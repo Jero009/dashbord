@@ -14,7 +14,17 @@ const EXPORT_DELETE_TABLES = [
   'exercise',
   'exercise_pr',
   'muscle_group',
-  'equipment'
+  'equipment',
+  'health_metric',
+  'readiness_score',
+  'habit_log',
+  'habit',
+  'goal',
+  'calendar_event',
+  'finance_subscription',
+  'finance_investment',
+  'finance_account',
+  'net_worth_snapshot'
 ];
 
 const EXPORT_INSERT_TABLES = [
@@ -26,7 +36,17 @@ const EXPORT_INSERT_TABLES = [
   'workout_template_exercise',
   'workout_exercise',
   'workout_exercise_sets',
-  'exercise_pr'
+  'exercise_pr',
+  'health_metric',
+  'readiness_score',
+  'habit',
+  'habit_log',
+  'goal',
+  'calendar_event',
+  'finance_account',
+  'finance_investment',
+  'finance_subscription',
+  'net_worth_snapshot'
 ];
 
 function toSqlLiteral(value: unknown) {
@@ -194,6 +214,93 @@ export async function initDB() {
       REFERENCES workout(id)
       ON DELETE SET NULL,
     UNIQUE(exercise_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS health_metric (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT,
+    source TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS readiness_score (
+    date TEXT PRIMARY KEY,
+    score REAL NOT NULL,
+    inputs_json TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS habit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    frequency TEXT DEFAULT 'daily',
+    target INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS habit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    habit_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    completed INTEGER DEFAULT 0,
+    FOREIGN KEY (habit_id)
+      REFERENCES habit(id)
+      ON DELETE CASCADE,
+    UNIQUE(habit_id, date)
+  );
+
+  CREATE TABLE IF NOT EXISTS goal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    target_value REAL NOT NULL,
+    current_value REAL DEFAULT 0,
+    due_date TEXT,
+    status TEXT DEFAULT 'active',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS calendar_event (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    date TEXT NOT NULL,
+    type TEXT DEFAULT 'general',
+    notes TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_account (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT DEFAULT 'cash',
+    institution TEXT,
+    balance REAL DEFAULT 0,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_investment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT DEFAULT 'stock',
+    quantity REAL DEFAULT 0,
+    value REAL DEFAULT 0,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_subscription (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    amount REAL DEFAULT 0,
+    cadence TEXT DEFAULT 'monthly',
+    next_due_date TEXT,
+    status TEXT DEFAULT 'active'
+  );
+
+  CREATE TABLE IF NOT EXISTS net_worth_snapshot (
+    date TEXT PRIMARY KEY,
+    total_assets REAL DEFAULT 0,
+    total_liabilities REAL DEFAULT 0
   );
   
   INSERT OR IGNORE INTO muscle_group (name) VALUES
@@ -1232,6 +1339,286 @@ export async function getTemplateExercisesByTemplateId(templateId: number) {
   return result.values || [];
 }
 
+// health + dashboard functions
+export async function addHealthMetric(
+  date: string,
+  type: string,
+  value: number,
+  unit?: string,
+  source?: string
+) {
+  if (!db) return;
+
+  try {
+    const result = await db.run(
+      `INSERT INTO health_metric (date, type, value, unit, source)
+       VALUES (?, ?, ?, ?, ?);`,
+      [date, type, value, unit ?? null, source ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding health metric:', error);
+    throw error;
+  }
+}
+
+export async function getLatestHealthMetric(type: string) {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE type = ?
+     ORDER BY date DESC, id DESC
+     LIMIT 1;`,
+    [type]
+  );
+  return result.values?.[0] || null;
+}
+
+export async function getHealthMetricsForDate(date: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE date = ?
+     ORDER BY type ASC;`,
+    [date]
+  );
+  return result.values || [];
+}
+
+export async function upsertReadinessScore(date: string, score: number, inputs: Record<string, unknown> = {}) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO readiness_score (date, score, inputs_json)
+       VALUES (?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET score = excluded.score, inputs_json = excluded.inputs_json;`,
+      [date, score, JSON.stringify(inputs)]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error upserting readiness score:', error);
+    throw error;
+  }
+}
+
+export async function getReadinessScore(date: string) {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM readiness_score WHERE date = ? LIMIT 1;`,
+    [date]
+  );
+  return result.values?.[0] || null;
+}
+
+export async function getLatestReadinessScore() {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM readiness_score ORDER BY date DESC LIMIT 1;`
+  );
+  return result.values?.[0] || null;
+}
+
+export async function addHabit(name: string, frequency: string, target: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO habit (name, frequency, target) VALUES (?, ?, ?);`,
+      [name, frequency, target]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding habit:', error);
+    throw error;
+  }
+}
+
+export async function getHabitsWithStatus(date: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT h.*, COALESCE(hl.completed, 0) AS completed
+     FROM habit h
+     LEFT JOIN habit_log hl
+       ON hl.habit_id = h.id AND hl.date = ?
+     ORDER BY h.created_at DESC;`,
+    [date]
+  );
+  return result.values || [];
+}
+
+export async function toggleHabitCompletion(habitId: number, date: string, completed: boolean) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO habit_log (habit_id, date, completed)
+       VALUES (?, ?, ?)
+       ON CONFLICT(habit_id, date) DO UPDATE SET completed = excluded.completed;`,
+      [habitId, date, completed ? 1 : 0]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error updating habit log:', error);
+    throw error;
+  }
+}
+
+export async function addGoal(name: string, targetValue: number, dueDate?: string) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO goal (name, target_value, due_date) VALUES (?, ?, ?);`,
+      [name, targetValue, dueDate ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding goal:', error);
+    throw error;
+  }
+}
+
+export async function getGoals() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM goal ORDER BY COALESCE(due_date, '') DESC, created_at DESC;`
+  );
+  return result.values || [];
+}
+
+export async function updateGoalProgress(goalId: number, currentValue: number, status?: string) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `UPDATE goal SET current_value = ?, status = COALESCE(?, status) WHERE id = ?;`,
+      [currentValue, status ?? null, goalId]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error updating goal progress:', error);
+    throw error;
+  }
+}
+
+export async function addCalendarEvent(title: string, date: string, type: string, notes?: string) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO calendar_event (title, date, type, notes) VALUES (?, ?, ?, ?);`,
+      [title, date, type, notes ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding calendar event:', error);
+    throw error;
+  }
+}
+
+export async function getCalendarEventsForDate(date: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM calendar_event WHERE date = ? ORDER BY id DESC;`,
+    [date]
+  );
+  return result.values || [];
+}
+
+// finance functions
+export async function addFinanceAccount(name: string, type: string, institution: string | null, balance: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_account (name, type, institution, balance)
+       VALUES (?, ?, ?, ?);`,
+      [name, type, institution, balance]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding finance account:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceAccounts() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_account ORDER BY updated_at DESC;`
+  );
+  return result.values || [];
+}
+
+export async function addFinanceInvestment(name: string, type: string, quantity: number, value: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_investment (name, type, quantity, value)
+       VALUES (?, ?, ?, ?);`,
+      [name, type, quantity, value]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding investment:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceInvestments() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_investment ORDER BY updated_at DESC;`
+  );
+  return result.values || [];
+}
+
+export async function addFinanceSubscription(
+  name: string,
+  amount: number,
+  cadence: string,
+  nextDueDate?: string
+) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date)
+       VALUES (?, ?, ?, ?);`,
+      [name, amount, cadence, nextDueDate ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding subscription:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceSubscriptions() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_subscription ORDER BY status DESC, next_due_date ASC;`
+  );
+  return result.values || [];
+}
+
+export async function addNetWorthSnapshot(date: string, totalAssets: number, totalLiabilities: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO net_worth_snapshot (date, total_assets, total_liabilities)
+       VALUES (?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET total_assets = excluded.total_assets, total_liabilities = excluded.total_liabilities;`,
+      [date, totalAssets, totalLiabilities]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding net worth snapshot:', error);
+    throw error;
+  }
+}
+
+export async function getLatestNetWorthSnapshot() {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`
+  );
+  return result.values?.[0] || null;
+}
+
 export async function exportDatabaseToSQL() {
   if (!db) return null;
 
@@ -1305,7 +1692,17 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     'workout_template',
     'exercise',
     'muscle_group',
-    'equipment'
+    'equipment',
+    'health_metric',
+    'readiness_score',
+    'habit_log',
+    'habit',
+    'goal',
+    'calendar_event',
+    'finance_subscription',
+    'finance_investment',
+    'finance_account',
+    'net_worth_snapshot'
   ];
 
   const insertOrder = [
@@ -1316,7 +1713,17 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     'workout',
     'workout_template_exercise',
     'workout_exercise',
-    'workout_exercise_sets'
+    'workout_exercise_sets',
+    'health_metric',
+    'readiness_score',
+    'habit',
+    'habit_log',
+    'goal',
+    'calendar_event',
+    'finance_account',
+    'finance_investment',
+    'finance_subscription',
+    'net_worth_snapshot'
   ];
 
   const deleteStatementsByTable = new Map<string, string>();
