@@ -2,6 +2,9 @@
   <ion-page>
     <ion-header>
       <ion-toolbar class="toolbar-flex">
+        <ion-buttons slot="start">
+          <ion-button fill="clear" @click="goToDashboard">Dashboard</ion-button>
+        </ion-buttons>
         <ion-title class="title">HOME</ion-title>
       </ion-toolbar>
     </ion-header>
@@ -134,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, onIonViewWillEnter, IonIcon, IonSelect, IonSelectOption } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, onIonViewWillEnter, IonIcon, IonSelect, IonSelectOption, IonButtons, IonButton } from '@ionic/vue';
 import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWorkout, getWorkouts, getWorkoutsByName } from '@/shared/db/app_db';
 import { ref, onMounted, onUnmounted,computed,watch } from 'vue';
 import { barbellSharp } from 'ionicons/icons';
@@ -154,6 +157,10 @@ let activeRestInterval: ReturnType<typeof setInterval> | null = null;
 
 // routing
 const router = useRouter();
+
+const goToDashboard = () => {
+  router.push('/home');
+};
 
 const startWorkout = async (templateId: number) => {
   if (activeWorkout.value) {

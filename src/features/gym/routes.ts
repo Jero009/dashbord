@@ -3,10 +3,6 @@ import TabsPage from './pages/TabsPage.vue';
 
 export const gymRoutes: Array<RouteRecordRaw> = [
   {
-    path: '/',
-    redirect: '/tabs/Home'
-  },
-  {
     path: '/workout/:id',
     name: 'Workout',
     component: () => import('./pages/WorkoutPage.vue')

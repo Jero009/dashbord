@@ -1,9 +1,21 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { gymRoutes } from '@/features/gym/routes';
+import { homeRoutes } from '@/features/home/routes';
+import { financeRoutes } from '@/features/finance/routes';
+import { healthRoutes } from '@/features/health/routes';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: gymRoutes
+  routes: [
+    {
+      path: '/',
+      redirect: '/home',
+    },
+    ...homeRoutes,
+    ...financeRoutes,
+    ...healthRoutes,
+    ...gymRoutes,
+  ],
 })
 
 export default router
