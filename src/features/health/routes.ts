@@ -7,6 +7,11 @@ export const healthRoutes: Array<RouteRecordRaw> = [
     component: () => import('./pages/HealthPage.vue')
   },
   {
+    path: '/health/sleep',
+    name: 'HealthSleep',
+    component: () => import('./pages/SleepPage.vue')
+  },
+  {
     path: '/health/calendar',
     name: 'HealthCalendar',
     component: () => import('./pages/HealthCalendarPage.vue')

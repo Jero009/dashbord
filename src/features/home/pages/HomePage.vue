@@ -80,22 +80,40 @@
         </section>
 
         <section class="quick-grid">
-          <ion-card class="quick-card">
+          <ion-card class="quick-card" button @click="navigateTo('/tabs/Home')">
             <ion-card-header>
               <ion-card-title>Workout</ion-card-title>
               <ion-card-subtitle>Templates and active sessions</ion-card-subtitle>
             </ion-card-header>
           </ion-card>
-          <ion-card class="quick-card">
+          <ion-card class="quick-card" button @click="navigateTo('/finance')">
             <ion-card-header>
               <ion-card-title>Finance</ion-card-title>
               <ion-card-subtitle>Accounts, investments, subscriptions</ion-card-subtitle>
             </ion-card-header>
           </ion-card>
-          <ion-card class="quick-card">
+          <ion-card class="quick-card" button @click="navigateTo('/health/sleep')">
             <ion-card-header>
-              <ion-card-title>Health</ion-card-title>
-              <ion-card-subtitle>Connect sync and manual logs</ion-card-subtitle>
+              <ion-card-title>Sleep</ion-card-title>
+              <ion-card-subtitle>Score, stages, HR, respiratory</ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+          <ion-card class="quick-card" button @click="navigateTo('/health/calendar')">
+            <ion-card-header>
+              <ion-card-title>Calendar</ion-card-title>
+              <ion-card-subtitle>Events and recovery days</ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+          <ion-card class="quick-card" button @click="navigateTo('/health/habits')">
+            <ion-card-header>
+              <ion-card-title>Habits</ion-card-title>
+              <ion-card-subtitle>Track consistency</ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+          <ion-card class="quick-card" button @click="navigateTo('/health/goals')">
+            <ion-card-header>
+              <ion-card-title>Goals</ion-card-title>
+              <ion-card-subtitle>Health goals and progress</ion-card-subtitle>
             </ion-card-header>
           </ion-card>
         </section>
@@ -108,6 +126,7 @@
 import { IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonHeader, IonPage } from '@ionic/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import { useRouter } from 'vue-router';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore } from '@/shared/db/app_db';
 import { applyReadinessDrain, calculateReadinessScore } from '@/shared/health/healthConnect';
 
@@ -116,6 +135,7 @@ const restingHr = ref<number | null>(null);
 const readinessBaselineScore = ref<number | null>(null);
 const nowTick = ref(Date.now());
 let readinessTimer: ReturnType<typeof setInterval> | null = null;
+const router = useRouter();
 
 const currentTimeLabel = computed(() =>
   new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(nowTick.value))
@@ -225,6 +245,10 @@ const loadSummary = async () => {
   sleepHours.value = latestSleep ? Number(latestSleep.value) : null;
   restingHr.value = latestHr ? Number(latestHr.value) : null;
   readinessBaselineScore.value = latestReadiness ? Number(latestReadiness.score) : null;
+};
+
+const navigateTo = (path: string) => {
+  router.push(path);
 };
 
 onUnmounted(() => {

@@ -29,6 +29,7 @@
 ### Health
 
 - Health overview with sleep and resting HR cards.
+- Sleep tab with score, stages, efficiency, sleep HR, and respiratory rate.
 - Manual metric entry for sleep and resting heart rate.
 - Google Health Connect sync for sleep and resting heart rate on Android.
 - Calendar page for events and recovery days.
@@ -38,6 +39,7 @@
 
 - Readiness circle based on sleep and resting HR.
 - Day graph that shows readiness draining through the day.
+- Quick links for sleep, calendar, habits, and goals.
 
 ### Finance
 
