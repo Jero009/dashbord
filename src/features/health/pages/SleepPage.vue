@@ -79,12 +79,39 @@
 
         <ion-card class="sleep-card">
           <ion-card-header>
+            <ion-card-title>Stage timeline</ion-card-title>
+            <ion-card-subtitle>When each stage happened overnight</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div v-if="sleepStageTimeline.length" class="stage-timeline">
+              <div class="stage-timeline__bar">
+                <div
+                  v-for="stage in sleepStageTimeline"
+                  :key="`${stage.stage}-${stage.startDate}`"
+                  class="stage-timeline__segment"
+                  :class="stageClass(stage.stage)"
+                  :style="stageStyle(stage)"
+                >
+                  <span>{{ stageLabel(stage.stage) }}</span>
+                </div>
+              </div>
+              <div class="stage-timeline__axis">
+                <span>{{ bedTimeClock }}</span>
+                <span>{{ wakeTimeClock }}</span>
+              </div>
+            </div>
+            <p v-else class="empty-state">No sleep stage timeline yet.</p>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="sleep-card">
+          <ion-card-header>
             <ion-card-title>Sleep stages</ion-card-title>
           </ion-card-header>
           <ion-card-content>
             <div v-if="stageRows.length" class="stage-list">
               <div v-for="stage in stageRows" :key="stage.stage" class="stage-row">
-                <span>{{ stage.stage }}</span>
+                <span>{{ stageLabel(stage.stage) }}</span>
                 <strong>{{ stage.minutes }}m</strong>
                 <small>{{ Math.round(stage.share * 100) }}%</small>
               </div>
@@ -114,7 +141,7 @@ import {
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
-import type { SleepSummary } from '@/shared/health/healthConnect';
+import type { SleepStageTimeline, SleepSummary } from '@/shared/health/healthConnect';
 import { getLatestSleepSummary, requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
 
 const syncing = ref(false);
@@ -193,6 +220,7 @@ const sleepEfficiencyDisplay = computed(() =>
 const sleepEfficiencyPercent = computed(() =>
   summary.value ? `${Math.round(summary.value.efficiency * 100)}%` : '—'
 );
+const sleepStageTimeline = computed(() => summary.value?.timeline ?? []);
 const sleepHeartRateDisplay = computed(() => {
   const value = summary.value?.sleepHeartRate ?? null;
   return value !== null ? `${value} bpm` : '—';
@@ -208,6 +236,29 @@ const wakeTimeDisplay = computed(() =>
   summary.value ? `Woke up ${new Date(summary.value.wokeUpAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : '—'
 );
 const stageRows = computed(() => summary.value?.stages ?? []);
+const bedTimeClock = computed(() =>
+  summary.value ? new Date(summary.value.wentToSleepAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'
+);
+const wakeTimeClock = computed(() =>
+  summary.value ? new Date(summary.value.wokeUpAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'
+);
+
+const stageLabel = (stage: string) =>
+  ({
+    awake: 'Awake',
+    asleep: 'Asleep',
+    rem: 'REM',
+    deep: 'Deep',
+    light: 'Light',
+    inBed: 'In bed',
+  }[stage] ?? stage);
+
+const stageClass = (stage: string) => `is-${stage.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+
+const stageStyle = (stage: SleepStageTimeline) => ({
+  left: `${stage.offset}%`,
+  width: `${Math.max(stage.width, 2)}%`,
+});
 
 onIonViewWillEnter(async () => {
   await loadSleep();
@@ -231,6 +282,11 @@ onIonViewWillEnter(async () => {
   margin: 0;
   border-radius: 12px;
   background: var(--ion-color-primary);
+  color: #fff;
+}
+
+.sleep-card ion-card-subtitle {
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .sleep-ring {
@@ -270,14 +326,23 @@ onIonViewWillEnter(async () => {
 .sleep-ring__content {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
   text-align: center;
+  color: #fff;
 }
 
 .sleep-ring__content strong {
   font-size: 3rem;
   line-height: 1;
+  color: #fff;
+}
+
+.sleep-ring__content span {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .sleep-grid {
@@ -295,6 +360,73 @@ onIonViewWillEnter(async () => {
   grid-template-columns: 1fr auto auto;
   gap: 12px;
   align-items: center;
+}
+
+.stage-timeline {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.stage-timeline__bar {
+  position: relative;
+  height: 64px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stage-timeline__segment {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  display: grid;
+  align-items: end;
+  padding: 8px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.stage-timeline__segment span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.stage-timeline__segment.is-awake {
+  background: rgba(239, 68, 68, 0.82);
+}
+
+.stage-timeline__segment.is-rem {
+  background: rgba(168, 85, 247, 0.82);
+}
+
+.stage-timeline__segment.is-deep {
+  background: rgba(59, 130, 246, 0.82);
+}
+
+.stage-timeline__segment.is-light {
+  background: rgba(34, 197, 94, 0.82);
+}
+
+.stage-timeline__segment.is-asleep {
+  background: rgba(249, 115, 22, 0.82);
+}
+
+.stage-timeline__segment.is-in-bed {
+  background: rgba(148, 163, 184, 0.72);
+}
+
+.stage-timeline__axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .empty-state {

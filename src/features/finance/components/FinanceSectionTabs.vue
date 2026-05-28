@@ -59,18 +59,16 @@ const handleSegmentChange = (event: CustomEvent) => {
 
 ion-segment {
   width: 100%;
-  --background: rgba(255, 255, 255, 0.04);
-  border-radius: 999px;
-  padding: 2px;
+  --background: transparent;
+  padding: 0;
 }
 
 ion-segment-button {
   --background: transparent;
-  --background-checked: var(--ion-color-light);
+  --background-checked: transparent;
   --color: rgba(255, 255, 255, 0.7);
-  --color-checked: var(--ion-color-dark);
-  --indicator-color: transparent;
-  --border-radius: 999px;
+  --color-checked: var(--ion-color-danger);
+  --indicator-color: var(--ion-color-danger);
   min-height: 34px;
   font-weight: 600;
 }

@@ -286,6 +286,7 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: none;
+  color: #fff;
 }
 
 .hero-card {
@@ -354,14 +355,19 @@ onMounted(async () => {
 .readiness-ring__content {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
   text-align: center;
+  color: #fff;
 }
 
 .readiness-ring__content strong {
   font-size: 3rem;
   line-height: 1;
+  color: #fff;
 }
 
 .readiness-ring__content span {
@@ -386,6 +392,22 @@ onMounted(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.graph-card__header h2,
+.graph-labels span,
+.readiness-meta strong,
+.readiness-meta span,
+.hero-copy {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.graph-card__header h2 {
+  color: #fff;
+}
+
+.graph-labels span {
   color: rgba(255, 255, 255, 0.55);
 }
 
