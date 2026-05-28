@@ -33,5 +33,21 @@ import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouter
 import { home, add, time, body } from 'ionicons/icons';
 </script>
 <style>
+ion-tab-bar {
+  --background: rgba(255, 255, 255, 0.03);
+  --border: 0;
+  padding: 6px 10px calc(env(safe-area-inset-bottom, 0px) + 6px);
+}
 
+ion-tab-button {
+  --color: rgba(255, 255, 255, 0.68);
+  --color-selected: var(--ion-color-danger);
+  --ripple-color: transparent;
+  min-height: 56px;
+  border-radius: 16px;
+}
+
+ion-tab-button.tab-selected {
+  background: rgba(239, 68, 68, 0.1);
+}
 </style>

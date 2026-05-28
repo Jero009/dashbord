@@ -83,16 +83,19 @@
             <ion-card-subtitle>When each stage happened overnight</ion-card-subtitle>
           </ion-card-header>
           <ion-card-content>
-            <div v-if="sleepStageTimeline.length" class="stage-timeline">
-              <div class="stage-timeline__bar">
-                <div
-                  v-for="stage in sleepStageTimeline"
-                  :key="`${stage.stage}-${stage.startDate}`"
-                  class="stage-timeline__segment"
-                  :class="stageClass(stage.stage)"
-                  :style="stageStyle(stage)"
-                >
-                  <span>{{ stageLabel(stage.stage) }}</span>
+            <div v-if="sleepStageLanes.length" class="stage-lanes">
+              <div v-for="lane in sleepStageLanes" :key="lane.stage" class="stage-lane">
+                <div class="stage-lane__label">{{ stageLabel(lane.stage) }}</div>
+                <div class="stage-lane__bar">
+                  <div
+                    v-for="segment in lane.segments"
+                    :key="`${segment.stage}-${segment.startDate}`"
+                    class="stage-lane__segment"
+                    :class="stageClass(segment.stage)"
+                    :style="stageStyle(segment)"
+                  >
+                    <span>{{ Math.round(segment.minutes) }}m</span>
+                  </div>
                 </div>
               </div>
               <div class="stage-timeline__axis">
@@ -101,6 +104,33 @@
               </div>
             </div>
             <p v-else class="empty-state">No sleep stage timeline yet.</p>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="sleep-card">
+          <ion-card-header>
+            <ion-card-title>Heart rate</ion-card-title>
+            <ion-card-subtitle>Sleep heart rate through the night</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div v-if="heartRatePoints.length" class="heart-rate-chart">
+              <svg viewBox="0 0 100 40" class="heart-rate-chart__svg" role="img" aria-label="Sleep heart rate graph">
+                <polyline class="heart-rate-chart__line" :points="heartRateLinePoints" />
+                <circle
+                  v-for="point in heartRatePoints"
+                  :key="point.time"
+                  class="heart-rate-chart__dot"
+                  :cx="point.offset"
+                  :cy="point.y"
+                  r="1.8"
+                />
+              </svg>
+              <div class="stage-timeline__axis">
+                <span>{{ bedTimeClock }}</span>
+                <span>{{ wakeTimeClock }}</span>
+              </div>
+            </div>
+            <p v-else class="empty-state">No sleep heart-rate data yet.</p>
           </ion-card-content>
         </ion-card>
 
@@ -117,6 +147,58 @@
               </div>
             </div>
             <p v-else class="empty-state">No stage data yet.</p>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="sleep-card">
+          <ion-card-header>
+            <ion-card-title>Sleep consistency</ion-card-title>
+            <ion-card-subtitle>Last 7 nights</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="consistency-grid">
+              <div class="consistency-pill">
+                <span>Score</span>
+                <strong>{{ consistencyDisplay }}</strong>
+              </div>
+              <div class="consistency-pill">
+                <span>Streak</span>
+                <strong>{{ streakDisplay }}</strong>
+              </div>
+              <div class="consistency-pill">
+                <span>Good nights</span>
+                <strong>{{ goodNightsDisplay }}</strong>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="sleep-card">
+          <ion-card-header>
+            <ion-card-title>Previous days</ion-card-title>
+            <ion-card-subtitle>Sleep score history</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div v-if="sleepScoreHistory.length" class="score-history">
+              <svg viewBox="0 0 100 48" class="score-history__svg" role="img" aria-label="Sleep score history graph">
+                <polygon class="score-history__area" :points="scoreHistoryAreaPoints" />
+                <polyline class="score-history__line" :points="scoreHistoryLinePoints" />
+                <circle
+                  v-for="point in sleepScoreHistory"
+                  :key="point.date"
+                  class="score-history__dot"
+                  :cx="point.x"
+                  :cy="point.y"
+                  r="1.8"
+                />
+              </svg>
+              <div class="score-history__labels">
+                <span v-for="label in scoreHistoryLabels" :key="label.date" :style="{ left: `${label.x}%` }">
+                  {{ label.text }}
+                </span>
+              </div>
+            </div>
+            <p v-else class="empty-state">No prior sleep history yet.</p>
           </ion-card-content>
         </ion-card>
       </div>
@@ -143,13 +225,31 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import type { SleepStageTimeline, SleepSummary } from '@/shared/health/healthConnect';
 import { getLatestSleepSummary, requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
+import { getRecentHealthMetrics } from '@/shared/db/app_db';
 
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
+const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
 
 const loadSleep = async () => {
   const result = await getLatestSleepSummary();
   summary.value = result.summary ?? null;
+
+  const [sleepRows, scoreRows, efficiencyRows] = await Promise.all([
+    getRecentHealthMetrics('sleep_duration', 14),
+    getRecentHealthMetrics('sleep_score', 14),
+    getRecentHealthMetrics('sleep_efficiency', 14),
+  ]);
+
+  const scoreByDate = new Map(scoreRows.map((row) => [row.date, Number(row.value)]));
+  const efficiencyByDate = new Map(efficiencyRows.map((row) => [row.date, Number(row.value)]));
+
+  sleepHistory.value = sleepRows.map((row) => ({
+    date: row.date,
+    value: Number(row.value),
+    score: scoreByDate.has(row.date) ? scoreByDate.get(row.date) ?? null : null,
+    efficiency: efficiencyByDate.has(row.date) ? efficiencyByDate.get(row.date) ?? null : null,
+  }));
 };
 
 const handleSync = async () => {
@@ -221,6 +321,91 @@ const sleepEfficiencyPercent = computed(() =>
   summary.value ? `${Math.round(summary.value.efficiency * 100)}%` : '—'
 );
 const sleepStageTimeline = computed(() => summary.value?.timeline ?? []);
+const sleepStageLanes = computed(() => {
+  const stages = sleepStageTimeline.value;
+  const order = ['deep', 'rem', 'light', 'asleep', 'awake', 'inBed'];
+  const grouped = new Map<string, SleepStageTimeline[]>();
+
+  for (const stage of stages) {
+    const bucket = grouped.get(stage.stage) ?? [];
+    bucket.push(stage);
+    grouped.set(stage.stage, bucket);
+  }
+
+  return order
+    .filter((stage) => grouped.has(stage))
+    .map((stage) => ({
+      stage,
+      segments: grouped.get(stage) ?? [],
+    }));
+});
+const heartRatePoints = computed(() => {
+  const points = summary.value?.heartRateTimeline ?? [];
+  if (!points.length) return [];
+
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const spread = Math.max(1, max - min);
+
+  return points.map((point) => ({
+    ...point,
+    y: 36 - ((point.value - min) / spread) * 28,
+  }));
+});
+const heartRateLinePoints = computed(() => heartRatePoints.value.map((point) => `${point.offset.toFixed(2)},${point.y.toFixed(2)}`).join(' '));
+const sleepScoreHistory = computed(() =>
+  [...sleepHistory.value]
+    .reverse()
+    .map((row, index, rows) => {
+      const x = rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100;
+      const score = row.score ?? 0;
+      return {
+        ...row,
+        x,
+        y: 44 - (Math.min(100, Math.max(0, score)) / 100) * 36,
+      };
+    })
+);
+const scoreHistoryLinePoints = computed(() =>
+  sleepScoreHistory.value.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
+);
+const scoreHistoryAreaPoints = computed(() => {
+  if (!sleepScoreHistory.value.length) return '';
+  const last = sleepScoreHistory.value[sleepScoreHistory.value.length - 1];
+  return `0,44 ${scoreHistoryLinePoints.value} ${last.x.toFixed(2)},44`;
+});
+const scoreHistoryLabels = computed(() =>
+  sleepScoreHistory.value
+    .filter((point, index) => index === 0 || index === sleepScoreHistory.value.length - 1 || index % 3 === 0)
+    .map((point) => ({
+      date: point.date,
+      x: point.x,
+      text: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    }))
+);
+const consistencyWindow = computed(() => sleepHistory.value.slice(0, 7));
+const goodNightsCount = computed(() =>
+  consistencyWindow.value.filter((row) => row.value >= 7 && (row.score ?? 0) >= 70).length
+);
+const consistencyScore = computed(() => {
+  if (!consistencyWindow.value.length) return null;
+  return Math.round((goodNightsCount.value / consistencyWindow.value.length) * 100);
+});
+const streakCount = computed(() => {
+  let streak = 0;
+  for (const row of consistencyWindow.value) {
+    if (row.value >= 7 && (row.score ?? 0) >= 70) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+  return streak;
+});
+const consistencyDisplay = computed(() => (consistencyScore.value === null ? '—' : `${consistencyScore.value}%`));
+const streakDisplay = computed(() => `${streakCount.value} night${streakCount.value === 1 ? '' : 's'}`);
+const goodNightsDisplay = computed(() => `${goodNightsCount.value}/${consistencyWindow.value.length || 0}`);
 const sleepHeartRateDisplay = computed(() => {
   const value = summary.value?.sleepHeartRate ?? null;
   return value !== null ? `${value} bpm` : '—';
@@ -362,60 +547,74 @@ onIonViewWillEnter(async () => {
   align-items: center;
 }
 
-.stage-timeline {
+.stage-lanes {
   display: grid;
   gap: 0.5rem;
 }
 
-.stage-timeline__bar {
+.stage-lane {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.stage-lane__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stage-lane__bar {
   position: relative;
-  height: 64px;
+  height: 22px;
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.stage-timeline__segment {
+.stage-lane__segment {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
-  display: grid;
-  align-items: end;
-  padding: 8px;
-  border-radius: 12px;
+  top: 2px;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   overflow: hidden;
   white-space: nowrap;
 }
 
-.stage-timeline__segment span {
+.stage-lane__segment span {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
-.stage-timeline__segment.is-awake {
+.stage-lane__segment.is-awake {
   background: rgba(239, 68, 68, 0.82);
 }
 
-.stage-timeline__segment.is-rem {
+.stage-lane__segment.is-rem {
   background: rgba(168, 85, 247, 0.82);
 }
 
-.stage-timeline__segment.is-deep {
+.stage-lane__segment.is-deep {
   background: rgba(59, 130, 246, 0.82);
 }
 
-.stage-timeline__segment.is-light {
+.stage-lane__segment.is-light {
   background: rgba(34, 197, 94, 0.82);
 }
 
-.stage-timeline__segment.is-asleep {
+.stage-lane__segment.is-asleep {
   background: rgba(249, 115, 22, 0.82);
 }
 
-.stage-timeline__segment.is-in-bed {
+.stage-lane__segment.is-in-bed {
   background: rgba(148, 163, 184, 0.72);
 }
 
@@ -429,6 +628,93 @@ onIonViewWillEnter(async () => {
   letter-spacing: 0.12em;
 }
 
+.heart-rate-chart {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.heart-rate-chart__svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.heart-rate-chart__line {
+  fill: none;
+  stroke: var(--ion-color-danger);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.heart-rate-chart__dot {
+  fill: var(--ion-color-danger);
+}
+
+.consistency-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.consistency-pill {
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.consistency-pill span,
+.history-row span {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.history-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.score-history {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.score-history__svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.score-history__area {
+  fill: rgba(239, 68, 68, 0.12);
+}
+
+.score-history__line {
+  fill: none;
+  stroke: var(--ion-color-danger);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.score-history__dot {
+  fill: var(--ion-color-danger);
+}
+
+.score-history__labels {
+  position: relative;
+  height: 1.4rem;
+}
+
+.score-history__labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .empty-state {
   margin: 0;
   color: rgba(255, 255, 255, 0.6);
@@ -437,6 +723,10 @@ onIonViewWillEnter(async () => {
 @media (min-width: 760px) {
   .sleep-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .consistency-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 </style>

@@ -1397,6 +1397,18 @@ export async function getLatestHealthMetric(type: string) {
   return result.values?.[0] || null;
 }
 
+export async function getRecentHealthMetrics(type: string, limit: number = 30) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE type = ?
+     ORDER BY date DESC, id DESC
+     LIMIT ?;`,
+    [type, limit]
+  );
+  return result.values || [];
+}
+
 export async function getHealthMetricsForDate(date: string) {
   if (!db) return [];
   const result = await db.query(

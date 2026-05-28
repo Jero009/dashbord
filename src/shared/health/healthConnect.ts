@@ -3,6 +3,7 @@ import { Health, type AuthorizationStatus, type HealthSample } from '@capgo/capa
 import { replaceHealthMetric, upsertReadinessScore } from '@/shared/db/app_db';
 
 export type HealthMetricType =
+  | 'steps'
   | 'sleep_duration'
   | 'sleep_time_in_bed'
   | 'sleep_efficiency'
@@ -11,9 +12,9 @@ export type HealthMetricType =
   | 'respiratory_rate'
   | 'resting_heart_rate';
 
-type HealthConnectDataType = 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate';
+type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate';
 
-const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = ['sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate'];
+const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate'];
 const HEALTH_CONNECT_SOURCE = 'health-connect';
 
 export interface HealthConnectAccessResult {
@@ -44,6 +45,12 @@ export interface SleepStageTimeline {
   width: number;
 }
 
+export interface SleepHeartRatePoint {
+  time: string;
+  value: number;
+  offset: number;
+}
+
 export interface SleepSummary {
   score: number;
   timeAsleepHours: number;
@@ -55,26 +62,45 @@ export interface SleepSummary {
   respiratoryRate: number | null;
   stages: SleepStageSummary[];
   timeline: SleepStageTimeline[];
+  heartRateTimeline: SleepHeartRatePoint[];
 }
 
 export interface SleepSummaryResult extends HealthConnectAccessResult {
   summary?: SleepSummary | null;
 }
 
+export interface ReadinessInputs {
+  sleepHours: number | null;
+  sleepEfficiency: number | null;
+  sleepScore: number | null;
+  restingHr: number | null;
+  sleepHeartRate: number | null;
+  respiratoryRate: number | null;
+  steps: number | null;
+}
+
 export function isHealthConnectAvailable() {
   return Capacitor.getPlatform() === 'android';
 }
 
-export function calculateReadinessScore(sleepHours: number | null, restingHr: number | null) {
-  let score = 50;
+export function calculateReadinessScore(inputs: ReadinessInputs) {
+  const sleepHoursScore = inputs.sleepHours === null ? 0 : clamp((inputs.sleepHours / 8) * 18, 0, 18);
+  const sleepEfficiencyScore = inputs.sleepEfficiency === null ? 0 : clamp(inputs.sleepEfficiency * 12, 0, 12);
+  const sleepScoreScore = inputs.sleepScore === null ? 0 : clamp((inputs.sleepScore / 100) * 22, 0, 22);
+  const restingHrScore = inputs.restingHr === null ? 6 : clamp(16 - Math.abs(inputs.restingHr - 60) * 1.2, 0, 16);
+  const sleepHeartRateScore = inputs.sleepHeartRate === null ? 4 : clamp(12 - Math.abs(inputs.sleepHeartRate - 55) * 0.8, 0, 12);
+  const respiratoryRateScore = inputs.respiratoryRate === null ? 3 : clamp(8 - Math.abs(inputs.respiratoryRate - 14.5) * 1.4, 0, 8);
+  const stepPenalty = inputs.steps === null ? 0 : clamp((inputs.steps - 10000) / 1500, 0, 10);
 
-  if (sleepHours !== null) {
-    score += Math.min(25, (sleepHours / 8) * 25);
-  }
-
-  if (restingHr !== null) {
-    score += Math.max(0, Math.min(25, 70 - restingHr));
-  }
+  const score =
+    24 +
+    sleepHoursScore +
+    sleepEfficiencyScore +
+    sleepScoreScore +
+    restingHrScore +
+    sleepHeartRateScore +
+    respiratoryRateScore -
+    stepPenalty;
 
   return Math.max(0, Math.min(100, Math.round(score)));
 }
@@ -166,6 +192,7 @@ function buildSleepSummary(sample: HealthSample, sleepHeartRate: number | null, 
     efficiency: timeInBedHours > 0 ? timeAsleepHours / timeInBedHours : 0,
     stages,
     timeline: buildSleepTimeline(sample),
+    heartRateTimeline: [],
     score: calculateSleepScore({
       timeAsleepHours,
       timeInBedHours,
@@ -303,13 +330,15 @@ export async function readHealthMetrics(_type: HealthMetricType, _startDate: str
   }
 
   const dataType: HealthConnectDataType =
-    _type === 'resting_heart_rate'
-      ? 'restingHeartRate'
-      : _type === 'sleep_heart_rate'
-        ? 'heartRate'
-        : _type === 'respiratory_rate'
-          ? 'respiratoryRate'
-          : 'sleep';
+    _type === 'steps'
+      ? 'steps'
+      : _type === 'resting_heart_rate'
+        ? 'restingHeartRate'
+        : _type === 'sleep_heart_rate'
+          ? 'heartRate'
+          : _type === 'respiratory_rate'
+            ? 'respiratoryRate'
+            : 'sleep';
   const result = await Health.readSamples({
     dataType,
     startDate: _startDate,
@@ -391,6 +420,20 @@ export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummary
 
   const sleepHeartRate = average(sleepHeartRateResult.samples.map((sample) => sample.value));
   const respiratoryRate = average(respiratoryRateResult.samples.map((sample) => sample.value));
+  const sleepWindowStart = new Date(session.startDate).getTime();
+  const sleepWindowEnd = new Date(session.endDate).getTime();
+  const sleepWindowSpan = Math.max(1, sleepWindowEnd - sleepWindowStart);
+  const heartRateTimeline: SleepHeartRatePoint[] = sleepHeartRateResult.samples
+    .map((sample) => {
+      const time = new Date(sample.startDate).getTime();
+      return {
+        time: sample.startDate,
+        value: sample.value,
+        offset: clamp(((time - sleepWindowStart) / sleepWindowSpan) * 100, 0, 100),
+      };
+    })
+    .filter((sample) => Number.isFinite(sample.value))
+    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   const sleepSummary = buildSleepSummary(
     session,
     sleepHeartRate,
@@ -398,6 +441,7 @@ export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummary
   );
   const summary: SleepSummary = {
     ...sleepSummary,
+    heartRateTimeline,
     wentToSleepAt: session.startDate,
     wokeUpAt: session.endDate,
     sleepHeartRate: sleepHeartRate === null ? null : Math.round(sleepHeartRate),
@@ -445,7 +489,14 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   const endDate = new Date().toISOString();
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
 
-  const [sleepResult, heartRateResult, respiratoryRateResult] = await Promise.all([
+  const [stepsResult, sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
+    Health.readSamples({
+      dataType: 'steps',
+      startDate,
+      endDate,
+      limit: 1000,
+      ascending: true,
+    }),
     Health.readSamples({
       dataType: 'sleep',
       startDate,
@@ -467,7 +518,22 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       limit: 1000,
       ascending: true,
     }),
+    Health.readSamples({
+      dataType: 'respiratoryRate',
+      startDate,
+      endDate,
+      limit: 1000,
+      ascending: true,
+    }),
   ]);
+
+  const stepsByDate = new Map<string, number>();
+  for (const sample of stepsResult.samples) {
+    if (!Number.isFinite(sample.value)) continue;
+
+    const key = toDateKey(sample.startDate || sample.endDate);
+    stepsByDate.set(key, (stepsByDate.get(key) ?? 0) + sample.value);
+  }
 
   const sleepByDate = new Map<string, { samples: HealthSample[] }>();
   for (const sample of sleepResult.samples) {
@@ -490,6 +556,16 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     heartRateByDate.set(key, bucket);
   }
 
+  const restingHeartRateByDate = new Map<string, { values: number[] }>();
+  for (const sample of restingHeartRateResult.samples) {
+    if (!Number.isFinite(sample.value)) continue;
+
+    const key = toDateKey(sample.startDate || sample.endDate);
+    const bucket = restingHeartRateByDate.get(key) ?? { values: [] };
+    bucket.values.push(sample.value);
+    restingHeartRateByDate.set(key, bucket);
+  }
+
   const respiratoryRateByDate = new Map<string, { values: number[] }>();
   for (const sample of respiratoryRateResult.samples) {
     if (!Number.isFinite(sample.value)) continue;
@@ -501,6 +577,11 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   }
 
   let synced = 0;
+
+  for (const [date, steps] of stepsByDate.entries()) {
+    await replaceHealthMetric(date, 'steps', Math.round(steps), 'count', HEALTH_CONNECT_SOURCE);
+    synced += 1;
+  }
 
   for (const [date, bucket] of sleepByDate.entries()) {
     const latestSample = bucket.samples[bucket.samples.length - 1];
@@ -530,7 +611,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     }
   }
 
-  for (const [date, bucket] of heartRateByDate.entries()) {
+  for (const [date, bucket] of restingHeartRateByDate.entries()) {
     const restingHr = average(bucket.values);
     if (restingHr === null) continue;
 
@@ -546,20 +627,34 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     synced += 1;
   }
 
-  const readinessDates = new Set([...sleepByDate.keys(), ...heartRateByDate.keys()]);
+  const readinessDates = new Set([...sleepByDate.keys(), ...restingHeartRateByDate.keys()]);
   for (const date of readinessDates) {
+    const sleepBucket = sleepByDate.get(date);
+    const latestSample = sleepBucket?.samples[sleepBucket.samples.length - 1] ?? null;
     const sleepHours = average(
-      (sleepByDate.get(date)?.samples ?? []).map((sample) => getSleepHours(sample)).filter((value): value is number => value !== null)
+      (sleepBucket?.samples ?? []).map((sample) => getSleepHours(sample)).filter((value): value is number => value !== null)
     );
-    const restingHr = average(heartRateByDate.get(date)?.values ?? []);
+    const restingHr = average(restingHeartRateByDate.get(date)?.values ?? []);
+    const sleepHeartRate = average(heartRateByDate.get(date)?.values ?? []);
+    const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
+    const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate) : null;
 
-    if (sleepHours === null && restingHr === null) {
+    if (sleepHours === null && restingHr === null && sleepSummary === null) {
       continue;
     }
 
-    await upsertReadinessScore(date, calculateReadinessScore(sleepHours, restingHr), {
-      sleepHours,
+    const readinessInputs = {
+      sleepHours: sleepSummary?.timeAsleepHours ?? sleepHours,
+      sleepEfficiency: sleepSummary?.efficiency ?? null,
+      sleepScore: sleepSummary?.score ?? null,
       restingHr,
+      sleepHeartRate,
+      respiratoryRate,
+      steps: stepsByDate.get(date) ?? null,
+    };
+
+    await upsertReadinessScore(date, calculateReadinessScore(readinessInputs), {
+      ...readinessInputs,
       source: HEALTH_CONNECT_SOURCE,
     });
   }

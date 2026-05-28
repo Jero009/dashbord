@@ -38,12 +38,48 @@
                 <strong>{{ sleepDisplay }}</strong>
               </div>
               <div>
+                <span>Steps</span>
+                <strong>{{ stepsDisplay }}</strong>
+              </div>
+              <div>
                 <span>Resting HR</span>
                 <strong>{{ restingHrDisplay }}</strong>
               </div>
               <div>
                 <span>Status</span>
                 <strong>{{ readinessSubtitle }}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="latestWorkout" class="workout-card">
+          <div class="graph-card__header">
+            <div>
+              <p class="eyebrow">Gym</p>
+              <h2>Latest workout</h2>
+              <p class="hero-copy">{{ latestWorkout.name ?? 'Completed session' }}</p>
+            </div>
+            <span class="graph-card__time">{{ latestWorkoutLabel }}</span>
+          </div>
+
+          <div class="workout-card__body">
+            <div class="workout-card__metrics">
+              <div>
+                <span>Duration</span>
+                <strong>{{ latestWorkoutDuration }}</strong>
+              </div>
+              <div>
+                <span>Volume</span>
+                <strong>{{ latestWorkoutVolume }}</strong>
+              </div>
+              <div>
+                <span>Exercises</span>
+                <strong>{{ latestWorkoutExerciseCount }}</strong>
+              </div>
+              <div>
+                <span>Sets</span>
+                <strong>{{ latestWorkoutSetCount }}</strong>
               </div>
             </div>
           </div>
@@ -82,7 +118,7 @@
         <section class="quick-grid">
           <ion-card class="quick-card" button @click="navigateTo('/tabs/Home')">
             <ion-card-header>
-              <ion-card-title>Workout</ion-card-title>
+              <ion-card-title>Gym</ion-card-title>
               <ion-card-subtitle>Templates and active sessions</ion-card-subtitle>
             </ion-card-header>
           </ion-card>
@@ -127,12 +163,17 @@ import { IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonH
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { useRouter } from 'vue-router';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore } from '@/shared/db/app_db';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises } from '@/shared/db/app_db';
 import { applyReadinessDrain, calculateReadinessScore } from '@/shared/health/healthConnect';
+import { formatDuration, formatWorkoutDate } from '@/shared/utils/timeFormat';
+import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 
 const sleepHours = ref<number | null>(null);
+const steps = ref<number | null>(null);
 const restingHr = ref<number | null>(null);
 const readinessBaselineScore = ref<number | null>(null);
+const latestWorkout = ref<Workout | null>(null);
+const latestWorkoutExercises = ref<WorkoutHistoryExercise[]>([]);
 const nowTick = ref(Date.now());
 let readinessTimer: ReturnType<typeof setInterval> | null = null;
 const router = useRouter();
@@ -146,11 +187,19 @@ const effectiveBaselineScore = computed(() => {
     return readinessBaselineScore.value;
   }
 
-  if (sleepHours.value === null && restingHr.value === null) {
+  if (sleepHours.value === null && restingHr.value === null && steps.value === null) {
     return null;
   }
 
-  return calculateReadinessScore(sleepHours.value, restingHr.value);
+  return calculateReadinessScore({
+    sleepHours: sleepHours.value,
+    sleepEfficiency: null,
+    sleepScore: null,
+    restingHr: restingHr.value,
+    sleepHeartRate: null,
+    respiratoryRate: null,
+    steps: steps.value,
+  });
 });
 
 const currentReadinessScore = computed(() => {
@@ -190,7 +239,16 @@ const readinessSubtitle = computed(() => {
 });
 
 const sleepDisplay = computed(() => (sleepHours.value === null ? '—' : `${sleepHours.value.toFixed(1)} h`));
+const stepsDisplay = computed(() => (steps.value === null ? '—' : `${Math.round(steps.value).toLocaleString()} steps`));
 const restingHrDisplay = computed(() => (restingHr.value === null ? '—' : `${restingHr.value} bpm`));
+
+const latestWorkoutLabel = computed(() => formatWorkoutDate(latestWorkout.value?.time_end));
+const latestWorkoutDuration = computed(() => formatDuration(latestWorkout.value?.time_start, latestWorkout.value?.time_end));
+const latestWorkoutVolume = computed(() => `${Math.round(latestWorkout.value?.total_kg ?? 0).toLocaleString()} kg`);
+const latestWorkoutExerciseCount = computed(() => `${latestWorkoutExercises.value.length}`);
+const latestWorkoutSetCount = computed(() =>
+  `${latestWorkoutExercises.value.reduce((total, exercise) => total + Number(exercise.set_count || 0), 0)}`
+);
 
 const graphData = computed(() => {
   const baseline = effectiveBaselineScore.value;
@@ -237,14 +295,44 @@ const currentMarkerX = computed(() => {
 });
 
 const loadSummary = async () => {
-  const latestSleep = await getLatestHealthMetric('sleep_duration');
-  const latestHr = await getLatestHealthMetric('resting_heart_rate');
-  const todayReadiness = await getReadinessScore(new Date().toISOString().slice(0, 10));
+  const [latestSleep, latestSleepEfficiency, latestSleepScore, latestSleepHeartRate, latestRespiratoryRate, latestSteps, latestHr] =
+    await Promise.all([
+      getLatestHealthMetric('sleep_duration'),
+      getLatestHealthMetric('sleep_efficiency'),
+      getLatestHealthMetric('sleep_score'),
+      getLatestHealthMetric('sleep_heart_rate'),
+      getLatestHealthMetric('respiratory_rate'),
+      getLatestHealthMetric('steps'),
+      getLatestHealthMetric('resting_heart_rate'),
+    ]);
+  const [todayReadiness, latestSession] = await Promise.all([
+    getReadinessScore(new Date().toISOString().slice(0, 10)),
+    getLatestWorkout(),
+  ]);
   const latestReadiness = todayReadiness ?? (await getLatestReadinessScore());
 
   sleepHours.value = latestSleep ? Number(latestSleep.value) : null;
+  const sleepEfficiency = latestSleepEfficiency ? Number(latestSleepEfficiency.value) / 100 : null;
+  const sleepScore = latestSleepScore ? Number(latestSleepScore.value) : null;
+  const sleepHeartRate = latestSleepHeartRate ? Number(latestSleepHeartRate.value) : null;
+  const respiratoryRate = latestRespiratoryRate ? Number(latestRespiratoryRate.value) : null;
+  steps.value = latestSteps ? Number(latestSteps.value) : null;
   restingHr.value = latestHr ? Number(latestHr.value) : null;
   readinessBaselineScore.value = latestReadiness ? Number(latestReadiness.score) : null;
+  latestWorkout.value = latestSession ?? null;
+  latestWorkoutExercises.value = latestSession ? (await getWorkoutHistoryExercises(latestSession.id)) : [];
+
+  if (readinessBaselineScore.value === null && (sleepHours.value !== null || restingHr.value !== null || steps.value !== null)) {
+    readinessBaselineScore.value = calculateReadinessScore({
+      sleepHours: sleepHours.value,
+      sleepEfficiency,
+      sleepScore,
+      restingHr: restingHr.value,
+      sleepHeartRate,
+      respiratoryRate,
+      steps: steps.value,
+    });
+  }
 };
 
 const navigateTo = (path: string) => {
@@ -293,6 +381,10 @@ onMounted(async () => {
   padding: 1rem;
 }
 
+.workout-card {
+  padding: 1rem;
+}
+
 .hero-card__header h1,
 .graph-card__header h2,
 .quick-card ion-card-title {
@@ -316,6 +408,36 @@ onMounted(async () => {
   margin-top: 1rem;
   display: grid;
   gap: 1rem;
+}
+
+.workout-card__body {
+  margin-top: 1rem;
+}
+
+.workout-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.workout-card__metrics > div {
+  padding: 0.8rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.workout-card__metrics span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.workout-card__metrics strong {
+  font-size: 1rem;
+  color: #fff;
 }
 
 .readiness-ring {
@@ -376,7 +498,7 @@ onMounted(async () => {
 
 .readiness-meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.75rem;
 }
 
@@ -477,6 +599,14 @@ onMounted(async () => {
   .hero-card__body {
     grid-template-columns: 280px 1fr;
     align-items: center;
+  }
+
+  .readiness-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workout-card__metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .quick-grid {
