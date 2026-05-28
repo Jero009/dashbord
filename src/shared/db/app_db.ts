@@ -1362,6 +1362,29 @@ export async function addHealthMetric(
   }
 }
 
+export async function replaceHealthMetric(
+  date: string,
+  type: string,
+  value: number,
+  unit?: string,
+  source?: string
+) {
+  if (!db) return;
+
+  try {
+    await db.run(
+      `DELETE FROM health_metric
+       WHERE date = ? AND type = ? AND source = ?;`,
+      [date, type, source ?? null]
+    );
+
+    return await addHealthMetric(date, type, value, unit, source);
+  } catch (error) {
+    console.error('Error replacing health metric:', error);
+    throw error;
+  }
+}
+
 export async function getLatestHealthMetric(type: string) {
   if (!db) return null;
   const result = await db.query(

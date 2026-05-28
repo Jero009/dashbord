@@ -52,6 +52,7 @@ const handleSegmentChange = (event: CustomEvent) => {
 <style scoped>
 .section-toolbar {
   --background: var(--ion-color-primary);
+  --padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
   padding: 0 8px 8px;
 }
 </style>

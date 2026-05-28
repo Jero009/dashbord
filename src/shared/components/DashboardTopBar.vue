@@ -54,7 +54,8 @@ const handleSegmentChange = (event: CustomEvent) => {
 <style scoped>
 .dashboard-toolbar {
   --background: var(--ion-color-primary);
-  padding: 0 8px;
+  --padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+  padding: 0 8px 8px;
 }
 
 ion-segment {

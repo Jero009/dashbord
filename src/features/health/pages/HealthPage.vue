@@ -7,22 +7,11 @@
     <ion-content :fullscreen="true" class="health-content">
       <div class="health-shell">
         <section class="summary-grid">
-          <ion-card class="summary-card readiness-card">
-            <ion-card-header>
-              <ion-card-title>Readiness</ion-card-title>
-              <ion-card-subtitle>{{ readinessSubtitle }}</ion-card-subtitle>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="readiness-score">{{ readinessDisplay }}</div>
-              <ion-progress-bar :value="readinessRatio"></ion-progress-bar>
-            </ion-card-content>
-          </ion-card>
-
-          <ion-card class="summary-card">
-            <ion-card-header>
-              <ion-card-title>Sleep</ion-card-title>
-              <ion-card-subtitle>{{ sleepSubtitle }}</ion-card-subtitle>
-            </ion-card-header>
+            <ion-card class="summary-card">
+              <ion-card-header>
+                <ion-card-title>Sleep</ion-card-title>
+                <ion-card-subtitle>{{ sleepSubtitle }}</ion-card-subtitle>
+              </ion-card-header>
             <ion-card-content>
               <div class="metric-value">{{ sleepDisplay }}</div>
             </ion-card-content>
@@ -41,11 +30,13 @@
 
         <ion-card class="connect-card">
           <ion-card-header>
-            <ion-card-title>Health Connect</ion-card-title>
+          <ion-card-title>Google Health Connect</ion-card-title>
             <ion-card-subtitle>{{ healthConnectStatus }}</ion-card-subtitle>
           </ion-card-header>
           <ion-card-content>
-            <ion-button expand="block" @click="handleConnect">Connect Health Connect</ion-button>
+          <ion-button expand="block" :disabled="syncing" @click="handleConnect">
+            {{ syncing ? 'Syncing...' : 'Connect Health Connect' }}
+          </ion-button>
           </ion-card-content>
         </ion-card>
 
@@ -87,7 +78,6 @@ import {
   IonCardTitle,
   IonCardSubtitle,
   IonCardContent,
-  IonProgressBar,
   IonButton,
   IonItem,
   IonLabel,
@@ -102,35 +92,23 @@ import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vu
 import {
   addHealthMetric,
   getLatestHealthMetric,
-  getLatestReadinessScore,
   upsertReadinessScore,
 } from '@/shared/db/app_db';
-import { isHealthConnectAvailable, requestHealthConnectPermissions } from '@/shared/health/healthConnect';
+import {
+  calculateReadinessScore,
+  isHealthConnectAvailable,
+  openHealthConnectSettings,
+  requestHealthConnectPermissions,
+  syncHealthConnectMetrics,
+} from '@/shared/health/healthConnect';
 
 const sleepHours = ref<number | null>(null);
 const restingHr = ref<number | null>(null);
-const readinessScore = ref<number | null>(null);
+const syncing = ref(false);
 
 const metricDate = ref(new Date().toISOString().slice(0, 10));
 const sleepInput = ref('');
 const hrInput = ref('');
-
-const readinessDisplay = computed(() => {
-  const score = effectiveReadinessScore.value;
-  return score === null ? '—' : `${score}/100`;
-});
-
-const readinessRatio = computed(() => {
-  const score = effectiveReadinessScore.value;
-  return score === null ? 0 : Math.min(1, score / 100);
-});
-
-const readinessSubtitle = computed(() => {
-  if (effectiveReadinessScore.value === null) return 'No data yet';
-  if (effectiveReadinessScore.value >= 80) return 'Ready to push';
-  if (effectiveReadinessScore.value >= 60) return 'Steady day';
-  return 'Take it easy';
-});
 
 const sleepDisplay = computed(() => (sleepHours.value === null ? '—' : `${sleepHours.value.toFixed(1)} h`));
 const restingHrDisplay = computed(() => (restingHr.value === null ? '—' : `${restingHr.value} bpm`));
@@ -139,40 +117,53 @@ const sleepSubtitle = computed(() => (sleepHours.value === null ? 'No sleep data
 const hrSubtitle = computed(() => (restingHr.value === null ? 'No HR data' : 'Latest reading'));
 
 const healthConnectStatus = computed(() =>
-  isHealthConnectAvailable() ? 'Android integration pending' : 'Health Connect unavailable on web'
+  isHealthConnectAvailable() ? 'Ready to sync Android health data' : 'Health Connect unavailable on web'
 );
-
-const effectiveReadinessScore = computed(() => {
-  if (readinessScore.value !== null) return readinessScore.value;
-  if (sleepHours.value === null && restingHr.value === null) return null;
-
-  let score = 50;
-  if (sleepHours.value !== null) {
-    score += Math.min(25, (sleepHours.value / 8) * 25);
-  }
-  if (restingHr.value !== null) {
-    score += Math.max(0, Math.min(25, (70 - restingHr.value) * 1));
-  }
-  return Math.max(0, Math.min(100, Math.round(score)));
-});
 
 const loadSummary = async () => {
   const latestSleep = await getLatestHealthMetric('sleep_duration');
   const latestHr = await getLatestHealthMetric('resting_heart_rate');
-  const latestReadiness = await getLatestReadinessScore();
 
   sleepHours.value = latestSleep ? Number(latestSleep.value) : null;
   restingHr.value = latestHr ? Number(latestHr.value) : null;
-  readinessScore.value = latestReadiness ? Number(latestReadiness.score) : null;
 };
 
 const handleConnect = async () => {
+  syncing.value = true;
+
   try {
     const result = await requestHealthConnectPermissions();
+    if (!result.available) {
+      if (isHealthConnectAvailable()) {
+        await openHealthConnectSettings();
+      }
+
+      const toast = await toastController.create({
+        message: result.reason ?? 'Health Connect unavailable.',
+        duration: 2200,
+        color: 'warning',
+      });
+      await toast.present();
+      return;
+    }
+
+    if (!result.granted) {
+      const toast = await toastController.create({
+        message: 'Health Connect permissions not granted yet.',
+        duration: 2200,
+        color: 'warning',
+      });
+      await toast.present();
+      return;
+    }
+
+    const syncResult = await syncHealthConnectMetrics();
+    await loadSummary();
+
     const toast = await toastController.create({
-      message: result.granted ? 'Health Connect permissions granted.' : 'Health Connect permissions not granted yet.',
-      duration: 2000,
-      color: result.granted ? 'success' : 'warning',
+      message: `Synced ${syncResult.synced} Health Connect records.`,
+      duration: 2200,
+      color: 'success',
     });
     await toast.present();
   } catch (error) {
@@ -182,6 +173,8 @@ const handleConnect = async () => {
       color: 'danger',
     });
     await toast.present();
+  } finally {
+    syncing.value = false;
   }
 };
 
@@ -226,10 +219,16 @@ const saveMetrics = async () => {
     await addHealthMetric(metricDate.value, 'resting_heart_rate', parsedHr, 'bpm', 'manual');
   }
 
-  if (effectiveReadinessScore.value !== null) {
-    await upsertReadinessScore(metricDate.value, effectiveReadinessScore.value, {
-      sleep: parsedSleep,
-      restingHr: parsedHr,
+  const baselineScore = calculateReadinessScore(
+    parsedSleep ?? sleepHours.value,
+    parsedHr ?? restingHr.value
+  );
+
+  if (baselineScore !== null) {
+    await upsertReadinessScore(metricDate.value, baselineScore, {
+      sleep: parsedSleep ?? sleepHours.value,
+      restingHr: parsedHr ?? restingHr.value,
+      source: 'manual',
     });
   }
 
@@ -273,11 +272,6 @@ onIonViewWillEnter(async () => {
   background: var(--ion-color-primary);
 }
 
-.readiness-card ion-progress-bar {
-  margin-top: 12px;
-}
-
-.readiness-score,
 .metric-value {
   font-size: 1.6rem;
   font-weight: 600;
