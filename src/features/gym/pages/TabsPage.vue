@@ -1,8 +1,5 @@
 <template>
   <ion-page>
-    <ion-header>
-      <DashboardTopBar />
-    </ion-header>
     <ion-tabs>
       <ion-router-outlet></ion-router-outlet>
       <ion-tab-bar slot="bottom">
@@ -32,9 +29,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet, IonHeader } from '@ionic/vue';
+import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
 import { home, add, time, body } from 'ionicons/icons';
-import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 </script>
 <style>
 ion-tab-bar {
