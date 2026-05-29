@@ -33,46 +33,39 @@
         <section class="sleep-grid">
           <ion-card class="sleep-card">
             <ion-card-header>
-              <ion-card-title>Time asleep</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>{{ sleepHoursDisplay }}</ion-card-content>
-          </ion-card>
-
-          <ion-card class="sleep-card">
-            <ion-card-header>
-              <ion-card-title>Time in bed</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>{{ timeInBedDisplay }}</ion-card-content>
-          </ion-card>
-
-          <ion-card class="sleep-card">
-            <ion-card-header>
-              <ion-card-title>Efficiency</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>{{ sleepEfficiencyPercent }}</ion-card-content>
-          </ion-card>
-
-          <ion-card class="sleep-card">
-            <ion-card-header>
-              <ion-card-title>Sleep heart rate</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>{{ sleepHeartRateDisplay }}</ion-card-content>
-          </ion-card>
-
-          <ion-card class="sleep-card">
-            <ion-card-header>
-              <ion-card-title>Respiratory rate</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>{{ respiratoryRateDisplay }}</ion-card-content>
-          </ion-card>
-
-          <ion-card class="sleep-card">
-            <ion-card-header>
-              <ion-card-title>Bedtime / wake</ion-card-title>
+              <ion-card-title>Sleep metrics</ion-card-title>
             </ion-card-header>
             <ion-card-content>
-              <div>{{ bedTimeDisplay }}</div>
-              <div>{{ wakeTimeDisplay }}</div>
+              <div class="metrics-grid">
+                <div class="metric-item">
+                  <span class="metric-label">Time asleep</span>
+                  <strong>{{ sleepHoursDisplay }}</strong>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Time in bed</span>
+                  <strong>{{ timeInBedDisplay }}</strong>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Efficiency</span>
+                  <strong>{{ sleepEfficiencyPercent }}</strong>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Heart rate</span>
+                  <strong>{{ sleepHeartRateDisplay }}</strong>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Respiratory</span>
+                  <strong>{{ respiratoryRateDisplay }}</strong>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Bedtime</span>
+                  <strong>{{ bedTimeClock }}</strong>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Wake time</span>
+                  <strong>{{ wakeTimeClock }}</strong>
+                </div>
+              </div>
             </ion-card-content>
           </ion-card>
         </section>
@@ -191,11 +184,17 @@
                   v-for="point in sleepScoreHistory"
                   :key="point.date"
                   class="score-history__dot"
+                  :class="{ 'is-selected': selectedScorePoint?.date === point.date }"
                   :cx="point.x"
                   :cy="point.y"
-                  r="1.8"
+                  r="1"
+                  @click="selectedScorePoint = { date: point.date, score: point.score ?? 0 }"
                 />
               </svg>
+              <div v-if="selectedScorePoint" class="score-history-tooltip">
+                <strong>{{ selectedScorePoint.score }}</strong>
+                <small>{{ new Date(`${selectedScorePoint.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
+              </div>
               <div class="score-history__labels">
                 <span v-for="label in scoreHistoryLabels" :key="label.date" :style="{ left: `${label.x}%` }">
                   {{ label.text }}
@@ -235,6 +234,7 @@ const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
 const selectedHeartRatePoint = ref<{ time: string; value: number } | null>(null);
+const selectedScorePoint = ref<{ date: string; score: number } | null>(null);
 
 const loadSleep = async () => {
   const result = await getLatestSleepSummary();
@@ -419,12 +419,6 @@ const respiratoryRateDisplay = computed(() => {
   const value = summary.value?.respiratoryRate ?? null;
   return value !== null ? `${value} rpm` : '—';
 });
-const bedTimeDisplay = computed(() =>
-  summary.value ? `Went to sleep ${new Date(summary.value.wentToSleepAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : '—'
-);
-const wakeTimeDisplay = computed(() =>
-  summary.value ? `Woke up ${new Date(summary.value.wokeUpAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : '—'
-);
 const stageRows = computed(() => summary.value?.stages ?? []);
 const bedTimeClock = computed(() =>
   summary.value ? new Date(summary.value.wentToSleepAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'
@@ -538,6 +532,35 @@ onIonViewWillEnter(async () => {
 .sleep-grid {
   display: grid;
   gap: 12px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.metric-item strong {
+  font-size: 1.1rem;
+  color: #fff;
 }
 
 .stage-list {
@@ -740,6 +763,40 @@ onIonViewWillEnter(async () => {
 
 .score-history__dot {
   fill: var(--ion-color-danger);
+  cursor: pointer;
+  transition: r 0.2s ease, filter 0.2s ease;
+}
+
+.score-history__dot:hover {
+  r: 1.5;
+  filter: brightness(1.2);
+}
+
+.score-history__dot.is-selected {
+  r: 1.5;
+  filter: brightness(1.4);
+}
+
+.score-history-tooltip {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--ion-color-danger);
+  text-align: center;
+  color: var(--ion-color-danger);
+  margin-bottom: 0.5rem;
+}
+
+.score-history-tooltip strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.score-history-tooltip small {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(239, 68, 68, 0.8);
+  margin-top: 0.25rem;
 }
 
 .score-history__labels {
