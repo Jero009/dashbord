@@ -10,7 +10,6 @@
           <div class="hero-card__header">
             <p class="eyebrow">Today</p>
             <h1>Readiness</h1>
-            <p class="hero-copy">A daily score based on sleep and resting heart rate.</p>
           </div>
 
           <div class="hero-card__body">
@@ -356,7 +355,7 @@ onMounted(async () => {
 
 <style scoped>
 .home-content {
-  --background: linear-gradient(180deg, #0d0d0d 0%, #151515 100%);
+  background: black;
 }
 
 .home-shell {
