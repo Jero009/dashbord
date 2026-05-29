@@ -93,9 +93,7 @@
                     class="stage-lane__segment"
                     :class="stageClass(segment.stage)"
                     :style="stageStyle(segment)"
-                  >
-                    <span>{{ Math.round(segment.minutes) }}m</span>
-                  </div>
+                  />
                 </div>
               </div>
               <div class="stage-timeline__axis">
@@ -120,11 +118,17 @@
                   v-for="point in heartRatePoints"
                   :key="point.time"
                   class="heart-rate-chart__dot"
+                  :class="{ 'is-selected': selectedHeartRatePoint?.time === point.time }"
                   :cx="point.offset"
                   :cy="point.y"
-                  r="1.8"
+                  r="0.8"
+                  @click="selectedHeartRatePoint = point"
                 />
               </svg>
+              <div v-if="selectedHeartRatePoint" class="heart-rate-tooltip">
+                <strong>{{ selectedHeartRatePoint.value }} bpm</strong>
+                <small>{{ new Date(selectedHeartRatePoint.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</small>
+              </div>
               <div class="stage-timeline__axis">
                 <span>{{ bedTimeClock }}</span>
                 <span>{{ wakeTimeClock }}</span>
@@ -230,6 +234,7 @@ import { getRecentHealthMetrics } from '@/shared/db/app_db';
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
+const selectedHeartRatePoint = ref<{ time: string; value: number } | null>(null);
 
 const loadSleep = async () => {
   const result = await getLatestSleepSummary();
@@ -592,6 +597,7 @@ onIonViewWillEnter(async () => {
 
 .stage-lane__segment span {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  display: none;
 }
 
 .stage-lane__segment.is-awake {
@@ -649,6 +655,39 @@ onIonViewWillEnter(async () => {
 
 .heart-rate-chart__dot {
   fill: var(--ion-color-danger);
+  cursor: pointer;
+  transition: r 0.2s ease, filter 0.2s ease;
+}
+
+.heart-rate-chart__dot:hover {
+  r: 1.3;
+  filter: brightness(1.2);
+}
+
+.heart-rate-chart__dot.is-selected {
+  r: 1.3;
+  filter: brightness(1.4);
+}
+
+.heart-rate-tooltip {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--ion-color-danger);
+  text-align: center;
+  color: var(--ion-color-danger);
+}
+
+.heart-rate-tooltip strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.heart-rate-tooltip small {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(239, 68, 68, 0.8);
+  margin-top: 0.25rem;
 }
 
 .consistency-grid {
