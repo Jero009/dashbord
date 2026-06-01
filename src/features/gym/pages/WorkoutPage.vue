@@ -388,7 +388,7 @@
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter,onIonViewDidEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
 import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
 import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline } from 'ionicons/icons';
@@ -414,19 +414,21 @@ const loadWorkout = async () => {
 
   const data = await getWorkoutExercises(workoutId);
 
-  for (const ex of data) {
-      const sets = await getWorkoutSets(ex.id);
-      const previousSets = await getLatestCompletedSetsForExercise(ex.exercise_id, workoutId);
-      const previousSetByNumber = new Map<number, any>(
-        previousSets.map((row: any) => [Number(row.set_number), row])
-      );
+  const [setsArray, previousSetsArray] = await Promise.all([
+    Promise.all(data.map((ex: any) => getWorkoutSets(ex.id))),
+    Promise.all(data.map((ex: any) => getLatestCompletedSetsForExercise(ex.exercise_id, workoutId))),
+  ]);
 
-      ex.sets = sets.map((s: any) => ({
-        ...s,
-        completed: !!s.completed,
-        previous_weight: Number(previousSetByNumber.get(Number(s.set_number))?.weight) || 0,
-        previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0
-      }));
+  for (let i = 0; i < data.length; i++) {
+    const previousSetByNumber = new Map<number, any>(
+      previousSetsArray[i].map((row: any) => [Number(row.set_number), row])
+    );
+    data[i].sets = setsArray[i].map((s: any) => ({
+      ...s,
+      completed: !!s.completed,
+      previous_weight: Number(previousSetByNumber.get(Number(s.set_number))?.weight) || 0,
+      previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0,
+    }));
   }
 
   workoutExercises.value = data;
@@ -831,11 +833,6 @@ onIonViewWillEnter(async () => {
   await loadWorkout();
   startTimer();
   restoreTimerState();
-});
-
-onIonViewDidEnter(async () => {
-  // Reload workout data when returning from ExercisePicker
-  await loadWorkout();
 });
 
 onUnmounted(() => {

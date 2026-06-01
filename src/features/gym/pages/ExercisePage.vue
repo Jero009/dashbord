@@ -257,9 +257,9 @@
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonIcon, IonButtons, IonModal, IonInput, onIonViewWillEnter,
    IonRefresher, IonRefresherContent, RefresherCustomEvent, alertController, IonSelect, IonSelectOption } from '@ionic/vue';
 import { add} from 'ionicons/icons'
-import { ref,onMounted,computed  } from 'vue';
+import { ref, computed } from 'vue';
 import type { Exercise, MuscleGroup, Equipment } from '@/features/gym/types/models';
-import { addExercise, getExercises,renameExercise,getMuscleGroups, getEquipment, getExercisePR } from '@/shared/db/app_db';
+import { addExercise, getExercises,renameExercise,getMuscleGroups, getEquipment, getAllExercisePRs } from '@/shared/db/app_db';
 import { useRouter } from 'vue-router';
 
 //creqating exercise modal
@@ -297,14 +297,11 @@ const confirm = async () => {
 };
 
 
-// Load PRs for all exercises
 const loadExercisePRs = async () => {
+  const allPRs = await getAllExercisePRs();
   const prMap: Record<number, any> = {};
-  for (const ex of exercises.value) {
-    const pr = await getExercisePR(ex.id);
-    if (pr) {
-      prMap[ex.id] = pr;
-    }
+  for (const pr of allPRs) {
+    prMap[pr.exercise_id] = pr;
   }
   exercisePRs.value = prMap;
 };
@@ -391,17 +388,10 @@ const handleRefresh = async (event: RefresherCustomEvent) => {
 };
 
 
-onMounted(() => {
-    LoadExercises()
-    getMuscleGroups().then(data => muscleGroups.value = data);
-    getEquipment().then(data => equipmentList.value = data);
-});
-
 onIonViewWillEnter(() => {
-    LoadExercises()
-    getMuscleGroups().then(data => muscleGroups.value = data);
-    getEquipment().then(data => equipmentList.value = data);
-
+  LoadExercises();
+  getMuscleGroups().then(data => muscleGroups.value = data);
+  getEquipment().then(data => equipmentList.value = data);
 });
 
 

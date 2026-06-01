@@ -17,6 +17,7 @@ const EXPORT_DELETE_TABLES = [
   'equipment',
   'health_metric',
   'readiness_score',
+  'sleep_session',
   'habit_log',
   'habit',
   'goal',
@@ -39,6 +40,7 @@ const EXPORT_INSERT_TABLES = [
   'exercise_pr',
   'health_metric',
   'readiness_score',
+  'sleep_session',
   'habit',
   'habit_log',
   'goal',
@@ -681,7 +683,28 @@ export async function initDB() {
         AND id_workout_template IS NOT NULL;
     `);
 
-    console.log("✅ Tables created");
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sleep_session (
+        date TEXT PRIMARY KEY,
+        bedtime TEXT NOT NULL,
+        waketime TEXT NOT NULL,
+        time_asleep_hours REAL NOT NULL,
+        time_in_bed_hours REAL NOT NULL,
+        efficiency REAL NOT NULL,
+        score INTEGER NOT NULL,
+        sleep_hr REAL,
+        respiratory_rate REAL,
+        stage_deep_min INTEGER DEFAULT 0,
+        stage_light_min INTEGER DEFAULT 0,
+        stage_rem_min INTEGER DEFAULT 0,
+        stage_awake_min INTEGER DEFAULT 0,
+        stage_asleep_min INTEGER DEFAULT 0,
+        hr_timeline_json TEXT,
+        stage_timeline_json TEXT,
+        source TEXT DEFAULT 'health-connect',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
     return db;
   } catch (error) {
@@ -1299,8 +1322,6 @@ export async function editTemplateExercises(
     [setNumber, repNumber, orderIndex, rowId]
   );
 
-  console.log("Rows affected:", result.changes);
-
   return result;
 }
 
@@ -1451,6 +1472,84 @@ export async function getLatestReadinessScore() {
     `SELECT * FROM readiness_score ORDER BY date DESC LIMIT 1;`
   );
   return result.values?.[0] || null;
+}
+
+// ============ SLEEP SESSIONS ============
+
+export interface SleepSessionRecord {
+  date: string;
+  bedtime: string;
+  waketime: string;
+  time_asleep_hours: number;
+  time_in_bed_hours: number;
+  efficiency: number;        // 0–1
+  score: number;             // 0–100
+  sleep_hr: number | null;
+  respiratory_rate: number | null;
+  stage_deep_min: number;
+  stage_light_min: number;
+  stage_rem_min: number;
+  stage_awake_min: number;
+  stage_asleep_min: number;
+  hr_timeline_json: string | null;   // JSON: [{t,v,o}]
+  stage_timeline_json: string | null; // JSON: [{s,start,end,dur}]
+  source: string;
+}
+
+export async function upsertSleepSession(record: Omit<SleepSessionRecord, 'source'> & { source?: string }) {
+  if (!db) return;
+  try {
+    await db.run(
+      `INSERT INTO sleep_session
+         (date, bedtime, waketime, time_asleep_hours, time_in_bed_hours, efficiency, score,
+          sleep_hr, respiratory_rate, stage_deep_min, stage_light_min, stage_rem_min,
+          stage_awake_min, stage_asleep_min, hr_timeline_json, stage_timeline_json, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET
+         bedtime = excluded.bedtime, waketime = excluded.waketime,
+         time_asleep_hours = excluded.time_asleep_hours, time_in_bed_hours = excluded.time_in_bed_hours,
+         efficiency = excluded.efficiency, score = excluded.score,
+         sleep_hr = excluded.sleep_hr, respiratory_rate = excluded.respiratory_rate,
+         stage_deep_min = excluded.stage_deep_min, stage_light_min = excluded.stage_light_min,
+         stage_rem_min = excluded.stage_rem_min, stage_awake_min = excluded.stage_awake_min,
+         stage_asleep_min = excluded.stage_asleep_min,
+         hr_timeline_json = excluded.hr_timeline_json,
+         stage_timeline_json = excluded.stage_timeline_json,
+         source = excluded.source;`,
+      [
+        record.date, record.bedtime, record.waketime,
+        record.time_asleep_hours, record.time_in_bed_hours,
+        record.efficiency, record.score,
+        record.sleep_hr ?? null, record.respiratory_rate ?? null,
+        record.stage_deep_min ?? 0, record.stage_light_min ?? 0,
+        record.stage_rem_min ?? 0, record.stage_awake_min ?? 0,
+        record.stage_asleep_min ?? 0,
+        record.hr_timeline_json ?? null, record.stage_timeline_json ?? null,
+        record.source ?? 'health-connect',
+      ]
+    );
+  } catch (error) {
+    console.error('Error upserting sleep session:', error);
+    throw error;
+  }
+}
+
+export async function getLatestSleepSession(): Promise<SleepSessionRecord | null> {
+  if (!db) return null;
+  const result = await db.query(`SELECT * FROM sleep_session ORDER BY date DESC LIMIT 1;`);
+  return (result.values?.[0] as SleepSessionRecord) ?? null;
+}
+
+export async function getSleepSession(date: string): Promise<SleepSessionRecord | null> {
+  if (!db) return null;
+  const result = await db.query(`SELECT * FROM sleep_session WHERE date = ? LIMIT 1;`, [date]);
+  return (result.values?.[0] as SleepSessionRecord) ?? null;
+}
+
+export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRecord[]> {
+  if (!db) return [];
+  const result = await db.query(`SELECT * FROM sleep_session ORDER BY date DESC LIMIT ?;`, [limit]);
+  return (result.values ?? []) as SleepSessionRecord[];
 }
 
 export async function addHabit(name: string, frequency: string, target: number) {

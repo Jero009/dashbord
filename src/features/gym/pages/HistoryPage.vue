@@ -176,7 +176,7 @@ ion-content.home-content {
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonCard,IonCardHeader,IonCardContent,IonCardSubtitle,IonCardTitle,IonList,IonItem, 
 IonRefresher, IonRefresherContent, RefresherCustomEvent, onIonViewWillEnter, IonButton, alertController, toastController, IonButtons, IonIcon } from '@ionic/vue';
 import { getWorkouts,getWorkoutHistoryExercises, cancelWorkout, exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
-import { onMounted ,ref} from 'vue';
+import { ref } from 'vue';
 import type { WorkoutHistory, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { cloudUploadOutline, downloadOutline } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
@@ -200,17 +200,16 @@ const showToast = async (message: string, color: string = 'danger', duration: nu
   await toast.present();
 };
 
-const LoadHistory = async () =>{
+const LoadHistory = async () => {
   const data = await getWorkouts();
-
-  for (const workout of data) {
-    workout.exercises = await getWorkoutHistoryExercises(workout.id);
-
-    // workout duration is already formatted in the template
+  const exercisesPerWorkout = await Promise.all(
+    data.map((workout: any) => getWorkoutHistoryExercises(workout.id))
+  );
+  for (let i = 0; i < data.length; i++) {
+    data[i].exercises = exercisesPerWorkout[i];
   }
-
   workouts.value = data;
-}
+};
 //time calculation
 const toTimestamp = (value: unknown): number => {
   if (value === null || value === undefined) return NaN;
@@ -426,13 +425,8 @@ const handleImportFile = async (event: Event) => {
 };
 
 
-  onMounted(() => {
-    LoadHistory()
-  });
-
   onIonViewWillEnter(() => {
-    LoadHistory()
-
-});
+    LoadHistory();
+  });
 
 </script>

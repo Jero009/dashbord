@@ -13,6 +13,15 @@
             <ion-card-subtitle>{{ sleepSubtitle }}</ion-card-subtitle>
           </ion-card-header>
           <ion-card-content>
+            <div class="date-nav" v-if="sessionDates.length">
+              <ion-button fill="clear" class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1">
+                <ion-icon :icon="chevronBackOutline"></ion-icon>
+              </ion-button>
+              <span class="date-nav__label">{{ selectedDateLabel }}</span>
+              <ion-button fill="clear" class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0">
+                <ion-icon :icon="chevronForwardOutline"></ion-icon>
+              </ion-button>
+            </div>
             <div class="sleep-ring" :style="{ '--score': sleepScoreRatio }">
               <svg viewBox="0 0 120 120" class="sleep-ring__svg" aria-hidden="true">
                 <circle class="sleep-ring__track" cx="60" cy="60" r="46"></circle>
@@ -219,43 +228,128 @@ import {
   IonCardTitle,
   IonContent,
   IonHeader,
+  IonIcon,
   IonPage,
   toastController,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
-import type { SleepStageTimeline, SleepSummary } from '@/shared/health/healthConnect';
-import { getLatestSleepSummary, requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
-import { getRecentHealthMetrics } from '@/shared/db/app_db';
+import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepSummary } from '@/shared/health/healthConnect';
+import { requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
+import { getSleepSession, getRecentSleepSessions } from '@/shared/db/app_db';
+import type { SleepSessionRecord } from '@/shared/db/app_db';
 
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
-const selectedHeartRatePoint = ref<{ time: string; value: number } | null>(null);
+const selectedHeartRatePoint = ref<{ time: string; value: number; offset: number } | null>(null);
 const selectedScorePoint = ref<{ date: string; score: number } | null>(null);
+const sessionDates = ref<string[]>([]);
+const selectedDate = ref<string | null>(null);
+
+function clampVal(val: number, min: number, max: number) { return Math.min(max, Math.max(min, val)); }
+
+function sessionToSummary(record: SleepSessionRecord): SleepSummary {
+  const bedMs = new Date(record.bedtime).getTime();
+  const wakeMs = new Date(record.waketime).getTime();
+  const span = Math.max(1, wakeMs - bedMs);
+  const spanMin = span / 60000;
+
+  const rawStages: Array<{ s: string; start: string; end: string; dur: number }> =
+    record.stage_timeline_json ? JSON.parse(record.stage_timeline_json) : [];
+  const timeline: SleepStageTimeline[] = rawStages
+    .map((rs) => {
+      const startMs = new Date(rs.start).getTime();
+      const offset = clampVal(((startMs - bedMs) / span) * 100, 0, 100);
+      const width = clampVal(Math.min((rs.dur / spanMin) * 100, 100 - offset), 0, 100);
+      return { stage: rs.s, startDate: rs.start, endDate: rs.end, minutes: rs.dur, offset, width };
+    })
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+  const rawHr: Array<{ t: string; v: number; o: number }> =
+    record.hr_timeline_json ? JSON.parse(record.hr_timeline_json) : [];
+  const heartRateTimeline: SleepHeartRatePoint[] = rawHr
+    .filter((p) => Number.isFinite(p.v))
+    .map((p) => ({ time: p.t, value: p.v, offset: p.o }));
+
+  const stageMap: Record<string, number> = {
+    deep: record.stage_deep_min,
+    light: record.stage_light_min,
+    rem: record.stage_rem_min,
+    awake: record.stage_awake_min,
+    asleep: record.stage_asleep_min,
+  };
+  const totalStageMin = Object.values(stageMap).reduce((s, m) => s + m, 0);
+  const stages: SleepStageSummary[] = Object.entries(stageMap)
+    .filter(([, m]) => m > 0)
+    .map(([stage, minutes]) => ({ stage, minutes, share: totalStageMin > 0 ? minutes / totalStageMin : 0 }))
+    .sort((a, b) => b.minutes - a.minutes);
+
+  return {
+    score: record.score,
+    timeAsleepHours: record.time_asleep_hours,
+    timeInBedHours: record.time_in_bed_hours,
+    efficiency: record.efficiency,
+    wentToSleepAt: record.bedtime,
+    wokeUpAt: record.waketime,
+    sleepHeartRate: record.sleep_hr,
+    respiratoryRate: record.respiratory_rate,
+    stages,
+    timeline,
+    heartRateTimeline,
+  };
+}
 
 const loadSleep = async () => {
-  const result = await getLatestSleepSummary();
-  summary.value = result.summary ?? null;
-
-  const [sleepRows, scoreRows, efficiencyRows] = await Promise.all([
-    getRecentHealthMetrics('sleep_duration', 14),
-    getRecentHealthMetrics('sleep_score', 14),
-    getRecentHealthMetrics('sleep_efficiency', 14),
-  ]);
-
-  const scoreByDate = new Map(scoreRows.map((row) => [row.date, Number(row.value)]));
-  const efficiencyByDate = new Map(efficiencyRows.map((row) => [row.date, Number(row.value)]));
-
-  sleepHistory.value = sleepRows.map((row) => ({
-    date: row.date,
-    value: Number(row.value),
-    score: scoreByDate.has(row.date) ? scoreByDate.get(row.date) ?? null : null,
-    efficiency: efficiencyByDate.has(row.date) ? efficiencyByDate.get(row.date) ?? null : null,
+  const sessions = await getRecentSleepSessions(30);
+  sessionDates.value = sessions.map((s) => s.date);
+  sleepHistory.value = sessions.map((s) => ({
+    date: s.date,
+    value: s.time_asleep_hours,
+    score: s.score,
+    efficiency: s.efficiency,
   }));
+
+  if (sessions.length === 0) {
+    summary.value = null;
+    return;
+  }
+
+  if (!selectedDate.value || !sessionDates.value.includes(selectedDate.value)) {
+    selectedDate.value = sessions[0].date;
+  }
+
+  const current = sessions.find((s) => s.date === selectedDate.value) ?? sessions[0];
+  summary.value = sessionToSummary(current);
 };
+
+const goToPrevDay = async () => {
+  const idx = sessionDates.value.indexOf(selectedDate.value ?? '');
+  if (idx < sessionDates.value.length - 1) {
+    selectedDate.value = sessionDates.value[idx + 1];
+    const record = await getSleepSession(selectedDate.value);
+    summary.value = record ? sessionToSummary(record) : null;
+    selectedHeartRatePoint.value = null;
+  }
+};
+
+const goToNextDay = async () => {
+  const idx = sessionDates.value.indexOf(selectedDate.value ?? '');
+  if (idx > 0) {
+    selectedDate.value = sessionDates.value[idx - 1];
+    const record = await getSleepSession(selectedDate.value);
+    summary.value = record ? sessionToSummary(record) : null;
+    selectedHeartRatePoint.value = null;
+  }
+};
+
+const selectedDateLabel = computed(() => {
+  if (!selectedDate.value) return '—';
+  return new Date(`${selectedDate.value}T00:00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+});
 
 const handleSync = async () => {
   syncing.value = true;
@@ -282,11 +376,12 @@ const handleSync = async () => {
       return;
     }
 
-    await syncHealthConnectMetrics();
+    const result = await syncHealthConnectMetrics();
+    selectedDate.value = null; // reset to latest after sync
     await loadSleep();
 
     const toast = await toastController.create({
-      message: 'Sleep data synced.',
+      message: `Synced ${result.synced} health records.`,
       duration: 2000,
       color: 'success',
     });
@@ -814,6 +909,28 @@ onIonViewWillEnter(async () => {
 .empty-state {
   margin: 0;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.date-nav__label {
+  min-width: 140px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.04em;
+}
+
+.date-nav__btn {
+  --color: rgba(255, 255, 255, 0.7);
+  --padding-start: 4px;
+  --padding-end: 4px;
 }
 
 @media (min-width: 760px) {

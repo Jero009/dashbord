@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type AuthorizationStatus, type HealthSample } from '@capgo/capacitor-health';
-import { replaceHealthMetric, upsertReadinessScore } from '@/shared/db/app_db';
+import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession } from '@/shared/db/app_db';
 
 export type HealthMetricType =
   | 'steps'
@@ -546,13 +546,14 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     sleepByDate.set(key, bucket);
   }
 
-  const heartRateByDate = new Map<string, { values: number[] }>();
+  const heartRateByDate = new Map<string, { values: number[]; samples: HealthSample[] }>();
   for (const sample of heartRateResult.samples) {
     if (!Number.isFinite(sample.value)) continue;
 
     const key = toDateKey(sample.startDate || sample.endDate);
-    const bucket = heartRateByDate.get(key) ?? { values: [] };
+    const bucket = heartRateByDate.get(key) ?? { values: [], samples: [] };
     bucket.values.push(sample.value);
+    bucket.samples.push(sample);
     heartRateByDate.set(key, bucket);
   }
 
@@ -579,52 +580,118 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   let synced = 0;
 
   for (const [date, steps] of stepsByDate.entries()) {
-    await replaceHealthMetric(date, 'steps', Math.round(steps), 'count', HEALTH_CONNECT_SOURCE);
-    synced += 1;
+    try {
+      await replaceHealthMetric(date, 'steps', Math.round(steps), 'count', HEALTH_CONNECT_SOURCE);
+      synced += 1;
+    } catch (e) {
+      console.error(`[healthConnect] Steps sync failed for ${date}:`, e);
+    }
   }
 
   for (const [date, bucket] of sleepByDate.entries()) {
     const latestSample = bucket.samples[bucket.samples.length - 1];
     if (!latestSample) continue;
 
-    const sleepHeartRate = average(heartRateByDate.get(date)?.values ?? []);
+    const hrBucket = heartRateByDate.get(date);
+    const sleepHeartRate = average(hrBucket?.values ?? []);
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
     const sleepSummary = buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate);
 
-    await replaceHealthMetric(date, 'sleep_duration', Number(sleepSummary.timeAsleepHours.toFixed(2)), 'hours', HEALTH_CONNECT_SOURCE);
-    synced += 1;
-    await replaceHealthMetric(date, 'sleep_time_in_bed', Number(sleepSummary.timeInBedHours.toFixed(2)), 'hours', HEALTH_CONNECT_SOURCE);
-    synced += 1;
-    await replaceHealthMetric(date, 'sleep_efficiency', Number((sleepSummary.efficiency * 100).toFixed(0)), 'percent', HEALTH_CONNECT_SOURCE);
-    synced += 1;
-    await replaceHealthMetric(date, 'sleep_score', sleepSummary.score, 'score', HEALTH_CONNECT_SOURCE);
-    synced += 1;
-
-    for (const stage of sleepSummary.stages) {
-      await replaceHealthMetric(date, `sleep_stage_${stage.stage}`, Number(stage.minutes.toFixed(0)), 'minutes', HEALTH_CONNECT_SOURCE);
+    try {
+      await replaceHealthMetric(date, 'sleep_duration', Number(sleepSummary.timeAsleepHours.toFixed(2)), 'hours', HEALTH_CONNECT_SOURCE);
       synced += 1;
-    }
-
-    if (sleepHeartRate !== null) {
-      await replaceHealthMetric(date, 'sleep_heart_rate', Math.round(sleepHeartRate), 'bpm', HEALTH_CONNECT_SOURCE);
+      await replaceHealthMetric(date, 'sleep_time_in_bed', Number(sleepSummary.timeInBedHours.toFixed(2)), 'hours', HEALTH_CONNECT_SOURCE);
       synced += 1;
+      await replaceHealthMetric(date, 'sleep_efficiency', Number((sleepSummary.efficiency * 100).toFixed(0)), 'percent', HEALTH_CONNECT_SOURCE);
+      synced += 1;
+      await replaceHealthMetric(date, 'sleep_score', sleepSummary.score, 'score', HEALTH_CONNECT_SOURCE);
+      synced += 1;
+
+      for (const stage of sleepSummary.stages) {
+        await replaceHealthMetric(date, `sleep_stage_${stage.stage}`, Number(stage.minutes.toFixed(0)), 'minutes', HEALTH_CONNECT_SOURCE);
+        synced += 1;
+      }
+
+      if (sleepHeartRate !== null) {
+        await replaceHealthMetric(date, 'sleep_heart_rate', Math.round(sleepHeartRate), 'bpm', HEALTH_CONNECT_SOURCE);
+        synced += 1;
+      }
+
+      // Build compact HR timeline for session storage
+      const windowStart = new Date(latestSample.startDate).getTime();
+      const windowEnd = new Date(latestSample.endDate).getTime();
+      const windowSpan = Math.max(1, windowEnd - windowStart);
+      const hrTimelineJson = hrBucket?.samples.length
+        ? JSON.stringify(
+            hrBucket.samples
+              .filter((s) => Number.isFinite(s.value))
+              .map((s) => ({
+                t: s.startDate,
+                v: Math.round(s.value),
+                o: Math.round(clamp(((new Date(s.startDate).getTime() - windowStart) / windowSpan) * 100, 0, 100)),
+              }))
+              .sort((a, b) => a.t.localeCompare(b.t))
+          )
+        : null;
+
+      const rawStages = latestSample.stages ?? [];
+      const stageTimelineJson = rawStages.length
+        ? JSON.stringify(
+            rawStages.map((s) => ({
+              s: s.stage,
+              start: s.startDate,
+              end: s.endDate,
+              dur: s.durationMinutes,
+            }))
+          )
+        : null;
+
+      const stageMin = (name: string) =>
+        rawStages.filter((s) => s.stage === name).reduce((sum, s) => sum + s.durationMinutes, 0);
+
+      await upsertSleepSession({
+        date,
+        bedtime: latestSample.startDate,
+        waketime: latestSample.endDate,
+        time_asleep_hours: Number(sleepSummary.timeAsleepHours.toFixed(3)),
+        time_in_bed_hours: Number(sleepSummary.timeInBedHours.toFixed(3)),
+        efficiency: sleepSummary.efficiency,
+        score: sleepSummary.score,
+        sleep_hr: sleepHeartRate !== null ? Math.round(sleepHeartRate) : null,
+        respiratory_rate: respiratoryRate !== null ? Number(respiratoryRate.toFixed(1)) : null,
+        stage_deep_min: stageMin('deep'),
+        stage_light_min: stageMin('light'),
+        stage_rem_min: stageMin('rem'),
+        stage_awake_min: stageMin('awake'),
+        stage_asleep_min: stageMin('asleep'),
+        hr_timeline_json: hrTimelineJson,
+        stage_timeline_json: stageTimelineJson,
+      });
+    } catch (e) {
+      console.error(`[healthConnect] Sleep sync failed for ${date}:`, e);
     }
   }
 
   for (const [date, bucket] of restingHeartRateByDate.entries()) {
     const restingHr = average(bucket.values);
     if (restingHr === null) continue;
-
-    await replaceHealthMetric(date, 'resting_heart_rate', Math.round(restingHr), 'bpm', HEALTH_CONNECT_SOURCE);
-    synced += 1;
+    try {
+      await replaceHealthMetric(date, 'resting_heart_rate', Math.round(restingHr), 'bpm', HEALTH_CONNECT_SOURCE);
+      synced += 1;
+    } catch (e) {
+      console.error(`[healthConnect] Resting HR sync failed for ${date}:`, e);
+    }
   }
 
   for (const [date, bucket] of respiratoryRateByDate.entries()) {
     const respiratoryRate = average(bucket.values);
     if (respiratoryRate === null) continue;
-
-    await replaceHealthMetric(date, 'respiratory_rate', Number(respiratoryRate.toFixed(1)), 'rpm', HEALTH_CONNECT_SOURCE);
-    synced += 1;
+    try {
+      await replaceHealthMetric(date, 'respiratory_rate', Number(respiratoryRate.toFixed(1)), 'rpm', HEALTH_CONNECT_SOURCE);
+      synced += 1;
+    } catch (e) {
+      console.error(`[healthConnect] Respiratory rate sync failed for ${date}:`, e);
+    }
   }
 
   const readinessDates = new Set([...sleepByDate.keys(), ...restingHeartRateByDate.keys()]);
