@@ -1,13 +1,18 @@
-# Graph Report - .  (2026-06-01)
+# Graph Report - dashbord  (2026-06-02)
 
 ## Corpus Check
-- 219 files · ~190,702 words
+- 160 files · ~197,422 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4767 nodes · 11083 edges · 229 communities (166 shown, 63 thin omitted)
-- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 536 edges (avg confidence: 0.82)
-- Token cost: 18,905 input · 7,440 output
+- 4851 nodes · 11016 edges · 241 communities (183 shown, 58 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 518 edges (avg confidence: 0.82)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `e7bac8e2`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Ionic Stencil Runtime A|Ionic Stencil Runtime A]]
@@ -106,6 +111,7 @@
 - [[_COMMUNITY_Health Connect Web Plugin|Health Connect Web Plugin]]
 - [[_COMMUNITY_Ionic Reorder Group|Ionic Reorder Group]]
 - [[_COMMUNITY_Ionic Infinite Scroll|Ionic Infinite Scroll]]
+- [[_COMMUNITY_Health Connect Legacy Plugin|Health Connect Legacy Plugin]]
 - [[_COMMUNITY_Ionic Virtual Scroll|Ionic Virtual Scroll]]
 - [[_COMMUNITY_Health Habits Page|Health Habits Page]]
 - [[_COMMUNITY_Ionic ActionSheet|Ionic ActionSheet]]
@@ -123,7 +129,7 @@
 - [[_COMMUNITY_Ionic Media Player|Ionic Media Player]]
 - [[_COMMUNITY_Vue App Entry|Vue App Entry]]
 - [[_COMMUNITY_Vite Build Config|Vite Build Config]]
-- [[_COMMUNITY_Time Format Utilities|Time Format Utilities]]
+- [[_COMMUNITY_Ionic Logger|Ionic Logger]]
 - [[_COMMUNITY_Android Manifest|Android Manifest]]
 - [[_COMMUNITY_Ionic Alert Dialog|Ionic Alert Dialog]]
 - [[_COMMUNITY_Ionic Picker|Ionic Picker]]
@@ -142,16 +148,25 @@
 - [[_COMMUNITY_Ionic Content Wrapper|Ionic Content Wrapper]]
 - [[_COMMUNITY_E2E Tests|E2E Tests]]
 - [[_COMMUNITY_Ionic Page Component|Ionic Page Component]]
+- [[_COMMUNITY_Ionic Title Component|Ionic Title Component]]
 - [[_COMMUNITY_Ionic Button Component|Ionic Button Component]]
 - [[_COMMUNITY_Ionic Icon Component|Ionic Icon Component]]
+- [[_COMMUNITY_Ionic Menu Component|Ionic Menu Component]]
+- [[_COMMUNITY_Ionic Nav Component|Ionic Nav Component]]
+- [[_COMMUNITY_Chart.js Doughnut|Chart.js Doughnut]]
+- [[_COMMUNITY_Finance Accounts (Legacy)|Finance Accounts (Legacy)]]
+- [[_COMMUNITY_Finance Investments (Legacy)|Finance Investments (Legacy)]]
+- [[_COMMUNITY_Finance Page (Legacy)|Finance Page (Legacy)]]
+- [[_COMMUNITY_Finance Tabs (Legacy)|Finance Tabs (Legacy)]]
+- [[_COMMUNITY_Finance Subs (Legacy)|Finance Subs (Legacy)]]
+- [[_COMMUNITY_Health Calendar (Legacy)|Health Calendar (Legacy)]]
+- [[_COMMUNITY_Health Habits (Legacy)|Health Habits (Legacy)]]
 - [[_COMMUNITY_ExercisePicker (Legacy)|ExercisePicker (Legacy)]]
 - [[_COMMUNITY_TemplateEditor (Legacy)|TemplateEditor (Legacy)]]
 - [[_COMMUNITY_DashboardTopBar (Legacy)|DashboardTopBar (Legacy)]]
 - [[_COMMUNITY_ExerciseDetail (Legacy)|ExerciseDetail (Legacy)]]
 - [[_COMMUNITY_Finance Section Tabs|Finance Section Tabs]]
 - [[_COMMUNITY_Capacitor Share Plugin|Capacitor Share Plugin]]
-- [[_COMMUNITY_Workout Intensity Enum|Workout Intensity Enum]]
-- [[_COMMUNITY_Workout Notification Level|Workout Notification Level]]
 - [[_COMMUNITY_Ionic Haptics Plugin|Ionic Haptics Plugin]]
 - [[_COMMUNITY_Ionic Keyboard Plugin|Ionic Keyboard Plugin]]
 - [[_COMMUNITY_Ionic Filesystem Plugin|Ionic Filesystem Plugin]]
@@ -181,33 +196,34 @@
 - [[_COMMUNITY_Habit Log System|Habit Log System]]
 - [[_COMMUNITY_Calendar Events|Calendar Events]]
 - [[_COMMUNITY_Vue Unit Tests|Vue Unit Tests]]
+- [[_COMMUNITY_Community 229|Community 229]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `__()` - 1018 edges
-2. `$()` - 258 edges
-3. `_()` - 167 edges
-4. `st()` - 75 edges
-5. `render()` - 74 edges
-6. `ks` - 71 edges
-7. `Ft()` - 63 edges
+1. `$()` - 256 edges
+2. `_()` - 161 edges
+3. `st()` - 75 edges
+4. `render()` - 73 edges
+5. `ks` - 71 edges
+6. `Ft()` - 63 edges
+7. `push()` - 62 edges
 8. `en` - 61 edges
-9. `push()` - 61 edges
-10. `si()` - 60 edges
+9. `si()` - 60 edges
+10. `forEach()` - 59 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `gym (Ionic+Vue3 App)` --uses--> `Capacitor cross-platform framework`  [INFERRED]
+  package.json → capacitor.config.ts
 - `App Launcher Icon (Round)` --app_icon_for_gym_tracking_app--> `Table: workout (id, id_template/id_workout_template, name, time_start, time_end, total_kg)`  [INFERRED]
   android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png → database_visual structure/V1.png
 - `App Favicon (Ionic logo - blue circle with dot)` --frontend_icon_for_app_with_this_schema--> `Database Schema V1`  [INFERRED]
   public/favicon.png → database_visual structure/V1.png
-- `beforeDatasetDraw()` --calls--> `_n()`  [INFERRED]
-  android/app/src/main/assets/public/assets/chart-legacy-BNR7Eo3k.js → android/app/src/main/assets/public/assets/index-DwWxPv8g.js
-- `wa()` --calls--> `$a()`  [INFERRED]
-  android/app/src/main/assets/public/assets/chart-tOTN6xO8.js → android/app/src/main/assets/public/assets/index-DwWxPv8g.js
-- `MainActivity` --configured_with--> `MainActivity launchMode=singleTask`  [EXTRACTED]
-  /home/jero/ai/dashbord/android/app/src/main/java/io/ionic/starter/MainActivity.java → /home/jero/ai/dashbord/android/app/src/main/AndroidManifest.xml
+- `Template API Functions` --operates_on--> `workout_template`  [INFERRED]
+  docs/API.md → docs/DB_SCHEMA.md
+- `Workout API Functions` --operates_on--> `workout`  [INFERRED]
+  docs/API.md → docs/DB_SCHEMA.md
 
 ## Import Cycles
-- 1-file cycle: `/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CneGxKsZ-DfOOJCm3.js -> /home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CneGxKsZ-DfOOJCm3.js`
+- None detected.
 
 ## Hyperedges (group relationships)
 - **Health Connect sync pipeline writes to health_metric, sleep_session, and readiness_score tables via replaceHealthMetric, upsertSleepSession, and upsertReadinessScore** — health_sync_pipeline, db_fns_health_group, db_fns_sleep_group, db_fns_readiness_group [EXTRACTED 1.00]
@@ -217,87 +233,87 @@
 - **Four App Feature Modules (Home, Health, Finance, Gym)** — docs_app_status_gym_feature, docs_app_status_health_feature, docs_app_status_home_feature, docs_app_status_finance_feature [EXTRACTED 1.00]
 - **Zenith Design System (Vision + Palette + Typography + Visualization)** — docs_design_core_vision, docs_design_visual_principles, docs_design_monochrome_palette, docs_design_typography, docs_design_hardware_visualization, docs_design_interaction_logic [EXTRACTED 1.00]
 
-## Communities (229 total, 63 thin omitted)
+## Communities (241 total, 58 thin omitted)
 
 ### Community 0 - "Ionic Stencil Runtime A"
 Cohesion: 0.01
-Nodes (143): __(), _0, _6, addIO(), __attachShadow(), Bc(), Bl(), c5() (+135 more)
+Nodes (122): a1(), addIO(), b2(), bp(), buttonClick(), callButtonHandler(), canGoBack(), canGoBackSync() (+114 more)
 
 ### Community 1 - "Ionic Stencil Runtime B"
 Cohesion: 0.01
-Nodes (100): Cu(), fm, rl(), ru(), su, tu, Xu(), xx (+92 more)
+Nodes (77): oh(), vm(), Xu, Zu(), aa(), addIO(), available(), buttonChanged() (+69 more)
 
 ### Community 2 - "Ionic Stencil Runtime C"
-Cohesion: 0.03
-Nodes (104): An(), ax(), b0(), Ba(), be(), bh(), bi(), bm() (+96 more)
+Cohesion: 0.04
+Nodes (79): Ae(), af(), As(), bm(), bx(), ci(), cl(), cm (+71 more)
 
 ### Community 3 - "Chart.js Modern Core"
 Cohesion: 0.03
-Nodes (96): ao(), ar(), as, at(), be(), bo(), br(), bs (+88 more)
+Nodes (105): ao(), ar(), as, be(), bo(), bs, ca(), Ce() (+97 more)
 
 ### Community 4 - "Chart.js Legacy Core"
 Cohesion: 0.03
-Nodes (71): _(), a(), ae(), b(), be(), beforeDatasetDraw(), bi(), bt() (+63 more)
+Nodes (64): _(), a(), ae(), b(), be(), bt(), C(), color() (+56 more)
 
 ### Community 5 - "Ionic Stencil Internals"
 Cohesion: 0.04
-Nodes (79): bd(), bo, bu(), ef(), fu(), hd(), Rr(), ub (+71 more)
+Nodes (53): at(), be(), by(), co(), Ct(), de, Dt(), _e() (+45 more)
 
 ### Community 6 - "Chart.js Dataset Rendering"
 Cohesion: 0.05
-Nodes (13): ae(), Bt, cr(), ds(), fa(), hr(), ir(), jn() (+5 more)
+Nodes (12): Bt, cr(), ds(), hr(), ir(), jn(), Oe(), P() (+4 more)
 
 ### Community 7 - "Finance Pages Bundle"
-Cohesion: 0.06
-Nodes (73): y, aa, G, J, M, z, G, J (+65 more)
+Cohesion: 0.04
+Nodes (82): gp(), Hg(), op(), wf, xv, xx, yf, applyFullscreenSafeArea() (+74 more)
 
 ### Community 8 - "Ionic Router & Navigation"
-Cohesion: 0.04
-Nodes (78): bf(), ff, Ld(), ll(), md(), ng(), Pd(), qb (+70 more)
+Cohesion: 0.05
+Nodes (73): ag(), am, bf(), d5(), eu, ff, ll(), ng() (+65 more)
 
 ### Community 9 - "Chart.js Legacy Scale Axes"
-Cohesion: 0.06
-Nodes (9): gs(), H(), jn, ks, ms(), mt(), vs(), ys() (+1 more)
+Cohesion: 0.05
+Nodes (17): ce(), g(), gs(), H(), j(), K(), ks, ms() (+9 more)
 
 ### Community 10 - "Chart.js Legacy Controller"
 Cohesion: 0.06
-Nodes (8): gi(), Is(), mi(), oi(), si(), wi(), xe(), xi()
+Nodes (7): Is(), mi(), oi(), si(), wi(), xe(), xi()
 
 ### Community 11 - "Vue 3 Reactivity System"
 Cohesion: 0.04
-Nodes (38): wk(), be(), Ct(), de, Dn(), _e(), Et(), fe() (+30 more)
+Nodes (50): hx, __asyncHydrate(), checkConnectionsConsistency(), ci(), cr(), cy(), di(), dr() (+42 more)
 
 ### Community 12 - "Chart.js Modern Scale Axes"
-Cohesion: 0.06
-Nodes (3): Mr, st(), ut()
+Cohesion: 0.05
+Nodes (8): _a(), at(), br(), st(), ut(), vr(), wr(), xs()
 
 ### Community 13 - "Ionic DOM & Shadow DOM"
 Cohesion: 0.04
-Nodes (72): gp(), Hg(), mh(), mp, nf(), Op(), pp, rf() (+64 more)
+Nodes (64): gd(), rl(), activatedChanged(), Ai(), an(), Ca(), cg(), childrenStyle() (+56 more)
 
 ### Community 14 - "Chart.js Modern Lifecycle"
-Cohesion: 0.06
-Nodes (12): afterDatasetsUpdate(), ba(), beforeDatasetsDraw(), cs(), Ft(), index(), kn, N() (+4 more)
-
-### Community 15 - "Ionic Stencil Hydration"
-Cohesion: 0.04
-Nodes (54): fl(), hx, qx, __asyncHydrate(), Ba(), checkConnectionsConsistency(), ci(), cr() (+46 more)
+Cohesion: 0.05
+Nodes (12): afterDatasetsUpdate(), ba(), Ft(), ha(), kn, Mr, N(), Ne() (+4 more)
 
 ### Community 16 - "Vue Router Navigation"
-Cohesion: 0.04
-Nodes (64): Do(), activatedChanged(), an(), at(), beforeMount(), beforeUnmount(), beforeUpdate(), bn() (+56 more)
+Cohesion: 0.07
+Nodes (38): addUpgradeStatement(), beginTransaction(), checkConnectionsConsistency(), close(), closeConnection(), commitTransaction(), copyFromAssets(), createConnection() (+30 more)
 
 ### Community 17 - "Chart.js Legacy Drawing"
-Cohesion: 0.06
-Nodes (10): afterDatasetsUpdate(), beforeDatasetsDraw(), ee(), en, Es(), fs, ie(), on() (+2 more)
+Cohesion: 0.05
+Nodes (9): afterDatasetsUpdate(), beforeDatasetsDraw(), en, Es(), fs, gi(), qs(), Ve() (+1 more)
+
+### Community 18 - "SQLite Web Adapter (Modern)"
+Cohesion: 0.05
+Nodes (57): activatedChanged(), activeBarStartChanged(), Bn, cb(), checkClearOnEdit(), componentDidLoad(), componentWillLoad(), connectedCallback() (+49 more)
 
 ### Community 19 - "Ionic Scroll & Reorder"
 Cohesion: 0.05
-Nodes (57): aa(), autoscroll(), Bp(), Br(), complete(), completeReorder(), cr(), emitIonInput() (+49 more)
+Nodes (51): beforeDatasetDraw(), _3(), b3(), c3(), d3(), f3(), g3(), H_() (+43 more)
 
 ### Community 20 - "SQLite Web Adapter (Legacy)"
-Cohesion: 0.07
-Nodes (38): addUpgradeStatement(), beginTransaction(), checkConnectionsConsistency(), close(), closeConnection(), commitTransaction(), copyFromAssets(), createConnection() (+30 more)
+Cohesion: 0.05
+Nodes (52): gm(), rh(), vd(), changeActive(), commit(), cw(), destroyView(), dw() (+44 more)
 
 ### Community 21 - "DB Layer: Workout CRUD"
 Cohesion: 0.04
@@ -305,67 +321,67 @@ Nodes (19): addExerciseToWorkout(), calculateOneRepMax(), endWorkout(), EXPORT_D
 
 ### Community 22 - "Ionic Navigation Stack"
 Cohesion: 0.05
-Nodes (58): jm(), rh(), vd, canGoBack(), canGoBackSync(), changeActive(), commit(), cw() (+50 more)
+Nodes (43): by(), Db(), Do(), e6(), Ep(), ew(), fm, Fn() (+35 more)
 
 ### Community 23 - "Ionic Event System"
 Cohesion: 0.05
-Nodes (31): cx(), Eb(), em, ev(), Fi(), g0(), g5(), Ge() (+23 more)
+Nodes (47): ab(), __attachShadow(), bk(), Bt(), constructor(), fd(), getHeaderSelectedDateText(), gk() (+39 more)
 
 ### Community 24 - "Ionic Core Primitives"
 Cohesion: 0.06
-Nodes (49): $a(), ac(), au(), _c(), Dc(), _f(), _h(), i5() (+41 more)
+Nodes (45): md(), _a(), afterAnimation(), beforeAnimation(), block(), capture(), checkCanDismiss(), cleanupChildRoutePassthrough() (+37 more)
 
 ### Community 25 - "Vuedraggable Drag & Drop"
-Cohesion: 0.06
-Nodes (35): A(), bn(), c(), cr(), d(), e(), eo(), f() (+27 more)
+Cohesion: 0.05
+Nodes (45): _5(), A6(), cd(), Da(), get(), ht(), insert(), insertPages() (+37 more)
 
 ### Community 26 - "Vue Legacy Compat Layer"
-Cohesion: 0.05
-Nodes (48): Ai(), cc(), checkClearOnEdit(), co(), concat(), defineProperty(), emitInputChange(), eo() (+40 more)
+Cohesion: 0.06
+Nodes (41): wa(), $, G, J, K, q, X, Z (+33 more)
 
 ### Community 27 - "DB Layer: Health & Sleep Sync"
 Cohesion: 0.08
-Nodes (44): addHealthMetric(), getLatestHealthMetric(), replaceHealthMetric(), upsertReadinessScore(), upsertSleepSession(), average(), buildSleepSummary(), buildSleepTimeline() (+36 more)
+Nodes (42): addHealthMetric(), replaceHealthMetric(), upsertReadinessScore(), upsertSleepSession(), ActivitySummary, applyReadinessDrain(), average(), BatteryDrains (+34 more)
 
 ### Community 28 - "Ionic Component Lifecycle"
-Cohesion: 0.07
-Nodes (43): _1(), b2(), b5(), b6(), c6(), d6(), ek, f2() (+35 more)
+Cohesion: 0.06
+Nodes (38): Ce, _e, Ee, fe, ge, Ie, me, pe (+30 more)
 
 ### Community 29 - "Project Dependencies"
 Cohesion: 0.04
 Nodes (46): dependencies, @capacitor/android, @capacitor/app, @capacitor-community/sqlite, @capacitor/core, @capacitor/filesystem, @capacitor/haptics, @capacitor/keyboard (+38 more)
 
 ### Community 30 - "Chart.js Modern Axis Scale"
-Cohesion: 0.07
-Nodes (15): Ai(), B(), ct(), Es(), Fi(), fs(), hs(), la() (+7 more)
+Cohesion: 0.09
+Nodes (15): B(), ct(), Es(), Fi(), fs(), hs(), Ht(), ia() (+7 more)
 
 ### Community 31 - "Chart.js Modern Dataset Ctrl"
-Cohesion: 0.06
-Nodes (10): ha(), Ne(), Oe(), oo(), P(), Re(), sa(), ta (+2 more)
+Cohesion: 0.09
+Nodes (5): oo(), Re(), sa(), ta, uo()
 
 ### Community 32 - "Ionic Animation & Gestures"
 Cohesion: 0.06
-Nodes (46): bk(), cn(), gk(), i1(), ik(), jk(), jt(), kb() (+38 more)
+Nodes (40): aa(), autoscroll(), bl(), complete(), completeReorder(), Dn, dp(), emitIonInput() (+32 more)
 
 ### Community 33 - "Chart.js Legacy Drawing Tools"
-Cohesion: 0.06
-Nodes (14): ai(), beforeDraw(), dn(), fn(), gt(), kn, ln(), mn() (+6 more)
+Cohesion: 0.07
+Nodes (13): ai(), Ci(), dataset(), fn(), gt(), index(), nearest(), pn (+5 more)
 
 ### Community 34 - "SQLite Capacitor Plugin"
 Cohesion: 0.06
-Nodes (18): AC, $C(), entries(), GC(), He(), jC(), MC(), NC() (+10 more)
+Nodes (30): b1(), bE(), Bi, bo, C0, c2, c6(), Ca() (+22 more)
 
 ### Community 35 - "Project Docs & API Reference"
-Cohesion: 0.06
-Nodes (45): AI Agent Context (AI_CONTEXT.md), Key Entry Points, Platform Constraints, Exercise API Functions, History and PR API Functions, Import/Export API Functions, Local Data API (app_db.ts), Template API Functions (+37 more)
+Cohesion: 0.51
+Nodes (11): Database Schema Documentation, equipment, exercise, exercise_pr, muscle_group, Tables, workout, workout_exercise (+3 more)
 
 ### Community 36 - "Ionic Web Legacy A"
-Cohesion: 0.07
-Nodes (42): activatedChanged(), activeBarStartChanged(), cb(), checkClearOnEdit(), componentDidLoad(), connectedCallback(), debounceChanged(), disabledChanged() (+34 more)
+Cohesion: 0.08
+Nodes (41): bu(), fu(), activate(), buttonClick(), buttonsChanged(), callButtonHandler(), callOptionHandler(), cbClick() (+33 more)
 
 ### Community 37 - "Ionic Web Legacy B"
-Cohesion: 0.05
-Nodes (32): b1(), bs(), C0, c2, cC(), cE(), ci, ck (+24 more)
+Cohesion: 0.06
+Nodes (36): aa, At, bt, ct, dt, Et, ft, gt (+28 more)
 
 ### Community 38 - "Gym & Finance Feature Pages"
 Cohesion: 0.08
@@ -376,40 +392,36 @@ Cohesion: 0.05
 Nodes (42): Android App build.gradle, Android capacitor.build.gradle (generated), Android top-level build.gradle, Android capacitor.settings.gradle (generated), capacitor-community-sqlite Android plugin, capawesome-capacitor-file-picker Android plugin, capgo-capacitor-health Android plugin, Android settings.gradle (+34 more)
 
 ### Community 40 - "Chart.js Axis Scale Modern"
-Cohesion: 0.05
-Nodes (40): _5(), A6(), cm, Da(), Ep, fg(), getActive(), getActiveSync() (+32 more)
-
-### Community 41 - "Sleep Page Bundle"
-Cohesion: 0.05
-Nodes (40): Co(), jS(), mr(), ys(), Ae, at, Be, ct (+32 more)
+Cohesion: 0.07
+Nodes (36): at(), calculateOffset(), calculatePosition(), calculatePull(), calculatePush(), calculateSize(), getColumns(), getHintTextID() (+28 more)
 
 ### Community 42 - "Finance DB & Section Tabs"
-Cohesion: 0.06
-Nodes (31): activeTab, route, router, activeSegment, route, router, addFinanceAccount(), addFinanceInvestment() (+23 more)
+Cohesion: 0.05
+Nodes (39): activeTab, route, router, activeSegment, route, router, addFinanceAccount(), addFinanceInvestment() (+31 more)
 
 ### Community 43 - "Chart.js Plugin Registry"
-Cohesion: 0.07
-Nodes (10): an(), bn(), Cn(), Di(), Ht(), numeric(), pi(), rn() (+2 more)
+Cohesion: 0.05
+Nodes (13): an(), bn(), Cn(), Di(), Ht(), jn, numeric(), pi() (+5 more)
 
 ### Community 44 - "Home Page & Workout History"
-Cohesion: 0.07
-Nodes (27): getActiveWorkout(), getLatestWorkout(), getTemplates(), getWorkouts(), getWorkoutsByName(), activeRestTimer, activeWorkout, chartData (+19 more)
+Cohesion: 0.05
+Nodes (42): getActiveWorkout(), getLatestWorkout(), getTemplates(), getWorkouts(), getWorkoutsByName(), activeRestTimer, activeWorkout, chartData (+34 more)
 
 ### Community 45 - "Ionic Web Components D"
 Cohesion: 0.08
-Nodes (36): Ce, _e, Ee, fe, ge, Ie, ke, me (+28 more)
+Nodes (26): Ip(), nh(), wk(), Yu(), __attachShadow(), backButtonIcon(), backButtonText(), constructor() (+18 more)
 
 ### Community 46 - "Chart.js Modern Tooltip"
-Cohesion: 0.06
-Nodes (34): _a(), ae, be, ce, de, _e, fe, ge (+26 more)
+Cohesion: 0.07
+Nodes (7): Fl, AC, dc(), Ml(), NC(), Wl(), zC()
 
 ### Community 47 - "Ionic Platform Utilities"
-Cohesion: 0.09
-Nodes (8): ea, go(), jo(), qo(), se(), tr(), yo(), zn()
+Cohesion: 0.07
+Nodes (13): dr(), ea, er(), jo(), Le, lr(), pr(), qo() (+5 more)
 
 ### Community 48 - "Chart.js Color Utilities"
 Cohesion: 0.07
-Nodes (36): du(), jd(), block(), capture(), checkCanDismiss(), cleanupChildRoutePassthrough(), cleanupParentRemovalObserver(), cleanupSafeAreaOverrides() (+28 more)
+Nodes (31): be, ce, de, _e, fe, ge, he, ie (+23 more)
 
 ### Community 49 - "Ionic Gesture System"
 Cohesion: 0.07
@@ -417,127 +429,139 @@ Nodes (6): Bs(), hi, js(), Rs(), ss(), ws()
 
 ### Community 50 - "Ionic Web Scroll"
 Cohesion: 0.07
-Nodes (36): bb(), buttonClick(), callButtonHandler(), Cp(), dismiss(), e1(), fb(), g1() (+28 more)
+Nodes (31): bd, i5(), iC(), pf(), ru(), t5(), xf, cancel() (+23 more)
 
 ### Community 51 - "Chart.js Animation Engine"
-Cohesion: 0.07
-Nodes (30): Bn, by(), c1(), d1(), ew(), fx(), fy(), gb() (+22 more)
+Cohesion: 0.06
+Nodes (31): at, bt, ct, dt, et, ft, Ge, gt (+23 more)
 
 ### Community 52 - "Ionic Select Component"
 Cohesion: 0.09
-Nodes (33): cl(), componentDidRender(), componentWillLoad(), dk(), Dt, dv, eo(), f3() (+25 more)
+Nodes (7): ae(), cs(), fa(), go(), oa(), ua, zn()
 
 ### Community 53 - "Vue 3 Template Compiler"
-Cohesion: 0.08
-Nodes (18): bi(), bn(), Et(), gn(), He(), J(), ke(), ln() (+10 more)
+Cohesion: 0.07
+Nodes (21): bi(), bn(), en(), Et(), fn(), gn(), hn(), J() (+13 more)
 
 ### Community 54 - "Chart.js Data Parsing"
+Cohesion: 0.08
+Nodes (30): afterAnimation(), beforeAnimation(), block(), close(), destroy(), destroyView(), failed(), fireError() (+22 more)
+
+### Community 55 - "Ionic Input Component"
 Cohesion: 0.07
-Nodes (33): afterAnimation(), beforeAnimation(), block(), close(), destroy(), destroyView(), disconnectedCallback(), enableScrollEvents() (+25 more)
+Nodes (28): be, Ce, De, _e, Ee, fe, ge, he (+20 more)
 
 ### Community 56 - "Sleep Page Source"
 Cohesion: 0.06
 Nodes (28): bedTimeClock, consistencyDisplay, consistencyScore, consistencyWindow, goodNightsCount, goodNightsDisplay, heartRateLinePoints, heartRatePoints (+20 more)
 
 ### Community 57 - "Ionic Toast & Alerts"
-Cohesion: 0.11
-Nodes (3): qn, wt(), yn()
+Cohesion: 0.08
+Nodes (23): _0, b0(), b6(), bh(), bs(), cC(), d0(), hm (+15 more)
 
 ### Community 58 - "Ionic Modal System"
-Cohesion: 0.07
-Nodes (30): bx(), Ct(), d5(), dl(), dr(), e3(), gv(), Hc() (+22 more)
+Cohesion: 0.08
+Nodes (26): bi(), yi(), _i(), ae, be, ce, de, _e (+18 more)
 
 ### Community 59 - "Cordova Shim Layer"
-Cohesion: 0.11
-Nodes (3): $e(), Pi(), tc()
+Cohesion: 0.06
+Nodes (9): aa(), Ai(), $e(), ec(), Gi, Oi(), Pi(), qa() (+1 more)
 
 ### Community 60 - "Chart.js Arc Element"
-Cohesion: 0.07
-Nodes (29): uu(), wd(), xf, xv, applyFullscreenSafeArea(), canStart(), canSwipe(), closeOpened() (+21 more)
+Cohesion: 0.19
+Nodes (4): E5(), g, m(), R()
 
 ### Community 61 - "Section Tab Components"
-Cohesion: 0.15
-Nodes (26): T, $, ae, U, X, Y, Z, w (+18 more)
+Cohesion: 0.07
+Nodes (60): k, y, $, ae, K, X, Y, Z (+52 more)
 
 ### Community 62 - "Home Page Bundle"
-Cohesion: 0.08
-Nodes (25): at, Be, dt, et, Fe, He, je, Ke (+17 more)
+Cohesion: 0.09
+Nodes (25): at, Be, Ee, et, Fe, He, je, Ke (+17 more)
 
 ### Community 63 - "Ionic Checkbox Component"
-Cohesion: 0.10
-Nodes (21): Ip(), nh(), Yu, __attachShadow(), backButtonIcon(), constructor(), En(), Fr() (+13 more)
+Cohesion: 0.09
+Nodes (13): em, g0(), Ha(), Hl(), Ia, Io, Kc, nm() (+5 more)
 
-### Community 65 - "Ionic Card Component"
+### Community 66 - "Ionic Refresher"
 Cohesion: 0.10
-Nodes (10): gd(), ol, x6(), childrenStyle(), itemStyle(), onAriaChanged(), onDirChanged(), onLangChanged() (+2 more)
+Nodes (26): beforeMount(), beforeUnmount(), beforeUpdate(), bn(), checkActiveTab(), created(), Ga(), getOriginalPageParent() (+18 more)
 
 ### Community 68 - "Feature Page Components"
-Cohesion: 0.14
-Nodes (26): DashboardTopBar, FinancePage, FinanceSectionTabs, FinanceSubscriptionsPage, HealthCalendarPage, HealthGoalsPage, HealthHabitsPage, HealthPage (+18 more)
+Cohesion: 0.08
+Nodes (24): ce, de, _e, fe, ge, he, ie, le (+16 more)
 
 ### Community 69 - "Ionic Loading Spinner"
 Cohesion: 0.10
-Nodes (25): bv(), cf(), cg(), df(), fd(), GC(), Gl(), gm() (+17 more)
+Nodes (20): dl, cc(), defineProperty(), Dn(), dy(), fk(), get(), includes() (+12 more)
 
-### Community 72 - "Chart.js Point Element"
+### Community 70 - "Ionic Range/Slider"
+Cohesion: 0.13
+Nodes (4): kx(), rd, Rs(), ya()
+
+### Community 71 - "Ionic Segment Control"
 Cohesion: 0.10
-Nodes (24): calculateOffset(), calculatePosition(), calculatePull(), calculatePush(), calculateSize(), getColumns(), getHintTextID(), getInputmode() (+16 more)
+Nodes (24): qx, BC(), entries(), every(), fw(), Fx(), GC(), gw() (+16 more)
 
 ### Community 73 - "Home Page Bundle Alt"
-Cohesion: 0.08
-Nodes (23): Ae, Be, Ce, Ee, Fe, Ge, Ie, je (+15 more)
+Cohesion: 0.10
+Nodes (22): bv(), cf(), df(), dm, ev(), gv(), Ir(), j0() (+14 more)
 
 ### Community 74 - "DB Schema Groups"
 Cohesion: 0.12
 Nodes (22): DB finance functions: addFinanceAccount, getFinanceAccounts, addFinanceInvestment, getFinanceInvestments, addFinanceSubscription, getFinanceSubscriptions, addNetWorthSnapshot, getLatestNetWorthSnapshot, DB health metric functions: addHealthMetric, replaceHealthMetric, getLatestHealthMetric, getRecentHealthMetrics, getHealthMetricsForDate, DB lifestyle functions: addHabit, getHabitsWithStatus, toggleHabitCompletion, addGoal, getGoals, updateGoalProgress, addCalendarEvent, getCalendarEventsForDate, DB readiness functions: upsertReadinessScore, getReadinessScore, getLatestReadinessScore, DB sleep session functions: upsertSleepSession, getLatestSleepSession, getSleepSession, getRecentSleepSessions, DB workout functions: startWorkoutFromTemplate, getWorkoutExercises, getWorkoutSets, updateWorkoutSet, endWorkout, cancelWorkout, getWorkouts, getLatestWorkout, getWorkoutHistoryExercises, saveWorkoutTotalKg, hasActiveWorkout, getActiveWorkout, addExerciseToWorkout, addSetToWorkoutExercise, deleteWorkoutSet, getWorkoutsByTemplate, getWorkoutsByName, updateExercisePRs, getExercisePR, getAllExercisePRs, getExerciseHistory, getExerciseStats, initDB: creates SQLite connection, creates all tables, seeds exercises and templates, calculateOneRepMax (Epley): weight * (1 + reps/30) (+14 more)
 
 ### Community 75 - "Ionic Backdrop"
-Cohesion: 0.13
-Nodes (21): aa(), da(), Fe, ga(), it(), jt(), mn(), mo() (+13 more)
+Cohesion: 0.06
+Nodes (35): qr(), A(), bn(), c(), cr(), d(), e(), eo() (+27 more)
+
+### Community 76 - "Ionic Popover"
+Cohesion: 0.11
+Nodes (7): al(), ek, qp(), sk, tk(), xd(), Y6
 
 ### Community 77 - "Ionic DateTime Picker"
-Cohesion: 0.13
-Nodes (11): co(), eo, io(), kt(), Li(), Me(), Nt(), _o() (+3 more)
+Cohesion: 0.27
+Nodes (5): eo, Me(), Nt(), qn(), to()
 
 ### Community 78 - "Ionic Radio Button"
 Cohesion: 0.12
-Nodes (17): Ae, be, Ce(), _e(), Ee, Fe, ge(), Ie (+9 more)
+Nodes (18): bC(), eC, Eo(), Gt(), h6(), Hc(), Je, Ju() (+10 more)
 
 ### Community 79 - "Ionic Tab Bar"
-Cohesion: 0.12
-Nodes (8): Ht(), Le, lo(), te(), Ti(), ur(), Wt(), Xe()
+Cohesion: 0.13
+Nodes (22): hd(), nf(), rf(), vh(), autoscroll(), beginRefresh(), calculateOptsWidth(), close() (+14 more)
 
 ### Community 81 - "Ionic Toolbar"
 Cohesion: 0.11
 Nodes (17): compilerOptions, esModuleInterop, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+9 more)
+
+### Community 82 - "Ionic Note Component"
+Cohesion: 0.10
+Nodes (19): Active / Live Cards, Architecture, Cards, Colors, Commands, Data Flow, DB Conventions, Design System (+11 more)
 
 ### Community 83 - "Ionic Badge"
 Cohesion: 0.26
 Nodes (14): a(), c(), d(), e(), f(), h(), i(), l() (+6 more)
 
 ### Community 84 - "Ionic Footer"
-Cohesion: 0.17
-Nodes (17): Main Index Bundle (index-DwWxPv8g.js), Ionic startStatusTap Legacy Module (SystemJS), Ionic startStatusTap Module, Ionic Input Shims / Keyboard Scroll Assist Module, Ionic Input Shims Legacy Module (SystemJS), Ionic Swipe-Back Gesture Legacy Module (SystemJS), Ionic Swipe-Back Gesture Module, Polyfills Legacy Bundle (core-js 3.49 + SystemJS) (+9 more)
+Cohesion: 0.67
+Nodes (3): Polyfills Legacy Bundle (core-js 3.49 + SystemJS), core-js 3.49 Polyfills (ES6+ Promise, Map, Set, Symbol, WeakMap, Array.from, fetch), SystemJS Module Loader (Legacy Browser Support)
 
 ### Community 85 - "Ionic Header"
 Cohesion: 0.22
 Nodes (3): fi, ge(), ui
 
 ### Community 86 - "Gym Type Models"
-Cohesion: 0.12
-Nodes (15): Equipment, Exercise, ExerciseHistoryPoint, ExercisePR, ExerciseStats, LatestCompletedSet, MuscleGroup, SetDefaults (+7 more)
-
-### Community 87 - "Ionic Skeleton Text"
-Cohesion: 0.16
-Nodes (6): Ci(), dataset(), index(), nearest(), te(), zi()
+Cohesion: 0.14
+Nodes (14): An(), ax(), Cs, Eb(), hf(), Ii(), im(), Mn() (+6 more)
 
 ### Community 88 - "Ionic Fab Button"
-Cohesion: 0.14
-Nodes (13): MainActivity launchMode=singleTask, FileProvider (androidx.core.content.FileProvider), INTERNET Permission, downloadFile method (FilesystemWeb), FilesystemWeb (web legacy plugin fallback), IndexedDB FileStorage (web fallback), cordova.js (empty stub), cordova_plugins.js (empty stub) (+5 more)
+Cohesion: 0.18
+Nodes (10): MainActivity launchMode=singleTask, FileProvider (androidx.core.content.FileProvider), INTERNET Permission, cordova.js (empty stub), cordova_plugins.js (empty stub), BridgeActivity (Capacitor), ExampleUnitTest, AppTheme.NoActionBarLaunch (SplashScreen theme) (+2 more)
 
 ### Community 89 - "Ionic Chip Component"
-Cohesion: 0.22
-Nodes (14): at(), di(), ee(), F(), Fe(), gi(), ji(), ke() (+6 more)
+Cohesion: 0.12
+Nodes (19): Ae(), c(), d(), di(), gi(), h(), Ht(), jt() (+11 more)
 
 ### Community 90 - "Ionic Avatar"
 Cohesion: 0.18
@@ -548,52 +572,64 @@ Cohesion: 0.25
 Nodes (14): Database Schema V1, Database Schema V2, Database Schema V3, App Favicon (Ionic logo - blue circle with dot), App Launcher Icon (Round), Table: equipment (id, name) - added in V2, Table: exercise (id, name, muscle_group, equipment, rest_seconds, id_muscle_group, id_equipment), Table: exercise_pr (id, exercise_id, pr_weight, pr_reps, one_rep_max, date_achieved, workout_id) - added in V3 (+6 more)
 
 ### Community 92 - "Health Schema Tables"
-Cohesion: 0.17
-Nodes (4): beforeDraw(), Gt(), Pa(), Ve()
+Cohesion: 0.11
+Nodes (8): beforeDatasetsDraw(), beforeDraw(), Gt(), index(), Pa(), ur(), Ve(), Xe()
+
+### Community 93 - "Health Connect Web Plugin"
+Cohesion: 0.11
+Nodes (17): Gc, getFirstEmptyIndex(), getTabbableIndex(), Ib(), nS(), nx, Ob(), onStart() (+9 more)
 
 ### Community 94 - "Ionic Reorder Group"
 Cohesion: 0.18
 Nodes (10): biometricAuth, biometricSubTitle, biometricTitle, appId, appName, androidBiometric, androidIsEncryption, plugins (+2 more)
 
+### Community 95 - "Ionic Infinite Scroll"
+Cohesion: 0.11
+Nodes (17): Build, Test & Lint Commands, Common Development Tasks, Copilot Instructions for Gym Dashboard, Database Layer, Database Operations, Feature-Based Modular Structure, Health Connect Sync, High-Level Architecture (+9 more)
+
 ### Community 97 - "Ionic Virtual Scroll"
-Cohesion: 0.29
-Nodes (7): impact(), notification(), patternForImpact(), patternForNotification(), selectionChanged(), vibrate(), vibrateWithPattern()
+Cohesion: 0.14
+Nodes (17): bb(), c1(), cp(), d1(), e1(), fb(), g1(), Hb() (+9 more)
 
 ### Community 98 - "Health Habits Page"
-Cohesion: 0.27
-Nodes (10): addHabit(), getHabitsWithStatus(), toggleHabitCompletion(), habitFrequency, habitName, habitTarget, loadHabits(), saveHabit() (+2 more)
+Cohesion: 0.19
+Nodes (12): addHabit(), getHabitsWithStatus(), toggleHabitCompletion(), habitFrequency, habitName, habitTarget, loadHabits(), progressPct (+4 more)
 
 ### Community 99 - "Ionic ActionSheet"
 Cohesion: 0.18
 Nodes (10): applicationId, artifactType, kind, type, baselineProfiles, elements, elementType, minSdkVersionForDexing (+2 more)
 
 ### Community 100 - "App Branding (Splash Screens)"
-Cohesion: 0.22
-Nodes (10): h(), Ht(), K(), mi(), mt(), Nt(), S(), st() (+2 more)
+Cohesion: 0.16
+Nodes (13): du(), dv, e2, e3(), e4, ko(), c(), _() (+5 more)
 
 ### Community 101 - "App Launcher Icons"
-Cohesion: 0.22
-Nodes (10): b(), ft(), g(), gt(), je(), O(), p(), Tt() (+2 more)
+Cohesion: 0.14
+Nodes (16): a5(), b5(), c5(), cu(), h5(), i2(), j5(), l5() (+8 more)
 
 ### Community 102 - "Finance Subscriptions"
-Cohesion: 0.27
-Nodes (8): addFinanceSubscription(), getFinanceSubscriptions(), loadSubscriptions(), saveSubscription(), subscriptionAmount, subscriptionCadence, subscriptionName, subscriptionNextDue
+Cohesion: 0.17
+Nodes (5): beforeDraw(), dn(), ln(), nn(), un
 
 ### Community 103 - "Health Calendar Page"
 Cohesion: 0.27
 Nodes (8): addCalendarEvent(), getCalendarEventsForDate(), eventNotes, eventTitle, eventType, loadEvents(), saveEvent(), selectedDate
 
 ### Community 105 - "Sleep Page Health Features"
-Cohesion: 0.22
-Nodes (9): DashboardTopBar (dependency), Health Connect Sleep Sync Action, HealthSectionTabs (dependency), Sleep Heart Rate Chart (SVG Polyline), Sleep Score History Graph (14-day area chart), Sleep Consistency Widget (7-night score, streak, good nights), SleepPage Component, Sleep Score Ring Visualization (+1 more)
+Cohesion: 0.17
+Nodes (15): b(), ei(), g(), hi(), I(), It(), Kt(), O() (+7 more)
 
 ### Community 106 - "Workout Timer Features"
-Cohesion: 0.25
-Nodes (9): Ae(), c(), d(), ei(), It(), jt(), Kt(), u() (+1 more)
+Cohesion: 0.24
+Nodes (14): at(), br(), Bt(), ee(), F(), Fe(), ji(), ke() (+6 more)
+
+### Community 107 - "Ionic Web Storage"
+Cohesion: 0.15
+Nodes (10): getLatestHealthMetric(), healthConnectStatus, hrSubtitle, loadSummary(), restingHrDisplay, sleepDisplay, sleepSubtitle, stepsDisplay (+2 more)
 
 ### Community 108 - "Workout Session UX"
-Cohesion: 0.31
-Nodes (9): AudioContext Beep on Rest Timer End, Exercise Reorder (up/down buttons, order_index persisted to DB), Haptics Integration (selection changed on dial turn), Previous Set Weight/Reps Placeholder Logic, Rest Timer Overlay (countdown with +/-15s, skip, progress bar), sessionStorage Rest Timer Persistence, TimerDial Component (circular SVG dial for rest timer), WorkoutPage Component (+1 more)
+Cohesion: 0.15
+Nodes (13): g5(), Gn(), Jn(), Ke(), ov(), tv(), Ul(), va() (+5 more)
 
 ### Community 109 - "App Config & Gradle"
 Cohesion: 0.31
@@ -604,16 +640,12 @@ Cohesion: 0.31
 Nodes (8): addGoal(), getGoals(), updateGoalProgress(), goalDueDate, goalName, goalTarget, loadGoals(), updateProgress()
 
 ### Community 112 - "Vue App Entry"
-Cohesion: 0.29
-Nodes (8): ci(), cr(), dt(), He(), Le(), Lt(), ni(), ri()
+Cohesion: 0.23
+Nodes (12): Ba(), ex(), Gr(), Is(), ix(), jc(), nd(), ph() (+4 more)
 
-### Community 113 - "Vite Build Config"
-Cohesion: 0.32
-Nodes (8): br(), Bt(), hi(), I(), Q(), Qt(), Tr(), yr()
-
-### Community 115 - "Time Format Utilities"
-Cohesion: 0.38
-Nodes (7): ExercisePicker Navigation (localStorage handoff), TemplateBuilderPage Component, Template Validation (name, duplicate exercises, sets/reps > 0), vuedraggable (drag-and-drop exercise ordering), ExercisePicker Navigation with templateId query param, Soft Delete Exercises (track removed IDs before save), TemplateEditorPage Component
+### Community 114 - "Ionic Logger"
+Cohesion: 0.17
+Nodes (11): Exercise API Functions, Exercises, History and PR API Functions, History & PRs, Import / Export, Import/Export API Functions, Local Data API, Template API Functions (+3 more)
 
 ### Community 116 - "Android Manifest"
 Cohesion: 0.57
@@ -623,9 +655,21 @@ Nodes (7): Dark Background Color Scheme - App Branding Theme, Weightlifter Pixel
 Cohesion: 0.29
 Nodes (6): compilerOptions, allowSyntheticDefaultImports, composite, module, moduleResolution, include
 
+### Community 118 - "Ionic Picker"
+Cohesion: 0.29
+Nodes (7): impact(), notification(), patternForImpact(), patternForNotification(), selectionChanged(), vibrate(), vibrateWithPattern()
+
+### Community 119 - "Ionic Progress Bar"
+Cohesion: 0.18
+Nodes (10): App Status, Finance, Gym, Health, Home, Notes, Planned / in progress, Shared (+2 more)
+
+### Community 120 - "Chart.js Bar Dataset"
+Cohesion: 0.18
+Nodes (10): 01. The Core Vision, 02. Visual Principles, 03. Typography & Data Viz, 04. Interaction Logic, 05. The Four Pillars, Dot-Matrix Language, Hardware-Inspired Visualization, Technical Minimalism (+2 more)
+
 ### Community 121 - "Chart.js Line Dataset"
-Cohesion: 0.40
-Nodes (6): ai(), ii(), ir(), li(), oi(), si()
+Cohesion: 0.20
+Nodes (9): AI Agent Context, Common Pitfalls, AI Agent Context (AI_CONTEXT.md), Key Entry Points, Key Entry Points, Platform Constraints, Quick Commands, Structure & Conventions (+1 more)
 
 ### Community 122 - "Ionic Slide Component"
 Cohesion: 0.60
@@ -643,33 +687,69 @@ Nodes (4): integrations, capacitor, name, type
 Cohesion: 0.50
 Nodes (5): ic_launcher_round (hdpi) - Round launcher icon, white/light background with small pink/red decorative elements suggesting a dashboard or fitness app icon, circular shape, ic_launcher (ldpi) - Standard square launcher icon, very small resolution (ldpi), minimal detail visible, white background, ic_launcher_background (ldpi) - Background layer of adaptive icon, plain white/very light background fill, no foreground elements, ic_launcher_foreground (ldpi) - Foreground layer of adaptive icon, shows small cross/plus or person-like figure with pink/red accent marks, white background, represents app branding, ic_launcher_round (ldpi) - Round launcher icon at ldpi density, circular shape with white background and small pink/red accent elements
 
+### Community 126 - "DB: PR Tracking"
+Cohesion: 0.27
+Nodes (9): App Entry Points, Architecture, Data Flow, Architecture Documentation, Feature Layout, Overview, Platform Notes, Runtime Stack (+1 more)
+
 ### Community 128 - "Ionic Split Pane"
 Cohesion: 0.50
 Nodes (3): body, email, name
 
+### Community 132 - "Ionic Content Wrapper"
+Cohesion: 0.20
+Nodes (9): Components, Detail/Flow Pages (Workout, ExerciseDetail, Picker, Builder, Editor), UI Structure Documentation, Main Tabs: Home, Template, Exercise, History, Navigation, Theme and Styling (variables.css + Doto font), Theme & Styling, TimerDial Component (rest timer UI) (+1 more)
+
 ### Community 134 - "Ionic Page Component"
+Cohesion: 0.39
+Nodes (5): A(), G(), H(), J(), Y()
+
+### Community 135 - "Ionic Title Component"
+Cohesion: 0.29
+Nodes (8): ci(), cr(), dt(), He(), Le(), Lt(), ni(), ri()
+
+### Community 140 - "Ionic Menu Component"
+Cohesion: 0.43
+Nodes (7): App Status (APP_STATUS.md), Finance Feature Status, Gym Feature Status, Health Feature Status, Home Feature Status, Planned Features, The Four Pillars: Home, Health, Finance, Gym
+
+### Community 141 - "Ionic Nav Component"
+Cohesion: 0.29
+Nodes (7): Core Vision: Hyper-Minimalist Technical Command Center, Design Philosophy: Zenith Nothing Edition, Hardware-Inspired Visualization, Interaction Logic: Tactile and Responsive, Monochrome Palette with Red Accent, Dot-Matrix Typography (Space Mono), Visual Principles: Technical Minimalism + Glassmorphism
+
+### Community 142 - "Chart.js Doughnut"
+Cohesion: 0.47
+Nodes (6): Hv(), km(), td(), wv, ym, yt()
+
+### Community 145 - "Finance Page (Legacy)"
+Cohesion: 0.40
+Nodes (6): ai(), ii(), ir(), li(), oi(), si()
+
+### Community 146 - "Finance Tabs (Legacy)"
+Cohesion: 0.50
+Nodes (3): Database Schema (SQLite), Import/Export, Seed Data
+
+### Community 148 - "Health Calendar (Legacy)"
 Cohesion: 0.67
-Nodes (3): Ca(), gy(), Zy()
+Nodes (3): ft(), gt(), je()
 
 ## Knowledge Gaps
-- **603 isolated node(s):** `allow`, `recommendations`, `version`, `type`, `kind` (+598 more)
+- **687 isolated node(s):** `PreToolUse`, `allow`, `recommendations`, `version`, `type` (+682 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **63 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **58 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `__()` connect `Ionic Stencil Runtime A` to `Ionic Stencil Runtime B`, `Ionic Stencil Runtime C`, `Ionic Content Wrapper`, `Ionic Stencil Internals`, `Ionic Page Component`, `Finance Pages Bundle`, `Ionic Router & Navigation`, `Vue 3 Reactivity System`, `Ionic DOM & Shadow DOM`, `Ionic Stencil Hydration`, `Vue Router Navigation`, `SQLite Web Adapter (Modern)`, `Ionic Scroll & Reorder`, `Ionic Navigation Stack`, `Ionic Event System`, `Ionic Core Primitives`, `Ionic Component Lifecycle`, `Ionic Animation & Gestures`, `Ionic Web Legacy A`, `Ionic Web Legacy B`, `Chart.js Axis Scale Modern`, `Sleep Page Bundle`, `Ionic Web Components D`, `Chart.js Modern Tooltip`, `Chart.js Color Utilities`, `Ionic Web Scroll`, `Chart.js Animation Engine`, `Ionic Select Component`, `Chart.js Data Parsing`, `Ionic Input Component`, `Ionic Modal System`, `Chart.js Arc Element`, `Section Tab Components`, `Home Page Bundle`, `Ionic Checkbox Component`, `Ionic Card Component`, `Ionic Refresher`, `Ionic Loading Spinner`, `Ionic Range/Slider`, `Chart.js Point Element`, `Home Page Bundle Alt`, `Ionic Radio Button`, `Health Connect Web Plugin`, `Ionic Web Storage`, `Ionic Picker`, `Chart.js Bar Dataset`, `DB: PR Tracking`?**
-  _High betweenness centrality (0.356) - this node is a cross-community bridge._
-- **Why does `_()` connect `Chart.js Legacy Core` to `Chart.js Canvas Helpers`, `Chart.js Legacy Drawing Tools`, `Chart.js Legacy Scale Axes`, `Chart.js Legacy Controller`, `Chart.js Plugin Registry`, `Chart.js Modern Scale Axes`, `Vue 3 Reactivity System`, `Ionic Media Player`, `Vue Router Navigation`, `Chart.js Legacy Drawing`, `Ionic Gesture System`, `Ionic Select Component`, `Ionic Header`, `Ionic Skeleton Text`, `Ionic Toast & Alerts`?**
-  _High betweenness centrality (0.204) - this node is a cross-community bridge._
-- **Why does `_n()` connect `Ionic Web Components D` to `Ionic Stencil Runtime A`, `Ionic Stencil Runtime C`, `Chart.js Legacy Core`, `Ionic Web Legacy B`, `Finance Pages Bundle`, `Home Page Bundle Alt`, `Sleep Page Bundle`, `Chart.js Modern Tooltip`, `Ionic Radio Button`, `Chart.js Legacy Drawing`, `Ionic Core Primitives`, `Vue Legacy Compat Layer`, `Section Tab Components`, `Home Page Bundle`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **Are the 7 inferred relationships involving `_()` (e.g. with `._computeGridLineItems()` and `setup()`) actually correct?**
-  _`_()` has 7 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 17 inferred relationships involving `render()` (e.g. with `eg()` and `fd()`) actually correct?**
-  _`render()` has 17 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `allow`, `recommendations`, `version` to the rest of the system?**
-  _603 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `_()` connect `Chart.js Legacy Core` to `Chart.js Canvas Helpers`, `Chart.js Legacy Drawing Tools`, `Finance Subscriptions`, `Chart.js Legacy Scale Axes`, `Chart.js Legacy Controller`, `Chart.js Plugin Registry`, `Chart.js Modern Scale Axes`, `Ionic Media Player`, `Chart.js Legacy Drawing`, `Ionic Gesture System`, `Ionic Scroll & Reorder`, `Ionic Header`, `Ionic Modal System`?**
+  _High betweenness centrality (0.153) - this node is a cross-community bridge._
+- **Why does `_n` connect `Ionic Scroll & Reorder` to `Ionic Stencil Runtime A`, `SQLite Capacitor Plugin`, `Ionic Web Legacy B`, `Ionic DOM & Shadow DOM`, `Chart.js Color Utilities`, `Chart.js Legacy Drawing`, `Chart.js Animation Engine`, `Vue Legacy Compat Layer`, `Ionic Component Lifecycle`?**
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `$i()` connect `Ionic Event System` to `Ionic Stencil Runtime B`, `Chart.js Legacy Core`, `Ionic Router & Navigation`, `Vue 3 Reactivity System`, `Ionic DOM & Shadow DOM`, `Ionic Select Component`, `Ionic Header`, `Ionic Core Primitives`?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
+- **Are the 16 inferred relationships involving `render()` (e.g. with `eg()` and `fd()`) actually correct?**
+  _`render()` has 16 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `PreToolUse`, `allow`, `recommendations` to the rest of the system?**
+  _687 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Ionic Stencil Runtime A` be split into smaller, more focused modules?**
-  _Cohesion score 0.00976706827309237 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.00995850622406639 - nodes in this community are weakly interconnected._
+- **Should `Ionic Stencil Runtime B` be split into smaller, more focused modules?**
+  _Cohesion score 0.012206027005275864 - nodes in this community are weakly interconnected._

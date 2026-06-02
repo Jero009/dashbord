@@ -706,6 +706,23 @@ export async function initDB() {
       );
     `);
 
+    const habitColumns = await db.query(`PRAGMA table_info("habit");`);
+    const hasHabitTimeColumn = (habitColumns.values || []).some(
+      (col: any) => String(col.name) === 'time'
+    );
+    if (!hasHabitTimeColumn) {
+      await db.execute(`ALTER TABLE habit ADD COLUMN time TEXT;`);
+    }
+
+    const calColumns = await db.query(`PRAGMA table_info("calendar_event");`);
+    const calColNames = new Set((calColumns.values || []).map((c: any) => String(c.name)));
+    if (!calColNames.has('time_start')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_start TEXT;`);
+    }
+    if (!calColNames.has('time_end')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_end TEXT;`);
+    }
+
     return db;
   } catch (error) {
     console.error('initDB failed:', error);
@@ -1157,7 +1174,17 @@ export async function getLatestWorkout() {
     'SELECT * FROM workout WHERE time_end IS NOT NULL ORDER BY time_end DESC LIMIT 1'
   );
   return result.values?.[0] || null;
+}
 
+export async function getTodayCompletedWorkouts() {
+  if (!db) return [] as { id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[];
+  const today = new Date().toISOString().slice(0, 10);
+  const result = await db.query(
+    `SELECT id, name, time_start, time_end, total_kg FROM workout
+     WHERE time_end IS NOT NULL AND date(time_end) = ?;`,
+    [today]
+  );
+  return (result.values ?? []) as { id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[];
 }
 
 // Add a new exercise to an active workout
@@ -1552,12 +1579,12 @@ export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRe
   return (result.values ?? []) as SleepSessionRecord[];
 }
 
-export async function addHabit(name: string, frequency: string, target: number) {
+export async function addHabit(name: string, frequency: string, target: number, time?: string) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO habit (name, frequency, target) VALUES (?, ?, ?);`,
-      [name, frequency, target]
+      `INSERT INTO habit (name, frequency, target, time) VALUES (?, ?, ?, ?);`,
+      [name, frequency, target, time ?? null]
     );
     return result;
   } catch (error) {
@@ -1631,12 +1658,19 @@ export async function updateGoalProgress(goalId: number, currentValue: number, s
   }
 }
 
-export async function addCalendarEvent(title: string, date: string, type: string, notes?: string) {
+export async function addCalendarEvent(
+  title: string,
+  date: string,
+  type: string,
+  notes?: string,
+  timeStart?: string,
+  timeEnd?: string
+) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO calendar_event (title, date, type, notes) VALUES (?, ?, ?, ?);`,
-      [title, date, type, notes ?? null]
+      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end) VALUES (?, ?, ?, ?, ?, ?);`,
+      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null]
     );
     return result;
   } catch (error) {
@@ -1652,6 +1686,45 @@ export async function getCalendarEventsForDate(date: string) {
     [date]
   );
   return result.values || [];
+}
+
+export async function deleteCalendarEvent(id: number) {
+  if (!db) return;
+  await db.run(`DELETE FROM calendar_event WHERE id = ?;`, [id]);
+}
+
+export async function deleteHabit(id: number) {
+  if (!db) return;
+  await db.run(`DELETE FROM habit WHERE id = ?;`, [id]);
+}
+
+export async function getCalendarEventDatesForMonth(yearMonth: string) {
+  if (!db) return [] as string[];
+  const result = await db.query(
+    `SELECT DISTINCT date FROM calendar_event WHERE date LIKE ?;`,
+    [`${yearMonth}-%`]
+  );
+  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
+}
+
+export async function getHabitCompletedDatesForMonth(yearMonth: string) {
+  if (!db) return [] as string[];
+  const result = await db.query(
+    `SELECT DISTINCT date FROM habit_log WHERE date LIKE ? AND completed = 1;`,
+    [`${yearMonth}-%`]
+  );
+  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
+}
+
+export async function getRecentHabitLogs(habitId: number, days: number) {
+  if (!db) return [] as { date: string; completed: number }[];
+  const result = await db.query(
+    `SELECT date, completed FROM habit_log
+     WHERE habit_id = ? AND date >= date('now', ?)
+     ORDER BY date DESC;`,
+    [habitId, `-${days} days`]
+  );
+  return (result.values ?? []) as { date: string; completed: number }[];
 }
 
 // finance functions

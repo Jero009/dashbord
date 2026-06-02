@@ -1,0 +1,1097 @@
+{
+  "/home/jero/ai/dashbord/.claude/settings.local.json": {
+    "mtime": 1780331404.4929104,
+    "ast_hash": "87819e25a6c777e8a0df2ad2f4208ef7",
+    "semantic_hash": "87819e25a6c777e8a0df2ad2f4208ef7"
+  },
+  "/home/jero/ai/dashbord/.vscode/extensions.json": {
+    "mtime": 1779895825.742096,
+    "ast_hash": "be6e3d258a12fd4214abd140175b91ca",
+    "semantic_hash": "be6e3d258a12fd4214abd140175b91ca"
+  },
+  "/home/jero/ai/dashbord/android/app/build.gradle": {
+    "mtime": 1779895825.7430718,
+    "ast_hash": "198e60eee81adfcba4b47956b5366488",
+    "semantic_hash": "198e60eee81adfcba4b47956b5366488"
+  },
+  "/home/jero/ai/dashbord/android/app/capacitor.build.gradle": {
+    "mtime": 1780239824.0041387,
+    "ast_hash": "2452f3b71ef5625cde4ff88dd93f8223",
+    "semantic_hash": "2452f3b71ef5625cde4ff88dd93f8223"
+  },
+  "/home/jero/ai/dashbord/android/app/release/baselineProfiles/0/app-release.dm": {
+    "mtime": 1779982381.196416,
+    "ast_hash": "8449cb23f05ab812daed9791aabded92",
+    "semantic_hash": "8449cb23f05ab812daed9791aabded92"
+  },
+  "/home/jero/ai/dashbord/android/app/release/baselineProfiles/1/app-release.dm": {
+    "mtime": 1779982381.200881,
+    "ast_hash": "cca454d9419047568ecea94e643939d3",
+    "semantic_hash": "cca454d9419047568ecea94e643939d3"
+  },
+  "/home/jero/ai/dashbord/android/app/release/output-metadata.json": {
+    "mtime": 1780241963.1877651,
+    "ast_hash": "5bd3357f9926750a70d27d3170172295",
+    "semantic_hash": "5bd3357f9926750a70d27d3170172295"
+  },
+  "/home/jero/ai/dashbord/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java": {
+    "mtime": 1779895825.7434914,
+    "ast_hash": "fbaf7cc870c663eb52dcf218531c439d",
+    "semantic_hash": "fbaf7cc870c663eb52dcf218531c439d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/capacitor.config.json": {
+    "mtime": 1780239823.311686,
+    "ast_hash": "f7cf332377a0703721a77e4279c0b252",
+    "semantic_hash": "f7cf332377a0703721a77e4279c0b252"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/capacitor.plugins.json": {
+    "mtime": 1780239823.9744163,
+    "ast_hash": "11db1de6c962c981e06411c7d454366c",
+    "semantic_hash": "11db1de6c962c981e06411c7d454366c"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/DashboardTopBar-OhFNCHkx.js": {
+    "mtime": 1780239823.3074036,
+    "ast_hash": "0727b7d35c0a97e0da30b79c8f7c3a3a",
+    "semantic_hash": "0727b7d35c0a97e0da30b79c8f7c3a3a"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/DashboardTopBar-legacy-EtxrAaen.js": {
+    "mtime": 1780239823.3026543,
+    "ast_hash": "a4174080f4de852c4c8d34897707fad1",
+    "semantic_hash": "a4174080f4de852c4c8d34897707fad1"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/ExerciseDetailPage-CqUqQ9gK.js": {
+    "mtime": 1780239823.3011985,
+    "ast_hash": "87bde7dead632209d21b0569086783ed",
+    "semantic_hash": "87bde7dead632209d21b0569086783ed"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/ExerciseDetailPage-legacy-I81r2PSw.js": {
+    "mtime": 1780239823.3005364,
+    "ast_hash": "41e91052857e3b60fdc6178ea0b026a7",
+    "semantic_hash": "41e91052857e3b60fdc6178ea0b026a7"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/ExercisePage-CRyZWlYn.js": {
+    "mtime": 1780239823.29987,
+    "ast_hash": "9c918062a4a4d11851fc3cbdb675af7b",
+    "semantic_hash": "9c918062a4a4d11851fc3cbdb675af7b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/ExercisePage-legacy-BUwy8_d8.js": {
+    "mtime": 1780239823.3073761,
+    "ast_hash": "0aa67b770076136dbcee7a9580392e9b",
+    "semantic_hash": "0aa67b770076136dbcee7a9580392e9b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/ExercisePickerPage-D6kHYhik.js": {
+    "mtime": 1780239823.3038182,
+    "ast_hash": "a8e32b9b2ca3ee2d2a5a0eddf73093da",
+    "semantic_hash": "a8e32b9b2ca3ee2d2a5a0eddf73093da"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/ExercisePickerPage-legacy-Bs-Npil6.js": {
+    "mtime": 1780239823.3024683,
+    "ast_hash": "efe66421dcedb57d60bc7eca4498205c",
+    "semantic_hash": "efe66421dcedb57d60bc7eca4498205c"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceAccountsPage-C-jjGpQf.js": {
+    "mtime": 1780239823.306826,
+    "ast_hash": "219448b93221eb7d0eae86c9872d29cf",
+    "semantic_hash": "219448b93221eb7d0eae86c9872d29cf"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceAccountsPage-legacy-XDaRO7CC.js": {
+    "mtime": 1780239823.30225,
+    "ast_hash": "34d9fd44f1f2699c127d6ae6459d2f27",
+    "semantic_hash": "34d9fd44f1f2699c127d6ae6459d2f27"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceInvestmentsPage-Dhm8fM9j.js": {
+    "mtime": 1780239823.3070855,
+    "ast_hash": "ed82ebbf0041ac92ff002d698091154b",
+    "semantic_hash": "ed82ebbf0041ac92ff002d698091154b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceInvestmentsPage-legacy-s2uryLj0.js": {
+    "mtime": 1780239823.3003173,
+    "ast_hash": "04cf9f1bd3a57e4dbd49cb0c5dea4985",
+    "semantic_hash": "04cf9f1bd3a57e4dbd49cb0c5dea4985"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinancePage-DwvUhcOV.js": {
+    "mtime": 1780239823.2996905,
+    "ast_hash": "f645f37b8fa980cc9d3b8d72aadfc326",
+    "semantic_hash": "f645f37b8fa980cc9d3b8d72aadfc326"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinancePage-legacy-po6R3crj.js": {
+    "mtime": 1780239823.307315,
+    "ast_hash": "bc3559ed3625fe232117e8444fd250f4",
+    "semantic_hash": "bc3559ed3625fe232117e8444fd250f4"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceSectionTabs-MnvvWbHh.js": {
+    "mtime": 1780239823.3022273,
+    "ast_hash": "fd3bde6da69fee128fa6b997db6ed78f",
+    "semantic_hash": "fd3bde6da69fee128fa6b997db6ed78f"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceSectionTabs-legacy-CmoxO3R2.js": {
+    "mtime": 1780239823.3024683,
+    "ast_hash": "09ecd5dcee063791eb9993abf7a420b7",
+    "semantic_hash": "09ecd5dcee063791eb9993abf7a420b7"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceSubscriptionsPage-DF1Oj0Uk.js": {
+    "mtime": 1780239823.3024485,
+    "ast_hash": "761600b545d3e9b0553fe578a412aa2d",
+    "semantic_hash": "761600b545d3e9b0553fe578a412aa2d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/FinanceSubscriptionsPage-legacy-VSdRLF5B.js": {
+    "mtime": 1780239823.3037622,
+    "ast_hash": "e898b71e8203ef93bbe7150a51a5169e",
+    "semantic_hash": "e898b71e8203ef93bbe7150a51a5169e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthCalendarPage-B1o0RtzB.js": {
+    "mtime": 1780239823.2998903,
+    "ast_hash": "587930402f10c55540841be73568cb83",
+    "semantic_hash": "587930402f10c55540841be73568cb83"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthCalendarPage-legacy-Bidz2UM5.js": {
+    "mtime": 1780239823.3003173,
+    "ast_hash": "3c97e6323a2e143adba4cd7c276d1585",
+    "semantic_hash": "3c97e6323a2e143adba4cd7c276d1585"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthGoalsPage-CV-4wiKS.js": {
+    "mtime": 1780239823.3033001,
+    "ast_hash": "a2b8fe26128a04343250f5dc3709d9ba",
+    "semantic_hash": "a2b8fe26128a04343250f5dc3709d9ba"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthGoalsPage-legacy-o_Y8670_.js": {
+    "mtime": 1780239823.3063974,
+    "ast_hash": "6128d72a8b911fa35ea3f087482992b2",
+    "semantic_hash": "6128d72a8b911fa35ea3f087482992b2"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthHabitsPage-Cm0rji3V.js": {
+    "mtime": 1780239823.2996905,
+    "ast_hash": "e642a4959de28df82cbf9371851656a8",
+    "semantic_hash": "e642a4959de28df82cbf9371851656a8"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthHabitsPage-legacy-DHe53JpR.js": {
+    "mtime": 1780239823.3074436,
+    "ast_hash": "54c1a761d1af8b807b8abc2f0151a5dc",
+    "semantic_hash": "54c1a761d1af8b807b8abc2f0151a5dc"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthPage-DtYoNwm0.js": {
+    "mtime": 1780239823.3064396,
+    "ast_hash": "982640f251c5865b998335e286e18b62",
+    "semantic_hash": "982640f251c5865b998335e286e18b62"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthPage-legacy-B-qglZY3.js": {
+    "mtime": 1780239823.3017855,
+    "ast_hash": "dbbbafc536736f3f8ed0c6221d5751ec",
+    "semantic_hash": "dbbbafc536736f3f8ed0c6221d5751ec"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthSectionTabs-BmM4vm0B.js": {
+    "mtime": 1780239823.3037622,
+    "ast_hash": "c672f359211b8973529e8520e9d8b201",
+    "semantic_hash": "c672f359211b8973529e8520e9d8b201"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HealthSectionTabs-legacy-Dm7R5M-s.js": {
+    "mtime": 1780239823.2996724,
+    "ast_hash": "7d90c705b764a50b386ce770b387e19e",
+    "semantic_hash": "7d90c705b764a50b386ce770b387e19e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HistoryPage-CTIU_D8N.js": {
+    "mtime": 1780239823.3026543,
+    "ast_hash": "7848f9892f7fde1dfedf9d3130857d3d",
+    "semantic_hash": "7848f9892f7fde1dfedf9d3130857d3d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HistoryPage-legacy-BQ_RDoeh.js": {
+    "mtime": 1780239823.3005142,
+    "ast_hash": "84709b0105ac5eeafe42c95ed68b11b2",
+    "semantic_hash": "84709b0105ac5eeafe42c95ed68b11b2"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HomePage-CbusUgVM.js": {
+    "mtime": 1780239823.3015387,
+    "ast_hash": "3e94425dd492563700d1d2128f0e92eb",
+    "semantic_hash": "3e94425dd492563700d1d2128f0e92eb"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HomePage-Dqq56H-j.js": {
+    "mtime": 1780239823.3032007,
+    "ast_hash": "9fe77f9ea842807274d21190bca092f3",
+    "semantic_hash": "9fe77f9ea842807274d21190bca092f3"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HomePage-legacy-Cn-PJ9Of.js": {
+    "mtime": 1780239823.3014328,
+    "ast_hash": "ef5f2f7d01457d2edea0b487dd90109e",
+    "semantic_hash": "ef5f2f7d01457d2edea0b487dd90109e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/HomePage-legacy-Rg0APHe3.js": {
+    "mtime": 1780239823.3019795,
+    "ast_hash": "5008cdee65cfc0b72843bd9d9f2e20c8",
+    "semantic_hash": "5008cdee65cfc0b72843bd9d9f2e20c8"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/SleepPage-2BYYS-Xi.js": {
+    "mtime": 1780239823.2995896,
+    "ast_hash": "c9502afb21e467bf5e7e4744fffcd092",
+    "semantic_hash": "c9502afb21e467bf5e7e4744fffcd092"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/SleepPage-legacy-k3uHhZZj.js": {
+    "mtime": 1780239823.3020048,
+    "ast_hash": "1c10ee54b0094a373b4a7d91c9a542a0",
+    "semantic_hash": "1c10ee54b0094a373b4a7d91c9a542a0"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/TemplateBuilderPage-Ci8AHlTP.js": {
+    "mtime": 1780239823.3030682,
+    "ast_hash": "1d5b59b10a376d54ba3b7dc5f8ee95ec",
+    "semantic_hash": "1d5b59b10a376d54ba3b7dc5f8ee95ec"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/TemplateBuilderPage-legacy-Ci1o7lvp.js": {
+    "mtime": 1780239823.3001153,
+    "ast_hash": "308b2fe3aca45d7f5030b0bb3f75b5c0",
+    "semantic_hash": "308b2fe3aca45d7f5030b0bb3f75b5c0"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/TemplateEditorPage-D2p3aVZq.js": {
+    "mtime": 1780239823.30701,
+    "ast_hash": "733842caffc046e2cdbbcafedaf2ca85",
+    "semantic_hash": "733842caffc046e2cdbbcafedaf2ca85"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/TemplateEditorPage-legacy-DjU0LLbL.js": {
+    "mtime": 1780239823.3014839,
+    "ast_hash": "d86c391127d2e42eefc7bc1b83c57e90",
+    "semantic_hash": "d86c391127d2e42eefc7bc1b83c57e90"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/TemplatePage-XkMu-chL.js": {
+    "mtime": 1780239823.3011775,
+    "ast_hash": "a552d666ad9b7e33414839a08ad113ca",
+    "semantic_hash": "a552d666ad9b7e33414839a08ad113ca"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/TemplatePage-legacy-8SS963GP.js": {
+    "mtime": 1780239823.301515,
+    "ast_hash": "9a27025f5f51cb12d3932dffa58d85f8",
+    "semantic_hash": "9a27025f5f51cb12d3932dffa58d85f8"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/WorkoutPage-DYRvVEw8.js": {
+    "mtime": 1780239823.3100553,
+    "ast_hash": "4242dd7ee78d90f7284ab2b01d3adea9",
+    "semantic_hash": "4242dd7ee78d90f7284ab2b01d3adea9"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/WorkoutPage-legacy-c-csVY96.js": {
+    "mtime": 1780239823.3100553,
+    "ast_hash": "635c975e397337df04ade3bf8ce35455",
+    "semantic_hash": "635c975e397337df04ade3bf8ce35455"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/_plugin-vue_export-helper-DlAUqK2U.js": {
+    "mtime": 1780239823.3037622,
+    "ast_hash": "25e3a5dcaf00fb2b1ba0c8ecea6d2560",
+    "semantic_hash": "25e3a5dcaf00fb2b1ba0c8ecea6d2560"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/_plugin-vue_export-helper-legacy-BVIICed7.js": {
+    "mtime": 1780239823.3073761,
+    "ast_hash": "2050e3f056f546550fc4356c5b3a2c71",
+    "semantic_hash": "2050e3f056f546550fc4356c5b3a2c71"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/chart-legacy-BNR7Eo3k.js": {
+    "mtime": 1780239823.3024683,
+    "ast_hash": "d0776c691fe076cc85e53b7e722abd98",
+    "semantic_hash": "d0776c691fe076cc85e53b7e722abd98"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/chart-tOTN6xO8.js": {
+    "mtime": 1780239823.3037622,
+    "ast_hash": "a8f749f34b2098d89e9beeeb56a20684",
+    "semantic_hash": "a8f749f34b2098d89e9beeeb56a20684"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/index-DwWxPv8g.js": {
+    "mtime": 1780239823.307155,
+    "ast_hash": "d2401c9642897a5ffc067a8dc6d01a37",
+    "semantic_hash": "d2401c9642897a5ffc067a8dc6d01a37"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/index-legacy-D55zxPZw.js": {
+    "mtime": 1780239823.3035882,
+    "ast_hash": "94e90c1f8c151a75205985f43ebad2cf",
+    "semantic_hash": "94e90c1f8c151a75205985f43ebad2cf"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-BgwEQWW6-BgfwURXz.js": {
+    "mtime": 1780239823.30225,
+    "ast_hash": "11586e62cf57ff4e61a33c9c543d7bc2",
+    "semantic_hash": "11586e62cf57ff4e61a33c9c543d7bc2"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-BgwEQWW6-legacy-cnWZTE_C.js": {
+    "mtime": 1780239823.3017595,
+    "ast_hash": "90c9664ba90998a4da976ec4f33d7405",
+    "semantic_hash": "90c9664ba90998a4da976ec4f33d7405"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CBzELu-H-ctGQMogf.js": {
+    "mtime": 1780239823.3063705,
+    "ast_hash": "8d87eaabf00d1cd6a5609e97a89dc717",
+    "semantic_hash": "8d87eaabf00d1cd6a5609e97a89dc717"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CBzELu-H-legacy-0zo9M_tF.js": {
+    "mtime": 1780239823.3063705,
+    "ast_hash": "6ad7ca9e0bdb9b6ac8c8d710da9eef3d",
+    "semantic_hash": "6ad7ca9e0bdb9b6ac8c8d710da9eef3d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CU1SSH8_-G-I_oerk.js": {
+    "mtime": 1780239823.303091,
+    "ast_hash": "3d68d4ded3fb00bdf7e36fcdfee97f89",
+    "semantic_hash": "3d68d4ded3fb00bdf7e36fcdfee97f89"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CU1SSH8_-legacy-eohOfWgX.js": {
+    "mtime": 1780239823.3030682,
+    "ast_hash": "0de8c188ad7a320f23016c4fa8452d61",
+    "semantic_hash": "0de8c188ad7a320f23016c4fa8452d61"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CneGxKsZ-DfOOJCm3.js": {
+    "mtime": 1780239823.30225,
+    "ast_hash": "2f466607efebf2426b0a2e799b9fb5bb",
+    "semantic_hash": "2f466607efebf2426b0a2e799b9fb5bb"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-CneGxKsZ-legacy-CmVXVmci.js": {
+    "mtime": 1780239823.29994,
+    "ast_hash": "81a6de000acd0a67dccdb3a25eb351e9",
+    "semantic_hash": "81a6de000acd0a67dccdb3a25eb351e9"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-Cwv-vmkN-DaFZ69uu.js": {
+    "mtime": 1780239823.3035345,
+    "ast_hash": "e9bc3b21434d4a8be41c9f5e44bfa68b",
+    "semantic_hash": "e9bc3b21434d4a8be41c9f5e44bfa68b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-Cwv-vmkN-legacy-DhTlDABd.js": {
+    "mtime": 1780239823.3020597,
+    "ast_hash": "901dff629bac57690543e021af8d3da0",
+    "semantic_hash": "901dff629bac57690543e021af8d3da0"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-Cz5nLPGT-CWmu5Kc9.js": {
+    "mtime": 1780239823.3074036,
+    "ast_hash": "3ab85f2629025dcfb725ede9869a89d3",
+    "semantic_hash": "3ab85f2629025dcfb725ede9869a89d3"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/p-Cz5nLPGT-legacy-CM5e8yRw.js": {
+    "mtime": 1780239823.3035882,
+    "ast_hash": "78151658b5e1de81fd556b7973d0f4dd",
+    "semantic_hash": "78151658b5e1de81fd556b7973d0f4dd"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/polyfills-legacy-BdFP_4d1.js": {
+    "mtime": 1780239823.3011985,
+    "ast_hash": "9573eaf6ce16066d8eb8c42aa255676b",
+    "semantic_hash": "9573eaf6ce16066d8eb8c42aa255676b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/timeFormat-f4MYzX7a.js": {
+    "mtime": 1780239823.3035092,
+    "ast_hash": "a8c7e3092523af17a31f7fd72575775a",
+    "semantic_hash": "a8c7e3092523af17a31f7fd72575775a"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/timeFormat-legacy-18jBhtyV.js": {
+    "mtime": 1780239823.2996113,
+    "ast_hash": "5c6cd3201070f2d4d23d908a4720a2ed",
+    "semantic_hash": "5c6cd3201070f2d4d23d908a4720a2ed"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/vuedraggable.umd-DN5Al1iN.js": {
+    "mtime": 1780239823.3003657,
+    "ast_hash": "43bd01ef9610cef0df26c53d19359db8",
+    "semantic_hash": "43bd01ef9610cef0df26c53d19359db8"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/vuedraggable.umd-legacy-s1Vwxr4c.js": {
+    "mtime": 1780239823.307104,
+    "ast_hash": "459382ef57e224810a615c6f8d1e9443",
+    "semantic_hash": "459382ef57e224810a615c6f8d1e9443"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-BdRL-hrm.js": {
+    "mtime": 1780239823.3026292,
+    "ast_hash": "0e4140bd0b8ed723eedfe8303fb50059",
+    "semantic_hash": "0e4140bd0b8ed723eedfe8303fb50059"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-Bxo7bPN4.js": {
+    "mtime": 1780239823.307046,
+    "ast_hash": "bc7db45c4f1e8d25e503a5a16cb5936b",
+    "semantic_hash": "bc7db45c4f1e8d25e503a5a16cb5936b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-Cjp3taYb.js": {
+    "mtime": 1780239823.3000922,
+    "ast_hash": "2e97d9c7b6caa3ee8f094a40d78f0da3",
+    "semantic_hash": "2e97d9c7b6caa3ee8f094a40d78f0da3"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-CtnP8X3R.js": {
+    "mtime": 1780239823.2998903,
+    "ast_hash": "30d9bbe36ac64f7464ad8bcd5c7ad8e1",
+    "semantic_hash": "30d9bbe36ac64f7464ad8bcd5c7ad8e1"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-D1JIsnwe.js": {
+    "mtime": 1780239823.3005822,
+    "ast_hash": "c1e85d233e512d8baef25ee989a3fd0f",
+    "semantic_hash": "c1e85d233e512d8baef25ee989a3fd0f"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-DgMX47JV.js": {
+    "mtime": 1780239823.306852,
+    "ast_hash": "634b38f43df845c894053d1fc2efd588",
+    "semantic_hash": "634b38f43df845c894053d1fc2efd588"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-legacy-Bk29vaR4.js": {
+    "mtime": 1780239823.3020048,
+    "ast_hash": "9d38b3b013883350dee032207b8f3bae",
+    "semantic_hash": "9d38b3b013883350dee032207b8f3bae"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-legacy-BkpnIteN.js": {
+    "mtime": 1780239823.3035345,
+    "ast_hash": "56aa9660114fd0676344fc3d0af2a36d",
+    "semantic_hash": "56aa9660114fd0676344fc3d0af2a36d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-legacy-CMpV1Gma.js": {
+    "mtime": 1780239823.307155,
+    "ast_hash": "8f570e3926f76d21add869a8a14d57b8",
+    "semantic_hash": "8f570e3926f76d21add869a8a14d57b8"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-legacy-D5lYHA18.js": {
+    "mtime": 1780239823.3020048,
+    "ast_hash": "51e868a9cff668707d181c292a92b355",
+    "semantic_hash": "51e868a9cff668707d181c292a92b355"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-legacy-L_YtYbFq.js": {
+    "mtime": 1780239823.3014839,
+    "ast_hash": "7e5ce51584218248c6ccfc2fe0f6fe91",
+    "semantic_hash": "7e5ce51584218248c6ccfc2fe0f6fe91"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/assets/web-legacy-krtuVTbD.js": {
+    "mtime": 1780239823.2998903,
+    "ast_hash": "ecca1fe59fe6bbade39497673b97cc1d",
+    "semantic_hash": "ecca1fe59fe6bbade39497673b97cc1d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/cordova.js": {
+    "mtime": 1780239824.00248,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/cordova_plugins.js": {
+    "mtime": 1780239824.00248,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/java/io/ionic/starter/MainActivity.java": {
+    "mtime": 1779895825.7436893,
+    "ast_hash": "c62553653dcd2b852520b5d4d8b72fdb",
+    "semantic_hash": "c62553653dcd2b852520b5d4d8b72fdb"
+  },
+  "/home/jero/ai/dashbord/android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java": {
+    "mtime": 1779895825.7479968,
+    "ast_hash": "e91b4501c14da821682fa5c26a16d616",
+    "semantic_hash": "e91b4501c14da821682fa5c26a16d616"
+  },
+  "/home/jero/ai/dashbord/android/build.gradle": {
+    "mtime": 1779895825.7479968,
+    "ast_hash": "682315a426653617c6a74fc12bef55b6",
+    "semantic_hash": "682315a426653617c6a74fc12bef55b6"
+  },
+  "/home/jero/ai/dashbord/android/capacitor-cordova-android-plugins/build.gradle": {
+    "mtime": 1780239824.0046546,
+    "ast_hash": "2af61653d70c95d20802c8b5c433ba90",
+    "semantic_hash": "2af61653d70c95d20802c8b5c433ba90"
+  },
+  "/home/jero/ai/dashbord/android/capacitor-cordova-android-plugins/cordova.variables.gradle": {
+    "mtime": 1780239824.0047507,
+    "ast_hash": "d2372a0ae9aa60abb8d03e7f06bf9194",
+    "semantic_hash": "d2372a0ae9aa60abb8d03e7f06bf9194"
+  },
+  "/home/jero/ai/dashbord/android/capacitor.settings.gradle": {
+    "mtime": 1780239824.0039937,
+    "ast_hash": "95d6965d5ba0fd8170209a8a6a66acb7",
+    "semantic_hash": "95d6965d5ba0fd8170209a8a6a66acb7"
+  },
+  "/home/jero/ai/dashbord/android/gradlew": {
+    "mtime": 1779895825.7484114,
+    "ast_hash": "794669d78aef1dd5c7d889ef618b311a",
+    "semantic_hash": "794669d78aef1dd5c7d889ef618b311a"
+  },
+  "/home/jero/ai/dashbord/android/settings.gradle": {
+    "mtime": 1779895825.7484114,
+    "ast_hash": "f6cd925b3f859e23c3d819fe2459e0e4",
+    "semantic_hash": "f6cd925b3f859e23c3d819fe2459e0e4"
+  },
+  "/home/jero/ai/dashbord/android/variables.gradle": {
+    "mtime": 1779981915.4016988,
+    "ast_hash": "0b2e461b92777838e75e129919ab8d30",
+    "semantic_hash": "0b2e461b92777838e75e129919ab8d30"
+  },
+  "/home/jero/ai/dashbord/capacitor.config.ts": {
+    "mtime": 1779895825.7484114,
+    "ast_hash": "bd5068b1c4fef5cf3cb480f35013ce16",
+    "semantic_hash": "bd5068b1c4fef5cf3cb480f35013ce16"
+  },
+  "/home/jero/ai/dashbord/cypress.config.ts": {
+    "mtime": 1779895825.7484114,
+    "ast_hash": "892528af583c8fa2b72ba12753d9afe8",
+    "semantic_hash": "892528af583c8fa2b72ba12753d9afe8"
+  },
+  "/home/jero/ai/dashbord/ionic.config.json": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "ffaf762787a845fad9ec95d53e0dcefd",
+    "semantic_hash": "ffaf762787a845fad9ec95d53e0dcefd"
+  },
+  "/home/jero/ai/dashbord/package.json": {
+    "mtime": 1779981016.8683975,
+    "ast_hash": "8e9f66c2faa8bda8fd70498577bb790f",
+    "semantic_hash": "8e9f66c2faa8bda8fd70498577bb790f"
+  },
+  "/home/jero/ai/dashbord/src/App.vue": {
+    "mtime": 1779983768.9928975,
+    "ast_hash": "1d9135c6036ccac9be749547110eb5f9",
+    "semantic_hash": "1d9135c6036ccac9be749547110eb5f9"
+  },
+  "/home/jero/ai/dashbord/src/components/ExploreContainer.vue": {
+    "mtime": 1779895825.7523491,
+    "ast_hash": "46138a478d4acbcabb04d1f04705c790",
+    "semantic_hash": "46138a478d4acbcabb04d1f04705c790"
+  },
+  "/home/jero/ai/dashbord/src/features/finance/components/FinanceSectionTabs.vue": {
+    "mtime": 1779984065.637234,
+    "ast_hash": "82d55ae3310aa983599c7c1c7ee8b543",
+    "semantic_hash": "82d55ae3310aa983599c7c1c7ee8b543"
+  },
+  "/home/jero/ai/dashbord/src/features/finance/pages/FinanceAccountsPage.vue": {
+    "mtime": 1779898123.5578089,
+    "ast_hash": "9d43c01b1d3d83ba3812bd8a60fb73a8",
+    "semantic_hash": "9d43c01b1d3d83ba3812bd8a60fb73a8"
+  },
+  "/home/jero/ai/dashbord/src/features/finance/pages/FinanceInvestmentsPage.vue": {
+    "mtime": 1779898135.5133257,
+    "ast_hash": "80666c2165d6fd1ef3f39afd98570cd7",
+    "semantic_hash": "80666c2165d6fd1ef3f39afd98570cd7"
+  },
+  "/home/jero/ai/dashbord/src/features/finance/pages/FinancePage.vue": {
+    "mtime": 1779897632.6510634,
+    "ast_hash": "ac80bc99da08c8747b94b3f0516181f4",
+    "semantic_hash": "ac80bc99da08c8747b94b3f0516181f4"
+  },
+  "/home/jero/ai/dashbord/src/features/finance/pages/FinanceSubscriptionsPage.vue": {
+    "mtime": 1779898147.7738988,
+    "ast_hash": "46995fbb7a626c61c9d669b28fbf4ecf",
+    "semantic_hash": "46995fbb7a626c61c9d669b28fbf4ecf"
+  },
+  "/home/jero/ai/dashbord/src/features/finance/routes.ts": {
+    "mtime": 1779898151.984443,
+    "ast_hash": "eee7d4934f63321ef682c9c2bee36c2d",
+    "semantic_hash": "eee7d4934f63321ef682c9c2bee36c2d"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/components/TimerDial.vue": {
+    "mtime": 1779895825.7526999,
+    "ast_hash": "c34786564a115ba06ce4a910e4b55fa2",
+    "semantic_hash": "c34786564a115ba06ce4a910e4b55fa2"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/ExerciseDetailPage.vue": {
+    "mtime": 1779895825.7526999,
+    "ast_hash": "e6b6fe35e8f426ced98e87513bd92f4b",
+    "semantic_hash": "e6b6fe35e8f426ced98e87513bd92f4b"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/ExercisePage.vue": {
+    "mtime": 1780329809.351666,
+    "ast_hash": "94b79ac08e175a68b8f07fe324a57a90",
+    "semantic_hash": "94b79ac08e175a68b8f07fe324a57a90"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/HistoryPage.vue": {
+    "mtime": 1780329822.6541884,
+    "ast_hash": "d2769cd4f4d3195e80f101634705935b",
+    "semantic_hash": "d2769cd4f4d3195e80f101634705935b"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/HomePage.vue": {
+    "mtime": 1779896390.2319393,
+    "ast_hash": "b712fdc9b1ec810371b367f4eeef238d",
+    "semantic_hash": "b712fdc9b1ec810371b367f4eeef238d"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/TabsPage.vue": {
+    "mtime": 1780056338.4540048,
+    "ast_hash": "4978937e7fd76dba69ac6487defb025d",
+    "semantic_hash": "4978937e7fd76dba69ac6487defb025d"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/TemplatePage.vue": {
+    "mtime": 1779895825.7528877,
+    "ast_hash": "7fa489346c272155e49bb3cb7377eadc",
+    "semantic_hash": "7fa489346c272155e49bb3cb7377eadc"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/WorkoutPage.vue": {
+    "mtime": 1780329843.739342,
+    "ast_hash": "b61ee5e288d765550c8b0c810ea168b5",
+    "semantic_hash": "b61ee5e288d765550c8b0c810ea168b5"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/flows/ExercisePickerPage.vue": {
+    "mtime": 1779895825.7528877,
+    "ast_hash": "3bd33088c74d6584e9b21abb9a484f16",
+    "semantic_hash": "3bd33088c74d6584e9b21abb9a484f16"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/flows/TemplateBuilderPage.vue": {
+    "mtime": 1779895825.753282,
+    "ast_hash": "c11a5ae18bad9cc16bbd8dae59ff6716",
+    "semantic_hash": "c11a5ae18bad9cc16bbd8dae59ff6716"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/pages/flows/TemplateEditorPage.vue": {
+    "mtime": 1779895825.753282,
+    "ast_hash": "c4a7c957c7dc149e00c2f9ffefbec597",
+    "semantic_hash": "c4a7c957c7dc149e00c2f9ffefbec597"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/routes.ts": {
+    "mtime": 1779896340.7773113,
+    "ast_hash": "9d678b2bff35d84de60d6013b34d6a3e",
+    "semantic_hash": "9d678b2bff35d84de60d6013b34d6a3e"
+  },
+  "/home/jero/ai/dashbord/src/features/gym/types/models.ts": {
+    "mtime": 1779895825.753282,
+    "ast_hash": "9c7aed6a7469798fb2a6b57dc831571b",
+    "semantic_hash": "9c7aed6a7469798fb2a6b57dc831571b"
+  },
+  "/home/jero/ai/dashbord/src/features/health/components/HealthSectionTabs.vue": {
+    "mtime": 1779984062.7323463,
+    "ast_hash": "7f9482c068143391970e84ec4c5845f0",
+    "semantic_hash": "7f9482c068143391970e84ec4c5845f0"
+  },
+  "/home/jero/ai/dashbord/src/features/health/pages/HealthCalendarPage.vue": {
+    "mtime": 1779897571.6979263,
+    "ast_hash": "7700235c2cb5a5c8397bb2bf65cef0b4",
+    "semantic_hash": "7700235c2cb5a5c8397bb2bf65cef0b4"
+  },
+  "/home/jero/ai/dashbord/src/features/health/pages/HealthGoalsPage.vue": {
+    "mtime": 1779897602.5809216,
+    "ast_hash": "442f461fdf48877242dcd6285a333287",
+    "semantic_hash": "442f461fdf48877242dcd6285a333287"
+  },
+  "/home/jero/ai/dashbord/src/features/health/pages/HealthHabitsPage.vue": {
+    "mtime": 1779897587.1123743,
+    "ast_hash": "98bd4d35ec1d9bde2f126a898f6d46a5",
+    "semantic_hash": "98bd4d35ec1d9bde2f126a898f6d46a5"
+  },
+  "/home/jero/ai/dashbord/src/features/health/pages/HealthPage.vue": {
+    "mtime": 1779984656.7601652,
+    "ast_hash": "e3e28546a91c7e9ca26420c3991a765b",
+    "semantic_hash": "e3e28546a91c7e9ca26420c3991a765b"
+  },
+  "/home/jero/ai/dashbord/src/features/health/pages/SleepPage.vue": {
+    "mtime": 1780330456.868524,
+    "ast_hash": "fb487d27b0205c7eb4bf27e21ed36b66",
+    "semantic_hash": "fb487d27b0205c7eb4bf27e21ed36b66"
+  },
+  "/home/jero/ai/dashbord/src/features/health/routes.ts": {
+    "mtime": 1779983014.0712883,
+    "ast_hash": "fb62b748c442a0b661fd8c4d4d83d80d",
+    "semantic_hash": "fb62b748c442a0b661fd8c4d4d83d80d"
+  },
+  "/home/jero/ai/dashbord/src/features/home/pages/HomePage.vue": {
+    "mtime": 1780217625.8132527,
+    "ast_hash": "5649553e55cb7e6f36b3acbfae5ac55e",
+    "semantic_hash": "5649553e55cb7e6f36b3acbfae5ac55e"
+  },
+  "/home/jero/ai/dashbord/src/features/home/routes.ts": {
+    "mtime": 1779985652.9508388,
+    "ast_hash": "557bbe4c8ae8ba37de7f3594d8e01941",
+    "semantic_hash": "557bbe4c8ae8ba37de7f3594d8e01941"
+  },
+  "/home/jero/ai/dashbord/src/main.ts": {
+    "mtime": 1779895825.753282,
+    "ast_hash": "923d702ba6b4adf2e5eb8e04fe7c2b37",
+    "semantic_hash": "923d702ba6b4adf2e5eb8e04fe7c2b37"
+  },
+  "/home/jero/ai/dashbord/src/router/index.ts": {
+    "mtime": 1779896384.3781836,
+    "ast_hash": "ce3503cc743bb3903b37a132f7f0c105",
+    "semantic_hash": "ce3503cc743bb3903b37a132f7f0c105"
+  },
+  "/home/jero/ai/dashbord/src/shared/components/DashboardTopBar.vue": {
+    "mtime": 1779985235.7597969,
+    "ast_hash": "31beb74b564032781da6afe0c386584e",
+    "semantic_hash": "31beb74b564032781da6afe0c386584e"
+  },
+  "/home/jero/ai/dashbord/src/shared/db/app_db.ts": {
+    "mtime": 1780330351.0466084,
+    "ast_hash": "54fef047b7814165a99b4e5dca2d6aab",
+    "semantic_hash": "54fef047b7814165a99b4e5dca2d6aab"
+  },
+  "/home/jero/ai/dashbord/src/shared/health/HealthConnectAutoSync.vue": {
+    "mtime": 1779983827.137632,
+    "ast_hash": "355ddb4bb7ff86d1953fff15f1659ae1",
+    "semantic_hash": "355ddb4bb7ff86d1953fff15f1659ae1"
+  },
+  "/home/jero/ai/dashbord/src/shared/health/healthConnect.ts": {
+    "mtime": 1780330396.4907053,
+    "ast_hash": "1b41d36cc89cb604056d3be02e91ae64",
+    "semantic_hash": "1b41d36cc89cb604056d3be02e91ae64"
+  },
+  "/home/jero/ai/dashbord/src/shared/utils/timeFormat.ts": {
+    "mtime": 1779895825.753549,
+    "ast_hash": "500ea37ce8c54c4a8207b12ab77e6d6c",
+    "semantic_hash": "500ea37ce8c54c4a8207b12ab77e6d6c"
+  },
+  "/home/jero/ai/dashbord/src/vite-env.d.ts": {
+    "mtime": 1779895825.753549,
+    "ast_hash": "0352474ba2918efe13895edbc3780d94",
+    "semantic_hash": "0352474ba2918efe13895edbc3780d94"
+  },
+  "/home/jero/ai/dashbord/tests/e2e/fixtures/example.json": {
+    "mtime": 1779895825.753868,
+    "ast_hash": "1c0f81b6b542d5bc3972f4a4f97b63d6",
+    "semantic_hash": "1c0f81b6b542d5bc3972f4a4f97b63d6"
+  },
+  "/home/jero/ai/dashbord/tests/e2e/specs/test.cy.ts": {
+    "mtime": 1779981612.0543582,
+    "ast_hash": "64c4de551c4826d6b6ef424c5d92eade",
+    "semantic_hash": "64c4de551c4826d6b6ef424c5d92eade"
+  },
+  "/home/jero/ai/dashbord/tests/e2e/support/commands.ts": {
+    "mtime": 1779895825.753868,
+    "ast_hash": "bd153e3a38e890ea7a3b69c4a43652b7",
+    "semantic_hash": "bd153e3a38e890ea7a3b69c4a43652b7"
+  },
+  "/home/jero/ai/dashbord/tests/e2e/support/e2e.ts": {
+    "mtime": 1779895825.7540233,
+    "ast_hash": "7bba757e2efad1ceafb94a37c700b34c",
+    "semantic_hash": "7bba757e2efad1ceafb94a37c700b34c"
+  },
+  "/home/jero/ai/dashbord/tests/unit/example.spec.ts": {
+    "mtime": 1779895825.7540233,
+    "ast_hash": "6164c1a31fbc740c178790f7addce6ed",
+    "semantic_hash": "6164c1a31fbc740c178790f7addce6ed"
+  },
+  "/home/jero/ai/dashbord/tsconfig.json": {
+    "mtime": 1779895825.7540233,
+    "ast_hash": "ac02707bb89b406011040a086b9dfec5",
+    "semantic_hash": "ac02707bb89b406011040a086b9dfec5"
+  },
+  "/home/jero/ai/dashbord/tsconfig.node.json": {
+    "mtime": 1779895825.7540233,
+    "ast_hash": "42c71f3f9f64d94f8145887b59354846",
+    "semantic_hash": "42c71f3f9f64d94f8145887b59354846"
+  },
+  "/home/jero/ai/dashbord/vite.config.ts": {
+    "mtime": 1779895825.7540233,
+    "ast_hash": "7a82cf0f53964af4cb63639c390c0d53",
+    "semantic_hash": "7a82cf0f53964af4cb63639c390c0d53"
+  },
+  "/home/jero/ai/dashbord/.github/copilot-instructions.md": {
+    "mtime": 1780217531.8793824,
+    "ast_hash": "e413d87af201542b45910706205b6bff",
+    "semantic_hash": "e413d87af201542b45910706205b6bff"
+  },
+  "/home/jero/ai/dashbord/.github/workflows/copilot-setup-steps.yml": {
+    "mtime": 1780217579.1731608,
+    "ast_hash": "c428b021ff468434ab9c1db695f1200a",
+    "semantic_hash": "c428b021ff468434ab9c1db695f1200a"
+  },
+  "/home/jero/ai/dashbord/CLAUDE.md": {
+    "mtime": 1780329594.060248,
+    "ast_hash": "ccd14815146caa9ffb0e4d8ffce6ff8f",
+    "semantic_hash": "ccd14815146caa9ffb0e4d8ffce6ff8f"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/index.html": {
+    "mtime": 1780239823.2970421,
+    "ast_hash": "7568ca440e177777dc2f39d768839203",
+    "semantic_hash": "7568ca440e177777dc2f39d768839203"
+  },
+  "/home/jero/ai/dashbord/docs/AI_CONTEXT.md": {
+    "mtime": 1779895825.7495732,
+    "ast_hash": "5b7e8aba737b5ca87c40a53aabc592e9",
+    "semantic_hash": "5b7e8aba737b5ca87c40a53aabc592e9"
+  },
+  "/home/jero/ai/dashbord/docs/API.md": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "9ad5a786e5ea7273ec33cf6a28a3d1ec",
+    "semantic_hash": "9ad5a786e5ea7273ec33cf6a28a3d1ec"
+  },
+  "/home/jero/ai/dashbord/docs/APP_STATUS.md": {
+    "mtime": 1779983138.5319386,
+    "ast_hash": "42a30835962a965f78759c001344f3d0",
+    "semantic_hash": "42a30835962a965f78759c001344f3d0"
+  },
+  "/home/jero/ai/dashbord/docs/ARCHITECTURE.md": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "da7818cbf13984f252cf3e372a7240e0",
+    "semantic_hash": "da7818cbf13984f252cf3e372a7240e0"
+  },
+  "/home/jero/ai/dashbord/docs/DB_SCHEMA.md": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "620606996ba3b80aca5434735a0908bd",
+    "semantic_hash": "620606996ba3b80aca5434735a0908bd"
+  },
+  "/home/jero/ai/dashbord/docs/DESIGN.md": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "96b671d5046726086751e4a9b1fd76c9",
+    "semantic_hash": "96b671d5046726086751e4a9b1fd76c9"
+  },
+  "/home/jero/ai/dashbord/docs/UI_STRUCTURE.md": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "9220b1ceed37f5c0608c813942763650",
+    "semantic_hash": "9220b1ceed37f5c0608c813942763650"
+  },
+  "/home/jero/ai/dashbord/index.html": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "c9f97cf4b968fcdaa3c8329f08489564",
+    "semantic_hash": "c9f97cf4b968fcdaa3c8329f08489564"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/assets/public/favicon.png": {
+    "mtime": 1780239823.2970421,
+    "ast_hash": "988be98f12b400c41a22b59b82cfeab6",
+    "semantic_hash": "988be98f12b400c41a22b59b82cfeab6"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-hdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "aeb856584d2a9cda9855758baf19ee33",
+    "semantic_hash": "aeb856584d2a9cda9855758baf19ee33"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-ldpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "816876a31018b871c79680ec02c28039",
+    "semantic_hash": "816876a31018b871c79680ec02c28039"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-mdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "f1fc57d2cf748942b8e6c5304c6bc104",
+    "semantic_hash": "f1fc57d2cf748942b8e6c5304c6bc104"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-night-hdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "f0b91011e761c363410f590dce11331e",
+    "semantic_hash": "f0b91011e761c363410f590dce11331e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-night-ldpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "d2b1753195aa3cdb744731824dfe079d",
+    "semantic_hash": "d2b1753195aa3cdb744731824dfe079d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-night-mdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "98598290d40f008e153c95a1482cb1fc",
+    "semantic_hash": "98598290d40f008e153c95a1482cb1fc"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-night-xhdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "b79ccc2e07ed43e8b3a545563f1ec7bc",
+    "semantic_hash": "b79ccc2e07ed43e8b3a545563f1ec7bc"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-night-xxhdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "4987d564ec122cb105a5467c2264fa5e",
+    "semantic_hash": "4987d564ec122cb105a5467c2264fa5e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-night-xxxhdpi/splash.png": {
+    "mtime": 1779895825.7438052,
+    "ast_hash": "3d8fad0cdc79282a73fb6fce81544de7",
+    "semantic_hash": "3d8fad0cdc79282a73fb6fce81544de7"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-xhdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "ee98da8072c949d6f315ca2e2225647a",
+    "semantic_hash": "ee98da8072c949d6f315ca2e2225647a"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-xxhdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "7e1c217a47c370771830cfdbb11d2f9e",
+    "semantic_hash": "7e1c217a47c370771830cfdbb11d2f9e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-land-xxxhdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "15ca33b97302df2f1f6cd1d30490d334",
+    "semantic_hash": "15ca33b97302df2f1f6cd1d30490d334"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-night/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "d2b1753195aa3cdb744731824dfe079d",
+    "semantic_hash": "d2b1753195aa3cdb744731824dfe079d"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-hdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "e3a385e4efca2d52dd6b6d9fd1855cff",
+    "semantic_hash": "e3a385e4efca2d52dd6b6d9fd1855cff"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-ldpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "753e012e358fdc1c9d552f9cbb2faf4c",
+    "semantic_hash": "753e012e358fdc1c9d552f9cbb2faf4c"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-mdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "9faee932c22ee1df0cb1c88d0d2d7caa",
+    "semantic_hash": "9faee932c22ee1df0cb1c88d0d2d7caa"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-night-hdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "376e0839b3cda9d89bd5591b3d36f578",
+    "semantic_hash": "376e0839b3cda9d89bd5591b3d36f578"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-night-ldpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "e1583e516ac18b56c827f790718e31d4",
+    "semantic_hash": "e1583e516ac18b56c827f790718e31d4"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-night-mdpi/splash.png": {
+    "mtime": 1779895825.7441568,
+    "ast_hash": "e84943bd7087223574311a2c4e7c15ca",
+    "semantic_hash": "e84943bd7087223574311a2c4e7c15ca"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-night-xhdpi/splash.png": {
+    "mtime": 1779895825.7451565,
+    "ast_hash": "c884a3e903cb7dc9d4854ac09f4c9011",
+    "semantic_hash": "c884a3e903cb7dc9d4854ac09f4c9011"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-night-xxhdpi/splash.png": {
+    "mtime": 1779895825.7451565,
+    "ast_hash": "3cf0c7a8f65b0ac635ae189bf5e82a9e",
+    "semantic_hash": "3cf0c7a8f65b0ac635ae189bf5e82a9e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-night-xxxhdpi/splash.png": {
+    "mtime": 1779895825.7451565,
+    "ast_hash": "4db11f06e099d73ddbfd8b56019b2e59",
+    "semantic_hash": "4db11f06e099d73ddbfd8b56019b2e59"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-xhdpi/splash.png": {
+    "mtime": 1779895825.7451565,
+    "ast_hash": "0264694f9a4093fd951217e2c65b0a78",
+    "semantic_hash": "0264694f9a4093fd951217e2c65b0a78"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-xxhdpi/splash.png": {
+    "mtime": 1779895825.7451565,
+    "ast_hash": "94dca2118c189f6deca40f4725019488",
+    "semantic_hash": "94dca2118c189f6deca40f4725019488"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable-port-xxxhdpi/splash.png": {
+    "mtime": 1779895825.7451565,
+    "ast_hash": "2f337c365a64dc29fe40a88477a82a0a",
+    "semantic_hash": "2f337c365a64dc29fe40a88477a82a0a"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/drawable/splash.png": {
+    "mtime": 1779895825.7466452,
+    "ast_hash": "9faee932c22ee1df0cb1c88d0d2d7caa",
+    "semantic_hash": "9faee932c22ee1df0cb1c88d0d2d7caa"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1779895825.746793,
+    "ast_hash": "eaf5f885af3ab2d7aae7cf13617dd06f",
+    "semantic_hash": "eaf5f885af3ab2d7aae7cf13617dd06f"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-hdpi/ic_launcher_background.png": {
+    "mtime": 1779895825.746864,
+    "ast_hash": "bc7c934a61eae7bcc611704b0c5b2d5f",
+    "semantic_hash": "bc7c934a61eae7bcc611704b0c5b2d5f"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png": {
+    "mtime": 1779895825.746864,
+    "ast_hash": "d1ead4120ee2276c31694f1af0ff2085",
+    "semantic_hash": "d1ead4120ee2276c31694f1af0ff2085"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1779895825.746864,
+    "ast_hash": "253dff3804722de1a97c036fb05003ca",
+    "semantic_hash": "253dff3804722de1a97c036fb05003ca"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-ldpi/ic_launcher.png": {
+    "mtime": 1779895825.746864,
+    "ast_hash": "4785275d612a290017a807f818f00900",
+    "semantic_hash": "4785275d612a290017a807f818f00900"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-ldpi/ic_launcher_background.png": {
+    "mtime": 1779895825.7469862,
+    "ast_hash": "3d6b120d600c303583d5269332817c91",
+    "semantic_hash": "3d6b120d600c303583d5269332817c91"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-ldpi/ic_launcher_foreground.png": {
+    "mtime": 1779895825.7469862,
+    "ast_hash": "40644523e5d3fbef007248083bd87d51",
+    "semantic_hash": "40644523e5d3fbef007248083bd87d51"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-ldpi/ic_launcher_round.png": {
+    "mtime": 1779895825.7469862,
+    "ast_hash": "2dcc9754a81f71a749aaa781cd0f5af4",
+    "semantic_hash": "2dcc9754a81f71a749aaa781cd0f5af4"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1779895825.7469862,
+    "ast_hash": "dbf343ac1be93b8bc39ae308117c9efc",
+    "semantic_hash": "dbf343ac1be93b8bc39ae308117c9efc"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-mdpi/ic_launcher_background.png": {
+    "mtime": 1779895825.7470932,
+    "ast_hash": "615b60ec33c56761f38852305c1b8e47",
+    "semantic_hash": "615b60ec33c56761f38852305c1b8e47"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png": {
+    "mtime": 1779895825.7470932,
+    "ast_hash": "aee82d5f52e68ff6abb68339f8b3177b",
+    "semantic_hash": "aee82d5f52e68ff6abb68339f8b3177b"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1779895825.7470932,
+    "ast_hash": "a665a3fff52b176faba4dc2a98bc3058",
+    "semantic_hash": "a665a3fff52b176faba4dc2a98bc3058"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1779895825.7470932,
+    "ast_hash": "c242cf130b77f93221399f75f559789e",
+    "semantic_hash": "c242cf130b77f93221399f75f559789e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xhdpi/ic_launcher_background.png": {
+    "mtime": 1779895825.747211,
+    "ast_hash": "9e1ec3df60917bce2c31aa8665afe21e",
+    "semantic_hash": "9e1ec3df60917bce2c31aa8665afe21e"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png": {
+    "mtime": 1779895825.747211,
+    "ast_hash": "c79c84f5486e15c19937a34d8e42ebf1",
+    "semantic_hash": "c79c84f5486e15c19937a34d8e42ebf1"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1779895825.747211,
+    "ast_hash": "ed1d8cebaefe4a58f9b2b44dbe84bf94",
+    "semantic_hash": "ed1d8cebaefe4a58f9b2b44dbe84bf94"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1779895825.747211,
+    "ast_hash": "218e617365b58046153aadcf21951e72",
+    "semantic_hash": "218e617365b58046153aadcf21951e72"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_background.png": {
+    "mtime": 1779895825.7473705,
+    "ast_hash": "5e809f15c5299495e990916334965946",
+    "semantic_hash": "5e809f15c5299495e990916334965946"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png": {
+    "mtime": 1779895825.7473705,
+    "ast_hash": "8a48290c385a474d2f94876364434e97",
+    "semantic_hash": "8a48290c385a474d2f94876364434e97"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1779895825.7473705,
+    "ast_hash": "7f8bcd6afaee0c4582a68e1e4374beae",
+    "semantic_hash": "7f8bcd6afaee0c4582a68e1e4374beae"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1779895825.7473705,
+    "ast_hash": "cce6c8bb7c3ad707fc53a1fbb1315be8",
+    "semantic_hash": "cce6c8bb7c3ad707fc53a1fbb1315be8"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_background.png": {
+    "mtime": 1779895825.74756,
+    "ast_hash": "2a2b548e7cb1ac0c3b0b2019cde4c5b7",
+    "semantic_hash": "2a2b548e7cb1ac0c3b0b2019cde4c5b7"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png": {
+    "mtime": 1779895825.74756,
+    "ast_hash": "d1ad6fcf16e2a8216c4028af4c384184",
+    "semantic_hash": "d1ad6fcf16e2a8216c4028af4c384184"
+  },
+  "/home/jero/ai/dashbord/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1779895825.74756,
+    "ast_hash": "f30dc19e84eb2c49cdc705f525c05406",
+    "semantic_hash": "f30dc19e84eb2c49cdc705f525c05406"
+  },
+  "/home/jero/ai/dashbord/database_visual structure/V1.png": {
+    "mtime": 1779895825.7484114,
+    "ast_hash": "392873505f3e99e272b69f5a360b19d9",
+    "semantic_hash": "392873505f3e99e272b69f5a360b19d9"
+  },
+  "/home/jero/ai/dashbord/database_visual structure/V2.png": {
+    "mtime": 1779895825.7495732,
+    "ast_hash": "d1580a22b9f56f410128eae1c1542dc2",
+    "semantic_hash": "d1580a22b9f56f410128eae1c1542dc2"
+  },
+  "/home/jero/ai/dashbord/database_visual structure/V3.png": {
+    "mtime": 1779895825.7495732,
+    "ast_hash": "fbd4de6dc3380bacf5d83f2f3df83ce8",
+    "semantic_hash": "fbd4de6dc3380bacf5d83f2f3df83ce8"
+  },
+  "/home/jero/ai/dashbord/public/favicon.png": {
+    "mtime": 1779895825.75031,
+    "ast_hash": "988be98f12b400c41a22b59b82cfeab6",
+    "semantic_hash": "988be98f12b400c41a22b59b82cfeab6"
+  },
+  "/home/jero/ai/dashbord/resources/icon.png": {
+    "mtime": 1779895825.751154,
+    "ast_hash": "247833649ebf4292196cc1095faa26f5",
+    "semantic_hash": "247833649ebf4292196cc1095faa26f5"
+  },
+  "/home/jero/ai/dashbord/resources/splash.png": {
+    "mtime": 1779895825.751154,
+    "ast_hash": "61787e1659dc8ba71488673ff54b72aa",
+    "semantic_hash": "61787e1659dc8ba71488673ff54b72aa"
+  }
+}

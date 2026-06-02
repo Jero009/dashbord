@@ -4,158 +4,596 @@
       <dashboard-top-bar />
       <health-section-tabs />
     </ion-header>
-    <ion-content :fullscreen="true" class="health-content">
-      <div class="health-shell">
-        <ion-card class="calendar-card">
-          <ion-card-header>
-            <ion-card-title>Calendar</ion-card-title>
-            <ion-card-subtitle>Track events and recovery days</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-item>
-              <ion-label position="stacked">Select date</ion-label>
-              <ion-input v-model="selectedDate" type="date"></ion-input>
-            </ion-item>
-          </ion-card-content>
-        </ion-card>
+    <ion-content :fullscreen="true" class="cal-content">
+      <div class="cal-shell">
 
-        <ion-card class="calendar-card">
-          <ion-card-header>
-            <ion-card-title>Add event</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list>
-              <ion-item>
-                <ion-label position="stacked">Title</ion-label>
-                <ion-input v-model="eventTitle"></ion-input>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Type</ion-label>
-                <ion-select v-model="eventType">
-                  <ion-select-option value="general">General</ion-select-option>
-                  <ion-select-option value="workout">Workout</ion-select-option>
-                  <ion-select-option value="recovery">Recovery</ion-select-option>
-                </ion-select>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Notes</ion-label>
-                <ion-input v-model="eventNotes"></ion-input>
-              </ion-item>
-            </ion-list>
-            <ion-button expand="block" @click="saveEvent">Save event</ion-button>
-          </ion-card-content>
-        </ion-card>
+        <!-- Month navigation -->
+        <div class="month-nav">
+          <button class="month-nav__btn" @click="prevMonth">&#8249;</button>
+          <span class="month-nav__label">{{ monthLabel }}</span>
+          <button class="month-nav__btn" @click="nextMonth">&#8250;</button>
+        </div>
 
-        <ion-card class="calendar-card">
-          <ion-card-header>
-            <ion-card-title>Events on {{ selectedDate }}</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list v-if="events.length">
-              <ion-item v-for="event in events" :key="event.id">
-                <ion-label>
-                  <h3>{{ event.title }}</h3>
-                  <p>{{ event.type }}</p>
-                  <p v-if="event.notes">{{ event.notes }}</p>
-                </ion-label>
-              </ion-item>
-            </ion-list>
-            <p v-else class="empty-state">No events yet.</p>
-          </ion-card-content>
-        </ion-card>
+        <!-- Day-of-week headers -->
+        <div class="cal-grid">
+          <div v-for="d in DOW" :key="d" class="cal-dow">{{ d }}</div>
+
+          <!-- Padding cells -->
+          <div v-for="n in leadingBlanks" :key="`b${n}`" class="cal-cell cal-cell--blank" />
+
+          <!-- Day cells -->
+          <div
+            v-for="cell in calendarCells"
+            :key="cell.dateStr"
+            class="cal-cell"
+            :class="{
+              'cal-cell--today': cell.dateStr === todayStr,
+              'cal-cell--selected': cell.dateStr === selectedDate,
+            }"
+            @click="selectDay(cell.dateStr)"
+          >
+            <span class="cal-cell__num">{{ cell.day }}</span>
+            <div class="cal-cell__dots">
+              <span v-if="cell.hasEvent" class="dot dot--event" />
+              <span v-if="cell.hasHabit" class="dot dot--habit" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected day detail -->
+        <div class="day-detail">
+          <p class="eyebrow">{{ selectedDateLabel }}</p>
+
+          <!-- Events -->
+          <div class="detail-card">
+            <div class="detail-card__header">
+              <h3>Events</h3>
+              <button class="icon-btn" @click="showAddEvent = !showAddEvent">
+                {{ showAddEvent ? '✕' : '+' }}
+              </button>
+            </div>
+
+            <div v-if="showAddEvent" class="add-form">
+              <input v-model="newTitle" class="form-input" placeholder="Event title" />
+              <div class="form-row">
+                <input v-model="newTimeStart" class="form-input form-input--time" type="time" title="Start time" />
+                <span class="time-sep">–</span>
+                <input v-model="newTimeEnd" class="form-input form-input--time" type="time" title="End time" />
+              </div>
+              <div class="form-row">
+                <select v-model="newType" class="form-select">
+                  <option value="general">General</option>
+                  <option value="workout">Workout</option>
+                  <option value="recovery">Recovery</option>
+                  <option value="reminder">Reminder</option>
+                </select>
+                <button class="save-btn" @click="saveEvent">Save</button>
+              </div>
+              <input v-model="newNotes" class="form-input" placeholder="Notes (optional)" />
+            </div>
+
+            <ul v-if="events.length" class="item-list">
+              <li v-for="ev in events" :key="ev.id" class="item-row">
+                <span class="item-tag" :class="`item-tag--${ev.type}`">{{ ev.type }}</span>
+                <div class="item-body">
+                  <strong>{{ ev.title }}</strong>
+                  <span v-if="ev.time_start" class="item-note">
+                    {{ ev.time_start }}{{ ev.time_end ? ' – ' + ev.time_end : '' }}
+                  </span>
+                  <span v-if="ev.notes" class="item-note">{{ ev.notes }}</span>
+                </div>
+                <button class="delete-btn" @click="removeEvent(ev.id)">×</button>
+              </li>
+            </ul>
+            <p v-else class="empty-hint">No events on this day</p>
+          </div>
+
+          <!-- Habits -->
+          <div class="detail-card">
+            <div class="detail-card__header">
+              <h3>Habits</h3>
+            </div>
+            <ul v-if="habits.length" class="item-list">
+              <li
+                v-for="h in habits"
+                :key="h.id"
+                class="habit-row"
+                @click="toggleHabit(h)"
+              >
+                <div class="habit-check" :class="{ 'habit-check--done': h.completed === 1 }">
+                  <span v-if="h.completed === 1">✓</span>
+                </div>
+                <span class="habit-name">{{ h.name }}</span>
+              </li>
+            </ul>
+            <p v-else class="empty-hint">No habits set up yet</p>
+          </div>
+        </div>
+
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import {
-  IonPage,
-  IonHeader,
-  IonContent,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
-  IonCardContent,
-  IonItem,
-  IonLabel,
-  IonInput,
-  IonSelect,
-  IonSelectOption,
-  IonList,
-  IonButton,
-  onIonViewWillEnter,
-  toastController,
-} from '@ionic/vue';
-import { ref, watch } from 'vue';
+import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { ref, computed, watch } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
-import { addCalendarEvent, getCalendarEventsForDate } from '@/shared/db/app_db';
+import {
+  addCalendarEvent,
+  deleteCalendarEvent,
+  getCalendarEventsForDate,
+  getCalendarEventDatesForMonth,
+  getHabitCompletedDatesForMonth,
+  getHabitsWithStatus,
+  toggleHabitCompletion,
+} from '@/shared/db/app_db';
 
-const selectedDate = ref(new Date().toISOString().slice(0, 10));
-const eventTitle = ref('');
-const eventType = ref('general');
-const eventNotes = ref('');
-const events = ref<Array<Record<string, any>>>([]);
+const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-const loadEvents = async () => {
-  events.value = await getCalendarEventsForDate(selectedDate.value);
+const todayStr = new Date().toISOString().slice(0, 10);
+const now = new Date();
+const viewYear = ref(now.getFullYear());
+const viewMonth = ref(now.getMonth()); // 0-indexed
+const selectedDate = ref(todayStr);
+
+const events = ref<Record<string, any>[]>([]);
+const habits = ref<Record<string, any>[]>([]);
+const eventDates = ref<Set<string>>(new Set());
+const habitDates = ref<Set<string>>(new Set());
+
+const showAddEvent = ref(false);
+const newTitle = ref('');
+const newType = ref('general');
+const newNotes = ref('');
+const newTimeStart = ref('');
+const newTimeEnd = ref('');
+
+const monthLabel = computed(() => {
+  return new Date(viewYear.value, viewMonth.value, 1).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+});
+
+const yearMonthStr = computed(() =>
+  `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}`
+);
+
+const leadingBlanks = computed(() =>
+  new Date(viewYear.value, viewMonth.value, 1).getDay()
+);
+
+const calendarCells = computed(() => {
+  const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate();
+  const cells = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${yearMonthStr.value}-${String(d).padStart(2, '0')}`;
+    cells.push({
+      day: d,
+      dateStr,
+      hasEvent: eventDates.value.has(dateStr),
+      hasHabit: habitDates.value.has(dateStr),
+    });
+  }
+  return cells;
+});
+
+const selectedDateLabel = computed(() =>
+  new Date(selectedDate.value + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+);
+
+const prevMonth = () => {
+  if (viewMonth.value === 0) { viewYear.value--; viewMonth.value = 11; }
+  else viewMonth.value--;
+};
+
+const nextMonth = () => {
+  if (viewMonth.value === 11) { viewYear.value++; viewMonth.value = 0; }
+  else viewMonth.value++;
+};
+
+const selectDay = (dateStr: string) => {
+  selectedDate.value = dateStr;
+};
+
+const loadMonthDots = async () => {
+  const [evDates, habDates] = await Promise.all([
+    getCalendarEventDatesForMonth(yearMonthStr.value),
+    getHabitCompletedDatesForMonth(yearMonthStr.value),
+  ]);
+  eventDates.value = new Set(evDates);
+  habitDates.value = new Set(habDates);
+};
+
+const loadDayDetail = async () => {
+  const [evs, habs] = await Promise.all([
+    getCalendarEventsForDate(selectedDate.value),
+    getHabitsWithStatus(selectedDate.value),
+  ]);
+  events.value = evs;
+  habits.value = habs;
 };
 
 const saveEvent = async () => {
-  if (!eventTitle.value.trim()) {
-    const toast = await toastController.create({
-      message: 'Add a title for the event.',
-      duration: 2000,
-      color: 'warning',
-    });
-    await toast.present();
+  if (!newTitle.value.trim()) {
+    const t = await toastController.create({ message: 'Add a title.', duration: 1800, color: 'warning' });
+    await t.present();
     return;
   }
-
-  await addCalendarEvent(eventTitle.value.trim(), selectedDate.value, eventType.value, eventNotes.value.trim());
-  eventTitle.value = '';
-  eventNotes.value = '';
-  await loadEvents();
-
-  const toast = await toastController.create({
-    message: 'Event added.',
-    duration: 1800,
-    color: 'success',
-  });
-  await toast.present();
+  await addCalendarEvent(
+    newTitle.value.trim(),
+    selectedDate.value,
+    newType.value,
+    newNotes.value.trim() || undefined,
+    newTimeStart.value || undefined,
+    newTimeEnd.value || undefined
+  );
+  newTitle.value = '';
+  newNotes.value = '';
+  newType.value = 'general';
+  newTimeStart.value = '';
+  newTimeEnd.value = '';
+  showAddEvent.value = false;
+  await Promise.all([loadDayDetail(), loadMonthDots()]);
 };
 
-watch(selectedDate, async () => {
-  await loadEvents();
-});
+const removeEvent = async (id: number) => {
+  await deleteCalendarEvent(id);
+  await Promise.all([loadDayDetail(), loadMonthDots()]);
+};
+
+const toggleHabit = async (h: Record<string, any>) => {
+  await toggleHabitCompletion(h.id, selectedDate.value, h.completed !== 1);
+  await Promise.all([loadDayDetail(), loadMonthDots()]);
+};
+
+watch(yearMonthStr, loadMonthDots);
+watch(selectedDate, loadDayDetail);
 
 onIonViewWillEnter(async () => {
-  await loadEvents();
+  await Promise.all([loadMonthDots(), loadDayDetail()]);
 });
 </script>
 
 <style scoped>
-.health-content {
-  --padding-top: 16px;
-  --padding-bottom: 24px;
+.cal-content {
+  --background: #000;
 }
 
-.health-shell {
-  padding: 16px;
+.cal-shell {
+  padding: 1rem 1rem 3rem;
   display: grid;
-  gap: 16px;
+  gap: 1.25rem;
+  max-width: 520px;
+  margin: 0 auto;
 }
 
-.calendar-card {
+/* Month navigation */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.month-nav__label {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.month-nav__btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Calendar grid */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-dow {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  padding-bottom: 4px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cal-cell--blank {
+  cursor: default;
+}
+
+.cal-cell--today .cal-cell__num {
+  color: rgb(239, 68, 68);
+  font-weight: 700;
+}
+
+.cal-cell--selected {
+  background: rgb(239, 68, 68) !important;
+}
+
+.cal-cell--selected .cal-cell__num {
+  color: #fff;
+  font-weight: 700;
+}
+
+.cal-cell:not(.cal-cell--blank):not(.cal-cell--selected):hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cal-cell__num {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1;
+}
+
+.cal-cell__dots {
+  display: flex;
+  gap: 2px;
+  min-height: 5px;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.dot--event {
+  background: rgb(239, 68, 68);
+}
+
+.dot--habit {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.cal-cell--selected .dot--event {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.cal-cell--selected .dot--habit {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* Day detail */
+.eyebrow {
   margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.day-detail {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.detail-card {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1rem;
+}
+
+.detail-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.detail-card__header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Add form */
+.add-form {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
   border-radius: 12px;
-  background: var(--ion-color-primary);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.empty-state {
+.form-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.form-select {
+  flex: 1;
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.form-input--time {
+  color-scheme: dark;
+  flex: 1;
+}
+
+.time-sep {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1rem;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.save-btn {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  background: rgb(239, 68, 68);
+  border: none;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Event list */
+.item-list {
+  list-style: none;
   margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.item-tag {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.item-tag--workout { background: rgba(239, 68, 68, 0.2); color: rgb(239, 68, 68); }
+.item-tag--recovery { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
+.item-tag--reminder { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
+
+.item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-body strong {
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.item-note {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.delete-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Habit rows */
+.habit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.habit-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: #fff;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.habit-check--done {
+  background: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+}
+
+.habit-name {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.empty-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.35);
 }
 </style>

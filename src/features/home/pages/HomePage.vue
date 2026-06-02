@@ -6,151 +6,191 @@
 
     <ion-content :fullscreen="true" class="home-content">
       <div class="home-shell">
-        <section class="hero-card">
-          <div class="hero-card__header">
-            <p class="eyebrow">Today</p>
-            <h1>Readiness</h1>
-          </div>
 
-          <div class="hero-card__body">
-            <div class="readiness-ring" :style="{ '--score': readinessRatio }">
+        <!-- Active workout banner -->
+        <ion-card v-if="activeWorkout" class="active-card" @click="backToWorkout">
+          <div class="card-topline">
+            <p class="section-kicker">Active workout</p>
+          </div>
+          <div class="active-card__body">
+            <div class="active-card__timer">
+              <span>Workout</span>
+              <strong>{{ formatWorkoutTimer() }}</strong>
+            </div>
+            <div v-if="activeRestTimer.isActive" class="active-card__timer active-card__timer--rest">
+              <span>Rest</span>
+              <strong>{{ formatRestTime(activeRestTimer.remaining) }}</strong>
+            </div>
+          </div>
+        </ion-card>
+
+        <!-- Battery -->
+        <ion-card class="summary-card">
+          <div class="card-topline">
+            <p class="section-kicker">Battery</p>
+            <span class="card-date">{{ todayDateLabel }}</span>
+          </div>
+          <div class="summary-card__body">
+
+            <div class="battery-ring">
               <svg viewBox="0 0 120 120" class="readiness-ring__svg" aria-hidden="true">
-                <circle class="readiness-ring__track" cx="60" cy="60" r="46"></circle>
+                <circle class="readiness-ring__track" cx="60" cy="60" r="46" />
                 <circle
                   class="readiness-ring__progress"
-                  cx="60"
-                  cy="60"
-                  r="46"
-                  :style="{ strokeDashoffset: readinessDashOffset }"
-                ></circle>
+                  cx="60" cy="60" r="46"
+                  :style="{ strokeDashoffset: batteryDashOffset, stroke: batteryColor }"
+                />
               </svg>
               <div class="readiness-ring__content">
-                <strong>{{ readinessDisplay }}</strong>
-                <span v-if="readinessDrainDisplay !== null">-{{ readinessDrainDisplay }} today</span>
-                <span v-else>Waiting for data</span>
+                <strong>{{ batteryScore !== null ? batteryScore : '—' }}</strong>
+                <span>{{ battery?.status ?? 'No data' }}</span>
               </div>
             </div>
 
-            <div class="readiness-meta">
-              <div>
-                <span>Sleep</span>
-                <strong>{{ sleepDisplay }}</strong>
+            <div class="battery-right">
+              <div class="ready-chips">
+                <div class="ready-chip" :class="battery?.readyToTrain ? 'ready-chip--on' : 'ready-chip--off'">
+                  🏋️ Train
+                </div>
+                <div class="ready-chip" :class="battery?.readyToStudy ? 'ready-chip--on' : 'ready-chip--off'">
+                  📚 Study
+                </div>
               </div>
-              <div>
-                <span>Steps</span>
-                <strong>{{ stepsDisplay }}</strong>
+
+              <div class="card-metrics">
+                <div class="card-metric">
+                  <span>Sleep</span>
+                  <strong>{{ sleepDisplay }}</strong>
+                </div>
+                <div class="card-metric">
+                  <span>Resting HR</span>
+                  <strong>{{ restingHrDisplay }}</strong>
+                </div>
+                <div class="card-metric">
+                  <span>Steps</span>
+                  <strong>{{ stepsDisplay }}</strong>
+                </div>
+                <div class="card-metric">
+                  <span>Morning</span>
+                  <strong>{{ baseline ?? '—' }}</strong>
+                </div>
               </div>
-              <div>
-                <span>Resting HR</span>
-                <strong>{{ restingHrDisplay }}</strong>
-              </div>
-              <div>
-                <span>Status</span>
-                <strong>{{ readinessSubtitle }}</strong>
-              </div>
+
+              <p v-if="drainParts.length" class="drain-line">{{ drainParts.join(' · ') }}</p>
+            </div>
+
+          </div>
+        </ion-card>
+
+        <!-- Latest workout (only when no active session) -->
+        <ion-card v-if="!activeWorkout && latestWorkout" class="summary-card">
+          <div class="card-topline">
+            <p class="section-kicker">Last workout</p>
+            <span class="card-date">{{ latestWorkoutLabel }}</span>
+          </div>
+          <div class="card-metrics card-metrics--4">
+            <div class="card-metric">
+              <span>Duration</span>
+              <strong>{{ latestWorkoutDuration }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Volume</span>
+              <strong>{{ latestWorkoutVolume }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Exercises</span>
+              <strong>{{ latestWorkoutExerciseCount }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Sets</span>
+              <strong>{{ latestWorkoutSetCount }}</strong>
             </div>
           </div>
-        </section>
+        </ion-card>
 
-        <section v-if="latestWorkout" class="workout-card">
-          <div class="graph-card__header">
-            <div>
-              <p class="eyebrow">Gym</p>
-              <h2>Latest workout</h2>
-              <p class="hero-copy">{{ latestWorkout.name ?? 'Completed session' }}</p>
-            </div>
-            <span class="graph-card__time">{{ latestWorkoutLabel }}</span>
+        <!-- Day timeline -->
+        <section class="day-view-card">
+          <div class="day-view__header">
+            <p class="section-kicker">Schedule</p>
+            <span class="card-date">{{ todayDateLabel }}</span>
           </div>
 
-          <div class="workout-card__body">
-            <div class="workout-card__metrics">
-              <div>
-                <span>Duration</span>
-                <strong>{{ latestWorkoutDuration }}</strong>
+          <!-- Habit blocks -->
+          <div v-if="todayHabits.length" class="habits-strip">
+            <div
+              v-for="h in todayHabits"
+              :key="h.id"
+              class="habit-block"
+              :class="{ 'habit-block--done': h.completed === 1 }"
+              @click="toggleTodayHabit(h)"
+            >
+              <div class="habit-block__check">
+                <span v-if="h.completed === 1">✓</span>
               </div>
-              <div>
-                <span>Volume</span>
-                <strong>{{ latestWorkoutVolume }}</strong>
-              </div>
-              <div>
-                <span>Exercises</span>
-                <strong>{{ latestWorkoutExerciseCount }}</strong>
-              </div>
-              <div>
-                <span>Sets</span>
-                <strong>{{ latestWorkoutSetCount }}</strong>
-              </div>
+              <span class="habit-block__name">{{ h.name }}</span>
+              <span v-if="h.time" class="habit-block__time">{{ h.time }}</span>
             </div>
           </div>
-        </section>
 
-        <section class="graph-card">
-          <div class="graph-card__header">
-            <div>
-              <p class="eyebrow">Day curve</p>
-              <h2>How it drains</h2>
+          <!-- All-day items (no time set) -->
+          <div v-if="allDayItems.length" class="allday-strip">
+            <div v-for="item in allDayItems" :key="item.key" class="allday-pill" :class="item.cls">
+              <span v-if="item.isHabit" class="allday-check" :class="{ 'allday-check--done': item.done }" @click="item.toggle && item.toggle()">
+                {{ item.done ? '✓' : '○' }}
+              </span>
+              {{ item.label }}
             </div>
-            <span class="graph-card__time">{{ currentTimeLabel }}</span>
           </div>
 
-          <svg viewBox="0 0 100 48" class="graph" role="img" aria-label="Readiness drains through the day">
-            <polygon class="graph__area" :points="areaPoints" />
-            <polyline class="graph__line" :points="graphPoints" />
-            <circle
-              v-for="point in graphData"
-              :key="point.hour"
-              class="graph__dot"
-              :cx="point.x"
-              :cy="point.y"
-              r="1.8"
-            />
-            <line class="graph__marker" :x1="currentMarkerX" y1="6" :x2="currentMarkerX" y2="42" />
-          </svg>
+          <!-- Timeline -->
+          <div v-if="timedItems.length" class="day-view__scroll" ref="timelineEl">
+            <div class="day-view__inner" :style="{ height: tlHeight + 'px' }">
 
-          <div class="graph-labels">
-            <span v-for="label in graphLabels" :key="label.hour" :style="{ left: `${label.x}%` }">
-              {{ label.text }}
-            </span>
+              <!-- Hour gridlines -->
+              <div
+                v-for="h in visibleHours"
+                :key="h"
+                class="hour-mark"
+                :style="{ top: hourToY(h) + 'px' }"
+              >
+                <span class="hour-label">{{ String(h).padStart(2,'0') }}:00</span>
+                <div class="hour-line" />
+              </div>
+
+              <!-- Now indicator -->
+              <div v-if="nowY >= 0" class="now-line" :style="{ top: nowY + 'px' }">
+                <div class="now-dot" />
+              </div>
+
+              <!-- Timed events -->
+              <div
+                v-for="ev in timedEvents"
+                :key="ev.id"
+                class="ev-block"
+                :class="`ev-block--${ev.type}`"
+                :style="{ top: ev.top + 'px', height: ev.height + 'px' }"
+              >
+                <strong class="ev-title">{{ ev.title }}</strong>
+                <span class="ev-time">{{ ev.time_start }}{{ ev.time_end ? ' – ' + ev.time_end : '' }}</span>
+              </div>
+
+              <!-- Timed habits -->
+              <div
+                v-for="h in timedHabits"
+                :key="h.id"
+                class="habit-pill"
+                :class="{ 'habit-pill--done': h.completed === 1 }"
+                :style="{ top: h.top + 'px' }"
+                @click="toggleTodayHabit(h)"
+              >
+                <span class="habit-pill__check">{{ h.completed === 1 ? '✓' : '○' }}</span>
+                {{ h.name }}, {{ h.time }}
+              </div>
+
+            </div>
           </div>
-        </section>
 
-        <section class="quick-grid">
-          <ion-card class="quick-card" button @click="navigateTo('/tabs/Home')">
-            <ion-card-header>
-              <ion-card-title>Gym</ion-card-title>
-              <ion-card-subtitle>Templates and active sessions</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
-          <ion-card class="quick-card" button @click="navigateTo('/finance')">
-            <ion-card-header>
-              <ion-card-title>Finance</ion-card-title>
-              <ion-card-subtitle>Accounts, investments, subscriptions</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
-          <ion-card class="quick-card" button @click="navigateTo('/health/sleep')">
-            <ion-card-header>
-              <ion-card-title>Sleep</ion-card-title>
-              <ion-card-subtitle>Score, stages, HR, respiratory</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
-          <ion-card class="quick-card" button @click="navigateTo('/health/calendar')">
-            <ion-card-header>
-              <ion-card-title>Calendar</ion-card-title>
-              <ion-card-subtitle>Events and recovery days</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
-          <ion-card class="quick-card" button @click="navigateTo('/health/habits')">
-            <ion-card-header>
-              <ion-card-title>Habits</ion-card-title>
-              <ion-card-subtitle>Track consistency</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
-          <ion-card class="quick-card" button @click="navigateTo('/health/goals')">
-            <ion-card-header>
-              <ion-card-title>Goals</ion-card-title>
-              <ion-card-subtitle>Health goals and progress</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
+          <p v-if="!allDayItems.length && !timedItems.length" class="day-view__empty">Nothing scheduled today</p>
         </section>
       </div>
     </ion-content>
@@ -158,14 +198,16 @@
 </template>
 
 <script setup lang="ts">
-import { IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonHeader, IonPage } from '@ionic/vue';
+import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter } from '@ionic/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { useRouter } from 'vue-router';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises } from '@/shared/db/app_db';
-import { applyReadinessDrain, calculateReadinessScore } from '@/shared/health/healthConnect';
-import { formatDuration, formatWorkoutDate } from '@/shared/utils/timeFormat';
+import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts } from '@/shared/db/app_db';
+import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
+import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
+
+const router = useRouter();
 
 const sleepHours = ref<number | null>(null);
 const steps = ref<number | null>(null);
@@ -175,21 +217,172 @@ const latestWorkout = ref<Workout | null>(null);
 const latestWorkoutExercises = ref<WorkoutHistoryExercise[]>([]);
 const nowTick = ref(Date.now());
 let readinessTimer: ReturnType<typeof setInterval> | null = null;
-const router = useRouter();
 
-const currentTimeLabel = computed(() =>
-  new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(nowTick.value))
+// Active workout
+const activeWorkout = ref(false);
+const workoutStartTime = ref<string | null>(null);
+const workoutSeconds = ref(0);
+let workoutInterval: ReturnType<typeof setInterval> | null = null;
+const activeRestTimer = ref({ isActive: false, remaining: 0, total: 0 });
+let restInterval: ReturnType<typeof setInterval> | null = null;
+
+const clearWorkoutTimer = () => {
+  if (workoutInterval) { clearInterval(workoutInterval); workoutInterval = null; }
+};
+const clearRestTimer = () => {
+  if (restInterval) { clearInterval(restInterval); restInterval = null; }
+  activeRestTimer.value = { isActive: false, remaining: 0, total: 0 };
+};
+
+const formatRestTime = (s: number) =>
+  `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+const formatWorkoutTimer = () => {
+  const h = Math.floor(workoutSeconds.value / 3600);
+  const m = Math.floor((workoutSeconds.value % 3600) / 60);
+  const s = workoutSeconds.value % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+};
+
+const restoreRestTimer = () => {
+  const saved = sessionStorage.getItem('restTimer');
+  if (!saved) return;
+  try {
+    const parsed = JSON.parse(saved);
+    const endTime = Number(parsed.endTime);
+    if (!Number.isFinite(endTime)) return;
+    const total = Math.max(1, Number(parsed.total) || Number(parsed.remaining) || 0);
+    activeRestTimer.value = { isActive: true, remaining: 0, total };
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      activeRestTimer.value.remaining = remaining;
+      if (remaining <= 0) { clearRestTimer(); sessionStorage.removeItem('restTimer'); }
+    };
+    tick();
+    if (activeRestTimer.value.isActive) restInterval = setInterval(tick, 1000);
+  } catch { /* ignore */ }
+};
+
+const loadActiveWorkout = async () => {
+  const workout = await getActiveWorkout();
+  if (workout?.time_start) {
+    workoutStartTime.value = normalizeDateInput(workout.time_start);
+    activeWorkout.value = true;
+    clearWorkoutTimer();
+    workoutInterval = setInterval(() => {
+      workoutSeconds.value = Math.max(0, Math.floor((Date.now() - new Date(workoutStartTime.value!).getTime()) / 1000));
+    }, 1000);
+    restoreRestTimer();
+  } else {
+    activeWorkout.value = false;
+    workoutStartTime.value = null;
+    workoutSeconds.value = 0;
+    clearWorkoutTimer();
+    clearRestTimer();
+  }
+};
+
+const backToWorkout = async () => {
+  const w = await getActiveWorkout();
+  if (w) router.push(`/workout/${w.id}`);
+};
+
+// Today
+const todayStr = new Date().toISOString().slice(0, 10);
+const todayEvents = ref<Record<string, any>[]>([]);
+const todayHabits = ref<Record<string, any>[]>([]);
+const todayWorkouts = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
+const todayActivities = ref<ActivitySummary[]>([]);
+const timelineEl = ref<HTMLElement | null>(null);
+
+const todayDateLabel = computed(() =>
+  new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
+);
+const todayHabitsDone = computed(() => todayHabits.value.filter((h) => h.completed === 1).length);
+
+// Timeline
+const HOUR_PX = 56;
+
+const parseHour = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h + m / 60;
+};
+
+const tlStart = computed(() => {
+  const times = [
+    ...todayEvents.value.filter((e) => e.time_start).map((e) => parseHour(e.time_start)),
+    ...todayHabits.value.filter((h) => h.time).map((h) => parseHour(h.time)),
+  ];
+  return times.length ? Math.max(0, Math.floor(Math.min(...times)) - 0.5) : 6;
+});
+
+const tlEnd = computed(() => {
+  const times = [
+    ...todayEvents.value.filter((e) => e.time_end).map((e) => parseHour(e.time_end)),
+    ...todayEvents.value.filter((e) => e.time_start && !e.time_end).map((e) => parseHour(e.time_start) + 1),
+    ...todayHabits.value.filter((h) => h.time).map((h) => parseHour(h.time) + 0.25),
+  ];
+  return times.length ? Math.min(24, Math.ceil(Math.max(...times)) + 0.5) : 22;
+});
+
+const tlHeight = computed(() => (tlEnd.value - tlStart.value) * HOUR_PX);
+const hourToY = (h: number) => (h - tlStart.value) * HOUR_PX;
+
+const visibleHours = computed(() => {
+  const start = Math.ceil(tlStart.value);
+  const end = Math.floor(tlEnd.value);
+  return Array.from({ length: Math.max(0, end - start + 1) }, (_, i) => start + i);
+});
+
+type TimedEvent = Record<string, any> & { top: number; height: number };
+type TimedHabit = Record<string, any> & { top: number };
+
+const timedEvents = computed<TimedEvent[]>(() =>
+  todayEvents.value
+    .filter((e) => e.time_start)
+    .map((e) => {
+      const start = parseHour(e.time_start);
+      const end = e.time_end ? parseHour(e.time_end) : start + 1;
+      return { ...e, top: hourToY(start), height: Math.max(32, (end - start) * HOUR_PX) } as TimedEvent;
+    })
+    .sort((a, b) => a.top - b.top)
 );
 
-const effectiveBaselineScore = computed(() => {
-  if (readinessBaselineScore.value !== null) {
-    return readinessBaselineScore.value;
-  }
+const timedHabits = computed<TimedHabit[]>(() =>
+  todayHabits.value
+    .filter((h) => h.time)
+    .map((h) => ({ ...h, top: hourToY(parseHour(h.time)) } as TimedHabit))
+    .sort((a, b) => a.top - b.top)
+);
 
-  if (sleepHours.value === null && restingHr.value === null && steps.value === null) {
-    return null;
-  }
+const timedItems = computed(() => [...timedEvents.value, ...timedHabits.value]);
 
+const allDayItems = computed(() => [
+  ...todayEvents.value
+    .filter((e) => !e.time_start)
+    .map((e) => ({ key: `ev-${e.id}`, label: e.title, cls: `allday-pill--${e.type}`, isHabit: false, done: false, toggle: null as (() => void) | null })),
+  ...todayHabits.value
+    .filter((h) => !h.time)
+    .map((h) => ({
+      key: `hab-${h.id}`,
+      label: h.name,
+      cls: h.completed === 1 ? 'allday-pill--habit-done' : 'allday-pill--habit',
+      isHabit: true,
+      done: h.completed === 1,
+      toggle: () => toggleTodayHabit(h),
+    })),
+]);
+
+const nowY = computed(() => {
+  const now = new Date(nowTick.value);
+  const h = now.getHours() + now.getMinutes() / 60;
+  if (h < tlStart.value || h > tlEnd.value) return -1;
+  return hourToY(h);
+});
+
+const baseline = computed(() => {
+  if (readinessBaselineScore.value !== null) return readinessBaselineScore.value;
+  if (sleepHours.value === null && restingHr.value === null && steps.value === null) return null;
   return calculateReadinessScore({
     sleepHours: sleepHours.value,
     sleepEfficiency: null,
@@ -201,40 +394,36 @@ const effectiveBaselineScore = computed(() => {
   });
 });
 
-const currentReadinessScore = computed(() => {
-  if (effectiveBaselineScore.value === null) {
-    return null;
-  }
-
-  return applyReadinessDrain(effectiveBaselineScore.value, new Date(nowTick.value));
+const battery = computed<BatteryResult | null>(() => {
+  if (baseline.value === null) return null;
+  return calculateBattery(
+    baseline.value,
+    new Date(nowTick.value),
+    todayWorkouts.value,
+    todayActivities.value,
+    todayEvents.value as { type: string; date: string; time_start: string | null; time_end: string | null }[]
+  );
 });
 
-const readinessDisplay = computed(() => {
-  const score = currentReadinessScore.value;
-  return score === null ? '—' : `${score}`;
+const batteryScore = computed(() => battery.value?.score ?? null);
+const batteryRatio = computed(() => batteryScore.value === null ? 0 : batteryScore.value / 100);
+const batteryDashOffset = computed(() => 289 - 289 * batteryRatio.value);
+const batteryColor = computed(() => {
+  const s = batteryScore.value;
+  if (s === null) return 'rgba(255,255,255,0.2)';
+  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 45) return 'rgb(234,179,8)';
+  return 'rgb(239,68,68)';
 });
-
-const readinessRatio = computed(() => {
-  const score = currentReadinessScore.value;
-  return score === null ? 0 : Math.min(1, score / 100);
-});
-
-const readinessDashOffset = computed(() => 289 - 289 * readinessRatio.value);
-
-const readinessDrainDisplay = computed(() => {
-  if (effectiveBaselineScore.value === null || currentReadinessScore.value === null) {
-    return null;
-  }
-
-  return effectiveBaselineScore.value - currentReadinessScore.value;
-});
-
-const readinessSubtitle = computed(() => {
-  const score = currentReadinessScore.value;
-  if (score === null) return 'No data yet';
-  if (score >= 80) return 'Ready to push';
-  if (score >= 60) return 'Steady day';
-  return 'Take it easy';
+const drainParts = computed(() => {
+  const d = battery.value?.drains;
+  if (!d) return [];
+  return [
+    d.time > 0 ? `−${d.time} rest` : null,
+    d.workout > 0 ? `−${d.workout} workout` : null,
+    d.activity > 0 ? `−${d.activity} activity` : null,
+    d.event > 0 ? `−${d.event} events` : null,
+  ].filter(Boolean) as string[];
 });
 
 const sleepDisplay = computed(() => (sleepHours.value === null ? '—' : `${sleepHours.value.toFixed(1)} h`));
@@ -248,50 +437,6 @@ const latestWorkoutExerciseCount = computed(() => `${latestWorkoutExercises.valu
 const latestWorkoutSetCount = computed(() =>
   `${latestWorkoutExercises.value.reduce((total, exercise) => total + Number(exercise.set_count || 0), 0)}`
 );
-
-const graphData = computed(() => {
-  const baseline = effectiveBaselineScore.value;
-  if (baseline === null) return [];
-
-  const hours = [6, 8, 10, 12, 14, 16, 18, 20, 22];
-  return hours.map((hour) => {
-    const sampleTime = new Date(nowTick.value);
-    sampleTime.setHours(hour, 0, 0, 0);
-    const score = applyReadinessDrain(baseline, sampleTime);
-
-    return {
-      hour,
-      x: ((hour - 6) / 16) * 100,
-      y: 44 - (score / 100) * 36,
-      score,
-    };
-  });
-});
-
-const graphPoints = computed(() => graphData.value.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' '));
-
-const areaPoints = computed(() => {
-  if (!graphData.value.length) return '';
-  const end = graphData.value[graphData.value.length - 1];
-  return `0,44 ${graphPoints.value} ${end.x.toFixed(2)},44`;
-});
-
-const graphLabels = computed(() =>
-  graphData.value
-    .filter((point) => point.hour % 4 === 2 || point.hour === 6 || point.hour === 22)
-    .map((point) => ({
-      hour: point.hour,
-      x: point.x,
-      text: `${point.hour}:00`,
-    }))
-);
-
-const currentMarkerX = computed(() => {
-  const now = new Date(nowTick.value);
-  const hour = now.getHours() + now.getMinutes() / 60;
-  const bounded = Math.max(6, Math.min(22, hour));
-  return ((bounded - 6) / 16) * 100;
-});
 
 const loadSummary = async () => {
   const [latestSleep, latestSleepEfficiency, latestSleepScore, latestSleepHeartRate, latestRespiratoryRate, latestSteps, latestHr] =
@@ -334,109 +479,213 @@ const loadSummary = async () => {
   }
 };
 
-const navigateTo = (path: string) => {
-  router.push(path);
+
+const toggleTodayHabit = async (h: Record<string, any>) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await toggleHabitCompletion(h.id, today, h.completed !== 1);
+  todayHabits.value = await getHabitsWithStatus(today);
 };
 
+const loadAll = async () => {
+  await Promise.all([
+    loadSummary(),
+    loadActiveWorkout(),
+    getCalendarEventsForDate(todayStr).then((evs) => { todayEvents.value = evs; }),
+    getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
+    getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
+    getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
+  ]);
+};
+
+onIonViewWillEnter(loadAll);
+
 onUnmounted(() => {
-  if (readinessTimer) {
-    clearInterval(readinessTimer);
-    readinessTimer = null;
-  }
+  if (readinessTimer) { clearInterval(readinessTimer); readinessTimer = null; }
+  clearWorkoutTimer();
+  clearRestTimer();
 });
 
 onMounted(async () => {
-  await loadSummary();
-  readinessTimer = setInterval(() => {
-    nowTick.value = Date.now();
-  }, 60_000);
+  await loadAll();
+  readinessTimer = setInterval(() => { nowTick.value = Date.now(); }, 60_000);
+  if (timelineEl.value && nowY.value >= 0) {
+    timelineEl.value.scrollTop = Math.max(0, nowY.value - 80);
+  }
 });
 </script>
 
 <style scoped>
 .home-content {
-  background: black;
+  --padding-top: 16px;
+  --padding-bottom: 24px;
 }
 
 .home-shell {
-  max-width: 980px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 1rem 1rem 2rem;
+  padding: 0 16px 24px;
   display: grid;
-  gap: 1rem;
+  gap: 16px;
 }
 
-.hero-card,
-.graph-card,
-.quick-card {
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: none;
-  color: #fff;
-}
-
-.hero-card {
-  padding: 1rem;
-}
-
-.workout-card {
-  padding: 1rem;
-}
-
-.hero-card__header h1,
-.graph-card__header h2,
-.quick-card ion-card-title {
+/* Cards */
+.summary-card,
+.active-card {
   margin: 0;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--ion-color-primary);
 }
 
-.eyebrow {
-  margin: 0 0 0.35rem;
+.active-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  border: 2px solid rgba(255, 215, 0, 0.35);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.active-card:active { transform: scale(0.98); }
+
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-kicker {
+  margin: 0;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.card-date {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.4);
 }
 
-.hero-copy {
-  margin: 0.35rem 0 0;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.hero-card__body {
-  margin-top: 1rem;
+/* Battery / Readiness layout */
+.summary-card__body {
+  margin-top: 18px;
   display: grid;
-  gap: 1rem;
+  gap: 14px;
 }
 
-.workout-card__body {
-  margin-top: 1rem;
+.battery-ring {
+  --score: 0;
+  position: relative;
+  width: min(100%, 200px);
+  aspect-ratio: 1;
+  margin: 0 auto;
 }
 
-.workout-card__metrics {
+.battery-right {
+  display: grid;
+  gap: 12px;
+}
+
+.ready-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.ready-chip {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.ready-chip--on {
+  background: rgba(34, 197, 94, 0.15);
+  color: rgb(34, 197, 94);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.ready-chip--off {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drain-line {
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.04em;
+}
+
+/* Metric tiles */
+.card-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 10px;
 }
 
-.workout-card__metrics > div {
-  padding: 0.8rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+.card-metrics--4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.workout-card__metrics span {
+.card-metric {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-metric span {
   display: block;
-  margin-bottom: 0.35rem;
+  margin-bottom: 6px;
   font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.1em;
 }
 
-.workout-card__metrics strong {
-  font-size: 1rem;
+.card-metric strong {
+  display: block;
+  font-size: 0.95rem;
   color: #fff;
+}
+
+/* Active workout timers */
+.active-card__body {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.active-card__timer {
+  border-radius: 10px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.active-card__timer span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.active-card__timer strong {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: rgb(255, 215, 0);
+  font-family: 'Doto', monospace;
+  letter-spacing: 0.05em;
+}
+
+.active-card__timer--rest {
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.25);
 }
 
 .readiness-ring {
@@ -495,121 +744,267 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.readiness-meta {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
+/* Day view */
+.day-view-card {
+  border-radius: 12px;
+  background: var(--ion-color-primary);
+  padding: 18px;
+  overflow: hidden;
 }
 
-.readiness-meta > div {
-  padding: 0.8rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+.day-view__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
 }
 
-.readiness-meta span,
-.graph-card__time {
-  display: block;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.graph-card__header h2,
-.graph-labels span,
-.readiness-meta strong,
-.readiness-meta span,
-.hero-copy {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.graph-card__header h2 {
+.day-view__header h2 {
+  margin: 0;
+  font-size: 1rem;
   color: #fff;
 }
 
-.graph-labels span {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.graph-card {
-  padding: 1rem;
-}
-
-.graph-card__header {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.graph {
-  width: 100%;
-  height: auto;
-  margin-top: 1rem;
-  overflow: visible;
-}
-
-.graph__area {
-  fill: rgba(239, 68, 68, 0.12);
-  stroke: none;
-}
-
-.graph__line {
-  fill: none;
-  stroke: rgb(239, 68, 68);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.graph__dot {
-  fill: rgb(239, 68, 68);
-}
-
-.graph__marker {
-  stroke: rgba(255, 255, 255, 0.4);
-  stroke-dasharray: 2 2;
-}
-
-.graph-labels {
-  position: relative;
-  height: 1.5rem;
-  margin-top: 0.35rem;
-}
-
-.graph-labels span {
-  position: absolute;
-  transform: translateX(-50%);
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.quick-grid {
+/* Habit blocks */
+.habits-strip {
   display: grid;
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.quick-card {
+.habit-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.habit-block--done {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.habit-block__check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #fff;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.habit-block--done .habit-block__check {
+  background: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+}
+
+.habit-block__name {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.2;
+}
+
+.habit-block--done .habit-block__name {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: line-through;
+}
+
+.habit-block__time {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.04em;
+}
+
+/* All-day strip */
+.allday-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.allday-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.allday-pill--workout   { background: rgba(239, 68, 68, 0.2);   color: rgb(239, 68, 68); }
+.allday-pill--recovery  { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
+.allday-pill--reminder  { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
+.allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.7); }
+.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: rgb(239, 68, 68); }
+
+.allday-check { cursor: pointer; font-size: 0.75rem; }
+.allday-check--done { color: rgb(239, 68, 68); }
+
+/* Scrollable timeline */
+.day-view__scroll {
+  overflow-y: auto;
+  max-height: 340px;
+  border-radius: 10px;
+}
+
+.day-view__inner {
+  position: relative;
+}
+
+/* Hour marks */
+.hour-mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.hour-label {
+  width: 40px;
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.28);
+  text-align: right;
+  padding-right: 8px;
+  margin-top: -0.45em;
+  line-height: 1;
+}
+
+.hour-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Now line */
+.now-line {
+  position: absolute;
+  left: 40px;
+  right: 0;
+  height: 2px;
+  background: rgb(239, 68, 68);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.now-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(239, 68, 68);
+  margin-left: -3px;
+  flex-shrink: 0;
+}
+
+/* Event blocks */
+.ev-block {
+  position: absolute;
+  left: 48px;
+  right: 4px;
+  border-radius: 8px;
+  padding: 5px 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ev-block--workout  { background: rgba(239, 68, 68, 0.25); }
+.ev-block--recovery { background: rgba(52, 211, 153, 0.18); }
+.ev-block--reminder { background: rgba(251, 191, 36, 0.18); }
+.ev-block--sleep    { background: rgba(255, 255, 255, 0.06); }
+
+.ev-title {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ev-time {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 1px;
+}
+
+/* Habit pills */
+.habit-pill {
+  position: absolute;
+  left: 48px;
+  right: 4px;
+  height: 22px;
+  border-radius: 20px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.habit-pill--done {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fff;
+}
+
+.habit-pill__check {
+  font-size: 0.7rem;
+  color: rgb(239, 68, 68);
+  flex-shrink: 0;
+}
+
+.day-view__empty {
   margin: 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.3);
 }
 
-@media (min-width: 760px) {
-  .hero-card__body {
-    grid-template-columns: 280px 1fr;
+
+@media (min-width: 600px) {
+  .summary-card__body {
+    grid-template-columns: 180px 1fr;
     align-items: center;
   }
 
-  .readiness-meta {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .card-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .workout-card__metrics {
+  .card-metrics--4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .quick-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .active-card__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

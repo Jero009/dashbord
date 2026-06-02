@@ -1,11 +1,17 @@
 <template>
   <ion-toolbar class="section-toolbar">
-    <ion-segment :value="activeSegment" @ionChange="handleSegmentChange">
+    <ion-segment :value="activeSegment" @ionChange="handleSegmentChange" scrollable>
       <ion-segment-button value="overview">
         <ion-label>Overview</ion-label>
       </ion-segment-button>
       <ion-segment-button value="sleep">
         <ion-label>Sleep</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="habits">
+        <ion-label>Habits</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="calendar">
+        <ion-label>Calendar</ion-label>
       </ion-segment-button>
       <ion-segment-button value="goals">
         <ion-label>Goals</ion-label>
@@ -25,6 +31,8 @@ const route = useRoute();
 const activeSegment = computed(() => {
   if (route.path.includes('/sleep')) return 'sleep';
   if (route.path.includes('/goals')) return 'goals';
+  if (route.path.includes('/habits')) return 'habits';
+  if (route.path.includes('/calendar')) return 'calendar';
   return 'overview';
 });
 
@@ -32,14 +40,17 @@ const handleSegmentChange = (event: CustomEvent) => {
   const value = (event.detail as { value?: string }).value;
   if (!value) return;
 
-  const target = {
+  const target: Record<string, string> = {
     overview: '/health',
     sleep: '/health/sleep',
     goals: '/health/goals',
-  }[value];
+    habits: '/health/habits',
+    calendar: '/health/calendar',
+  };
 
-  if (target && target !== route.path) {
-    router.push(target);
+  const dest = target[value];
+  if (dest && dest !== route.path) {
+    router.push(dest);
   }
 };
 </script>
@@ -66,5 +77,6 @@ ion-segment-button {
   --indicator-color: var(--ion-color-danger);
   min-height: 34px;
   font-weight: 600;
+  min-width: 70px;
 }
 </style>

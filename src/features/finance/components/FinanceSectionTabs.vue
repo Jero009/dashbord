@@ -1,6 +1,6 @@
 <template>
   <ion-toolbar class="section-toolbar">
-    <ion-segment :value="activeSegment" @ionChange="handleSegmentChange">
+    <ion-segment :value="activeSegment" @ionChange="handleSegmentChange" scrollable>
       <ion-segment-button value="overview">
         <ion-label>Overview</ion-label>
       </ion-segment-button>
@@ -71,5 +71,6 @@ ion-segment-button {
   --indicator-color: var(--ion-color-danger);
   min-height: 34px;
   font-weight: 600;
+  min-width: 70px;
 }
 </style>

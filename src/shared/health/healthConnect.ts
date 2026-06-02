@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { Health, type AuthorizationStatus, type HealthSample } from '@capgo/capacitor-health';
+import { Health, type AuthorizationStatus, type HealthSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession } from '@/shared/db/app_db';
 
 export type HealthMetricType =
@@ -12,9 +12,9 @@ export type HealthMetricType =
   | 'respiratory_rate'
   | 'resting_heart_rate';
 
-type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate';
+type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'workouts';
 
-const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate'];
+const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate', 'workouts'];
 const HEALTH_CONNECT_SOURCE = 'health-connect';
 
 export interface HealthConnectAccessResult {
@@ -803,4 +803,116 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     granted: true,
     synced,
   };
+}
+
+export interface BatteryDrains {
+  time: number;
+  workout: number;
+  activity: number;
+  event: number;
+}
+
+export interface BatteryResult {
+  score: number;
+  baseline: number;
+  drains: BatteryDrains;
+  readyToTrain: boolean;
+  readyToStudy: boolean;
+  status: 'Peak' | 'Good' | 'Low' | 'Recharge';
+}
+
+export function calculateBattery(
+  baseline: number,
+  now: Date,
+  workouts: { time_start: string; time_end: string; total_kg: number | null }[],
+  activities: ActivitySummary[],
+  events: { type: string; date: string; time_start: string | null; time_end: string | null }[]
+): BatteryResult {
+  // 1. Time drain — gradual fatigue through the day
+  const timeDrain = Math.max(0, baseline - applyReadinessDrain(baseline, now));
+
+  // 2. Workout drain — gym sessions completed today
+  const workoutDrain = clamp(
+    workouts.reduce((sum, w) => {
+      const durationMins = Math.max(0, (new Date(w.time_end).getTime() - new Date(w.time_start).getTime()) / 60000);
+      const fromDuration = clamp(durationMins / 3, 0, 20);
+      const fromVolume = clamp((w.total_kg ?? 0) / 300, 0, 15);
+      return sum + fromDuration + fromVolume;
+    }, 0),
+    0, 35
+  );
+
+  // 3. Activity drain — Health Connect workouts today
+  const todayStr = now.toISOString().slice(0, 10);
+  const todayActivities = activities.filter((a) => a.startDate.slice(0, 10) === todayStr);
+  const activityDrain = clamp(
+    todayActivities.reduce((sum, a) => {
+      const fromDuration = clamp(a.durationMinutes / 3, 0, 20);
+      const fromCalories = a.calories ? clamp(a.calories / 50, 0, 20) : 0;
+      return sum + Math.max(fromDuration, fromCalories);
+    }, 0),
+    0, 30
+  );
+
+  // 4. Event drain — calendar events that have already started
+  const eventDrain = clamp(
+    events.reduce((sum, e) => {
+      if (!e.time_start) return sum;
+      const start = new Date(`${e.date}T${e.time_start}`);
+      if (start > now) return sum; // future event, no drain yet
+      const endTime = e.time_end ? new Date(`${e.date}T${e.time_end}`) : new Date(start.getTime() + 3600000);
+      const durationHours = Math.max(0, (Math.min(endTime.getTime(), now.getTime()) - start.getTime()) / 3600000);
+      const drainPerHour = e.type === 'recovery' ? -2 : e.type === 'workout' ? 6 : e.type === 'reminder' ? 0 : 4;
+      return sum + clamp(durationHours * drainPerHour, -5, 15);
+    }, 0),
+    0, 25
+  );
+
+  const score = clamp(Math.round(baseline - timeDrain - workoutDrain - activityDrain - eventDrain), 0, 100);
+
+  return {
+    score,
+    baseline,
+    drains: {
+      time: Math.round(timeDrain),
+      workout: Math.round(workoutDrain),
+      activity: Math.round(activityDrain),
+      event: Math.round(eventDrain),
+    },
+    readyToTrain: score >= 60,
+    readyToStudy: score >= 40,
+    status: score >= 70 ? 'Peak' : score >= 55 ? 'Good' : score >= 35 ? 'Low' : 'Recharge',
+  };
+}
+
+export interface ActivitySummary {
+  workoutType: string;
+  startDate: string;
+  endDate: string;
+  durationMinutes: number;
+  calories: number | null;
+  distanceKm: number | null;
+  sourceName: string | null;
+}
+
+export async function getRecentActivities(daysBack = 7): Promise<ActivitySummary[]> {
+  if (!isHealthConnectAvailable()) return [];
+
+  try {
+    const endDate = new Date().toISOString();
+    const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+    const result = await Health.queryWorkouts({ startDate, endDate, limit: 50, ascending: false });
+
+    return result.workouts.map((w: HCWorkout) => ({
+      workoutType: w.workoutType,
+      startDate: w.startDate,
+      endDate: w.endDate,
+      durationMinutes: Math.round(w.duration / 60),
+      calories: w.totalEnergyBurned != null ? Math.round(w.totalEnergyBurned) : null,
+      distanceKm: w.totalDistance != null ? Math.round(w.totalDistance / 100) / 10 : null,
+      sourceName: w.sourceName ?? null,
+    }));
+  } catch {
+    return [];
+  }
 }

@@ -7,57 +7,66 @@
     <ion-content :fullscreen="true" class="health-content">
       <div class="health-shell">
         <ion-card class="goal-card">
-          <ion-card-header>
-            <ion-card-title>Goals</ion-card-title>
-            <ion-card-subtitle>Track progress across the year</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list>
-              <ion-item>
-                <ion-label position="stacked">Goal name</ion-label>
-                <ion-input v-model="goalName"></ion-input>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Target value</ion-label>
-                <ion-input v-model="goalTarget" type="number" inputmode="decimal"></ion-input>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Due date</ion-label>
-                <ion-input v-model="goalDueDate" type="date"></ion-input>
-              </ion-item>
-            </ion-list>
-            <ion-button expand="block" @click="saveGoal">Add goal</ion-button>
-          </ion-card-content>
+          <div class="card-topline">
+            <p class="section-kicker">Add goal</p>
+            <span class="card-sub">Track progress across the year</span>
+          </div>
+          <div class="form-fields">
+            <div class="field-group">
+              <label class="field-label">Goal name</label>
+              <ion-input v-model="goalName" class="styled-input"></ion-input>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Target value</label>
+              <ion-input v-model="goalTarget" type="number" inputmode="decimal" class="styled-input"></ion-input>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Due date</label>
+              <ion-input v-model="goalDueDate" type="date" class="styled-input"></ion-input>
+            </div>
+          </div>
+          <ion-button expand="block" class="add-btn" @click="saveGoal">Add goal</ion-button>
         </ion-card>
 
         <ion-card class="goal-card">
-          <ion-card-header>
-            <ion-card-title>Active goals</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div v-if="goals.length" class="goal-list">
-              <div v-for="goal in goals" :key="goal.id" class="goal-item">
-                <div class="goal-header">
-                  <div>
-                    <h3>{{ goal.name }}</h3>
-                    <p>Target {{ goal.target_value }} · Due {{ goal.due_date || 'TBD' }}</p>
-                  </div>
+          <div class="card-topline">
+            <p class="section-kicker">Active goals</p>
+            <span class="card-sub">{{ goals.length }} goal{{ goals.length === 1 ? '' : 's' }}</span>
+          </div>
+          <div v-if="goals.length" class="goal-list">
+            <div v-for="goal in goals" :key="goal.id" class="goal-item">
+              <div class="goal-item__header">
+                <strong class="goal-item__name">{{ goal.name }}</strong>
+                <span class="goal-item__current">{{ goal.current_value || 0 }}</span>
+              </div>
+              <div class="card-metrics">
+                <div class="card-metric">
+                  <span>Target</span>
+                  <strong>{{ goal.target_value }}</strong>
+                </div>
+                <div class="card-metric">
+                  <span>Current</span>
                   <strong>{{ goal.current_value || 0 }}</strong>
                 </div>
-                <ion-progress-bar :value="goalProgress(goal)"></ion-progress-bar>
-                <div class="goal-update">
-                  <ion-input
-                    v-model="progressDrafts[goal.id]"
-                    type="number"
-                    inputmode="decimal"
-                    placeholder="Update progress"
-                  ></ion-input>
-                  <ion-button size="small" @click="updateProgress(goal)">Update</ion-button>
+                <div class="card-metric">
+                  <span>Due</span>
+                  <strong>{{ goal.due_date || 'TBD' }}</strong>
                 </div>
               </div>
+              <ion-progress-bar :value="goalProgress(goal)"></ion-progress-bar>
+              <div class="goal-update">
+                <ion-input
+                  v-model="progressDrafts[goal.id]"
+                  type="number"
+                  inputmode="decimal"
+                  placeholder="Update progress"
+                  class="styled-input"
+                ></ion-input>
+                <ion-button size="small" class="update-btn" @click="updateProgress(goal)">Update</ion-button>
+              </div>
             </div>
-            <p v-else class="empty-state">No goals yet.</p>
-          </ion-card-content>
+          </div>
+          <p v-else class="empty-state">No goals yet.</p>
         </ion-card>
       </div>
     </ion-content>
@@ -70,13 +79,6 @@ import {
   IonHeader,
   IonContent,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
-  IonCardContent,
-  IonList,
-  IonItem,
-  IonLabel,
   IonInput,
   IonButton,
   IonProgressBar,
@@ -181,6 +183,8 @@ onIonViewWillEnter(async () => {
 }
 
 .health-shell {
+  max-width: 760px;
+  margin: 0 auto;
   padding: 16px;
   display: grid;
   gap: 16px;
@@ -190,6 +194,68 @@ onIonViewWillEnter(async () => {
   margin: 0;
   border-radius: 12px;
   background: var(--ion-color-primary);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.card-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.form-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.styled-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  --color: #fff;
+  --placeholder-color: rgba(255, 255, 255, 0.35);
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  min-height: 44px;
+}
+
+.add-btn {
+  --background: rgb(239, 68, 68);
+  --background-activated: rgb(220, 50, 50);
+  --border-radius: 8px;
+  --box-shadow: none;
+  margin: 0;
 }
 
 .goal-list {
@@ -197,36 +263,78 @@ onIonViewWillEnter(async () => {
   gap: 16px;
 }
 
-.goal-item h3 {
-  margin: 0;
+.goal-item {
+  display: grid;
+  gap: 10px;
 }
 
-.goal-item p {
-  margin: 4px 0 12px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
-}
-
-.goal-header {
+.goal-item__header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
+}
+
+.goal-item__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.goal-item__current {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.card-metric {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-metric span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.card-metric strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
 }
 
 .goal-update {
-  margin-top: 12px;
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.goal-update ion-input {
+.goal-update .styled-input {
   flex: 1;
+}
+
+.update-btn {
+  --background: rgb(239, 68, 68);
+  --background-activated: rgb(220, 50, 50);
+  --border-radius: 8px;
+  --box-shadow: none;
 }
 
 .empty-state {
   margin: 0;
   color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
 }
 </style>

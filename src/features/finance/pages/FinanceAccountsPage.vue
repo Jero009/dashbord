@@ -7,53 +7,50 @@
     <ion-content :fullscreen="true" class="finance-content">
       <div class="finance-shell">
         <ion-card class="finance-card">
-          <ion-card-header>
-            <ion-card-title>Add account</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list>
-              <ion-item>
-                <ion-label position="stacked">Account name</ion-label>
-                <ion-input v-model="accountName"></ion-input>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Type</ion-label>
-                <ion-select v-model="accountType">
-                  <ion-select-option value="cash">Cash</ion-select-option>
-                  <ion-select-option value="bank">Bank</ion-select-option>
-                  <ion-select-option value="credit">Credit</ion-select-option>
-                  <ion-select-option value="loan">Loan</ion-select-option>
-                </ion-select>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Institution</ion-label>
-                <ion-input v-model="accountInstitution"></ion-input>
-              </ion-item>
-              <ion-item>
-                <ion-label position="stacked">Balance</ion-label>
-                <ion-input v-model="accountBalance" type="number" inputmode="decimal"></ion-input>
-              </ion-item>
-            </ion-list>
-            <ion-button expand="block" @click="saveAccount">Add account</ion-button>
-          </ion-card-content>
+          <div class="card-topline">
+            <p class="section-kicker">Add account</p>
+          </div>
+          <div class="form-fields">
+            <div class="field-group">
+              <label class="field-label">Account name</label>
+              <ion-input v-model="accountName" class="styled-input"></ion-input>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Type</label>
+              <ion-select v-model="accountType" class="styled-select">
+                <ion-select-option value="cash">Cash</ion-select-option>
+                <ion-select-option value="bank">Bank</ion-select-option>
+                <ion-select-option value="credit">Credit</ion-select-option>
+                <ion-select-option value="loan">Loan</ion-select-option>
+              </ion-select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Institution</label>
+              <ion-input v-model="accountInstitution" class="styled-input"></ion-input>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Balance</label>
+              <ion-input v-model="accountBalance" type="number" inputmode="decimal" class="styled-input"></ion-input>
+            </div>
+          </div>
+          <ion-button expand="block" class="add-btn" @click="saveAccount">Add account</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
-          <ion-card-header>
-            <ion-card-title>Accounts</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <ion-list v-if="accounts.length">
-              <ion-item v-for="account in accounts" :key="account.id">
-                <ion-label>
-                  <h3>{{ account.name }}</h3>
-                  <p>{{ account.type }} · {{ account.institution || 'No institution' }}</p>
-                </ion-label>
-                <strong slot="end">{{ formatCurrency(Number(account.balance) || 0) }}</strong>
-              </ion-item>
-            </ion-list>
-            <p v-else class="empty-state">No accounts yet.</p>
-          </ion-card-content>
+          <div class="card-topline">
+            <p class="section-kicker">Accounts</p>
+            <span class="card-count">{{ accounts.length }} total</span>
+          </div>
+          <div v-if="accounts.length" class="account-list">
+            <div v-for="account in accounts" :key="account.id" class="account-item">
+              <div class="account-item__info">
+                <strong class="account-item__name">{{ account.name }}</strong>
+                <span class="account-item__meta">{{ account.type }} · {{ account.institution || 'No institution' }}</span>
+              </div>
+              <span class="account-item__balance">{{ formatCurrency(Number(account.balance) || 0) }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-state">No accounts yet.</p>
         </ion-card>
       </div>
     </ion-content>
@@ -66,12 +63,6 @@ import {
   IonHeader,
   IonContent,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
-  IonList,
-  IonItem,
-  IonLabel,
   IonInput,
   IonSelect,
   IonSelectOption,
@@ -145,6 +136,8 @@ onIonViewWillEnter(async () => {
 }
 
 .finance-shell {
+  max-width: 760px;
+  margin: 0 auto;
   padding: 16px;
   display: grid;
   gap: 16px;
@@ -154,10 +147,113 @@ onIonViewWillEnter(async () => {
   margin: 0;
   border-radius: 12px;
   background: var(--ion-color-primary);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.card-count {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.form-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.styled-input,
+.styled-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  --color: #fff;
+  --placeholder-color: rgba(255, 255, 255, 0.35);
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  min-height: 44px;
+}
+
+.add-btn {
+  --background: rgb(239, 68, 68);
+  --background-activated: rgb(220, 50, 50);
+  --border-radius: 8px;
+  --box-shadow: none;
+  margin: 0;
+}
+
+.account-list {
+  display: grid;
+  gap: 8px;
+}
+
+.account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.account-item__info {
+  display: grid;
+  gap: 4px;
+}
+
+.account-item__name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.account-item__meta {
+  font-size: 0.72rem;
+  text-transform: capitalize;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.account-item__balance {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
 }
 
 .empty-state {
   margin: 0;
   color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
 }
 </style>

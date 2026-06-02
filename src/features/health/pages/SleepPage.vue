@@ -7,212 +7,185 @@
 
     <ion-content :fullscreen="true" class="sleep-content">
       <div class="sleep-shell">
-        <ion-card class="sleep-hero">
-          <ion-card-header>
-            <ion-card-title>Sleep score</ion-card-title>
-            <ion-card-subtitle>{{ sleepSubtitle }}</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
+
+        <!-- Hero: score ring + key metrics -->
+        <ion-card class="sleep-card">
+          <div class="card-topline">
+            <p class="section-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
-              <ion-button fill="clear" class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1">
-                <ion-icon :icon="chevronBackOutline"></ion-icon>
-              </ion-button>
+              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1">&#8249;</button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
-              <ion-button fill="clear" class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0">
-                <ion-icon :icon="chevronForwardOutline"></ion-icon>
-              </ion-button>
+              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0">&#8250;</button>
             </div>
+          </div>
+
+          <div class="hero-body">
             <div class="sleep-ring" :style="{ '--score': sleepScoreRatio }">
               <svg viewBox="0 0 120 120" class="sleep-ring__svg" aria-hidden="true">
-                <circle class="sleep-ring__track" cx="60" cy="60" r="46"></circle>
-                <circle class="sleep-ring__progress" cx="60" cy="60" r="46"></circle>
+                <circle class="sleep-ring__track" cx="60" cy="60" r="46" />
+                <circle class="sleep-ring__progress" cx="60" cy="60" r="46" />
               </svg>
               <div class="sleep-ring__content">
                 <strong>{{ sleepScoreDisplay }}</strong>
-                <span>{{ sleepEfficiencyDisplay }}</span>
+                <span>{{ sleepSubtitle }}</span>
               </div>
             </div>
 
-            <ion-button expand="block" :disabled="syncing" @click="handleSync">
-              {{ syncing ? 'Syncing...' : 'Sync Sleep Connect' }}
-            </ion-button>
-          </ion-card-content>
-        </ion-card>
-
-        <section class="sleep-grid">
-          <ion-card class="sleep-card">
-            <ion-card-header>
-              <ion-card-title>Sleep metrics</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="metrics-grid">
-                <div class="metric-item">
-                  <span class="metric-label">Time asleep</span>
-                  <strong>{{ sleepHoursDisplay }}</strong>
-                </div>
-                <div class="metric-item">
-                  <span class="metric-label">Time in bed</span>
-                  <strong>{{ timeInBedDisplay }}</strong>
-                </div>
-                <div class="metric-item">
-                  <span class="metric-label">Efficiency</span>
-                  <strong>{{ sleepEfficiencyPercent }}</strong>
-                </div>
-                <div class="metric-item">
-                  <span class="metric-label">Heart rate</span>
-                  <strong>{{ sleepHeartRateDisplay }}</strong>
-                </div>
-                <div class="metric-item">
-                  <span class="metric-label">Respiratory</span>
-                  <strong>{{ respiratoryRateDisplay }}</strong>
-                </div>
-                <div class="metric-item">
-                  <span class="metric-label">Bedtime</span>
-                  <strong>{{ bedTimeClock }}</strong>
-                </div>
-                <div class="metric-item">
-                  <span class="metric-label">Wake time</span>
-                  <strong>{{ wakeTimeClock }}</strong>
-                </div>
+            <div class="hero-stats">
+              <div class="card-metric">
+                <span>Asleep</span>
+                <strong>{{ sleepHoursDisplay }}</strong>
               </div>
-            </ion-card-content>
-          </ion-card>
-        </section>
-
-        <ion-card class="sleep-card">
-          <ion-card-header>
-            <ion-card-title>Stage timeline</ion-card-title>
-            <ion-card-subtitle>When each stage happened overnight</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <div v-if="sleepStageLanes.length" class="stage-lanes">
-              <div v-for="lane in sleepStageLanes" :key="lane.stage" class="stage-lane">
-                <div class="stage-lane__label">{{ stageLabel(lane.stage) }}</div>
-                <div class="stage-lane__bar">
-                  <div
-                    v-for="segment in lane.segments"
-                    :key="`${segment.stage}-${segment.startDate}`"
-                    class="stage-lane__segment"
-                    :class="stageClass(segment.stage)"
-                    :style="stageStyle(segment)"
-                  />
-                </div>
+              <div class="card-metric">
+                <span>In bed</span>
+                <strong>{{ timeInBedDisplay }}</strong>
               </div>
-              <div class="stage-timeline__axis">
-                <span>{{ bedTimeClock }}</span>
-                <span>{{ wakeTimeClock }}</span>
+              <div class="card-metric">
+                <span>Efficiency</span>
+                <strong>{{ sleepEfficiencyPercent }}</strong>
+              </div>
+              <div class="card-metric">
+                <span>Bedtime</span>
+                <strong>{{ bedTimeClock }}</strong>
+              </div>
+              <div class="card-metric">
+                <span>Wake</span>
+                <strong>{{ wakeTimeClock }}</strong>
+              </div>
+              <div class="card-metric">
+                <span>HR</span>
+                <strong>{{ sleepHeartRateDisplay }}</strong>
+              </div>
+              <div class="card-metric">
+                <span>Resp.</span>
+                <strong>{{ respiratoryRateDisplay }}</strong>
               </div>
             </div>
-            <p v-else class="empty-state">No sleep stage timeline yet.</p>
-          </ion-card-content>
+          </div>
+
+          <button class="sync-btn" :disabled="syncing" @click="handleSync">
+            {{ syncing ? 'Syncing…' : 'Sync Health Connect' }}
+          </button>
         </ion-card>
 
+        <!-- Stage timeline -->
         <ion-card class="sleep-card">
-          <ion-card-header>
-            <ion-card-title>Heart rate</ion-card-title>
-            <ion-card-subtitle>Sleep heart rate through the night</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <div v-if="heartRatePoints.length" class="heart-rate-chart">
-              <svg viewBox="0 0 100 40" class="heart-rate-chart__svg" role="img" aria-label="Sleep heart rate graph">
-                <polyline class="heart-rate-chart__line" :points="heartRateLinePoints" />
-                <circle
-                  v-for="point in heartRatePoints"
-                  :key="point.time"
-                  class="heart-rate-chart__dot"
-                  :class="{ 'is-selected': selectedHeartRatePoint?.time === point.time }"
-                  :cx="point.offset"
-                  :cy="point.y"
-                  r="0.8"
-                  @click="selectedHeartRatePoint = point"
+          <p class="section-kicker">Stage timeline</p>
+          <div v-if="sleepStageLanes.length" class="stage-lanes">
+            <div v-for="lane in sleepStageLanes" :key="lane.stage" class="stage-lane">
+              <div class="stage-lane__label">{{ stageLabel(lane.stage) }}</div>
+              <div class="stage-lane__bar">
+                <div
+                  v-for="segment in lane.segments"
+                  :key="`${segment.stage}-${segment.startDate}`"
+                  class="stage-lane__segment"
+                  :class="stageClass(segment.stage)"
+                  :style="stageStyle(segment)"
                 />
-              </svg>
-              <div v-if="selectedHeartRatePoint" class="heart-rate-tooltip">
-                <strong>{{ selectedHeartRatePoint.value }} bpm</strong>
-                <small>{{ new Date(selectedHeartRatePoint.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</small>
-              </div>
-              <div class="stage-timeline__axis">
-                <span>{{ bedTimeClock }}</span>
-                <span>{{ wakeTimeClock }}</span>
               </div>
             </div>
-            <p v-else class="empty-state">No sleep heart-rate data yet.</p>
-          </ion-card-content>
+            <div class="axis-row">
+              <span>{{ bedTimeClock }}</span>
+              <span>{{ wakeTimeClock }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-state">No stage timeline yet</p>
         </ion-card>
 
-        <ion-card class="sleep-card">
-          <ion-card-header>
-            <ion-card-title>Sleep stages</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
+        <!-- Stage breakdown + consistency row -->
+        <div class="two-col">
+          <ion-card class="sleep-card">
+            <p class="section-kicker">Stages</p>
             <div v-if="stageRows.length" class="stage-list">
               <div v-for="stage in stageRows" :key="stage.stage" class="stage-row">
+                <div class="stage-dot" :class="`stage-dot--${stage.stage}`"></div>
                 <span>{{ stageLabel(stage.stage) }}</span>
                 <strong>{{ stage.minutes }}m</strong>
                 <small>{{ Math.round(stage.share * 100) }}%</small>
               </div>
             </div>
-            <p v-else class="empty-state">No stage data yet.</p>
-          </ion-card-content>
-        </ion-card>
+            <p v-else class="empty-state">No stage data</p>
+          </ion-card>
 
-        <ion-card class="sleep-card">
-          <ion-card-header>
-            <ion-card-title>Sleep consistency</ion-card-title>
-            <ion-card-subtitle>Last 7 nights</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
+          <ion-card class="sleep-card">
+            <p class="section-kicker">Consistency · 7 nights</p>
             <div class="consistency-grid">
-              <div class="consistency-pill">
+              <div class="card-metric">
                 <span>Score</span>
                 <strong>{{ consistencyDisplay }}</strong>
               </div>
-              <div class="consistency-pill">
+              <div class="card-metric">
                 <span>Streak</span>
                 <strong>{{ streakDisplay }}</strong>
               </div>
-              <div class="consistency-pill">
+              <div class="card-metric card-metric--full">
                 <span>Good nights</span>
                 <strong>{{ goodNightsDisplay }}</strong>
               </div>
             </div>
-          </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Heart rate chart -->
+        <ion-card class="sleep-card">
+          <p class="section-kicker">Heart rate overnight</p>
+          <div v-if="heartRatePoints.length" class="heart-rate-chart">
+            <svg viewBox="0 0 100 40" class="chart-svg" role="img" aria-label="Sleep heart rate graph">
+              <polyline class="chart-line" :points="heartRateLinePoints" />
+              <circle
+                v-for="point in heartRatePoints"
+                :key="point.time"
+                class="chart-dot"
+                :class="{ 'is-selected': selectedHeartRatePoint?.time === point.time }"
+                :cx="point.offset"
+                :cy="point.y"
+                r="0.8"
+                @click="selectedHeartRatePoint = point"
+              />
+            </svg>
+            <div v-if="selectedHeartRatePoint" class="chart-tooltip">
+              <strong>{{ selectedHeartRatePoint.value }} bpm</strong>
+              <small>{{ new Date(selectedHeartRatePoint.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</small>
+            </div>
+            <div class="axis-row">
+              <span>{{ bedTimeClock }}</span>
+              <span>{{ wakeTimeClock }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-state">No HR data yet</p>
         </ion-card>
 
+        <!-- Score history -->
         <ion-card class="sleep-card">
-          <ion-card-header>
-            <ion-card-title>Previous days</ion-card-title>
-            <ion-card-subtitle>Sleep score history</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <div v-if="sleepScoreHistory.length" class="score-history">
-              <svg viewBox="0 0 100 48" class="score-history__svg" role="img" aria-label="Sleep score history graph">
-                <polygon class="score-history__area" :points="scoreHistoryAreaPoints" />
-                <polyline class="score-history__line" :points="scoreHistoryLinePoints" />
-                <circle
-                  v-for="point in sleepScoreHistory"
-                  :key="point.date"
-                  class="score-history__dot"
-                  :class="{ 'is-selected': selectedScorePoint?.date === point.date }"
-                  :cx="point.x"
-                  :cy="point.y"
-                  r="1"
-                  @click="selectedScorePoint = { date: point.date, score: point.score ?? 0 }"
-                />
-              </svg>
-              <div v-if="selectedScorePoint" class="score-history-tooltip">
-                <strong>{{ selectedScorePoint.score }}</strong>
-                <small>{{ new Date(`${selectedScorePoint.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
-              </div>
-              <div class="score-history__labels">
-                <span v-for="label in scoreHistoryLabels" :key="label.date" :style="{ left: `${label.x}%` }">
-                  {{ label.text }}
-                </span>
-              </div>
+          <p class="section-kicker">History · 30 nights</p>
+          <div v-if="sleepScoreHistory.length" class="score-history">
+            <svg viewBox="0 0 100 48" class="chart-svg" role="img" aria-label="Sleep score history">
+              <polygon class="chart-area" :points="scoreHistoryAreaPoints" />
+              <polyline class="chart-line" :points="scoreHistoryLinePoints" />
+              <circle
+                v-for="point in sleepScoreHistory"
+                :key="point.date"
+                class="chart-dot"
+                :class="{ 'is-selected': selectedScorePoint?.date === point.date }"
+                :cx="point.x"
+                :cy="point.y"
+                r="1"
+                @click="selectedScorePoint = { date: point.date, score: point.score ?? 0 }"
+              />
+            </svg>
+            <div v-if="selectedScorePoint" class="chart-tooltip">
+              <strong>{{ selectedScorePoint.score }}</strong>
+              <small>{{ new Date(`${selectedScorePoint.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
             </div>
-            <p v-else class="empty-state">No prior sleep history yet.</p>
-          </ion-card-content>
+            <div class="score-history__labels">
+              <span v-for="label in scoreHistoryLabels" :key="label.date" :style="{ left: `${label.x}%` }">
+                {{ label.text }}
+              </span>
+            </div>
+          </div>
+          <p v-else class="empty-state">No history yet</p>
         </ion-card>
+
       </div>
     </ion-content>
   </ion-page>
@@ -220,20 +193,13 @@
 
 <script setup lang="ts">
 import {
-  IonButton,
   IonCard,
-  IonCardContent,
-  IonCardHeader,
-  IonCardSubtitle,
-  IonCardTitle,
   IonContent,
   IonHeader,
-  IonIcon,
   IonPage,
   toastController,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
@@ -552,28 +518,137 @@ onIonViewWillEnter(async () => {
 
 .sleep-shell {
   padding: 16px;
+  max-width: 760px;
+  margin: 0 auto;
   display: grid;
   gap: 16px;
 }
 
-.sleep-hero,
 .sleep-card {
   margin: 0;
   border-radius: 12px;
   background: var(--ion-color-primary);
   color: #fff;
+  padding: 18px;
 }
 
-.sleep-card ion-card-subtitle {
-  color: rgba(255, 255, 255, 0.65);
+.section-kicker {
+  margin: 0 0 14px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.45);
 }
+
+/* Card topline */
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* Hero layout */
+.hero-body {
+  display: grid;
+  gap: 16px;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Metric tiles */
+.card-metric {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-metric span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.card-metric strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.card-metric--full {
+  grid-column: 1 / -1;
+}
+
+/* Sync button */
+.sync-btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sync-btn:disabled { opacity: 0.4; }
+.sync-btn:not(:disabled):active { background: rgba(255,255,255,0.1); }
+
+/* Date nav */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-nav__label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.75);
+  min-width: 110px;
+  text-align: center;
+}
+
+.date-nav__btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.date-nav__btn:disabled { opacity: 0.25; }
+
+/* Two-col layout */
+.two-col {
+  display: grid;
+  gap: 16px;
+}
+
+/* Sleep ring */
 
 .sleep-ring {
   --score: 0;
   position: relative;
-  width: min(100%, 240px);
+  width: min(100%, 200px);
   aspect-ratio: 1;
-  margin: 0 auto 16px;
+  margin: 0 auto;
 }
 
 .sleep-ring__svg {
@@ -586,14 +661,9 @@ onIonViewWillEnter(async () => {
 .sleep-ring__progress {
   fill: none;
   stroke-width: 12;
-  cx: 60;
-  cy: 60;
-  r: 46;
 }
 
-.sleep-ring__track {
-  stroke: rgba(255, 255, 255, 0.08);
-}
+.sleep-ring__track { stroke: rgba(255, 255, 255, 0.08); }
 
 .sleep-ring__progress {
   stroke: var(--ion-color-danger);
@@ -611,335 +681,203 @@ onIonViewWillEnter(async () => {
   flex-direction: column;
   gap: 0.2rem;
   text-align: center;
-  color: #fff;
 }
 
 .sleep-ring__content strong {
-  font-size: 3rem;
+  font-size: 2.8rem;
   line-height: 1;
+  font-weight: 700;
   color: #fff;
 }
 
 .sleep-ring__content span {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.sleep-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 12px;
-}
-
-.metric-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: center;
-}
-
-.metric-label {
   font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.55);
 }
 
-.metric-item strong {
-  font-size: 1.1rem;
-  color: #fff;
-}
-
-.stage-list {
-  display: grid;
-  gap: 8px;
-}
-
-.stage-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  align-items: center;
-}
-
-.stage-lanes {
-  display: grid;
-  gap: 0.5rem;
-}
+/* Stage timeline */
+.stage-lanes { display: grid; gap: 8px; }
 
 .stage-lane {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
 }
 
 .stage-lane__label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .stage-lane__bar {
   position: relative;
-  height: 22px;
-  border-radius: 16px;
+  height: 20px;
+  border-radius: 10px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stage-lane__segment {
   position: absolute;
   top: 2px;
   bottom: 2px;
+  border-radius: 8px;
+}
+
+.stage-lane__segment.is-awake  { background: rgba(239, 68, 68, 0.8); }
+.stage-lane__segment.is-rem    { background: rgba(168, 85, 247, 0.8); }
+.stage-lane__segment.is-deep   { background: rgba(59, 130, 246, 0.85); }
+.stage-lane__segment.is-light  { background: rgba(34, 197, 94, 0.75); }
+.stage-lane__segment.is-asleep { background: rgba(249, 115, 22, 0.8); }
+.stage-lane__segment.is-in-bed { background: rgba(148, 163, 184, 0.5); }
+
+.axis-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.08em;
+}
+
+/* Two-column sections */
+.two-col { display: grid; gap: 16px; }
+
+/* Stage list */
+.stage-list { display: grid; gap: 10px; }
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stage-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stage-dot--awake  { background: rgba(239, 68, 68, 0.8); }
+.stage-dot--rem    { background: rgba(168, 85, 247, 0.8); }
+.stage-dot--deep   { background: rgba(59, 130, 246, 0.85); }
+.stage-dot--light  { background: rgba(34, 197, 94, 0.75); }
+.stage-dot--asleep { background: rgba(249, 115, 22, 0.8); }
+
+.stage-row span {
+  flex: 1;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stage-row strong {
+  font-size: 0.88rem;
+  color: #fff;
+}
+
+.stage-row small {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Consistency */
+.consistency-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Charts */
+.heart-rate-chart,
+.score-history {
+  display: grid;
+  gap: 8px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--ion-color-danger);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-area { fill: rgba(239, 68, 68, 0.12); }
+
+.chart-dot {
+  fill: var(--ion-color-danger);
+  cursor: pointer;
+  transition: r 0.15s, filter 0.15s;
+}
+
+.chart-dot:hover,
+.chart-dot.is-selected {
+  filter: brightness(1.3);
+}
+
+.chart-tooltip {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 600;
-  overflow: hidden;
-  white-space: nowrap;
+  gap: 8px;
 }
 
-.stage-lane__segment span {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  display: none;
-}
-
-.stage-lane__segment.is-awake {
-  background: rgba(239, 68, 68, 0.82);
-}
-
-.stage-lane__segment.is-rem {
-  background: rgba(168, 85, 247, 0.82);
-}
-
-.stage-lane__segment.is-deep {
-  background: rgba(59, 130, 246, 0.82);
-}
-
-.stage-lane__segment.is-light {
-  background: rgba(34, 197, 94, 0.82);
-}
-
-.stage-lane__segment.is-asleep {
-  background: rgba(249, 115, 22, 0.82);
-}
-
-.stage-lane__segment.is-in-bed {
-  background: rgba(148, 163, 184, 0.72);
-}
-
-.stage-timeline__axis {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.heart-rate-chart {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.heart-rate-chart__svg {
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.heart-rate-chart__line {
-  fill: none;
-  stroke: var(--ion-color-danger);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.heart-rate-chart__dot {
-  fill: var(--ion-color-danger);
-  cursor: pointer;
-  transition: r 0.2s ease, filter 0.2s ease;
-}
-
-.heart-rate-chart__dot:hover {
-  r: 1.3;
-  filter: brightness(1.2);
-}
-
-.heart-rate-chart__dot.is-selected {
-  r: 1.3;
-  filter: brightness(1.4);
-}
-
-.heart-rate-tooltip {
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid var(--ion-color-danger);
-  text-align: center;
+.chart-tooltip strong {
+  font-size: 1.1rem;
   color: var(--ion-color-danger);
 }
 
-.heart-rate-tooltip strong {
-  display: block;
-  font-size: 1.25rem;
-}
-
-.heart-rate-tooltip small {
-  display: block;
+.chart-tooltip small {
   font-size: 0.75rem;
-  color: rgba(239, 68, 68, 0.8);
-  margin-top: 0.25rem;
-}
-
-.consistency-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.consistency-pill {
-  padding: 0.75rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.consistency-pill span,
-.history-row span {
-  display: block;
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.history-list {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.score-history {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.score-history__svg {
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.score-history__area {
-  fill: rgba(239, 68, 68, 0.12);
-}
-
-.score-history__line {
-  fill: none;
-  stroke: var(--ion-color-danger);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.score-history__dot {
-  fill: var(--ion-color-danger);
-  cursor: pointer;
-  transition: r 0.2s ease, filter 0.2s ease;
-}
-
-.score-history__dot:hover {
-  r: 1.5;
-  filter: brightness(1.2);
-}
-
-.score-history__dot.is-selected {
-  r: 1.5;
-  filter: brightness(1.4);
-}
-
-.score-history-tooltip {
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid var(--ion-color-danger);
-  text-align: center;
-  color: var(--ion-color-danger);
-  margin-bottom: 0.5rem;
-}
-
-.score-history-tooltip strong {
-  display: block;
-  font-size: 1.25rem;
-}
-
-.score-history-tooltip small {
-  display: block;
-  font-size: 0.75rem;
-  color: rgba(239, 68, 68, 0.8);
-  margin-top: 0.25rem;
+  color: rgba(239, 68, 68, 0.7);
 }
 
 .score-history__labels {
   position: relative;
-  height: 1.4rem;
+  height: 1.2rem;
 }
 
 .score-history__labels span {
   position: absolute;
   transform: translateX(-50%);
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .empty-state {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.35);
 }
 
-.date-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
+@media (min-width: 600px) {
+  .hero-body {
+    grid-template-columns: 180px 1fr;
+    align-items: center;
+  }
 
-.date-nav__label {
-  min-width: 140px;
-  text-align: center;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
-  letter-spacing: 0.04em;
-}
-
-.date-nav__btn {
-  --color: rgba(255, 255, 255, 0.7);
-  --padding-start: 4px;
-  --padding-end: 4px;
-}
-
-@media (min-width: 760px) {
-  .sleep-grid {
+  .hero-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .consistency-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .two-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

@@ -6,46 +6,30 @@
     </ion-header>
     <ion-content :fullscreen="true" class="finance-content">
       <div class="finance-shell">
-        <section class="summary-grid">
-          <ion-card class="summary-card">
-            <ion-card-header>
-              <ion-card-title>Net worth</ion-card-title>
-              <ion-card-subtitle>Accounts + investments</ion-card-subtitle>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="metric-value">{{ netWorthDisplay }}</div>
-            </ion-card-content>
-          </ion-card>
-
-          <ion-card class="summary-card">
-            <ion-card-header>
-              <ion-card-title>Accounts</ion-card-title>
-              <ion-card-subtitle>{{ accounts.length }} total</ion-card-subtitle>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="metric-value">{{ accountsTotalDisplay }}</div>
-            </ion-card-content>
-          </ion-card>
-
-          <ion-card class="summary-card">
-            <ion-card-header>
-              <ion-card-title>Subscriptions</ion-card-title>
-              <ion-card-subtitle>Monthly spend</ion-card-subtitle>
-            </ion-card-header>
-            <ion-card-content>
-              <div class="metric-value">{{ subscriptionsTotalDisplay }}</div>
-            </ion-card-content>
-          </ion-card>
-        </section>
-
-        <ion-card class="summary-card">
-          <ion-card-header>
-            <ion-card-title>Investments</ion-card-title>
-            <ion-card-subtitle>{{ investments.length }} holdings</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <div class="metric-value">{{ investmentsTotalDisplay }}</div>
-          </ion-card-content>
+        <ion-card class="summary-card net-worth-card">
+          <div class="card-topline">
+            <p class="section-kicker">Net worth</p>
+            <span class="card-sub">Accounts + investments</span>
+          </div>
+          <div class="net-worth-value">{{ netWorthDisplay }}</div>
+          <div class="card-metrics">
+            <div class="card-metric">
+              <span>Accounts</span>
+              <strong>{{ accountsTotalDisplay }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Investments</span>
+              <strong>{{ investmentsTotalDisplay }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Subscriptions / mo</span>
+              <strong>{{ subscriptionsTotalDisplay }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Holdings</span>
+              <strong>{{ investments.length }}</strong>
+            </div>
+          </div>
         </ion-card>
       </div>
     </ion-content>
@@ -58,10 +42,6 @@ import {
   IonHeader,
   IonContent,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
-  IonCardContent,
   onIonViewWillEnter,
 } from '@ionic/vue';
 import { computed, ref } from 'vue';
@@ -113,30 +93,83 @@ onIonViewWillEnter(async () => {
 }
 
 .finance-shell {
+  max-width: 760px;
+  margin: 0 auto;
   padding: 16px;
   display: grid;
   gap: 16px;
-}
-
-.summary-grid {
-  display: grid;
-  gap: 12px;
 }
 
 .summary-card {
   margin: 0;
   border-radius: 12px;
   background: var(--ion-color-primary);
+  padding: 18px;
 }
 
-.metric-value {
-  font-size: 1.6rem;
-  font-weight: 600;
+.net-worth-card {
+  display: grid;
+  gap: 18px;
 }
 
-@media (min-width: 760px) {
-  .summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.card-sub {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.net-worth-value {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.card-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.card-metric {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-metric span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.card-metric strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+@media (min-width: 540px) {
+  .card-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 </style>

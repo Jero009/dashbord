@@ -124,8 +124,8 @@ import {
   onIonViewWillEnter
 } from '@ionic/vue';
 import { useRoute } from 'vue-router';
-import { ref, computed, onMounted, watch } from 'vue';
-import { getExerciseStats } from '@/shared/db/app_db';
+import { ref, computed, nextTick, watch } from 'vue';
+import { getExerciseStats, getExerciseHistory } from '@/shared/db/app_db';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { ExercisePR } from '@/features/gym/types/models';
 
@@ -139,7 +139,7 @@ const exerciseId = computed(() => Number(route.params.id));
 const exerciseName = ref('');
 const currentPR = ref<ExercisePR | null>(null);
 const historyData = ref<any[]>([]);
-const timeFrame = ref(90);
+const timeFrame = ref('90');
 
 const totalWorkouts = computed(() => historyData.value.length);
 const avgWeight = computed(() => {
@@ -159,13 +159,17 @@ const formatPRDate = (dateString: string) => {
 
 const loadExerciseData = async () => {
   try {
-    const stats = await getExerciseStats(exerciseId.value);
+    const [stats, history] = await Promise.all([
+      getExerciseStats(exerciseId.value),
+      getExerciseHistory(exerciseId.value, Number(timeFrame.value)),
+    ]);
     if (stats) {
       exerciseName.value = stats.exercise_name;
       currentPR.value = stats.pr;
-      historyData.value = stats.history;
-      updateChart();
     }
+    historyData.value = history;
+    await nextTick();
+    updateChart();
   } catch (error) {
     console.error('Error loading exercise data:', error);
   }
@@ -267,10 +271,6 @@ watch(timeFrame, async () => {
 });
 
 onIonViewWillEnter(() => {
-  loadExerciseData();
-});
-
-onMounted(() => {
   loadExerciseData();
 });
 </script>
