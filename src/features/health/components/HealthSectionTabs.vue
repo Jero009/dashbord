@@ -16,6 +16,9 @@
       <ion-segment-button value="goals">
         <ion-label>Goals</ion-label>
       </ion-segment-button>
+      <ion-segment-button value="body">
+        <ion-label>Body</ion-label>
+      </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
 </template>

@@ -304,6 +304,14 @@ export async function initDB() {
     total_assets REAL DEFAULT 0,
     total_liabilities REAL DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS body_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    weight_kg REAL NOT NULL,
+    notes TEXT,
+    photo_path TEXT
+  );
   
   INSERT OR IGNORE INTO muscle_group (name) VALUES
     ('chest'),
@@ -2007,6 +2015,43 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return { success: false, message: `Failed to import SQL data: ${errorMessage}` };
   }
+}
+
+// ── Body log ──────────────────────────────────────────────────────────────────
+
+export interface BodyLogEntry {
+  id: number
+  date: string
+  weight_kg: number
+  notes: string | null
+  photo_path: string | null
+}
+
+export async function insertBodyLog(entry: {
+  date: string
+  weight_kg: number
+  notes?: string
+  photo_path?: string
+}): Promise<void> {
+  const db = await getDb()
+  if (!db) return
+  await db.run(
+    `INSERT INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, ?, ?)`,
+    [entry.date, entry.weight_kg, entry.notes ?? null, entry.photo_path ?? null]
+  )
+}
+
+export async function getBodyLogs(): Promise<BodyLogEntry[]> {
+  const db = await getDb()
+  if (!db) return []
+  const result = await db.query(`SELECT * FROM body_log ORDER BY date DESC, id DESC`)
+  return result.values ?? []
+}
+
+export async function deleteBodyLog(id: number): Promise<void> {
+  const db = await getDb()
+  if (!db) return
+  await db.run(`DELETE FROM body_log WHERE id = ?`, [id])
 }
 
 // ============ PR & 1RM TRACKING ============

@@ -45,6 +45,10 @@ const syncIfNeeded = async () => {
 onMounted(async () => {
   await syncIfNeeded();
 
+  // Health Connect may not be ready immediately on cold start — retry after a
+  // short delay so a skipped startup sync recovers without waiting 30 minutes.
+  setTimeout(() => void syncIfNeeded(), 6_000);
+
   intervalId = setInterval(() => {
     void syncIfNeeded();
   }, syncIntervalMs);

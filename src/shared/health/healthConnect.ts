@@ -862,7 +862,12 @@ export function calculateBattery(
       if (start > now) return sum; // future event, no drain yet
       const endTime = e.time_end ? new Date(`${e.date}T${e.time_end}`) : new Date(start.getTime() + 3600000);
       const durationHours = Math.max(0, (Math.min(endTime.getTime(), now.getTime()) - start.getTime()) / 3600000);
-      const drainPerHour = e.type === 'recovery' ? -2 : e.type === 'workout' ? 6 : e.type === 'reminder' ? 0 : 4;
+      const drainPerHour =
+        e.type === 'sleep'    ? -5 :
+        e.type === 'recovery' ? -2 :
+        e.type === 'workout'  ?  6 :
+        e.type === 'school'   ?  5 :
+        e.type === 'reminder' ?  0 : 4;
       return sum + clamp(durationHours * drainPerHour, -5, 15);
     }, 0),
     0, 25

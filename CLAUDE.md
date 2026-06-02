@@ -54,8 +54,20 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 
 - Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
 - Check availability before calling — not present on all Android devices
+- `HealthConnectAutoSync.vue` does an initial sync on mount, then retries after 6 s to recover from cold-start race conditions where HC isn't ready yet
 - Readiness score is derived from sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, and steps
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (20), deep% at ≥18% target (12.5), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (15). Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
+
+### Calendar Event Types & Battery Impact
+
+`HealthCalendarPage.vue` supports event types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. Each type has a CSS tag color class (`item-tag--<type>`). `calculateBattery()` in `healthConnect.ts` applies `drainPerHour` per event: school=+5/hr, sleep=−5/hr (others defined separately).
+
+### Body Log Feature
+
+- `body_log` table in `app_db.ts`: `id`, `date`, `weight_kg`, `notes`, `photo_path`
+- DB functions: `insertBodyLog`, `getBodyLogs` (DESC order), `deleteBodyLog`, `BodyLogEntry` interface
+- Photos stored via `@capacitor/filesystem` in `Directory.Data/body_photos/`; picked via `@capawesome/capacitor-file-picker`
+- Route: `/health/body` → `BodyPage.vue`; "Body" tab added to `HealthSectionTabs.vue`
 
 ## Key Conventions
 

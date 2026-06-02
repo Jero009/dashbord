@@ -65,6 +65,8 @@
                   <option value="general">General</option>
                   <option value="workout">Workout</option>
                   <option value="recovery">Recovery</option>
+                  <option value="school">School</option>
+                  <option value="sleep">Sleep</option>
                   <option value="reminder">Reminder</option>
                 </select>
                 <button class="save-btn" @click="saveEvent">Save</button>
@@ -523,8 +525,10 @@ onIonViewWillEnter(async () => {
   margin-top: 2px;
 }
 
-.item-tag--workout { background: rgba(239, 68, 68, 0.2); color: rgb(239, 68, 68); }
+.item-tag--workout  { background: rgba(239, 68, 68, 0.2);   color: rgb(239, 68, 68); }
 .item-tag--recovery { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
+.item-tag--school   { background: rgba(96, 165, 250, 0.18); color: rgb(96, 165, 250); }
+.item-tag--sleep    { background: rgba(167, 139, 250, 0.18); color: rgb(167, 139, 250); }
 .item-tag--reminder { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
 
 .item-body {
