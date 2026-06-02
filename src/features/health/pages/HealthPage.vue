@@ -45,7 +45,7 @@
           <p class="section-kicker">Activities · last 7 days</p>
           <div class="activity-list">
             <div v-for="(act, i) in activities" :key="i" class="activity-card">
-              <div class="activity-card__icon">{{ workoutIcon(act.workoutType) }}</div>
+              <div class="activity-card__icon">{{ workoutInitial(act.workoutType) }}</div>
               <div class="activity-card__body">
                 <strong class="activity-card__name">{{ formatWorkoutType(act.workoutType) }}</strong>
                 <span class="activity-card__date">{{ formatActivityDate(act.startDate) }}</span>
@@ -115,18 +115,9 @@ const healthConnectStatus = computed(() =>
 const formatWorkoutType = (t: string) =>
   t.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
 
-const workoutIcon = (t: string): string => {
-  if (t.includes('running') || t.includes('Running')) return '🏃';
-  if (t.includes('cycling') || t.includes('Cycling') || t.includes('biking')) return '🚴';
-  if (t.includes('swimming') || t.includes('Swimming')) return '🏊';
-  if (t.includes('walking') || t.includes('Walking')) return '🚶';
-  if (t.includes('yoga') || t.includes('Yoga')) return '🧘';
-  if (t.includes('strength') || t.includes('Strength') || t.includes('weight')) return '🏋️';
-  if (t.includes('hiking') || t.includes('Hiking')) return '🥾';
-  if (t.includes('soccer') || t.includes('football')) return '⚽';
-  if (t.includes('basketball')) return '🏀';
-  if (t.includes('tennis')) return '🎾';
-  return '🏅';
+const workoutInitial = (t: string): string => {
+  const label = formatWorkoutType(t);
+  return label.slice(0, 2).toUpperCase();
 };
 
 const formatActivityDate = (iso: string) =>

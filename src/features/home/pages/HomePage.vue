@@ -50,10 +50,10 @@
             <div class="battery-right">
               <div class="ready-chips">
                 <div class="ready-chip" :class="battery?.readyToTrain ? 'ready-chip--on' : 'ready-chip--off'">
-                  🏋️ Train
+                  Train
                 </div>
                 <div class="ready-chip" :class="battery?.readyToStudy ? 'ready-chip--on' : 'ready-chip--off'">
-                  📚 Study
+                  Study
                 </div>
               </div>
 

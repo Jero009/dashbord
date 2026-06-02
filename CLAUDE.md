@@ -69,6 +69,9 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 
 **ALWAYS follow these rules when writing or editing any component.** Do not invent new patterns — extend existing ones.
 
+### No emojis
+Never use emoji characters anywhere in the UI — not in templates, not in labels, not as icon substitutes. Use text initials, abbreviations, or ionicons instead.
+
 ### Colors
 - Background: `#000` (page), `var(--ion-color-primary)` (cards)
 - Accent red: `rgb(239, 68, 68)` / `var(--ion-color-accent-red)` — primary interactive color
