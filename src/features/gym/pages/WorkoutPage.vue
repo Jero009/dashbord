@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title slot="start" class="title">Workout</ion-title>
         <div class="timer">{{ formatTime() }}</div>
-        <ion-buttons  slot="end">
+        <ion-buttons slot="end">
           <ion-button class="button-red" @click="saveWorkout">stop</ion-button>
         </ion-buttons>
       </ion-toolbar>

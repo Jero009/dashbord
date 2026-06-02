@@ -2,13 +2,13 @@
 <ion-page>
   <ion-header>
     <ion-toolbar>
-        <ion-title class="title">EXERCISES</ion-title>
+      <ion-title class="title">EXERCISES</ion-title>
       <ion-buttons slot="end">
         <ion-button class="button-red" @click="openModal">
-          <ion-icon :icon="add" ></ion-icon>
+          <ion-icon :icon="add"></ion-icon>
         </ion-button>
       </ion-buttons>
-      </ion-toolbar>
+    </ion-toolbar>
   </ion-header>
   <ion-content class="exercise-content">
     <ion-modal :is-open="isOpen" css-class="exercise-modal">

@@ -55,6 +55,7 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 - Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
 - Check availability before calling — not present on all Android devices
 - Readiness score is derived from sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, and steps
+- Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (20), deep% at ≥18% target (12.5), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (15). Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
 
 ## Key Conventions
 

@@ -1,7 +1,7 @@
 <template>
   <ion-page>
     <ion-tabs>
-      <ion-router-outlet></ion-router-outlet>
+      <ion-router-outlet :animation="fadeTransition"></ion-router-outlet>
       <ion-tab-bar slot="bottom">
         <ion-tab-button tab="Home" href="/tabs/Home" >
           <ion-icon aria-hidden="true" :icon="home" />
@@ -29,8 +29,27 @@
 </template>
 
 <script setup lang="ts">
-import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
+import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet, createAnimation } from '@ionic/vue';
+import type { AnimationBuilder } from '@ionic/vue';
 import { home, add, time, body } from 'ionicons/icons';
+
+const fadeTransition: AnimationBuilder = (_, opts) => {
+  const enter = createAnimation()
+    .addElement(opts.enteringEl)
+    .duration(220)
+    .easing('cubic-bezier(0.4, 0, 0.2, 1)')
+    .fromTo('opacity', '0', '1')
+    .fromTo('transform', 'translate3d(0, 6px, 0)', 'translate3d(0, 0, 0)');
+
+  const leave = createAnimation()
+    .addElement(opts.leavingEl)
+    .duration(180)
+    .easing('cubic-bezier(0.4, 0, 1, 1)')
+    .fromTo('opacity', '1', '0')
+    .fromTo('transform', 'translate3d(0, 0, 0)', 'translate3d(0, -4px, 0)');
+
+  return createAnimation().addAnimation([enter, leave]);
+};
 </script>
 <style>
 ion-tab-bar {
@@ -40,18 +59,6 @@ ion-tab-bar {
   transition: background 0.3s ease;
 }
 
-ion-router-outlet {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0.95;
-  }
-  to {
-    opacity: 1;
-  }
-}
 
 ion-tab-button {
   --color: rgba(255, 255, 255, 0.68);

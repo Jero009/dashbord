@@ -174,10 +174,21 @@ function buildSleepTimeline(sample: HealthSample) {
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 }
 
-function buildSleepSummary(sample: HealthSample, sleepHeartRate: number | null, respiratoryRate: number | null) {
+function buildSleepSummary(
+  sample: HealthSample,
+  sleepHeartRate: number | null,
+  respiratoryRate: number | null,
+  options: {
+    targetSleepHours?: number;
+    timingVarianceMinutes?: number | null;
+    respiratoryRateBaseline?: number | null;
+  } = {}
+) {
   const timeInBedHours = hoursBetween(sample.startDate, sample.endDate);
   const { totalMinutes, stageSummaries } = sumStageMinutes(sample);
   const timeAsleepHours = totalMinutes > 0 ? totalMinutes / 60 : timeInBedHours;
+  const efficiency = timeInBedHours > 0 ? timeAsleepHours / timeInBedHours : 0;
+
   const stages: SleepStageSummary[] = Object.entries(stageSummaries)
     .map(([stage, minutes]) => ({
       stage,
@@ -186,49 +197,74 @@ function buildSleepSummary(sample: HealthSample, sleepHeartRate: number | null, 
     }))
     .sort((a, b) => b.minutes - a.minutes);
 
+  const sleepOnlyMinutes = stages
+    .filter((s) => s.stage !== 'awake' && s.stage !== 'inBed')
+    .reduce((sum, s) => sum + s.minutes, 0);
+
+  const hasStages = sleepOnlyMinutes > 0;
+  const deepPct = hasStages ? (stageSummaries['deep'] ?? 0) / sleepOnlyMinutes : null;
+  const remPct = hasStages ? (stageSummaries['rem'] ?? 0) / sleepOnlyMinutes : null;
+
   return {
     timeInBedHours,
     timeAsleepHours,
-    efficiency: timeInBedHours > 0 ? timeAsleepHours / timeInBedHours : 0,
+    efficiency,
     stages,
     timeline: buildSleepTimeline(sample),
     heartRateTimeline: [],
     score: calculateSleepScore({
       timeAsleepHours,
-      timeInBedHours,
-      sleepHeartRate,
+      targetSleepHours: options.targetSleepHours ?? 8.0,
+      efficiency,
+      deepPct,
+      remPct,
+      timingVarianceMinutes: options.timingVarianceMinutes ?? null,
       respiratoryRate,
-      stages,
+      respiratoryRateBaseline: options.respiratoryRateBaseline ?? null,
     }),
   };
 }
 
-function calculateSleepScore(summary: {
+interface SleepScoreInputs {
   timeAsleepHours: number;
-  timeInBedHours: number;
-  sleepHeartRate: number | null;
+  targetSleepHours: number;
+  efficiency: number;                       // 0–1
+  deepPct: number | null;                   // fraction of sleep time (0–1)
+  remPct: number | null;                    // fraction of sleep time (0–1)
+  timingVarianceMinutes: number | null;     // deviation from rolling bedtime mean
   respiratoryRate: number | null;
-  stages: SleepStageSummary[];
-}) {
-  const durationScore = clamp((summary.timeAsleepHours / 8) * 30, 0, 30);
-  const efficiencyScore = clamp(summary.timeInBedHours > 0 ? summary.timeAsleepHours / summary.timeInBedHours : 0, 0, 1) * 25;
+  respiratoryRateBaseline: number | null;   // rolling personal mean
+}
 
-  const distinctStages = new Set(
-    summary.stages
-      .map((stage) => stage.stage)
-      .filter((stage) => stage !== 'awake' && stage !== 'inBed')
-  );
-  const stageScore = clamp((distinctStages.size / 4) * 15, 0, 15);
+function calculateSleepScore(inputs: SleepScoreInputs): number {
+  // Duration vs user target: 25 pts
+  const durationScore = clamp((inputs.timeAsleepHours / inputs.targetSleepHours) * 25, 0, 25);
 
-  const sleepHrScore = summary.sleepHeartRate === null
-    ? 5
-    : clamp(15 - Math.abs(summary.sleepHeartRate - 55) / 2, 0, 15);
+  // Sleep efficiency: 20 pts
+  const efficiencyScore = clamp(inputs.efficiency * 20, 0, 20);
 
-  const respiratoryScore = summary.respiratoryRate === null
-    ? 5
-    : clamp(15 - Math.abs(summary.respiratoryRate - 14.5) / 0.9, 0, 15);
+  // Stage composition: 12.5 pts each for deep and REM
+  // Targets: deep ≥18%, REM ≥22% of total sleep time
+  const hasStageData = inputs.deepPct !== null || inputs.remPct !== null;
+  const deepScore = !hasStageData ? 6.25
+    : inputs.deepPct === null ? 6.25
+    : clamp((inputs.deepPct / 0.18) * 12.5, 0, 12.5);
+  const remScore = !hasStageData ? 6.25
+    : inputs.remPct === null ? 6.25
+    : clamp((inputs.remPct / 0.22) * 12.5, 0, 12.5);
 
-  return Math.round(durationScore + efficiencyScore + stageScore + sleepHrScore + respiratoryScore);
+  // Bedtime timing consistency: 15 pts (0 pts at ≥60 min variance)
+  const timingScore = inputs.timingVarianceMinutes === null
+    ? 7.5
+    : clamp(15 - (inputs.timingVarianceMinutes / 60) * 15, 0, 15);
+
+  // Respiratory deviation from personal baseline: 15 pts (0 pts at ≥3 bpm deviation)
+  const respiratoryScore =
+    inputs.respiratoryRate === null || inputs.respiratoryRateBaseline === null
+      ? 7.5
+      : clamp(15 - (Math.abs(inputs.respiratoryRate - inputs.respiratoryRateBaseline) / 3) * 15, 0, 15);
+
+  return Math.round(durationScore + efficiencyScore + deepScore + remScore + timingScore + respiratoryScore);
 }
 
 function toDateKey(date: string) {
@@ -588,14 +624,50 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     }
   }
 
-  for (const [date, bucket] of sleepByDate.entries()) {
+  // Process sleep in chronological order so rolling baselines accumulate correctly
+  const sortedSleepEntries = [...sleepByDate.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const rollingBedtimeMinutes: number[] = [];
+  const rollingRespRates: number[] = [];
+  const ROLLING_WINDOW = 14;
+
+  for (const [date, bucket] of sortedSleepEntries) {
     const latestSample = bucket.samples[bucket.samples.length - 1];
     if (!latestSample) continue;
 
     const hrBucket = heartRateByDate.get(date);
     const sleepHeartRate = average(hrBucket?.values ?? []);
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
-    const sleepSummary = buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate);
+
+    // Bedtime in minutes since midnight, handling overnight sessions (e.g. 23:00)
+    const bedtimeDate = new Date(latestSample.startDate);
+    const bedtimeMinutes = bedtimeDate.getHours() * 60 + bedtimeDate.getMinutes();
+
+    // Timing variance: deviation from rolling mean of prior bedtimes
+    let timingVarianceMinutes: number | null = null;
+    if (rollingBedtimeMinutes.length >= 3) {
+      const window = rollingBedtimeMinutes.slice(-ROLLING_WINDOW);
+      const mean = window.reduce((s, v) => s + v, 0) / window.length;
+      let diff = Math.abs(bedtimeMinutes - mean);
+      // Wrap-around: 23:50 vs 00:10 should be 20 min apart, not 1420
+      if (diff > 720) diff = 1440 - diff;
+      timingVarianceMinutes = diff;
+    }
+
+    // Respiratory baseline: rolling mean of prior nights
+    let respiratoryRateBaseline: number | null = null;
+    if (rollingRespRates.length >= 3) {
+      const window = rollingRespRates.slice(-ROLLING_WINDOW);
+      respiratoryRateBaseline = window.reduce((s, v) => s + v, 0) / window.length;
+    }
+
+    const sleepSummary = buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate, {
+      timingVarianceMinutes,
+      respiratoryRateBaseline,
+    });
+
+    // Update rolling state AFTER scoring so current night doesn't influence its own baseline
+    rollingBedtimeMinutes.push(bedtimeMinutes);
+    if (respiratoryRate !== null) rollingRespRates.push(respiratoryRate);
 
     try {
       await replaceHealthMetric(date, 'sleep_duration', Number(sleepSummary.timeAsleepHours.toFixed(2)), 'hours', HEALTH_CONNECT_SOURCE);
