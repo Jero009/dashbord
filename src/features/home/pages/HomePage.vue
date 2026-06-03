@@ -149,15 +149,15 @@
           </div>
           <div class="digest-grid">
             <div class="digest-tile">
-              <span class="digest-label">Sleep avg</span>
+              <span class="digest-label">Avg sleep</span>
               <span class="digest-value">{{ digest.avgSleep !== null ? digest.avgSleep.toFixed(1) + ' h' : '—' }}</span>
             </div>
             <div class="digest-tile">
-              <span class="digest-label">Steps avg</span>
+              <span class="digest-label">Avg steps</span>
               <span class="digest-value">{{ digest.avgSteps !== null ? Math.round(digest.avgSteps).toLocaleString() : '—' }}</span>
             </div>
             <div class="digest-tile">
-              <span class="digest-label">Readiness</span>
+              <span class="digest-label">Avg readiness</span>
               <span class="digest-value">{{ digest.avgReadiness !== null ? Math.round(digest.avgReadiness) : '—' }}</span>
             </div>
             <div class="digest-tile">
@@ -1397,52 +1397,4 @@ onMounted(async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* ── Weekly digest ──────────────────────────────────────── */
-.digest-card {
-  margin: 0;
-  border-radius: 12px;
-  background: var(--ion-color-primary);
-  box-shadow: none;
-}
-
-.digest-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.digest-tile {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.digest-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.5);
-  white-space: nowrap;
-}
-
-.digest-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
-}
-
-.digest-trend {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.trend--up   { color: rgb(34, 197, 94); }
-.trend--down { color: rgb(239, 68, 68); }
 </style>
