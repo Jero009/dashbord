@@ -380,9 +380,7 @@ const sleepHoursDisplay = computed(() =>
 const timeInBedDisplay = computed(() =>
   summary.value ? `${summary.value.timeInBedHours.toFixed(1)} h` : '—'
 );
-const sleepEfficiencyDisplay = computed(() =>
-  summary.value ? `${Math.round(summary.value.efficiency * 100)}% efficiency` : '—'
-);
+
 const sleepEfficiencyPercent = computed(() =>
   summary.value ? `${Math.round(summary.value.efficiency * 100)}%` : '—'
 );

@@ -455,6 +455,7 @@ onIonViewWillEnter(async () => {
 
 
 onUnmounted(() => {
+  if (renderChartTimeout) { clearTimeout(renderChartTimeout); renderChartTimeout = null; }
   clearTimer();
   clearActiveRestTimer();
   if (chart) chart.destroy();

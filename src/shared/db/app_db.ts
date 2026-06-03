@@ -22,6 +22,7 @@ const EXPORT_DELETE_TABLES = [
   'habit',
   'goal',
   'calendar_event',
+  'body_log',
   'finance_subscription',
   'finance_investment',
   'finance_account',
@@ -45,6 +46,7 @@ const EXPORT_INSERT_TABLES = [
   'habit_log',
   'goal',
   'calendar_event',
+  'body_log',
   'finance_account',
   'finance_investment',
   'finance_subscription',
@@ -737,6 +739,15 @@ export async function initDB() {
     if (!calColNamesArr.includes('recurrence')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN recurrence TEXT DEFAULT 'none';`);
     }
+
+    // One-time dedup: remove duplicate health_metric rows accumulated by the
+    // = NULL bug in replaceHealthMetric — keeps the highest-id row per (date, type, source).
+    await db.execute(`
+      DELETE FROM health_metric
+      WHERE id NOT IN (
+        SELECT MAX(id) FROM health_metric GROUP BY date, type, source
+      );
+    `);
 
     return db;
   } catch (error) {
@@ -1438,8 +1449,8 @@ export async function replaceHealthMetric(
   try {
     await db.run(
       `DELETE FROM health_metric
-       WHERE date = ? AND type = ? AND source = ?;`,
-      [date, type, source ?? null]
+       WHERE date = ? AND type = ? AND (source = ? OR (source IS NULL AND ? IS NULL));`,
+      [date, type, source ?? null, source ?? null]
     );
 
     return await addHealthMetric(date, type, value, unit, source);
@@ -1688,7 +1699,7 @@ export async function addCalendarEvent(
   try {
     const result = await db.run(
       `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, recurrence ?? 'none']
+      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none']
     );
     return result;
   } catch (error) {
@@ -1753,10 +1764,6 @@ export async function getCalendarEventDatesForMonth(yearMonth: string) {
         if (dow === startDow) dates.add(dateStr);
       }
     }
-  }
-  // Also include the start date itself for recurring events in the month
-  for (const row of (recurResult.values ?? []) as { date: string }[]) {
-    if (row.date >= monthStart && row.date <= monthEnd) dates.add(row.date);
   }
   return [...dates];
 }
@@ -2101,11 +2108,11 @@ export async function bulkInsertBodyLog(entries: { date: string; weight_kg: numb
   if (!db) return 0
   let inserted = 0
   for (const e of entries) {
-    await db.run(
+    const result = await db.run(
       `INSERT OR IGNORE INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, NULL, NULL)`,
       [e.date, e.weight_kg]
     )
-    inserted++
+    if ((result?.changes?.changes ?? 0) > 0) inserted++
   }
   return inserted
 }

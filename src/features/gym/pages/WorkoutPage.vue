@@ -546,6 +546,8 @@ const handleCancelWorkout = async () => {
           await cancelWorkout(workoutId);
           if (interval) clearInterval(interval);
           interval = null;
+          if (restInterval) clearInterval(restInterval);
+          restInterval = null;
           router.push('/tabs/Home');
         }
       }
@@ -758,6 +760,7 @@ const restoreTimerState = () => {
 
   try {
     const { endTime } = JSON.parse(saved);
+    if (!Number.isFinite(endTime)) { sessionStorage.removeItem('restTimer'); return; }
     const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
     if (remaining > 0) {
       startRestTimer(remaining);

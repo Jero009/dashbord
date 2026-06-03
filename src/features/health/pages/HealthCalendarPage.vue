@@ -48,7 +48,7 @@
           <div class="detail-card">
             <div class="detail-card__header">
               <h3>Events</h3>
-              <button class="icon-btn" @click="showAddEvent = !showAddEvent">
+              <button class="icon-btn" @click="showAddEvent ? (resetEventForm(), showAddEvent = false) : (showAddEvent = true)">
                 {{ showAddEvent ? '✕' : '+' }}
               </button>
             </div>
@@ -284,9 +284,20 @@ const computeRecommendation = async (timeStart: string) => {
 };
 
 watch([newType, newTimeStart], ([type, time]) => {
-  if (type === 'workout') computeRecommendation(time as string);
+  if (type === 'workout') void computeRecommendation(time as string);
   else { recommendedTemplateId.value = null; newWorkoutTemplateId.value = null; }
 });
+
+const resetEventForm = () => {
+  newTitle.value = '';
+  newNotes.value = '';
+  newType.value = 'general';
+  newTimeStart.value = '';
+  newTimeEnd.value = '';
+  newWorkoutTemplateId.value = null;
+  newRecurrence.value = 'none';
+  recommendedTemplateId.value = null;
+};
 
 const saveEvent = async () => {
   if (!newTitle.value.trim()) {
@@ -304,13 +315,7 @@ const saveEvent = async () => {
     newWorkoutTemplateId.value ?? undefined,
     newRecurrence.value
   );
-  newTitle.value = '';
-  newNotes.value = '';
-  newType.value = 'general';
-  newTimeStart.value = '';
-  newTimeEnd.value = '';
-  newWorkoutTemplateId.value = null;
-  newRecurrence.value = 'none';
+  resetEventForm();
   showAddEvent.value = false;
   await Promise.all([loadDayDetail(), loadMonthDots()]);
 };

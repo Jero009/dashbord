@@ -124,7 +124,7 @@ import {
   onIonViewWillEnter
 } from '@ionic/vue';
 import { useRoute } from 'vue-router';
-import { ref, computed, nextTick, watch } from 'vue';
+import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
 import { getExerciseStats, getExerciseHistory } from '@/shared/db/app_db';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { ExercisePR } from '@/features/gym/types/models';
@@ -276,6 +276,10 @@ watch(timeFrame, async () => {
 
 onIonViewWillEnter(() => {
   loadExerciseData();
+});
+
+onUnmounted(() => {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 });
 </script>
 

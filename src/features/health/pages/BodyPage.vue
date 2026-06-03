@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler)
@@ -213,7 +213,11 @@ const buildChart = () => {
   })
 }
 
-watch(chartRange, buildChart)
+watch(chartRange, buildChart, { flush: 'post' })
+
+onUnmounted(() => {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null }
+})
 
 const form = ref({
   date: new Date().toISOString().slice(0, 10),
@@ -248,8 +252,8 @@ const formatDate = (d: string) =>
 const loadEntries = async () => {
   entries.value = await getBodyLogs()
   photoUrls.value = {}
-  for (const entry of entries.value) {
-    if (!entry.photo_path) continue
+  await Promise.all(entries.value.map(async (entry) => {
+    if (!entry.photo_path) return
     try {
       const file = await Filesystem.readFile({ path: entry.photo_path, directory: Directory.Data })
       const mime = entry.photo_path.endsWith('.png') ? 'image/png' : 'image/jpeg'
@@ -257,7 +261,7 @@ const loadEntries = async () => {
     } catch {
       // file missing on disk, skip thumbnail
     }
-  }
+  }))
   buildChart()
 }
 
