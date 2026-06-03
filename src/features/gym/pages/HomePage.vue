@@ -123,7 +123,7 @@ import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWork
 import { ref, onMounted, onUnmounted,computed,watch } from 'vue';
 import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
-import {Chart,LineController,LineElement,PointElement,LinearScale,CategoryScale} from 'chart.js';
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
 import { formatDuration, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
 
@@ -305,13 +305,7 @@ const formatWorkoutTimer = () => {
 
 // chart 
 
-Chart.register(
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale
-);
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler);
 
 const chartRef = ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
@@ -347,13 +341,15 @@ const renderChart = () => {
         {
           label: 'Total KG',
           data: chartData.value.map(d => d.kg),
+          borderColor: 'rgb(239,68,68)',
+          backgroundColor: 'rgba(239,68,68,0.15)',
           borderWidth: 2,
           tension: 0.3,
-
-
-          borderColor: '#D71921',
-          pointRadius: 4,
-          pointBackgroundColor: '#D71921',
+          fill: true,
+          pointRadius: 3,
+          pointBackgroundColor: 'rgb(239,68,68)',
+          pointBorderColor: 'transparent',
+          pointHoverRadius: 5,
         }
       ]
     },
@@ -362,27 +358,24 @@ const renderChart = () => {
       animation: false,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false,
-        },
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: 'rgba(255,255,255,0.5)',
+          bodyColor: '#fff',
+          padding: 10,
+          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(0)} kg` }
+        }
       },
       scales: {
         x: {
-          ticks: {
-            color: '#b9b9b9',
-          },
-          grid: {
-            color: 'rgba(255, 255, 255, 0.06)',
-          },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 6 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
         y: {
           min: 0,
-          ticks: {
-            color: '#b9b9b9',
-          },
-          grid: {
-            color: 'rgba(255, 255, 255, 0.06)',
-          },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
       }
     }
@@ -727,6 +720,9 @@ ion-content.home-content {
 .chart-frame {
   margin-top: 16px;
   height: 240px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 8px 4px 4px;
 }
 
 .chart-frame canvas {

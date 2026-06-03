@@ -734,6 +734,9 @@ export async function initDB() {
     if (!calColNamesArr.includes('workout_template_id')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN workout_template_id INTEGER;`);
     }
+    if (!calColNamesArr.includes('recurrence')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recurrence TEXT DEFAULT 'none';`);
+    }
 
     return db;
   } catch (error) {
@@ -1678,13 +1681,14 @@ export async function addCalendarEvent(
   notes?: string,
   timeStart?: string,
   timeEnd?: string,
-  workoutTemplateId?: number
+  workoutTemplateId?: number,
+  recurrence?: string
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id) VALUES (?, ?, ?, ?, ?, ?, ?);`,
-      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null]
+      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, recurrence ?? 'none']
     );
     return result;
   } catch (error) {
@@ -1696,8 +1700,12 @@ export async function addCalendarEvent(
 export async function getCalendarEventsForDate(date: string) {
   if (!db) return [];
   const result = await db.query(
-    `SELECT * FROM calendar_event WHERE date = ? ORDER BY id DESC;`,
-    [date]
+    `SELECT * FROM calendar_event
+     WHERE date = ?
+        OR (recurrence = 'daily' AND date < ?)
+        OR (recurrence = 'weekly' AND date < ? AND strftime('%w', date) = strftime('%w', ?))
+     ORDER BY time_start ASC, id DESC;`,
+    [date, date, date, date]
   );
   return result.values || [];
 }
@@ -1714,11 +1722,43 @@ export async function deleteHabit(id: number) {
 
 export async function getCalendarEventDatesForMonth(yearMonth: string) {
   if (!db) return [] as string[];
-  const result = await db.query(
-    `SELECT DISTINCT date FROM calendar_event WHERE date LIKE ?;`,
+  const [year, month] = yearMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const monthEnd = `${yearMonth}-${String(daysInMonth).padStart(2, '0')}`;
+
+  // Non-recurring events within the month
+  const exactResult = await db.query(
+    `SELECT DISTINCT date FROM calendar_event WHERE date LIKE ? AND (recurrence IS NULL OR recurrence = 'none');`,
     [`${yearMonth}-%`]
   );
-  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
+  const dates = new Set<string>(
+    ((exactResult.values ?? []) as { date: string }[]).map((r) => r.date)
+  );
+
+  // Recurring events that started on or before month end
+  const recurResult = await db.query(
+    `SELECT date, recurrence FROM calendar_event WHERE recurrence != 'none' AND recurrence IS NOT NULL AND date <= ?;`,
+    [monthEnd]
+  );
+  const monthStart = `${yearMonth}-01`;
+  for (const row of (recurResult.values ?? []) as { date: string; recurrence: string }[]) {
+    const startDow = new Date(row.date + 'T12:00:00').getDay();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${yearMonth}-${String(d).padStart(2, '0')}`;
+      if (dateStr < row.date) continue; // before this event's start
+      if (row.recurrence === 'daily') {
+        dates.add(dateStr);
+      } else if (row.recurrence === 'weekly') {
+        const dow = new Date(dateStr + 'T12:00:00').getDay();
+        if (dow === startDow) dates.add(dateStr);
+      }
+    }
+  }
+  // Also include the start date itself for recurring events in the month
+  for (const row of (recurResult.values ?? []) as { date: string }[]) {
+    if (row.date >= monthStart && row.date <= monthEnd) dates.add(row.date);
+  }
+  return [...dates];
 }
 
 export async function getHabitCompletedDatesForMonth(yearMonth: string) {

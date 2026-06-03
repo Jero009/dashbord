@@ -37,6 +37,11 @@ export async function scheduleWeightReminder(time: string): Promise<void> {
   })
 }
 
+export async function dismissWeightReminder(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.removeDeliveredNotifications({ notifications: [{ id: ID_WEIGHT, tag: '' }] })
+}
+
 export async function scheduleHabitReminder(time: string, habitNames: string[]): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
   await LocalNotifications.cancel({ notifications: [{ id: ID_HABIT }] })

@@ -69,6 +69,13 @@
                   <option value="sleep">Sleep</option>
                   <option value="reminder">Reminder</option>
                 </select>
+                <select v-model="newRecurrence" class="form-select">
+                  <option value="none">No repeat</option>
+                  <option value="daily">Every day</option>
+                  <option value="weekly">Every week</option>
+                </select>
+              </div>
+              <div class="form-row form-row--end">
                 <button class="save-btn" @click="saveEvent">Save</button>
               </div>
               <div v-if="newType === 'workout'" class="form-row workout-picker">
@@ -93,6 +100,9 @@
                   <strong>{{ ev.title }}</strong>
                   <span v-if="ev.time_start" class="item-note">
                     {{ ev.time_start }}{{ ev.time_end ? ' – ' + ev.time_end : '' }}
+                  </span>
+                  <span v-if="ev.recurrence && ev.recurrence !== 'none'" class="item-note item-note--recur">
+                    {{ ev.recurrence === 'daily' ? 'Repeats daily' : 'Repeats weekly' }}
                   </span>
                   <span v-if="ev.notes" class="item-note">{{ ev.notes }}</span>
                 </div>
@@ -165,6 +175,7 @@ const newType = ref('general');
 const newNotes = ref('');
 const newTimeStart = ref('');
 const newTimeEnd = ref('');
+const newRecurrence = ref('none');
 
 const templates = ref<{ id: number; name: string }[]>([]);
 const newWorkoutTemplateId = ref<number | null>(null);
@@ -290,7 +301,8 @@ const saveEvent = async () => {
     newNotes.value.trim() || undefined,
     newTimeStart.value || undefined,
     newTimeEnd.value || undefined,
-    newWorkoutTemplateId.value ?? undefined
+    newWorkoutTemplateId.value ?? undefined,
+    newRecurrence.value
   );
   newTitle.value = '';
   newNotes.value = '';
@@ -298,6 +310,7 @@ const saveEvent = async () => {
   newTimeStart.value = '';
   newTimeEnd.value = '';
   newWorkoutTemplateId.value = null;
+  newRecurrence.value = 'none';
   showAddEvent.value = false;
   await Promise.all([loadDayDetail(), loadMonthDots()]);
 };
@@ -657,5 +670,13 @@ onIonViewWillEnter(async () => {
   margin: 0;
   font-size: 0.82rem;
   color: rgba(255, 255, 255, 0.35);
+}
+
+.form-row--end {
+  justify-content: flex-end;
+}
+
+.item-note--recur {
+  color: rgba(255, 215, 0, 0.7);
 }
 </style>

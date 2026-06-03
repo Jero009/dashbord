@@ -119,6 +119,7 @@ import { FilePicker } from '@capawesome/capacitor-file-picker'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
+import { dismissWeightReminder } from '@/shared/utils/notifications'
 import type { BodyLogEntry } from '@/shared/db/app_db'
 import { getGoalWeightKg } from '@/shared/utils/userSettings'
 
@@ -164,7 +165,7 @@ const buildChart = () => {
           label: 'Weight',
           data,
           borderColor: 'var(--ion-color-accent-red)',
-          backgroundColor: 'rgba(239,68,68,0.08)',
+          backgroundColor: 'rgba(239,68,68,0.15)',
           borderWidth: 2,
           pointRadius: filtered.length > 60 ? 0 : 3,
           pointBackgroundColor: 'var(--ion-color-accent-red)',
@@ -186,6 +187,7 @@ const buildChart = () => {
     },
     options: {
       responsive: true,
+      animation: false,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
@@ -193,19 +195,18 @@ const buildChart = () => {
           backgroundColor: 'rgba(0,0,0,0.85)',
           titleColor: 'rgba(255,255,255,0.5)',
           bodyColor: '#fff',
-          callbacks: {
-            label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)} kg`
-          }
+          padding: 10,
+          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)} kg` }
         }
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 }, maxTicksLimit: 8 },
-          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 8 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
         y: {
-          ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 }, callback: (v) => `${v} kg` },
-          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         }
       }
     }
@@ -332,6 +333,8 @@ const saveEntry = async () => {
       notes: form.value.notes.trim() || undefined,
       photo_path: photoPath,
     })
+    const today = new Date().toISOString().slice(0, 10)
+    if (form.value.date === today) dismissWeightReminder()
 
     form.value.weight = ''
     form.value.notes = ''
@@ -646,6 +649,9 @@ onIonViewWillEnter(loadEntries)
 .chart-wrap {
   height: 180px;
   position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 8px 4px 4px;
 }
 
 /* Full-screen photo viewer */
