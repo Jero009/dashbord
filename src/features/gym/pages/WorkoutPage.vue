@@ -4,7 +4,7 @@
       <ion-toolbar>
         <ion-title slot="start" class="title">Workout</ion-title>
         <div class="timer">{{ formatTime() }}</div>
-        <ion-buttons  slot="end">
+        <ion-buttons slot="end">
           <ion-button class="button-red" @click="saveWorkout">stop</ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -41,6 +41,7 @@
                     </ion-button>
                   </div>
                   <ion-card-title>{{ ex.name }}</ion-card-title>
+                  <p v-if="overloadHint(ex)" class="overload-hint">{{ overloadHint(ex) }}</p>
                 </div>
                     <div class="rest-settings" @click="editRestTime(ex)">
                       <ion-icon :icon="timerOutline"></ion-icon>
@@ -177,6 +178,13 @@
   color:var(--ion-color-light);
   gap: 8px;
 }
+.overload-hint {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: rgba(255, 215, 0, 0.7);
+  letter-spacing: 0.02em;
+}
+
 .rest-settings {
   display: flex;
   align-items: center;
@@ -388,7 +396,7 @@
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter,onIonViewDidEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
 import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
 import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline } from 'ionicons/icons';
@@ -414,19 +422,21 @@ const loadWorkout = async () => {
 
   const data = await getWorkoutExercises(workoutId);
 
-  for (const ex of data) {
-      const sets = await getWorkoutSets(ex.id);
-      const previousSets = await getLatestCompletedSetsForExercise(ex.exercise_id, workoutId);
-      const previousSetByNumber = new Map<number, any>(
-        previousSets.map((row: any) => [Number(row.set_number), row])
-      );
+  const [setsArray, previousSetsArray] = await Promise.all([
+    Promise.all(data.map((ex: any) => getWorkoutSets(ex.id))),
+    Promise.all(data.map((ex: any) => getLatestCompletedSetsForExercise(ex.exercise_id, workoutId))),
+  ]);
 
-      ex.sets = sets.map((s: any) => ({
-        ...s,
-        completed: !!s.completed,
-        previous_weight: Number(previousSetByNumber.get(Number(s.set_number))?.weight) || 0,
-        previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0
-      }));
+  for (let i = 0; i < data.length; i++) {
+    const previousSetByNumber = new Map<number, any>(
+      previousSetsArray[i].map((row: any) => [Number(row.set_number), row])
+    );
+    data[i].sets = setsArray[i].map((s: any) => ({
+      ...s,
+      completed: !!s.completed,
+      previous_weight: Number(previousSetByNumber.get(Number(s.set_number))?.weight) || 0,
+      previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0,
+    }));
   }
 
   workoutExercises.value = data;
@@ -544,6 +554,8 @@ const handleCancelWorkout = async () => {
           await cancelWorkout(workoutId);
           if (interval) clearInterval(interval);
           interval = null;
+          if (restInterval) clearInterval(restInterval);
+          restInterval = null;
           router.push('/tabs/Home');
         }
       }
@@ -644,6 +656,16 @@ const addNewSet = async (exercise: any) => {
       });
     }
   }
+};
+
+const overloadHint = (exercise: any): string => {
+  const sets: any[] = exercise?.sets ?? [];
+  const maxWeight = Math.max(...sets.map((s: any) => Number(s.previous_weight) || 0));
+  if (maxWeight <= 0) return '';
+  const maxWeightSet = sets.find((s: any) => Number(s.previous_weight) === maxWeight);
+  const prevReps = Number(maxWeightSet?.previous_reps) || 0;
+  const suggested = Math.round((maxWeight * 1.025) / 2.5) * 2.5;
+  return `Last: ${maxWeight} kg × ${prevReps} — try ${suggested} kg`;
 };
 
 const getWeightPlaceholder = (exercise: any, currentSet: any) => {
@@ -756,6 +778,7 @@ const restoreTimerState = () => {
 
   try {
     const { endTime } = JSON.parse(saved);
+    if (!Number.isFinite(endTime)) { sessionStorage.removeItem('restTimer'); return; }
     const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
     if (remaining > 0) {
       startRestTimer(remaining);
@@ -831,11 +854,6 @@ onIonViewWillEnter(async () => {
   await loadWorkout();
   startTimer();
   restoreTimerState();
-});
-
-onIonViewDidEnter(async () => {
-  // Reload workout data when returning from ExercisePicker
-  await loadWorkout();
 });
 
 onUnmounted(() => {

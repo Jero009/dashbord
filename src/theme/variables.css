@@ -11,7 +11,9 @@
   --ion-color-light: #ffffff;         /* true white for high contrast */
 
     /* Signature accent colors */
-  --ion-color-accent-red: var(--ion-color-danger);   /* match Ionic danger exactly */
+  --ion-color-danger: #f32121;
+  --ion-color-danger-rgb: 239,68,68;
+  --ion-color-accent-red: #f32121;
   --ion-color-accent-yellow: #FFD700; /* vibrant gold pop */
 
   /* Toolbar & background */

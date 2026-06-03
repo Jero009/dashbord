@@ -30,3 +30,20 @@ npm-debug.log*
 /platforms
 /plugins
 /www
+
+# Android build outputs
+android/app/release/
+android/app/debug/
+android/.idea/
+*.apk
+*.aab
+
+# Keystore and signing secrets — never commit these
+*.keystore
+*.jks
+*.p12
+keystore.properties
+release.keystore
+
+# Graphify generated cache — local tool only
+graphify-out/

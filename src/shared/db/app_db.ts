@@ -14,7 +14,19 @@ const EXPORT_DELETE_TABLES = [
   'exercise',
   'exercise_pr',
   'muscle_group',
-  'equipment'
+  'equipment',
+  'health_metric',
+  'readiness_score',
+  'sleep_session',
+  'habit_log',
+  'habit',
+  'goal',
+  'calendar_event',
+  'body_log',
+  'finance_subscription',
+  'finance_investment',
+  'finance_account',
+  'net_worth_snapshot'
 ];
 
 const EXPORT_INSERT_TABLES = [
@@ -26,7 +38,19 @@ const EXPORT_INSERT_TABLES = [
   'workout_template_exercise',
   'workout_exercise',
   'workout_exercise_sets',
-  'exercise_pr'
+  'exercise_pr',
+  'health_metric',
+  'readiness_score',
+  'sleep_session',
+  'habit',
+  'habit_log',
+  'goal',
+  'calendar_event',
+  'body_log',
+  'finance_account',
+  'finance_investment',
+  'finance_subscription',
+  'net_worth_snapshot'
 ];
 
 function toSqlLiteral(value: unknown) {
@@ -194,6 +218,101 @@ export async function initDB() {
       REFERENCES workout(id)
       ON DELETE SET NULL,
     UNIQUE(exercise_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS health_metric (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT,
+    source TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS readiness_score (
+    date TEXT PRIMARY KEY,
+    score REAL NOT NULL,
+    inputs_json TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS habit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    frequency TEXT DEFAULT 'daily',
+    target INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS habit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    habit_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    completed INTEGER DEFAULT 0,
+    FOREIGN KEY (habit_id)
+      REFERENCES habit(id)
+      ON DELETE CASCADE,
+    UNIQUE(habit_id, date)
+  );
+
+  CREATE TABLE IF NOT EXISTS goal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    target_value REAL NOT NULL,
+    current_value REAL DEFAULT 0,
+    due_date TEXT,
+    status TEXT DEFAULT 'active',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS calendar_event (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    date TEXT NOT NULL,
+    type TEXT DEFAULT 'general',
+    notes TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_account (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT DEFAULT 'cash',
+    institution TEXT,
+    balance REAL DEFAULT 0,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_investment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT DEFAULT 'stock',
+    quantity REAL DEFAULT 0,
+    value REAL DEFAULT 0,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_subscription (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    amount REAL DEFAULT 0,
+    cadence TEXT DEFAULT 'monthly',
+    next_due_date TEXT,
+    status TEXT DEFAULT 'active'
+  );
+
+  CREATE TABLE IF NOT EXISTS net_worth_snapshot (
+    date TEXT PRIMARY KEY,
+    total_assets REAL DEFAULT 0,
+    total_liabilities REAL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS body_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    weight_kg REAL NOT NULL,
+    notes TEXT,
+    photo_path TEXT
   );
   
   INSERT OR IGNORE INTO muscle_group (name) VALUES
@@ -574,7 +693,61 @@ export async function initDB() {
         AND id_workout_template IS NOT NULL;
     `);
 
-    console.log("✅ Tables created");
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sleep_session (
+        date TEXT PRIMARY KEY,
+        bedtime TEXT NOT NULL,
+        waketime TEXT NOT NULL,
+        time_asleep_hours REAL NOT NULL,
+        time_in_bed_hours REAL NOT NULL,
+        efficiency REAL NOT NULL,
+        score INTEGER NOT NULL,
+        sleep_hr REAL,
+        respiratory_rate REAL,
+        stage_deep_min INTEGER DEFAULT 0,
+        stage_light_min INTEGER DEFAULT 0,
+        stage_rem_min INTEGER DEFAULT 0,
+        stage_awake_min INTEGER DEFAULT 0,
+        stage_asleep_min INTEGER DEFAULT 0,
+        hr_timeline_json TEXT,
+        stage_timeline_json TEXT,
+        source TEXT DEFAULT 'health-connect',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    const habitColumns = await db.query(`PRAGMA table_info("habit");`);
+    const hasHabitTimeColumn = (habitColumns.values || []).some(
+      (col: any) => String(col.name) === 'time'
+    );
+    if (!hasHabitTimeColumn) {
+      await db.execute(`ALTER TABLE habit ADD COLUMN time TEXT;`);
+    }
+
+    const calColumns = await db.query(`PRAGMA table_info("calendar_event");`);
+    const calColNames = new Set((calColumns.values || []).map((c: any) => String(c.name)));
+    if (!calColNames.has('time_start')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_start TEXT;`);
+    }
+    if (!calColNames.has('time_end')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_end TEXT;`);
+    }
+    const calColNamesArr = (calColumns.values ?? []).map((c: any) => c.name);
+    if (!calColNamesArr.includes('workout_template_id')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN workout_template_id INTEGER;`);
+    }
+    if (!calColNamesArr.includes('recurrence')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recurrence TEXT DEFAULT 'none';`);
+    }
+
+    // One-time dedup: remove duplicate health_metric rows accumulated by the
+    // = NULL bug in replaceHealthMetric — keeps the highest-id row per (date, type, source).
+    await db.execute(`
+      DELETE FROM health_metric
+      WHERE id NOT IN (
+        SELECT MAX(id) FROM health_metric GROUP BY date, type, source
+      );
+    `);
 
     return db;
   } catch (error) {
@@ -955,14 +1128,15 @@ export async function getWorkouts() {
   if (!db) return [];
 
   const result = await db.query(`
-    SELECT 
+    SELECT
       w.id,
+      w.id_workout_template,
       COALESCE(w.name, wt.name) AS name,
       w.time_start,
       w.time_end,
       w.total_kg
     FROM workout w
-    LEFT JOIN workout_template wt 
+    LEFT JOIN workout_template wt
       ON wt.id = w.id_workout_template
     WHERE w.time_end IS NOT NULL
     ORDER BY w.time_start DESC
@@ -1027,7 +1201,17 @@ export async function getLatestWorkout() {
     'SELECT * FROM workout WHERE time_end IS NOT NULL ORDER BY time_end DESC LIMIT 1'
   );
   return result.values?.[0] || null;
+}
 
+export async function getTodayCompletedWorkouts() {
+  if (!db) return [] as { id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[];
+  const today = new Date().toISOString().slice(0, 10);
+  const result = await db.query(
+    `SELECT id, name, time_start, time_end, total_kg FROM workout
+     WHERE time_end IS NOT NULL AND date(time_end) = ?;`,
+    [today]
+  );
+  return (result.values ?? []) as { id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[];
 }
 
 // Add a new exercise to an active workout
@@ -1192,8 +1376,6 @@ export async function editTemplateExercises(
     [setNumber, repNumber, orderIndex, rowId]
   );
 
-  console.log("Rows affected:", result.changes);
-
   return result;
 }
 
@@ -1230,6 +1412,520 @@ export async function getTemplateExercisesByTemplateId(templateId: number) {
     WHERE wte.id_workout_template = ?
   `, [templateId]);
   return result.values || [];
+}
+
+// health + dashboard functions
+export async function addHealthMetric(
+  date: string,
+  type: string,
+  value: number,
+  unit?: string,
+  source?: string
+) {
+  if (!db) return;
+
+  try {
+    const result = await db.run(
+      `INSERT INTO health_metric (date, type, value, unit, source)
+       VALUES (?, ?, ?, ?, ?);`,
+      [date, type, value, unit ?? null, source ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding health metric:', error);
+    throw error;
+  }
+}
+
+export async function replaceHealthMetric(
+  date: string,
+  type: string,
+  value: number,
+  unit?: string,
+  source?: string
+) {
+  if (!db) return;
+
+  try {
+    await db.run(
+      `DELETE FROM health_metric
+       WHERE date = ? AND type = ? AND (source = ? OR (source IS NULL AND ? IS NULL));`,
+      [date, type, source ?? null, source ?? null]
+    );
+
+    return await addHealthMetric(date, type, value, unit, source);
+  } catch (error) {
+    console.error('Error replacing health metric:', error);
+    throw error;
+  }
+}
+
+export async function getLatestHealthMetric(type: string) {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE type = ?
+     ORDER BY date DESC, id DESC
+     LIMIT 1;`,
+    [type]
+  );
+  return result.values?.[0] || null;
+}
+
+export async function getRecentHealthMetrics(type: string, limit: number = 30) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE type = ?
+     ORDER BY date DESC, id DESC
+     LIMIT ?;`,
+    [type, limit]
+  );
+  return result.values || [];
+}
+
+export async function getHealthMetricsForDate(date: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE date = ?
+     ORDER BY type ASC;`,
+    [date]
+  );
+  return result.values || [];
+}
+
+export async function upsertReadinessScore(date: string, score: number, inputs: Record<string, unknown> = {}) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO readiness_score (date, score, inputs_json)
+       VALUES (?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET score = excluded.score, inputs_json = excluded.inputs_json;`,
+      [date, score, JSON.stringify(inputs)]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error upserting readiness score:', error);
+    throw error;
+  }
+}
+
+export async function getReadinessScore(date: string) {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM readiness_score WHERE date = ? LIMIT 1;`,
+    [date]
+  );
+  return result.values?.[0] || null;
+}
+
+export async function getLatestReadinessScore() {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM readiness_score ORDER BY date DESC LIMIT 1;`
+  );
+  return result.values?.[0] || null;
+}
+
+// ============ SLEEP SESSIONS ============
+
+export interface SleepSessionRecord {
+  date: string;
+  bedtime: string;
+  waketime: string;
+  time_asleep_hours: number;
+  time_in_bed_hours: number;
+  efficiency: number;        // 0–1
+  score: number;             // 0–100
+  sleep_hr: number | null;
+  respiratory_rate: number | null;
+  stage_deep_min: number;
+  stage_light_min: number;
+  stage_rem_min: number;
+  stage_awake_min: number;
+  stage_asleep_min: number;
+  hr_timeline_json: string | null;   // JSON: [{t,v,o}]
+  stage_timeline_json: string | null; // JSON: [{s,start,end,dur}]
+  source: string;
+}
+
+export async function upsertSleepSession(record: Omit<SleepSessionRecord, 'source'> & { source?: string }) {
+  if (!db) return;
+  try {
+    await db.run(
+      `INSERT INTO sleep_session
+         (date, bedtime, waketime, time_asleep_hours, time_in_bed_hours, efficiency, score,
+          sleep_hr, respiratory_rate, stage_deep_min, stage_light_min, stage_rem_min,
+          stage_awake_min, stage_asleep_min, hr_timeline_json, stage_timeline_json, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET
+         bedtime = excluded.bedtime, waketime = excluded.waketime,
+         time_asleep_hours = excluded.time_asleep_hours, time_in_bed_hours = excluded.time_in_bed_hours,
+         efficiency = excluded.efficiency, score = excluded.score,
+         sleep_hr = excluded.sleep_hr, respiratory_rate = excluded.respiratory_rate,
+         stage_deep_min = excluded.stage_deep_min, stage_light_min = excluded.stage_light_min,
+         stage_rem_min = excluded.stage_rem_min, stage_awake_min = excluded.stage_awake_min,
+         stage_asleep_min = excluded.stage_asleep_min,
+         hr_timeline_json = excluded.hr_timeline_json,
+         stage_timeline_json = excluded.stage_timeline_json,
+         source = excluded.source;`,
+      [
+        record.date, record.bedtime, record.waketime,
+        record.time_asleep_hours, record.time_in_bed_hours,
+        record.efficiency, record.score,
+        record.sleep_hr ?? null, record.respiratory_rate ?? null,
+        record.stage_deep_min ?? 0, record.stage_light_min ?? 0,
+        record.stage_rem_min ?? 0, record.stage_awake_min ?? 0,
+        record.stage_asleep_min ?? 0,
+        record.hr_timeline_json ?? null, record.stage_timeline_json ?? null,
+        record.source ?? 'health-connect',
+      ]
+    );
+  } catch (error) {
+    console.error('Error upserting sleep session:', error);
+    throw error;
+  }
+}
+
+export async function getLatestSleepSession(): Promise<SleepSessionRecord | null> {
+  if (!db) return null;
+  const result = await db.query(`SELECT * FROM sleep_session ORDER BY date DESC LIMIT 1;`);
+  return (result.values?.[0] as SleepSessionRecord) ?? null;
+}
+
+export async function getSleepSession(date: string): Promise<SleepSessionRecord | null> {
+  if (!db) return null;
+  const result = await db.query(`SELECT * FROM sleep_session WHERE date = ? LIMIT 1;`, [date]);
+  return (result.values?.[0] as SleepSessionRecord) ?? null;
+}
+
+export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRecord[]> {
+  if (!db) return [];
+  const result = await db.query(`SELECT * FROM sleep_session ORDER BY date DESC LIMIT ?;`, [limit]);
+  return (result.values ?? []) as SleepSessionRecord[];
+}
+
+export async function addHabit(name: string, frequency: string, target: number, time?: string) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO habit (name, frequency, target, time) VALUES (?, ?, ?, ?);`,
+      [name, frequency, target, time ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding habit:', error);
+    throw error;
+  }
+}
+
+export async function getHabitsWithStatus(date: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT h.*, COALESCE(hl.completed, 0) AS completed
+     FROM habit h
+     LEFT JOIN habit_log hl
+       ON hl.habit_id = h.id AND hl.date = ?
+     ORDER BY h.created_at DESC;`,
+    [date]
+  );
+  return result.values || [];
+}
+
+export async function toggleHabitCompletion(habitId: number, date: string, completed: boolean) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO habit_log (habit_id, date, completed)
+       VALUES (?, ?, ?)
+       ON CONFLICT(habit_id, date) DO UPDATE SET completed = excluded.completed;`,
+      [habitId, date, completed ? 1 : 0]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error updating habit log:', error);
+    throw error;
+  }
+}
+
+export async function addGoal(name: string, targetValue: number, dueDate?: string) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO goal (name, target_value, due_date) VALUES (?, ?, ?);`,
+      [name, targetValue, dueDate ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding goal:', error);
+    throw error;
+  }
+}
+
+export async function getGoals() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM goal ORDER BY COALESCE(due_date, '') DESC, created_at DESC;`
+  );
+  return result.values || [];
+}
+
+export async function updateGoalProgress(goalId: number, currentValue: number, status?: string) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `UPDATE goal SET current_value = ?, status = COALESCE(?, status) WHERE id = ?;`,
+      [currentValue, status ?? null, goalId]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error updating goal progress:', error);
+    throw error;
+  }
+}
+
+export async function addCalendarEvent(
+  title: string,
+  date: string,
+  type: string,
+  notes?: string,
+  timeStart?: string,
+  timeEnd?: string,
+  workoutTemplateId?: number,
+  recurrence?: string
+) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none']
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding calendar event:', error);
+    throw error;
+  }
+}
+
+export async function getCalendarEventsForDate(date: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM calendar_event
+     WHERE date = ?
+        OR (recurrence = 'daily' AND date < ?)
+        OR (recurrence = 'weekly' AND date < ? AND strftime('%w', date) = strftime('%w', ?))
+     ORDER BY time_start ASC, id DESC;`,
+    [date, date, date, date]
+  );
+  return result.values || [];
+}
+
+export async function deleteCalendarEvent(id: number) {
+  if (!db) return;
+  await db.run(`DELETE FROM calendar_event WHERE id = ?;`, [id]);
+}
+
+export async function deleteHabit(id: number) {
+  if (!db) return;
+  await db.run(`DELETE FROM habit WHERE id = ?;`, [id]);
+}
+
+export async function getCalendarEventDatesForMonth(yearMonth: string) {
+  if (!db) return [] as string[];
+  const [year, month] = yearMonth.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const monthEnd = `${yearMonth}-${String(daysInMonth).padStart(2, '0')}`;
+
+  // Non-recurring events within the month
+  const exactResult = await db.query(
+    `SELECT DISTINCT date FROM calendar_event WHERE date LIKE ? AND (recurrence IS NULL OR recurrence = 'none');`,
+    [`${yearMonth}-%`]
+  );
+  const dates = new Set<string>(
+    ((exactResult.values ?? []) as { date: string }[]).map((r) => r.date)
+  );
+
+  // Recurring events that started on or before month end
+  const recurResult = await db.query(
+    `SELECT date, recurrence FROM calendar_event WHERE recurrence != 'none' AND recurrence IS NOT NULL AND date <= ?;`,
+    [monthEnd]
+  );
+  const monthStart = `${yearMonth}-01`;
+  for (const row of (recurResult.values ?? []) as { date: string; recurrence: string }[]) {
+    const startDow = new Date(row.date + 'T12:00:00').getDay();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${yearMonth}-${String(d).padStart(2, '0')}`;
+      if (dateStr < row.date) continue; // before this event's start
+      if (row.recurrence === 'daily') {
+        dates.add(dateStr);
+      } else if (row.recurrence === 'weekly') {
+        const dow = new Date(dateStr + 'T12:00:00').getDay();
+        if (dow === startDow) dates.add(dateStr);
+      }
+    }
+  }
+  return [...dates];
+}
+
+export async function queryReadinessHistory(days = 14): Promise<{ date: string; score: number }[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT date, score FROM readiness_score
+     WHERE date >= date('now', ?)
+     ORDER BY date ASC;`,
+    [`-${days} days`]
+  );
+  return ((result.values ?? []) as { date: string; score: number }[]);
+}
+
+export async function getWeeklyDigest(): Promise<{
+  avgSleep: number | null;
+  avgSteps: number | null;
+  avgReadiness: number | null;
+  workoutCount: number;
+  readinessTrend: number | null;
+}> {
+  if (!db) return { avgSleep: null, avgSteps: null, avgReadiness: null, workoutCount: 0, readinessTrend: null };
+
+  const [sleepR, stepsR, readinessR, prevReadinessR, workoutsR] = await Promise.all([
+    db.query(`SELECT AVG(value) AS v FROM health_metric WHERE type = 'sleep_duration' AND date >= date('now','-7 days');`),
+    db.query(`SELECT AVG(value) AS v FROM health_metric WHERE type = 'steps' AND date >= date('now','-7 days');`),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now','-7 days');`),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now','-14 days') AND date < date('now','-7 days');`),
+    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start) >= date('now','-7 days');`),
+  ]);
+
+  const avg = (r: any) => { const v = r.values?.[0]?.v; return v !== null && v !== undefined ? Number(v) : null; };
+  const thisReadiness = avg(readinessR);
+  const prevReadiness = avg(prevReadinessR);
+
+  return {
+    avgSleep: avg(sleepR),
+    avgSteps: avg(stepsR),
+    avgReadiness: thisReadiness,
+    workoutCount: Number(workoutsR.values?.[0]?.v ?? 0),
+    readinessTrend: thisReadiness !== null && prevReadiness !== null ? Math.round(thisReadiness - prevReadiness) : null,
+  };
+}
+
+export async function getHabitCompletedDatesForMonth(yearMonth: string) {
+  if (!db) return [] as string[];
+  const result = await db.query(
+    `SELECT DISTINCT date FROM habit_log WHERE date LIKE ? AND completed = 1;`,
+    [`${yearMonth}-%`]
+  );
+  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
+}
+
+export async function getRecentHabitLogs(habitId: number, days: number) {
+  if (!db) return [] as { date: string; completed: number }[];
+  const result = await db.query(
+    `SELECT date, completed FROM habit_log
+     WHERE habit_id = ? AND date >= date('now', ?)
+     ORDER BY date DESC;`,
+    [habitId, `-${days} days`]
+  );
+  return (result.values ?? []) as { date: string; completed: number }[];
+}
+
+// finance functions
+export async function addFinanceAccount(name: string, type: string, institution: string | null, balance: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_account (name, type, institution, balance)
+       VALUES (?, ?, ?, ?);`,
+      [name, type, institution, balance]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding finance account:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceAccounts() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_account ORDER BY updated_at DESC;`
+  );
+  return result.values || [];
+}
+
+export async function addFinanceInvestment(name: string, type: string, quantity: number, value: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_investment (name, type, quantity, value)
+       VALUES (?, ?, ?, ?);`,
+      [name, type, quantity, value]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding investment:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceInvestments() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_investment ORDER BY updated_at DESC;`
+  );
+  return result.values || [];
+}
+
+export async function addFinanceSubscription(
+  name: string,
+  amount: number,
+  cadence: string,
+  nextDueDate?: string
+) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date)
+       VALUES (?, ?, ?, ?);`,
+      [name, amount, cadence, nextDueDate ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding subscription:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceSubscriptions() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_subscription ORDER BY status DESC, next_due_date ASC;`
+  );
+  return result.values || [];
+}
+
+export async function addNetWorthSnapshot(date: string, totalAssets: number, totalLiabilities: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO net_worth_snapshot (date, total_assets, total_liabilities)
+       VALUES (?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET total_assets = excluded.total_assets, total_liabilities = excluded.total_liabilities;`,
+      [date, totalAssets, totalLiabilities]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding net worth snapshot:', error);
+    throw error;
+  }
+}
+
+export async function getLatestNetWorthSnapshot() {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`
+  );
+  return result.values?.[0] || null;
 }
 
 export async function exportDatabaseToSQL() {
@@ -1305,7 +2001,17 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     'workout_template',
     'exercise',
     'muscle_group',
-    'equipment'
+    'equipment',
+    'health_metric',
+    'readiness_score',
+    'habit_log',
+    'habit',
+    'goal',
+    'calendar_event',
+    'finance_subscription',
+    'finance_investment',
+    'finance_account',
+    'net_worth_snapshot'
   ];
 
   const insertOrder = [
@@ -1316,7 +2022,17 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     'workout',
     'workout_template_exercise',
     'workout_exercise',
-    'workout_exercise_sets'
+    'workout_exercise_sets',
+    'health_metric',
+    'readiness_score',
+    'habit',
+    'habit_log',
+    'goal',
+    'calendar_event',
+    'finance_account',
+    'finance_investment',
+    'finance_subscription',
+    'net_worth_snapshot'
   ];
 
   const deleteStatementsByTable = new Map<string, string>();
@@ -1393,6 +2109,53 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return { success: false, message: `Failed to import SQL data: ${errorMessage}` };
   }
+}
+
+// ── Body log ──────────────────────────────────────────────────────────────────
+
+export interface BodyLogEntry {
+  id: number
+  date: string
+  weight_kg: number
+  notes: string | null
+  photo_path: string | null
+}
+
+export async function insertBodyLog(entry: {
+  date: string
+  weight_kg: number
+  notes?: string
+  photo_path?: string
+}): Promise<void> {
+  if (!db) return
+  await db.run(
+    `INSERT INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, ?, ?)`,
+    [entry.date, entry.weight_kg, entry.notes ?? null, entry.photo_path ?? null]
+  )
+}
+
+export async function getBodyLogs(): Promise<BodyLogEntry[]> {
+  if (!db) return []
+  const result = await db.query(`SELECT * FROM body_log ORDER BY date DESC, id DESC`)
+  return result.values ?? []
+}
+
+export async function deleteBodyLog(id: number): Promise<void> {
+  if (!db) return
+  await db.run(`DELETE FROM body_log WHERE id = ?`, [id])
+}
+
+export async function bulkInsertBodyLog(entries: { date: string; weight_kg: number }[]): Promise<number> {
+  if (!db) return 0
+  let inserted = 0
+  for (const e of entries) {
+    const result = await db.run(
+      `INSERT OR IGNORE INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, NULL, NULL)`,
+      [e.date, e.weight_kg]
+    )
+    if ((result?.changes?.changes ?? 0) > 0) inserted++
+  }
+  return inserted
 }
 
 // ============ PR & 1RM TRACKING ============

@@ -1,12 +1,7 @@
 <template>
   <ion-page>
     <ion-header>
-      <ion-toolbar class="toolbar-flex">
-        <ion-buttons slot="start">
-          <ion-button fill="clear" @click="goToDashboard">Dashboard</ion-button>
-        </ion-buttons>
-        <ion-title class="title">HOME</ion-title>
-      </ion-toolbar>
+      <dashboard-top-bar />
     </ion-header>
       <ion-header collapse="condense">
         <ion-toolbar>
@@ -38,41 +33,7 @@
                   </div>
                 </div>
 
-                <div class="weekly-goal-panel">
-                  <div class="weekly-goal-panel__header">
-                    <div>
-                      <span class="weekly-goal-panel__label">This week</span>
-                      <strong>{{ weeklyCompletedWorkouts }} workout{{ weeklyCompletedWorkouts === 1 ? '' : 's' }}</strong>
-                    </div>
-                    <div class="weekly-goal-panel__selector">
-                      <span>Goal</span>
-                      <ion-select
-                        v-model="weeklyWorkoutGoal"
-                        interface="action-sheet"
-                        :interface-options="{ cssClass: 'app-action-sheet' }"
-                        class="app-select weekly-goal-select"
-                      >
-                        <ion-select-option v-for="goal in weeklyGoalOptions" :key="goal" :value="goal">
-                          {{ goal }} / week
-                        </ion-select-option>
-                      </ion-select>
-                    </div>
-                  </div>
 
-                  <div class="weekly-goal-panel__meta">
-                    <span>{{ weeklyGoalProgress }}% reached</span>
-                    <span>{{ weeklyCompletedWorkouts }} of {{ weeklyWorkoutGoal }}</span>
-                  </div>
-
-                  <div class="weekly-goal-dots" :aria-label="`Weekly goal progress: ${weeklyCompletedWorkouts} of ${weeklyWorkoutGoal}`">
-                    <span
-                      v-for="dot in weeklyGoalDots"
-                      :key="dot"
-                      class="weekly-goal-dot"
-                      :class="{ 'weekly-goal-dot--filled': dot <= weeklyCompletedWorkouts }"
-                    ></span>
-                  </div>
-                </div>
               </div>
             </ion-card>
 
@@ -93,6 +54,25 @@
                 </div>
               </div>
             </ion-card>
+          </div>
+
+          <!-- Weekly progress -->
+          <div class="weekly-card">
+            <div class="weekly-card__header">
+              <span class="section-kicker">This week</span>
+              <span class="weekly-count">{{ weeklyCompletedWorkouts }} / {{ weeklyWorkoutGoal }}</span>
+            </div>
+            <div class="weekly-dots">
+              <div
+                v-for="dot in weeklyGoalDots"
+                :key="dot"
+                class="weekly-dot"
+                :class="{ 'weekly-dot--filled': dot <= weeklyCompletedWorkouts }"
+              />
+            </div>
+            <div class="weekly-progress-bar">
+              <div class="weekly-progress-bar__fill" :style="{ width: weeklyGoalProgress + '%' }" />
+            </div>
           </div>
         </section>
 
@@ -137,12 +117,13 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, onIonViewWillEnter, IonIcon, IonSelect, IonSelectOption, IonButtons, IonButton } from '@ionic/vue';
-import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWorkout, getWorkouts, getWorkoutsByName } from '@/shared/db/app_db';
+import { IonPage, IonHeader, IonContent, IonCard, onIonViewWillEnter, IonIcon, IonSelect, IonSelectOption } from '@ionic/vue';
+import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWorkout, getWorkoutsByName, getWorkouts } from '@/shared/db/app_db';
 import { ref, onMounted, onUnmounted,computed,watch } from 'vue';
 import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
-import {Chart,LineController,LineElement,PointElement,LinearScale,CategoryScale} from 'chart.js';
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
 import { formatDuration, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
 
@@ -158,9 +139,6 @@ let activeRestInterval: ReturnType<typeof setInterval> | null = null;
 // routing
 const router = useRouter();
 
-const goToDashboard = () => {
-  router.push('/home');
-};
 
 const startWorkout = async (templateId: number) => {
   if (activeWorkout.value) {
@@ -210,47 +188,6 @@ const loadLatestWorkout = async () => {
   latestWorkout.value = workout || null;
 };
 
-const WEEKLY_GOAL_STORAGE_KEY = 'homeWeeklyGoal';
-const weeklyGoalOptions = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12];
-const weeklyWorkoutGoal = ref(4);
-const weeklyCompletedWorkouts = ref(0);
-
-const getStartOfWeek = () => {
-  const start = new Date();
-  const currentDay = start.getDay();
-  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1;
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - daysSinceMonday);
-  return start;
-};
-
-const loadWeeklyGoal = () => {
-  const savedGoal = Number(localStorage.getItem(WEEKLY_GOAL_STORAGE_KEY));
-  weeklyWorkoutGoal.value = Number.isFinite(savedGoal) && savedGoal > 0 ? savedGoal : 4;
-};
-
-const loadWeeklyWorkoutCount = async () => {
-  const workoutsCompleted = await getWorkouts();
-  const weekStart = getStartOfWeek().getTime();
-
-  weeklyCompletedWorkouts.value = (workoutsCompleted || []).filter((workout: any) => {
-    const completedAt = new Date(String(workout.time_end).replace(' ', 'T')).getTime();
-    return Number.isFinite(completedAt) && completedAt >= weekStart;
-  }).length;
-};
-
-watch(weeklyWorkoutGoal, (goal) => {
-  localStorage.setItem(WEEKLY_GOAL_STORAGE_KEY, String(goal));
-});
-
-const weeklyGoalProgress = computed(() => {
-  if (!weeklyWorkoutGoal.value) return 0;
-  return Math.min(100, Math.round((weeklyCompletedWorkouts.value / weeklyWorkoutGoal.value) * 100));
-});
-
-const weeklyGoalDots = computed(() => {
-  return Array.from({ length: weeklyWorkoutGoal.value }, (_, index) => index + 1);
-});
 
 const formatRestTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -368,13 +305,7 @@ const formatWorkoutTimer = () => {
 
 // chart 
 
-Chart.register(
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale
-);
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler);
 
 const chartRef = ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
@@ -410,13 +341,15 @@ const renderChart = () => {
         {
           label: 'Total KG',
           data: chartData.value.map(d => d.kg),
+          borderColor: 'rgb(239,68,68)',
+          backgroundColor: 'rgba(239,68,68,0.15)',
           borderWidth: 2,
           tension: 0.3,
-
-
-          borderColor: '#D71921',
-          pointRadius: 4,
-          pointBackgroundColor: '#D71921',
+          fill: true,
+          pointRadius: 3,
+          pointBackgroundColor: 'rgb(239,68,68)',
+          pointBorderColor: 'transparent',
+          pointHoverRadius: 5,
         }
       ]
     },
@@ -425,27 +358,24 @@ const renderChart = () => {
       animation: false,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false,
-        },
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: 'rgba(255,255,255,0.5)',
+          bodyColor: '#fff',
+          padding: 10,
+          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(0)} kg` }
+        }
       },
       scales: {
         x: {
-          ticks: {
-            color: '#b9b9b9',
-          },
-          grid: {
-            color: 'rgba(255, 255, 255, 0.06)',
-          },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 6 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
         y: {
           min: 0,
-          ticks: {
-            color: '#b9b9b9',
-          },
-          grid: {
-            color: 'rgba(255, 255, 255, 0.06)',
-          },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
       }
     }
@@ -477,12 +407,40 @@ watch(selectedTemplateId, async (templateId) => {
 });
 
 // Load all templates and latest workout on mount
+// Weekly progress dots
+const weeklyWorkoutGoal = ref(4)
+const weeklyCompletedWorkouts = ref(0)
+
+const weeklyGoalDots = computed(() =>
+  Array.from({ length: weeklyWorkoutGoal.value }, (_, i) => i + 1)
+)
+
+const weeklyGoalProgress = computed(() =>
+  weeklyWorkoutGoal.value ? Math.min(100, Math.round((weeklyCompletedWorkouts.value / weeklyWorkoutGoal.value) * 100)) : 0
+)
+
+const loadWeeklyData = async () => {
+  const saved = Number(localStorage.getItem('homeWeeklyGoal'))
+  weeklyWorkoutGoal.value = Number.isFinite(saved) && saved > 0 ? saved : 4
+
+  const now = new Date()
+  const dayOfWeek = now.getDay() // 0 = Sunday
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - dayOfWeek)
+  weekStart.setHours(0, 0, 0, 0)
+  const weekStartStr = weekStart.toISOString().slice(0, 10)
+
+  const all = await getWorkouts()
+  weeklyCompletedWorkouts.value = all.filter((w: any) =>
+    w.time_end && w.time_end.slice(0, 10) >= weekStartStr
+  ).length
+}
+
 onMounted(async () => {
   await loadActiveWorkout();
   await loadTemplates();
   await loadLatestWorkout();
-  loadWeeklyGoal();
-  await loadWeeklyWorkoutCount();
+  await loadWeeklyData();
   renderChart();
 });
 
@@ -490,14 +448,14 @@ onIonViewWillEnter(async () => {
   await loadActiveWorkout();
   await loadTemplates();
   await loadLatestWorkout();
-  loadWeeklyGoal();
-  await loadWeeklyWorkoutCount();
+  await loadWeeklyData();
   renderChart();
 });
 
 
 
 onUnmounted(() => {
+  if (renderChartTimeout) { clearTimeout(renderChartTimeout); renderChartTimeout = null; }
   clearTimer();
   clearActiveRestTimer();
   if (chart) chart.destroy();
@@ -525,6 +483,66 @@ ion-content.home-content {
 .top-cards {
   display: grid;
   gap: 12px;
+}
+
+.weekly-card {
+  background: var(--ion-color-primary);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weekly-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.weekly-card__header .section-kicker {
+  margin: 0;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+.weekly-count {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+
+.weekly-dots {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.weekly-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.18);
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.weekly-dot--filled {
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
+}
+
+.weekly-progress-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.weekly-progress-bar__fill {
+  height: 100%;
+  background: var(--ion-color-accent-red);
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
 .section-heading {
@@ -636,71 +654,6 @@ ion-content.home-content {
   border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
-.weekly-goal-panel {
-  border-radius: 12px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  display: grid;
-  gap: 12px;
-}
-
-.weekly-goal-panel__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.weekly-goal-panel__label,
-.weekly-goal-panel__selector span,
-.weekly-goal-panel__meta {
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 0.8rem;
-}
-
-.weekly-goal-panel__header strong {
-  display: block;
-  margin-top: 6px;
-  color: var(--ion-color-light);
-  font-size: 1rem;
-}
-
-.weekly-goal-panel__selector {
-  display: grid;
-  gap: 6px;
-  justify-items: end;
-}
-
-.weekly-goal-select {
-  min-width: 138px;
-}
-
-.weekly-goal-panel__meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.weekly-goal-dots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.weekly-goal-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-
-
-}
-
-.weekly-goal-dot--filled {
-  background: var(--ion-color-accent-red);
-  transform: scale(1.08);
-}
 
 .card-metric-wide {
   grid-column: 1 / -1;
@@ -768,6 +721,9 @@ ion-content.home-content {
 .chart-frame {
   margin-top: 16px;
   height: 240px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 8px 4px 4px;
 }
 
 .chart-frame canvas {
@@ -804,10 +760,6 @@ ion-content.home-content {
 
   .summary-card__body {
     grid-template-columns: 1fr;
-  }
-
-  .weekly-goal-panel__header {
-    align-items: center;
   }
 
   .workout-grid {

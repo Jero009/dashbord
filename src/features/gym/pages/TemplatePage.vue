@@ -3,11 +3,11 @@
     <ion-header>
       <ion-toolbar>
         <ion-title class="title">TEMPLATE</ion-title>
-      <ion-buttons slot="end">
-        <ion-button class="button-red" @click="goToTemplateBuilder">
-          <ion-icon :icon="add"></ion-icon>
-        </ion-button>
-      </ion-buttons>
+        <ion-buttons slot="end">
+          <ion-button class="button-red" @click="goToTemplateBuilder">
+            <ion-icon :icon="add"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content :fullscreen="true" class="template-content">

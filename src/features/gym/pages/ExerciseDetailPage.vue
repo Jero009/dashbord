@@ -124,8 +124,8 @@ import {
   onIonViewWillEnter
 } from '@ionic/vue';
 import { useRoute } from 'vue-router';
-import { ref, computed, onMounted, watch } from 'vue';
-import { getExerciseStats } from '@/shared/db/app_db';
+import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
+import { getExerciseStats, getExerciseHistory } from '@/shared/db/app_db';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { ExercisePR } from '@/features/gym/types/models';
 
@@ -139,7 +139,7 @@ const exerciseId = computed(() => Number(route.params.id));
 const exerciseName = ref('');
 const currentPR = ref<ExercisePR | null>(null);
 const historyData = ref<any[]>([]);
-const timeFrame = ref(90);
+const timeFrame = ref('90');
 
 const totalWorkouts = computed(() => historyData.value.length);
 const avgWeight = computed(() => {
@@ -159,13 +159,17 @@ const formatPRDate = (dateString: string) => {
 
 const loadExerciseData = async () => {
   try {
-    const stats = await getExerciseStats(exerciseId.value);
+    const [stats, history] = await Promise.all([
+      getExerciseStats(exerciseId.value),
+      getExerciseHistory(exerciseId.value, Number(timeFrame.value)),
+    ]);
     if (stats) {
       exerciseName.value = stats.exercise_name;
       currentPR.value = stats.pr;
-      historyData.value = stats.history;
-      updateChart();
     }
+    historyData.value = history;
+    await nextTick();
+    updateChart();
   } catch (error) {
     console.error('Error loading exercise data:', error);
   }
@@ -196,66 +200,70 @@ const updateChart = () => {
       labels,
       datasets: [
         {
-          label: 'Max Weight (kg)',
+          label: 'Weight (kg)',
           data: weightData,
-          borderColor: '#FFD700',
-          backgroundColor: 'rgba(255, 215, 0, 0.1)',
+          borderColor: 'rgb(255,215,0)',
+          backgroundColor: 'rgba(255,215,0,0.13)',
           fill: true,
-          tension: 0.4,
-          pointBackgroundColor: '#FFD700',
-          pointBorderColor: '#ffffff',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          yAxisID: 'y'
-        },
-        {
-          label: 'Total Volume (×100)',
-          data: volumeData,
-          borderColor: '#ff5252',
-          backgroundColor: 'rgba(255, 82, 82, 0.05)',
-          fill: false,
-          tension: 0.4,
-          pointBackgroundColor: '#ff5252',
-          pointBorderColor: '#ffffff',
+          tension: 0.3,
+          pointBackgroundColor: 'rgb(255,215,0)',
+          pointBorderColor: 'transparent',
           pointRadius: 3,
           pointHoverRadius: 5,
-          yAxisID: 'y1'
+          yAxisID: 'y',
+        },
+        {
+          label: 'Volume (×100)',
+          data: volumeData,
+          borderColor: 'rgb(239,68,68)',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.3,
+          pointBackgroundColor: 'rgb(239,68,68)',
+          pointBorderColor: 'transparent',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          yAxisID: 'y1',
         }
       ]
     },
     options: {
       responsive: true,
+      animation: false,
       maintainAspectRatio: true,
-      interaction: {
-        mode: 'index',
-        intersect: false
-      },
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           labels: {
-            color: '#ffffff',
-            font: { family: "'Doto', sans-serif" }
+            color: 'rgba(255,255,255,0.6)',
+            font: { size: 11 },
+            boxWidth: 12,
+            padding: 16,
           }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: 'rgba(255,255,255,0.5)',
+          bodyColor: '#fff',
+          padding: 10,
         }
       },
       scales: {
         y: {
           type: 'linear',
           position: 'left',
-          ticks: { color: '#ffffff' },
-          grid: { color: 'rgba(255, 255, 255, 0.1)' },
-          title: { display: true, text: 'Weight (kg)', color: '#ffffff' }
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
         y1: {
           type: 'linear',
           position: 'right',
-          ticks: { color: '#ff5252' },
+          ticks: { color: 'rgba(239,68,68,0.6)', font: { size: 10 } },
           grid: { display: false },
-          title: { display: true, text: 'Volume', color: '#ff5252' }
         },
         x: {
-          ticks: { color: '#ffffff' },
-          grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 6 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         }
       }
     }
@@ -270,8 +278,8 @@ onIonViewWillEnter(() => {
   loadExerciseData();
 });
 
-onMounted(() => {
-  loadExerciseData();
+onUnmounted(() => {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 });
 </script>
 
@@ -385,6 +393,9 @@ onMounted(() => {
   height: 300px;
   width: 100%;
   margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 8px 4px 4px;
 }
 
 .stats-section {
