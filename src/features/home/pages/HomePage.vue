@@ -30,6 +30,18 @@
             <p class="section-kicker">Battery</p>
             <span class="card-date">{{ todayDateLabel }}</span>
           </div>
+
+          <div class="scores-row">
+            <div class="score-tile">
+              <span class="score-tile__label">Battery</span>
+              <strong class="score-tile__val" :style="{ color: batteryColor }">{{ batteryScore !== null ? batteryScore : '—' }}</strong>
+            </div>
+            <div class="score-tile">
+              <span class="score-tile__label">Sleep score</span>
+              <strong class="score-tile__val" :style="{ color: sleepScoreColor }">{{ sleepScoreVal !== null ? sleepScoreVal : '—' }}</strong>
+            </div>
+          </div>
+
           <div class="summary-card__body">
 
             <div class="battery-ring">
@@ -71,7 +83,7 @@
                   <strong>{{ stepsDisplay }}</strong>
                 </div>
                 <div class="card-metric">
-                  <span>Morning</span>
+                  <span>Readiness</span>
                   <strong>{{ baseline ?? '—' }}</strong>
                 </div>
               </div>
@@ -139,33 +151,6 @@
           </div>
         </ion-card>
 
-        <!-- Weekly digest -->
-        <ion-card v-if="digest" class="digest-card">
-          <div class="card-topline">
-            <p class="section-kicker">This week</p>
-            <span class="digest-trend" v-if="digest.readinessTrend !== null" :class="digest.readinessTrend >= 0 ? 'trend--up' : 'trend--down'">
-              {{ digest.readinessTrend >= 0 ? '+' : '' }}{{ digest.readinessTrend }} readiness
-            </span>
-          </div>
-          <div class="digest-grid">
-            <div class="digest-tile">
-              <span class="digest-label">Avg sleep</span>
-              <span class="digest-value">{{ digest.avgSleep !== null ? digest.avgSleep.toFixed(1) + ' h' : '—' }}</span>
-            </div>
-            <div class="digest-tile">
-              <span class="digest-label">Avg steps</span>
-              <span class="digest-value">{{ digest.avgSteps !== null ? Math.round(digest.avgSteps).toLocaleString() : '—' }}</span>
-            </div>
-            <div class="digest-tile">
-              <span class="digest-label">Avg readiness</span>
-              <span class="digest-value">{{ digest.avgReadiness !== null ? Math.round(digest.avgReadiness) : '—' }}</span>
-            </div>
-            <div class="digest-tile">
-              <span class="digest-label">Workouts</span>
-              <span class="digest-value">{{ digest.workoutCount }}</span>
-            </div>
-          </div>
-        </ion-card>
 
         <!-- Day timeline -->
         <section class="day-view-card">
@@ -184,7 +169,7 @@
               @click="toggleTodayHabit(h)"
             >
               <div class="habit-block__check">
-                <span v-if="h.completed === 1">✓</span>
+                <span v-if="h.completed === 1">&#10003;</span>
               </div>
               <span class="habit-block__name">{{ h.name }}</span>
               <span v-if="h.time" class="habit-block__time">{{ h.time }}</span>
@@ -195,7 +180,7 @@
           <div v-if="allDayItems.length" class="allday-strip">
             <div v-for="item in allDayItems" :key="item.key" class="allday-pill" :class="item.cls">
               <span v-if="item.isHabit" class="allday-check" :class="{ 'allday-check--done': item.done }" @click="item.toggle && item.toggle()">
-                {{ item.done ? '✓' : '○' }}
+                {{ item.done ? '&#10003;' : '&#9900;' }}
               </span>
               {{ item.label }}
               <button
@@ -252,7 +237,7 @@
                 :style="{ top: h.top + 'px' }"
                 @click="toggleTodayHabit(h)"
               >
-                <span class="habit-pill__check">{{ h.completed === 1 ? '✓' : '○' }}</span>
+                <span class="habit-pill__check">{{ h.completed === 1 ? '&#10003;' : '&#9900;' }}</span>
                 {{ h.name }}, {{ h.time }}
               </div>
 
@@ -271,7 +256,7 @@ import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter, toastContr
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getWeeklyDigest } from '@/shared/db/app_db';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
@@ -351,6 +336,7 @@ const logQuickWeight = async () => {
 };
 
 const sleepHours = ref<number | null>(null);
+const sleepScoreVal = ref<number | null>(null);
 const steps = ref<number | null>(null);
 const restingHr = ref<number | null>(null);
 const readinessBaselineScore = ref<number | null>(null);
@@ -448,8 +434,6 @@ const todayWorkouts = ref<{ id: number; name: string | null; time_start: string;
 const todayActivities = ref<ActivitySummary[]>([]);
 const timelineEl = ref<HTMLElement | null>(null);
 
-type DigestResult = Awaited<ReturnType<typeof getWeeklyDigest>>;
-const digest = ref<DigestResult | null>(null);
 
 const todayDateLabel = computed(() =>
   new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -582,6 +566,14 @@ const batteryColor = computed(() => {
   if (s >= 45) return 'rgb(234,179,8)';
   return 'var(--ion-color-accent-red)';
 });
+const sleepScoreColor = computed(() => {
+  const s = sleepScoreVal.value;
+  if (s === null) return '#fff';
+  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 45) return 'rgb(234,179,8)';
+  return 'var(--ion-color-accent-red)';
+});
+
 const drainParts = computed(() => {
   const d = battery.value?.drains;
   if (!d) return [];
@@ -625,6 +617,7 @@ const loadSummary = async () => {
   sleepHours.value = latestSleep ? Number(latestSleep.value) : null;
   const sleepEfficiency = latestSleepEfficiency ? Number(latestSleepEfficiency.value) / 100 : null;
   const sleepScore = latestSleepScore ? Number(latestSleepScore.value) : null;
+  sleepScoreVal.value = sleepScore;
   const sleepHeartRate = latestSleepHeartRate ? Number(latestSleepHeartRate.value) : null;
   const respiratoryRate = latestRespiratoryRate ? Number(latestRespiratoryRate.value) : null;
   steps.value = latestSteps ? Number(latestSteps.value) : null;
@@ -748,7 +741,6 @@ const loadAll = async () => {
     getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
-    getWeeklyDigest().then((d) => { digest.value = d; }),
   ]);
   await new Promise(r => setTimeout(r, 60));
   buildBatteryChart();
@@ -760,6 +752,8 @@ onUnmounted(() => {
   if (readinessTimer) { clearInterval(readinessTimer); readinessTimer = null; }
   clearWorkoutTimer();
   clearRestTimer();
+  if (sparkChart) { sparkChart.destroy(); sparkChart = null; }
+  if (batteryChartInstance) { batteryChartInstance.destroy(); batteryChartInstance = null; }
 });
 
 onMounted(async () => {
@@ -865,6 +859,37 @@ onMounted(async () => {
 .card-date {
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.4);
+}
+
+/* 3-score row */
+.scores-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.score-tile {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-tile__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.score-tile__val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
 }
 
 /* Battery / Readiness layout */

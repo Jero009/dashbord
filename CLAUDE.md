@@ -21,7 +21,7 @@ npm run test:e2e      # Cypress (requires dev server running separately)
 
 ### Feature Modules
 
-`src/features/` holds isolated feature modules: **gym**, **health**, **finance**, **home**. Each follows:
+`src/features/` holds isolated feature modules: **gym**, **health**, **finance**, **home**, **plan**. Each follows:
 
 ```
 features/[name]/
@@ -56,7 +56,8 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 - Check availability before calling — not present on all Android devices
 - `HealthConnectAutoSync.vue` does an initial sync on mount, then retries after 6 s to recover from cold-start race conditions where HC isn't ready yet
 - Readiness score is derived from sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, and steps
-- Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (20), deep% at ≥18% target (12.5), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (15). Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
+- Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (15), WASO/wake-after-sleep-onset (10), deep% at ≥18% target (10), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (12.5). WASO sourced from `stageSummaries['awake']` minutes — no extra HC permissions. Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
+- User device: Amazfit Active 2 via Zepp Health → Health Connect. Provides sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
 
 ### Calendar Event Types, Recurrence & Battery Impact
 
@@ -75,7 +76,21 @@ Calendar events support a `recurrence` column: `none` | `daily` | `weekly`. `get
 
 ### Health Overview Page
 
-`HealthPage.vue` uses plain `<div>` cards only (no `ion-card`). Sections: readiness hero (score + bar + 3 mini tiles), sleep detail (5 metrics + insight line), body card (HR, resp rate, weight), activities list, 14-day readiness history SVG chart, compact sync button. DB function: `queryReadinessHistory(days)` in `app_db.ts`.
+`HealthPage.vue` uses plain `<div>` cards only (no `ion-card`). Sections: **battery hero** (full `calculateBattery()` score + color-coded bar + 3 mini tiles; loads `todayWorkouts` + `todayEvents` via `loadTodayContext`), sleep detail (5 metrics + insight line), body card (HR, resp rate, weight), activities list, 14-day readiness history SVG chart, compact sync button. DB function: `queryReadinessHistory(days)` in `app_db.ts`.
+
+Health tab (`HealthSectionTabs.vue`) now shows only: Overview / Sleep / Body. Goals, Habits, and Calendar moved to the Plan tab.
+
+### Plan Feature Module
+
+`src/features/plan/` — routes: `/plan`, `/plan/goals`, `/plan/habits`, `/plan/calendar`. `PlanPage.vue` is the landing page with nav tiles. `PlanSectionTabs.vue` is the sub-nav (Overview/Goals/Habits/Calendar). `/plan/goals`, `/plan/habits`, `/plan/calendar` reuse the existing Health page components (`HealthGoalsPage`, `HealthHabitsPage`, `HealthCalendarPage`).
+
+**Conditional sub-nav pattern**: `HealthGoalsPage`, `HealthHabitsPage`, and `HealthCalendarPage` each render `PlanSectionTabs` when served under `/plan/*`, and `HealthSectionTabs` otherwise — detected via `useRoute().path.startsWith('/plan')`.
+
+**Tab order** in `DashboardTopBar.vue`: Home / Finance / Health / Plan / Gym (Gym is last; `scrollable` enabled). Active-tab check tests `/plan` before `/health` so `/plan/*` paths correctly highlight Plan.
+
+### Sleep Hypnogram
+
+`SleepPage.vue` uses a single SVG hypnogram (replaces old per-stage swimlane rows). Stages occupy fixed vertical bands top-to-bottom: Awake (yellow), REM (teal), Light (medium blue), Deep (dark blue). Vertical connector lines link transitions. Right-side labels: Aw/RE/Li/De. Removed computeds: `sleepStageLanes`, `stageClass`, `stageStyle`.
 
 ### Google Drive Backup
 
@@ -93,7 +108,9 @@ Calendar events support a `recurrence` column: `none` | `daily` | `weekly`. `get
 - **New DB tables**: Always add to both `EXPORT_DELETE_TABLES` and `EXPORT_INSERT_TABLES` immediately.
 - **Build + sync order**: `npm run build` THEN `npx cap sync` before any APK rebuild. Skipping build causes stale `dist/` to be synced.
 - **Progressive overload hint**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% weight increase rounded to nearest 2.5 kg, display-only.
-- **Weekly digest**: `getWeeklyDigest()` in `app_db.ts` — 7-day averages for sleep, steps, readiness, workout count + trend vs prior week.
+- **Weekly digest**: `getWeeklyDigest()` in `app_db.ts` exists but its UI card was removed from `HomePage.vue` (broken). Do not re-add without verifying the function.
+- **Battery score**: `calculateBattery()` in `healthConnect.ts` — shown as a tile on `HomePage.vue` (scores-row alongside Sleep Score) and as the hero on `HealthPage.vue`. `eventDrain` clamp lower bound is `-20` (not 0) — must stay negative to allow recovery/sleep events to benefit the score.
+- **No raw unicode checkmarks/crosses in templates** — use ionicons (`ion-icon`) instead of `✓`, `×`, `✕`.
 
 ## Design System
 

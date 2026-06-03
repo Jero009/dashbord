@@ -71,17 +71,25 @@
         <!-- Stage timeline -->
         <ion-card class="sleep-card">
           <p class="section-kicker">Stage timeline</p>
-          <div v-if="sleepStageLanes.length" class="stage-lanes">
-            <div v-for="lane in sleepStageLanes" :key="lane.stage" class="stage-lane">
-              <div class="stage-lane__label">{{ stageLabel(lane.stage) }}</div>
-              <div class="stage-lane__bar">
-                <div
-                  v-for="segment in lane.segments"
-                  :key="`${segment.stage}-${segment.startDate}`"
-                  class="stage-lane__segment"
-                  :class="stageClass(segment.stage)"
-                  :style="stageStyle(segment)"
+          <div v-if="hypnogramBlocks.length" class="hypnogram-wrap">
+            <div class="hypnogram-inner">
+              <svg viewBox="0 0 100 52" class="hypnogram-svg" preserveAspectRatio="none">
+                <rect
+                  v-for="(block, i) in hypnogramBlocks" :key="i"
+                  :x="block.x" :y="block.y" :width="block.w" :height="block.h"
+                  :fill="block.fill"
                 />
+                <line
+                  v-for="(conn, i) in hypnogramConnectors" :key="`c${i}`"
+                  :x1="conn.x" :y1="conn.y1" :x2="conn.x" :y2="conn.y2"
+                  stroke="rgba(0,0,0,0.6)" stroke-width="0.4"
+                />
+              </svg>
+              <div class="hypnogram-labels">
+                <span>Aw</span>
+                <span>RE</span>
+                <span>Li</span>
+                <span>De</span>
               </div>
             </div>
             <div class="axis-row">
@@ -384,25 +392,6 @@ const timeInBedDisplay = computed(() =>
 const sleepEfficiencyPercent = computed(() =>
   summary.value ? `${Math.round(summary.value.efficiency * 100)}%` : '—'
 );
-const sleepStageTimeline = computed(() => summary.value?.timeline ?? []);
-const sleepStageLanes = computed(() => {
-  const stages = sleepStageTimeline.value;
-  const order = ['deep', 'rem', 'light', 'asleep', 'awake', 'inBed'];
-  const grouped = new Map<string, SleepStageTimeline[]>();
-
-  for (const stage of stages) {
-    const bucket = grouped.get(stage.stage) ?? [];
-    bucket.push(stage);
-    grouped.set(stage.stage, bucket);
-  }
-
-  return order
-    .filter((stage) => grouped.has(stage))
-    .map((stage) => ({
-      stage,
-      segments: grouped.get(stage) ?? [],
-    }));
-});
 const heartRatePoints = computed(() => {
   const points = summary.value?.heartRateTimeline ?? [];
   if (!points.length) return [];
@@ -496,11 +485,38 @@ const stageLabel = (stage: string) =>
     inBed: 'In bed',
   }[stage] ?? stage);
 
-const stageClass = (stage: string) => `is-${stage.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+// Hypnogram — each stage occupies a fixed vertical band; blocks fill the band width for their duration
+const STAGE_BANDS: Record<string, { y: number; h: number; fill: string }> = {
+  awake:  { y: 1,  h: 9,  fill: 'rgba(255,215,0,0.88)' },
+  inBed:  { y: 1,  h: 9,  fill: 'rgba(148,163,184,0.35)' },
+  rem:    { y: 14, h: 10, fill: 'rgba(34,211,238,0.82)' },
+  light:  { y: 28, h: 11, fill: 'rgba(96,149,240,0.78)' },
+  asleep: { y: 28, h: 11, fill: 'rgba(96,149,240,0.55)' },
+  deep:   { y: 42, h: 10, fill: 'rgba(37,78,195,0.92)' },
+};
 
-const stageStyle = (stage: SleepStageTimeline) => ({
-  left: `${stage.offset}%`,
-  width: `${Math.max(stage.width, 2)}%`,
+const hypnogramBlocks = computed(() => {
+  const segs = [...(summary.value?.timeline ?? [])]
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  return segs.map(s => {
+    const band = STAGE_BANDS[s.stage] ?? STAGE_BANDS.inBed;
+    return { x: s.offset, y: band.y, w: Math.max(s.width, 0.5), h: band.h, fill: band.fill };
+  });
+});
+
+const hypnogramConnectors = computed(() => {
+  const blocks = hypnogramBlocks.value;
+  const result: { x: number; y1: number; y2: number }[] = [];
+  for (let i = 1; i < blocks.length; i++) {
+    const prev = blocks[i - 1];
+    const curr = blocks[i];
+    const prevMid = prev.y + prev.h / 2;
+    const currMid = curr.y + curr.h / 2;
+    if (Math.abs(prevMid - currMid) > 1) {
+      result.push({ x: curr.x, y1: Math.min(prevMid, currMid), y2: Math.max(prevMid, currMid) });
+    }
+  }
+  return result;
 });
 
 onIonViewWillEnter(async () => {
@@ -535,7 +551,7 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Card topline */
@@ -568,7 +584,7 @@ onIonViewWillEnter(async () => {
 .card-metric span {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.5);
@@ -664,7 +680,7 @@ onIonViewWillEnter(async () => {
 .sleep-ring__track { stroke: rgba(255, 255, 255, 0.08); }
 
 .sleep-ring__progress {
-  stroke: var(--ion-color-danger);
+  stroke: rgb(239, 68, 68);
   stroke-linecap: round;
   stroke-dasharray: 289;
   stroke-dashoffset: calc(289 - (289 * var(--score)));
@@ -693,44 +709,33 @@ onIonViewWillEnter(async () => {
   color: rgba(255, 255, 255, 0.55);
 }
 
-/* Stage timeline */
-.stage-lanes { display: grid; gap: 8px; }
+/* Hypnogram */
+.hypnogram-wrap { display: grid; gap: 6px; }
 
-.stage-lane {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
+.hypnogram-inner {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
 }
 
-.stage-lane__label {
-  font-size: 0.68rem;
+.hypnogram-svg {
+  flex: 1;
+  height: 90px;
+  display: block;
+}
+
+.hypnogram-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 22px;
+  padding: 1px 0;
+  text-align: right;
+  font-size: 0.58rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.35);
 }
-
-.stage-lane__bar {
-  position: relative;
-  height: 20px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.stage-lane__segment {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  border-radius: 8px;
-}
-
-.stage-lane__segment.is-awake  { background: rgba(239, 68, 68, 0.8); }
-.stage-lane__segment.is-rem    { background: rgba(168, 85, 247, 0.8); }
-.stage-lane__segment.is-deep   { background: rgba(59, 130, 246, 0.85); }
-.stage-lane__segment.is-light  { background: rgba(34, 197, 94, 0.75); }
-.stage-lane__segment.is-asleep { background: rgba(249, 115, 22, 0.8); }
-.stage-lane__segment.is-in-bed { background: rgba(148, 163, 184, 0.5); }
 
 .axis-row {
   display: flex;
@@ -760,11 +765,11 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.stage-dot--awake  { background: rgba(239, 68, 68, 0.8); }
-.stage-dot--rem    { background: rgba(168, 85, 247, 0.8); }
-.stage-dot--deep   { background: rgba(59, 130, 246, 0.85); }
-.stage-dot--light  { background: rgba(34, 197, 94, 0.75); }
-.stage-dot--asleep { background: rgba(249, 115, 22, 0.8); }
+.stage-dot--awake  { background: rgba(255, 215, 0, 0.88); }
+.stage-dot--rem    { background: rgba(34, 211, 238, 0.82); }
+.stage-dot--light  { background: rgba(96, 149, 240, 0.78); }
+.stage-dot--deep   { background: rgba(37, 78, 195, 0.92); }
+.stage-dot--asleep { background: rgba(96, 149, 240, 0.55); }
 
 .stage-row span {
   flex: 1;
@@ -806,7 +811,7 @@ onIonViewWillEnter(async () => {
 
 .chart-line {
   fill: none;
-  stroke: var(--ion-color-danger);
+  stroke: rgb(239, 68, 68);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -815,7 +820,7 @@ onIonViewWillEnter(async () => {
 .chart-area { fill: rgba(239, 68, 68, 0.12); }
 
 .chart-dot {
-  fill: var(--ion-color-danger);
+  fill: rgb(239, 68, 68);
   cursor: pointer;
   transition: r 0.15s, filter 0.15s;
 }
@@ -838,7 +843,7 @@ onIonViewWillEnter(async () => {
 
 .chart-tooltip strong {
   font-size: 1.1rem;
-  color: var(--ion-color-danger);
+  color: rgb(239, 68, 68);
 }
 
 .chart-tooltip small {

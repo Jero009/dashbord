@@ -205,6 +205,7 @@ function buildSleepSummary(
   const hasStages = sleepOnlyMinutes > 0;
   const deepPct = hasStages ? (stageSummaries['deep'] ?? 0) / sleepOnlyMinutes : null;
   const remPct = hasStages ? (stageSummaries['rem'] ?? 0) / sleepOnlyMinutes : null;
+  const wasoMinutes = hasStages ? (stageSummaries['awake'] ?? 0) : null;
 
   return {
     timeInBedHours,
@@ -222,6 +223,7 @@ function buildSleepSummary(
       timingVarianceMinutes: options.timingVarianceMinutes ?? null,
       respiratoryRate,
       respiratoryRateBaseline: options.respiratoryRateBaseline ?? null,
+      wasoMinutes,
     }),
   };
 }
@@ -235,21 +237,26 @@ interface SleepScoreInputs {
   timingVarianceMinutes: number | null;     // deviation from rolling bedtime mean
   respiratoryRate: number | null;
   respiratoryRateBaseline: number | null;   // rolling personal mean
+  wasoMinutes: number | null;               // wake-after-sleep-onset minutes; null = no stage data
 }
 
 function calculateSleepScore(inputs: SleepScoreInputs): number {
   // Duration vs user target: 25 pts
   const durationScore = clamp((inputs.timeAsleepHours / inputs.targetSleepHours) * 25, 0, 25);
 
-  // Sleep efficiency: 20 pts
-  const efficiencyScore = clamp(inputs.efficiency * 20, 0, 20);
+  // Sleep efficiency: 15 pts (reduced to make room for WASO)
+  const efficiencyScore = clamp(inputs.efficiency * 15, 0, 15);
 
-  // Stage composition: 12.5 pts each for deep and REM
-  // Targets: deep ≥18%, REM ≥22% of total sleep time
+  // WASO — wake after sleep onset: 10 pts (full at ≤20 min, 0 at ≥50 min)
+  const wasoScore = inputs.wasoMinutes === null
+    ? 5
+    : clamp(10 - Math.max(0, inputs.wasoMinutes - 20) / 3, 0, 10);
+
+  // Stage composition — deep: 10 pts (target ≥18%), REM: 12.5 pts (target ≥22%)
   const hasStageData = inputs.deepPct !== null || inputs.remPct !== null;
-  const deepScore = !hasStageData ? 6.25
-    : inputs.deepPct === null ? 6.25
-    : clamp((inputs.deepPct / 0.18) * 12.5, 0, 12.5);
+  const deepScore = !hasStageData ? 5
+    : inputs.deepPct === null ? 5
+    : clamp((inputs.deepPct / 0.18) * 10, 0, 10);
   const remScore = !hasStageData ? 6.25
     : inputs.remPct === null ? 6.25
     : clamp((inputs.remPct / 0.22) * 12.5, 0, 12.5);
@@ -259,13 +266,13 @@ function calculateSleepScore(inputs: SleepScoreInputs): number {
     ? 7.5
     : clamp(15 - (inputs.timingVarianceMinutes / 60) * 15, 0, 15);
 
-  // Respiratory deviation from personal baseline: 15 pts (0 pts at ≥3 bpm deviation)
+  // Respiratory deviation from personal baseline: 12.5 pts (0 pts at ≥3 bpm deviation)
   const respiratoryScore =
     inputs.respiratoryRate === null || inputs.respiratoryRateBaseline === null
-      ? 7.5
-      : clamp(15 - (Math.abs(inputs.respiratoryRate - inputs.respiratoryRateBaseline) / 3) * 15, 0, 15);
+      ? 6.25
+      : clamp(12.5 - (Math.abs(inputs.respiratoryRate - inputs.respiratoryRateBaseline) / 3) * 12.5, 0, 12.5);
 
-  return Math.round(durationScore + efficiencyScore + deepScore + remScore + timingScore + respiratoryScore);
+  return Math.round(durationScore + efficiencyScore + wasoScore + deepScore + remScore + timingScore + respiratoryScore);
 }
 
 function toDateKey(date: string) {
@@ -871,7 +878,7 @@ export function calculateBattery(
         e.type === 'reminder' ?  0 : 4;
       return sum + clamp(durationHours * drainPerHour, -5, 15);
     }, 0),
-    0, 25
+    -20, 25
   );
 
   const score = clamp(Math.round(baseline - timeDrain - workoutDrain - activityDrain - eventDrain), 0, 100);

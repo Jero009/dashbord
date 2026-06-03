@@ -2,7 +2,8 @@
   <ion-page>
     <ion-header>
       <dashboard-top-bar />
-      <health-section-tabs />
+      <plan-section-tabs v-if="route.path.startsWith('/plan')" />
+      <health-section-tabs v-else />
     </ion-header>
     <ion-content :fullscreen="true" class="health-content">
       <div class="health-shell">
@@ -86,8 +87,11 @@ import {
   toastController,
 } from '@ionic/vue';
 import { reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
+import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
+const route = useRoute();
 import { addGoal, getGoals, updateGoalProgress } from '@/shared/db/app_db';
 
 const goalName = ref('');

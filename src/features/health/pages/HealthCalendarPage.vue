@@ -2,7 +2,8 @@
   <ion-page>
     <ion-header>
       <dashboard-top-bar />
-      <health-section-tabs />
+      <plan-section-tabs v-if="route.path.startsWith('/plan')" />
+      <health-section-tabs v-else />
     </ion-header>
     <ion-content :fullscreen="true" class="cal-content">
       <div class="cal-shell">
@@ -49,7 +50,8 @@
             <div class="detail-card__header">
               <h3>Events</h3>
               <button class="icon-btn" @click="showAddEvent ? (resetEventForm(), showAddEvent = false) : (showAddEvent = true)">
-                {{ showAddEvent ? '✕' : '+' }}
+                <ion-icon v-if="showAddEvent" :icon="close" />
+                <span v-else>+</span>
               </button>
             </div>
 
@@ -106,7 +108,7 @@
                   </span>
                   <span v-if="ev.notes" class="item-note">{{ ev.notes }}</span>
                 </div>
-                <button class="delete-btn" @click="removeEvent(ev.id)">×</button>
+                <button class="delete-btn" @click="removeEvent(ev.id)"><ion-icon :icon="close" /></button>
               </li>
             </ul>
             <p v-else class="empty-hint">No events on this day</p>
@@ -125,7 +127,7 @@
                 @click="toggleHabit(h)"
               >
                 <div class="habit-check" :class="{ 'habit-check--done': h.completed === 1 }">
-                  <span v-if="h.completed === 1">✓</span>
+                  <ion-icon v-if="h.completed === 1" :icon="checkmark" />
                 </div>
                 <span class="habit-name">{{ h.name }}</span>
               </li>
@@ -140,10 +142,14 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonIcon, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { checkmark, close } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
+import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
+const route = useRoute();
 import {
   addCalendarEvent,
   deleteCalendarEvent,

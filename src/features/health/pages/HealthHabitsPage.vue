@@ -2,7 +2,8 @@
   <ion-page>
     <ion-header>
       <dashboard-top-bar />
-      <health-section-tabs />
+      <plan-section-tabs v-if="route.path.startsWith('/plan')" />
+      <health-section-tabs v-else />
     </ion-header>
     <ion-content :fullscreen="true" class="habits-content">
       <div class="habits-shell">
@@ -29,7 +30,7 @@
             :class="{ 'habit-card--done': h.completed === 1 }"
           >
             <button class="habit-check" @click="toggleHabit(h)">
-              <span v-if="h.completed === 1" class="check-icon">✓</span>
+              <ion-icon v-if="h.completed === 1" :icon="checkmark" class="check-icon" />
             </button>
             <div class="habit-info">
               <span class="habit-name">{{ h.name }}</span>
@@ -39,7 +40,7 @@
               <span class="streak-num">{{ streaks[h.id] ?? 0 }}</span>
               <span class="streak-label">day streak</span>
             </div>
-            <button class="habit-delete" @click="removeHabit(h.id)">×</button>
+            <button class="habit-delete" @click="removeHabit(h.id)"><ion-icon :icon="close" /></button>
           </div>
         </div>
 
@@ -58,7 +59,7 @@
         <!-- Add habit form -->
         <div class="add-section">
           <button class="add-toggle" @click="showForm = !showForm">
-            {{ showForm ? '✕ Cancel' : '+ Add habit' }}
+            {{ showForm ? 'Cancel' : '+ Add habit' }}
           </button>
 
           <div v-if="showForm" class="add-form">
@@ -86,10 +87,14 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonIcon, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { checkmark, close } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
+import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
+const route = useRoute();
 import {
   addHabit,
   deleteHabit,

@@ -8,9 +8,9 @@
     <ion-content :fullscreen="true" class="health-content">
       <div class="health-shell">
 
-        <!-- 1. Readiness hero card -->
+        <!-- 1. Battery hero card -->
         <div class="card readiness-card">
-          <p class="section-kicker">Readiness</p>
+          <p class="section-kicker">Battery</p>
           <div class="readiness-hero">
             <div class="readiness-score-wrap">
               <span class="readiness-score-num">{{ readinessDisplay }}</span>
@@ -19,7 +19,7 @@
             <span class="readiness-label" :class="readinessLabelClass">{{ readinessLabel }}</span>
           </div>
           <div class="readiness-bar-track">
-            <div class="readiness-bar-fill" :style="{ width: readinessBarWidth }"></div>
+            <div class="readiness-bar-fill" :style="{ width: readinessBarWidth, background: batteryBarColor }"></div>
           </div>
           <div class="metric-grid readiness-mini-grid">
             <div class="card-metric">
@@ -167,10 +167,10 @@ import {
   requestHealthConnectPermissions,
   syncHealthConnectMetrics,
   getRecentActivities,
-  calculateReadinessScore,
-  applyReadinessDrain,
+  calculateReadinessScore, calculateBattery,
   type ActivitySummary,
 } from '@/shared/health/healthConnect';
+import { getTodayCompletedWorkouts, getCalendarEventsForDate } from '@/shared/db/app_db';
 
 type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
 
@@ -183,6 +183,8 @@ const respRate        = ref<number | null>(null);
 const restingHr       = ref<number | null>(null);
 const steps           = ref<number | null>(null);
 const readinessScore  = ref<number | null>(null);
+const todayWorkouts   = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
+const todayEvents     = ref<{ type: string; date: string; time_start: string | null; time_end: string | null }[]>([]);
 const latestBodyLog   = ref<BodyLogEntry | null>(null);
 const activities      = ref<ActivitySummary[]>([]);
 const syncing         = ref(false);
@@ -205,17 +207,26 @@ const readinessDisplay = computed(() => readinessScore.value === null ? '—' : 
 const readinessLabel = computed(() => {
   const s = readinessScore.value;
   if (s === null) return 'No data';
-  if (s >= 80) return 'Ready to push';
-  if (s >= 60) return 'Steady day';
-  return 'Take it easy';
+  if (s >= 70) return 'Peak';
+  if (s >= 55) return 'Good';
+  if (s >= 35) return 'Low';
+  return 'Recharge';
 });
 
 const readinessLabelClass = computed(() => {
   const s = readinessScore.value;
   if (s === null) return 'label--muted';
-  if (s >= 80) return 'label--green';
-  if (s >= 60) return 'label--yellow';
+  if (s >= 70) return 'label--green';
+  if (s >= 45) return 'label--yellow';
   return 'label--red';
+});
+
+const batteryBarColor = computed(() => {
+  const s = readinessScore.value;
+  if (s === null) return 'rgba(255,255,255,0.2)';
+  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 45) return 'rgb(234,179,8)';
+  return 'rgb(239,68,68)';
 });
 
 const readinessBarWidth = computed(() => {
@@ -284,20 +295,26 @@ const loadReadiness = async () => {
   let stored = await getReadinessScore(today);
   if (!stored) stored = await getLatestReadinessScore();
 
-  if (stored?.score != null) {
-    readinessScore.value = Math.round(applyReadinessDrain(Number(stored.score)));
-  } else {
-    const base = calculateReadinessScore({
-      sleepHours:      sleepHours.value,
-      sleepEfficiency: sleepEfficiency.value,
-      sleepScore:      sleepScore.value,
-      restingHr:       restingHr.value,
-      sleepHeartRate:  sleepHr.value,
-      respiratoryRate: respRate.value,
-      steps:           steps.value,
-    });
-    readinessScore.value = Math.round(applyReadinessDrain(base));
-  }
+  const baseline = stored?.score != null
+    ? Number(stored.score)
+    : calculateReadinessScore({
+        sleepHours:      sleepHours.value,
+        sleepEfficiency: sleepEfficiency.value,
+        sleepScore:      sleepScore.value,
+        restingHr:       restingHr.value,
+        sleepHeartRate:  sleepHr.value,
+        respiratoryRate: respRate.value,
+        steps:           steps.value,
+      });
+
+  const battery = calculateBattery(
+    baseline,
+    new Date(),
+    todayWorkouts.value,
+    activities.value,
+    todayEvents.value,
+  );
+  readinessScore.value = battery.score;
 };
 
 const loadBody = async () => {
@@ -333,8 +350,18 @@ const rhAreaPoints = computed(() => {
   return `${pts[0].x},40 ${rhLinePoints.value} ${pts[pts.length - 1].x},40`;
 });
 
+const loadTodayContext = async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const [workouts, events] = await Promise.all([
+    getTodayCompletedWorkouts(),
+    getCalendarEventsForDate(today),
+  ]);
+  todayWorkouts.value = workouts;
+  todayEvents.value = events;
+};
+
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadTodayContext()]);
   await loadReadiness();
 });
 
@@ -355,7 +382,7 @@ const handleConnect = async () => {
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadTodayContext()]);
     await loadReadiness();
     const t = await toastController.create({ message: `Synced ${syncResult.synced} records.`, duration: 2200, color: 'success' });
     await t.present();
