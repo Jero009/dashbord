@@ -1768,6 +1768,47 @@ export async function getCalendarEventDatesForMonth(yearMonth: string) {
   return [...dates];
 }
 
+export async function queryReadinessHistory(days = 14): Promise<{ date: string; score: number }[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT date, score FROM readiness_score
+     WHERE date >= date('now', ?)
+     ORDER BY date ASC;`,
+    [`-${days} days`]
+  );
+  return ((result.values ?? []) as { date: string; score: number }[]);
+}
+
+export async function getWeeklyDigest(): Promise<{
+  avgSleep: number | null;
+  avgSteps: number | null;
+  avgReadiness: number | null;
+  workoutCount: number;
+  readinessTrend: number | null;
+}> {
+  if (!db) return { avgSleep: null, avgSteps: null, avgReadiness: null, workoutCount: 0, readinessTrend: null };
+
+  const [sleepR, stepsR, readinessR, prevReadinessR, workoutsR] = await Promise.all([
+    db.query(`SELECT AVG(value) AS v FROM health_metric WHERE type = 'sleep_duration' AND date >= date('now','-7 days');`),
+    db.query(`SELECT AVG(value) AS v FROM health_metric WHERE type = 'steps' AND date >= date('now','-7 days');`),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now','-7 days');`),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now','-14 days') AND date < date('now','-7 days');`),
+    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start) >= date('now','-7 days');`),
+  ]);
+
+  const avg = (r: any) => { const v = r.values?.[0]?.v; return v !== null && v !== undefined ? Number(v) : null; };
+  const thisReadiness = avg(readinessR);
+  const prevReadiness = avg(prevReadinessR);
+
+  return {
+    avgSleep: avg(sleepR),
+    avgSteps: avg(stepsR),
+    avgReadiness: thisReadiness,
+    workoutCount: Number(workoutsR.values?.[0]?.v ?? 0),
+    readinessTrend: thisReadiness !== null && prevReadiness !== null ? Math.round(thisReadiness - prevReadiness) : null,
+  };
+}
+
 export async function getHabitCompletedDatesForMonth(yearMonth: string) {
   if (!db) return [] as string[];
   const result = await db.query(

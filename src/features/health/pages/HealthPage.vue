@@ -84,7 +84,35 @@
           </div>
         </div>
 
-        <!-- 4. Activities section -->
+        <!-- 4. Readiness history chart -->
+        <div class="card">
+          <p class="section-kicker">Readiness · last 14 days</p>
+          <div v-if="readinessHistory.length >= 2" class="rh-chart">
+            <svg viewBox="0 0 100 40" class="rh-svg" aria-label="Readiness history">
+              <polygon class="rh-area" :points="rhAreaPoints" />
+              <polyline class="rh-line" :points="rhLinePoints" />
+              <circle
+                v-for="pt in readinessHistory"
+                :key="pt.date"
+                class="rh-dot"
+                :class="{ 'rh-dot--selected': selectedRhPoint?.date === pt.date }"
+                :cx="pt.x" :cy="pt.y" r="1.2"
+                @click="selectedRhPoint = pt"
+              />
+            </svg>
+            <div v-if="selectedRhPoint" class="rh-tooltip">
+              <strong>{{ selectedRhPoint.score }}</strong>
+              <small>{{ new Date(selectedRhPoint.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
+            </div>
+            <div class="rh-axis">
+              <span>{{ readinessHistory[0]?.dateLabel }}</span>
+              <span>{{ readinessHistory[readinessHistory.length - 1]?.dateLabel }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-hint">No readiness data yet — sync Health Connect to populate</p>
+        </div>
+
+        <!-- 5. Activities section -->
         <section v-if="activities.length">
           <p class="section-kicker">Activity · last 7 days</p>
           <div class="activity-list">
@@ -122,7 +150,7 @@
 import {
   IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController,
 } from '@ionic/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, type Ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {
@@ -130,6 +158,7 @@ import {
   getReadinessScore,
   getLatestReadinessScore,
   getBodyLogs,
+  queryReadinessHistory,
 } from '@/shared/db/app_db';
 import type { BodyLogEntry } from '@/shared/db/app_db';
 import {
@@ -143,6 +172,8 @@ import {
   type ActivitySummary,
 } from '@/shared/health/healthConnect';
 
+type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
+
 // --- State ---
 const sleepHours      = ref<number | null>(null);
 const sleepScore      = ref<number | null>(null);
@@ -155,6 +186,8 @@ const readinessScore  = ref<number | null>(null);
 const latestBodyLog   = ref<BodyLogEntry | null>(null);
 const activities      = ref<ActivitySummary[]>([]);
 const syncing         = ref(false);
+const readinessHistory = ref<RhPoint[]>([]);
+const selectedRhPoint  = ref<RhPoint | null>(null);
 
 // --- Displays ---
 const sleepDisplay          = computed(() => sleepHours.value === null      ? '—' : `${sleepHours.value.toFixed(1)} h`);
@@ -276,8 +309,32 @@ const loadActivities = async () => {
   activities.value = await getRecentActivities(7);
 };
 
+const loadReadinessHistory = async () => {
+  const raw = await queryReadinessHistory(14);
+  if (raw.length < 2) { readinessHistory.value = []; return; }
+  const minS = Math.min(...raw.map(r => r.score));
+  const maxS = Math.max(...raw.map(r => r.score));
+  const range = maxS - minS || 1;
+  readinessHistory.value = raw.map((r, i) => ({
+    date: r.date,
+    score: Math.round(r.score),
+    x: (i / (raw.length - 1)) * 96 + 2,
+    y: 36 - ((r.score - minS) / range) * 32 + 2,
+    dateLabel: new Date(r.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }),
+  }));
+};
+
+const rhLinePoints = computed(() =>
+  readinessHistory.value.map(p => `${p.x},${p.y}`).join(' ')
+);
+const rhAreaPoints = computed(() => {
+  const pts = readinessHistory.value;
+  if (!pts.length) return '';
+  return `${pts[0].x},40 ${rhLinePoints.value} ${pts[pts.length - 1].x},40`;
+});
+
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory()]);
   await loadReadiness();
 });
 
@@ -454,6 +511,59 @@ const handleConnect = async () => {
   background: rgba(255, 255, 255, 0.04);
   border-radius: 8px;
   border-left: 2px solid rgba(239, 68, 68, 0.5);
+}
+
+/* ── Readiness history chart ────────────────────────────── */
+.rh-chart { display: grid; gap: 8px; }
+
+.rh-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.rh-line {
+  fill: none;
+  stroke: rgb(239, 68, 68);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rh-area { fill: rgba(239, 68, 68, 0.15); stroke: none; }
+
+.rh-dot {
+  fill: rgb(239, 68, 68);
+  cursor: pointer;
+  transition: r 0.15s;
+}
+
+.rh-dot--selected { r: 2; filter: brightness(1.3); }
+
+.rh-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.rh-tooltip strong { font-size: 1.1rem; color: rgb(239, 68, 68); }
+.rh-tooltip small  { font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); }
+
+.rh-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.empty-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.35);
 }
 
 /* ── Activities ─────────────────────────────────────────── */

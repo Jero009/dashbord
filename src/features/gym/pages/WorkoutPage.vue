@@ -41,6 +41,7 @@
                     </ion-button>
                   </div>
                   <ion-card-title>{{ ex.name }}</ion-card-title>
+                  <p v-if="overloadHint(ex)" class="overload-hint">{{ overloadHint(ex) }}</p>
                 </div>
                     <div class="rest-settings" @click="editRestTime(ex)">
                       <ion-icon :icon="timerOutline"></ion-icon>
@@ -177,6 +178,13 @@
   color:var(--ion-color-light);
   gap: 8px;
 }
+.overload-hint {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: rgba(255, 215, 0, 0.7);
+  letter-spacing: 0.02em;
+}
+
 .rest-settings {
   display: flex;
   align-items: center;
@@ -648,6 +656,16 @@ const addNewSet = async (exercise: any) => {
       });
     }
   }
+};
+
+const overloadHint = (exercise: any): string => {
+  const sets: any[] = exercise?.sets ?? [];
+  const maxWeight = Math.max(...sets.map((s: any) => Number(s.previous_weight) || 0));
+  if (maxWeight <= 0) return '';
+  const maxWeightSet = sets.find((s: any) => Number(s.previous_weight) === maxWeight);
+  const prevReps = Number(maxWeightSet?.previous_reps) || 0;
+  const suggested = Math.round((maxWeight * 1.025) / 2.5) * 2.5;
+  return `Last: ${maxWeight} kg × ${prevReps} — try ${suggested} kg`;
 };
 
 const getWeightPlaceholder = (exercise: any, currentSet: any) => {

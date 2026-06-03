@@ -139,6 +139,34 @@
           </div>
         </ion-card>
 
+        <!-- Weekly digest -->
+        <ion-card v-if="digest" class="digest-card">
+          <div class="card-topline">
+            <p class="section-kicker">This week</p>
+            <span class="digest-trend" v-if="digest.readinessTrend !== null" :class="digest.readinessTrend >= 0 ? 'trend--up' : 'trend--down'">
+              {{ digest.readinessTrend >= 0 ? '+' : '' }}{{ digest.readinessTrend }} readiness
+            </span>
+          </div>
+          <div class="digest-grid">
+            <div class="digest-tile">
+              <span class="digest-label">Sleep avg</span>
+              <span class="digest-value">{{ digest.avgSleep !== null ? digest.avgSleep.toFixed(1) + ' h' : '—' }}</span>
+            </div>
+            <div class="digest-tile">
+              <span class="digest-label">Steps avg</span>
+              <span class="digest-value">{{ digest.avgSteps !== null ? Math.round(digest.avgSteps).toLocaleString() : '—' }}</span>
+            </div>
+            <div class="digest-tile">
+              <span class="digest-label">Readiness</span>
+              <span class="digest-value">{{ digest.avgReadiness !== null ? Math.round(digest.avgReadiness) : '—' }}</span>
+            </div>
+            <div class="digest-tile">
+              <span class="digest-label">Workouts</span>
+              <span class="digest-value">{{ digest.workoutCount }}</span>
+            </div>
+          </div>
+        </ion-card>
+
         <!-- Day timeline -->
         <section class="day-view-card">
           <div class="day-view__header">
@@ -243,7 +271,7 @@ import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter, toastContr
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate } from '@/shared/db/app_db';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getWeeklyDigest } from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
@@ -419,6 +447,9 @@ const todayHabits = ref<Record<string, any>[]>([]);
 const todayWorkouts = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
 const todayActivities = ref<ActivitySummary[]>([]);
 const timelineEl = ref<HTMLElement | null>(null);
+
+type DigestResult = Awaited<ReturnType<typeof getWeeklyDigest>>;
+const digest = ref<DigestResult | null>(null);
 
 const todayDateLabel = computed(() =>
   new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -717,6 +748,7 @@ const loadAll = async () => {
     getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
+    getWeeklyDigest().then((d) => { digest.value = d; }),
   ]);
   await new Promise(r => setTimeout(r, 60));
   buildBatteryChart();
@@ -1365,4 +1397,52 @@ onMounted(async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* ── Weekly digest ──────────────────────────────────────── */
+.digest-card {
+  margin: 0;
+  border-radius: 12px;
+  background: var(--ion-color-primary);
+  box-shadow: none;
+}
+
+.digest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.digest-tile {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.digest-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+.digest-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.digest-trend {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trend--up   { color: rgb(34, 197, 94); }
+.trend--down { color: rgb(239, 68, 68); }
 </style>

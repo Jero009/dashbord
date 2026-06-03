@@ -58,9 +58,11 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 - Readiness score is derived from sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, and steps
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (20), deep% at ≥18% target (12.5), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (15). Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
 
-### Calendar Event Types & Battery Impact
+### Calendar Event Types, Recurrence & Battery Impact
 
 `HealthCalendarPage.vue` supports event types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. Each type has a CSS tag color class (`item-tag--<type>`). `calculateBattery()` in `healthConnect.ts` applies `drainPerHour` per event: school=+5/hr, sleep=−5/hr (others defined separately).
+
+Calendar events support a `recurrence` column: `none` | `daily` | `weekly`. `getCalendarEventsForDate` uses `strftime('%w', date)` matching for weekly recurrence. `getCalendarEventDatesForMonth` expands recurring events into month dot indicators. Any new event type must have a validated recurrence value (checked against allowlist in `addCalendarEvent`).
 
 ### Body Log Feature
 
@@ -68,6 +70,16 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 - DB functions: `insertBodyLog`, `getBodyLogs` (DESC order), `deleteBodyLog`, `BodyLogEntry` interface
 - Photos stored via `@capacitor/filesystem` in `Directory.Data/body_photos/`; picked via `@capawesome/capacitor-file-picker`
 - Route: `/health/body` → `BodyPage.vue`; "Body" tab added to `HealthSectionTabs.vue`
+- `body_log` is included in both `EXPORT_DELETE_TABLES` and `EXPORT_INSERT_TABLES`; must remain in both if schema changes
+- After a successful weight log for today, `BodyPage.vue` calls `dismissWeightReminder()` from `src/shared/utils/notifications.ts`
+
+### Health Overview Page
+
+`HealthPage.vue` uses plain `<div>` cards only (no `ion-card`). Sections: readiness hero (score + bar + 3 mini tiles), sleep detail (5 metrics + insight line), body card (HR, resp rate, weight), activities list, 14-day readiness history SVG chart, compact sync button. DB function: `queryReadinessHistory(days)` in `app_db.ts`.
+
+### Google Drive Backup
+
+`src/shared/utils/driveBackup.ts` — daily DB export to Google Drive via `@codetrix-studio/capacitor-google-auth`. Triggered on app start from `HealthConnectAutoSync.vue` and manually from `SettingsPage.vue`. Requires external Google Cloud setup (Drive API + OAuth client ID + SHA-1 fingerprint) before the code has any effect.
 
 ## Key Conventions
 
@@ -76,6 +88,12 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 - Use `@/` path alias for all imports (maps to `src/`)
 - Use scoped styles in feature flow pages to prevent leakage
 - `no-console` / `no-debugger` are warnings in dev, errors in production builds
+- **Chart.js**: Always destroy chart instance in `onUnmounted`. Use `flush: 'post'` in `watch` callbacks that re-render charts. Unified style: `rgb(239,68,68)` line, `rgba(255,255,255,0.4)` ticks, `rgba(255,255,255,0.1)` grid, `animation: false`, dark tooltip.
+- **DB nullable unique columns**: Never use `WHERE col = NULL`. Use `(col = ? OR (col IS NULL AND ? IS NULL))` pattern in `replaceHealthMetric` and any similar upsert.
+- **New DB tables**: Always add to both `EXPORT_DELETE_TABLES` and `EXPORT_INSERT_TABLES` immediately.
+- **Build + sync order**: `npm run build` THEN `npx cap sync` before any APK rebuild. Skipping build causes stale `dist/` to be synced.
+- **Progressive overload hint**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% weight increase rounded to nearest 2.5 kg, display-only.
+- **Weekly digest**: `getWeeklyDigest()` in `app_db.ts` — 7-day averages for sleep, steps, readiness, workout count + trend vs prior week.
 
 ## Design System
 
