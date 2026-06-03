@@ -80,15 +80,19 @@
             </div>
 
           </div>
+          <div v-if="baseline !== null" class="battery-timeline">
+            <canvas ref="batteryChartRef"></canvas>
+          </div>
         </ion-card>
 
-        <!-- Latest workout (only when no active session) -->
-        <ion-card v-if="!activeWorkout && latestWorkout" class="summary-card">
-          <div class="card-topline">
+        <!-- Last workout card (big) -->
+        <ion-card v-if="!activeWorkout && latestWorkout" class="workout-hero-card">
+          <div class="workout-hero__topline">
             <p class="section-kicker">Last workout</p>
             <span class="card-date">{{ latestWorkoutLabel }}</span>
           </div>
-          <div class="card-metrics card-metrics--4">
+          <p class="workout-hero__name">{{ latestWorkout.name ?? 'Workout' }}</p>
+          <div class="card-metrics card-metrics--4 workout-hero__metrics">
             <div class="card-metric">
               <span>Duration</span>
               <strong>{{ latestWorkoutDuration }}</strong>
@@ -105,6 +109,33 @@
               <span>Sets</span>
               <strong>{{ latestWorkoutSetCount }}</strong>
             </div>
+          </div>
+          <button v-if="latestWorkout.id_workout_template" class="workout-hero__start" @click="repeatLastWorkout">
+            Start again
+          </button>
+        </ion-card>
+
+        <!-- Weight card -->
+        <ion-card class="weight-card">
+          <div class="weight-card__left">
+            <p class="section-kicker">Weight</p>
+            <strong class="weight-val">{{ todayWeight !== null ? todayWeight + ' kg' : '—' }}</strong>
+            <span v-if="goalWeight !== null && todayWeight !== null" class="weight-goal-line">{{ weightDeltaLabel }}</span>
+            <div v-if="todayWeight === null" class="weight-quick-log">
+              <input
+                v-model="quickWeightInput"
+                type="number"
+                step="0.1"
+                inputmode="decimal"
+                placeholder="kg"
+                class="form-input weight-input"
+                @keyup.enter="logQuickWeight"
+              />
+              <button class="log-btn" @click="logQuickWeight">Log</button>
+            </div>
+          </div>
+          <div class="weight-card__spark">
+            <canvas ref="sparkRef"></canvas>
           </div>
         </ion-card>
 
@@ -139,6 +170,11 @@
                 {{ item.done ? '✓' : '○' }}
               </span>
               {{ item.label }}
+              <button
+                v-if="item.type === 'workout' && item.workoutTemplateId"
+                class="ev-start-btn"
+                @click.stop="startEventWorkout(item.workoutTemplateId)"
+              >Start</button>
             </div>
           </div>
 
@@ -172,6 +208,11 @@
               >
                 <strong class="ev-title">{{ ev.title }}</strong>
                 <span class="ev-time">{{ ev.time_start }}{{ ev.time_end ? ' – ' + ev.time_end : '' }}</span>
+                <button
+                  v-if="ev.type === 'workout' && ev.workout_template_id"
+                  class="ev-start-btn"
+                  @click.stop="startEventWorkout(ev.workout_template_id)"
+                >Start</button>
               </div>
 
               <!-- Timed habits -->
@@ -198,16 +239,88 @@
 </template>
 
 <script setup lang="ts">
-import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter } from '@ionic/vue';
+import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts } from '@/shared/db/app_db';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate } from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
+import { getGoalWeightKg } from '@/shared/utils/userSettings';
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 const router = useRouter();
+
+// Weight card
+const todayWeight = ref<number | null>(null);
+const goalWeight = ref<number | null>(getGoalWeightKg());
+const quickWeightInput = ref('');
+const sparkRef = ref<HTMLCanvasElement>();
+let sparkChart: Chart | null = null;
+
+const weightDeltaLabel = computed(() => {
+  if (todayWeight.value === null || goalWeight.value === null) return '';
+  const delta = todayWeight.value - goalWeight.value;
+  if (delta <= 0) return 'Goal reached';
+  return `−${delta.toFixed(1)} kg to go`;
+});
+
+const buildSparkline = (points: number[]) => {
+  if (!sparkRef.value || points.length < 2) return;
+  if (sparkChart) sparkChart.destroy();
+  const ctx = sparkRef.value.getContext('2d')!;
+  sparkChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: points.map(() => ''),
+      datasets: [{
+        data: points,
+        borderColor: 'var(--ion-color-accent-red)',
+        backgroundColor: 'rgba(239,68,68,0.08)',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false },
+      }
+    }
+  });
+};
+
+const loadTodayWeight = async () => {
+  const logs = await getBodyLogs();
+  const todayEntry = logs.find(e => e.date === todayStr);
+  todayWeight.value = todayEntry ? todayEntry.weight_kg : null;
+
+  // last 7 days with data, chronological
+  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const week = [...logs].filter(e => e.date >= cutoff).reverse();
+  if (week.length >= 2) {
+    await new Promise(r => setTimeout(r, 50)); // let canvas render
+    buildSparkline(week.map(e => e.weight_kg));
+  }
+};
+
+const logQuickWeight = async () => {
+  const val = parseFloat(quickWeightInput.value);
+  if (!val || val <= 0) return;
+  await insertBodyLog({ date: todayStr, weight_kg: val });
+  quickWeightInput.value = '';
+  await loadTodayWeight();
+  const t = await toastController.create({ message: 'Logged', duration: 1500, color: 'success' });
+  await t.present();
+};
 
 const sleepHours = ref<number | null>(null);
 const steps = ref<number | null>(null);
@@ -287,6 +400,18 @@ const backToWorkout = async () => {
   if (w) router.push(`/workout/${w.id}`);
 };
 
+const repeatLastWorkout = async () => {
+  const templateId = latestWorkout.value?.id_workout_template
+  if (!templateId) return
+  const workoutId = await startWorkoutFromTemplate(templateId)
+  if (workoutId) router.push(`/workout/${workoutId}`)
+}
+
+const startEventWorkout = async (templateId: number) => {
+  const workoutId = await startWorkoutFromTemplate(templateId);
+  if (workoutId) router.push(`/workout/${workoutId}`);
+};
+
 // Today
 const todayStr = new Date().toISOString().slice(0, 10);
 const todayEvents = ref<Record<string, any>[]>([]);
@@ -360,7 +485,16 @@ const timedItems = computed(() => [...timedEvents.value, ...timedHabits.value]);
 const allDayItems = computed(() => [
   ...todayEvents.value
     .filter((e) => !e.time_start)
-    .map((e) => ({ key: `ev-${e.id}`, label: e.title, cls: `allday-pill--${e.type}`, isHabit: false, done: false, toggle: null as (() => void) | null })),
+    .map((e) => ({
+      key: `ev-${e.id}`,
+      label: e.title,
+      cls: `allday-pill--${e.type}`,
+      isHabit: false,
+      done: false,
+      toggle: null as (() => void) | null,
+      type: e.type as string,
+      workoutTemplateId: (e.workout_template_id as number | null | undefined) ?? null,
+    })),
   ...todayHabits.value
     .filter((h) => !h.time)
     .map((h) => ({
@@ -370,6 +504,8 @@ const allDayItems = computed(() => [
       isHabit: true,
       done: h.completed === 1,
       toggle: () => toggleTodayHabit(h),
+      type: 'habit' as string,
+      workoutTemplateId: null as number | null,
     })),
 ]);
 
@@ -413,7 +549,7 @@ const batteryColor = computed(() => {
   if (s === null) return 'rgba(255,255,255,0.2)';
   if (s >= 70) return 'rgb(34,197,94)';
   if (s >= 45) return 'rgb(234,179,8)';
-  return 'rgb(239,68,68)';
+  return 'var(--ion-color-accent-red)';
 });
 const drainParts = computed(() => {
   const d = battery.value?.drains;
@@ -486,15 +622,104 @@ const toggleTodayHabit = async (h: Record<string, any>) => {
   todayHabits.value = await getHabitsWithStatus(today);
 };
 
+// Battery timeline chart
+const batteryChartRef = ref<HTMLCanvasElement>();
+let batteryChartInstance: Chart | null = null;
+
+const buildBatteryChart = () => {
+  if (!batteryChartRef.value || baseline.value === null) return;
+  if (batteryChartInstance) { batteryChartInstance.destroy(); batteryChartInstance = null; }
+
+  const now = new Date();
+  const nowHour = now.getHours() + now.getMinutes() / 60;
+  const hours = Array.from({ length: 18 }, (_, i) => i + 6); // 06:00–23:00
+  const labels = hours.map(h => `${String(h).padStart(2, '0')}:00`);
+  const evs = todayEvents.value as { type: string; date: string; time_start: string | null; time_end: string | null }[];
+  const wks = todayWorkouts.value;
+  const acts = todayActivities.value;
+
+  const allScores = hours.map(h => {
+    const t = new Date(todayStr + 'T' + String(h).padStart(2, '0') + ':00:00');
+    return calculateBattery(baseline.value as number, t, wks, acts, evs).score;
+  });
+
+  // Split at current hour index
+  const nowIdx = hours.findIndex(h => h > nowHour);
+  const splitIdx = nowIdx === -1 ? hours.length : nowIdx;
+
+  const pastData  = allScores.map((s, i) => i < splitIdx ? s : null);
+  const futureData = allScores.map((s, i) => i >= splitIdx - 1 ? s : null); // -1 to connect
+
+  const ctx = batteryChartRef.value.getContext('2d')!;
+  batteryChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: pastData,
+          borderColor: 'var(--ion-color-accent-red)',
+          backgroundColor: 'rgba(239,68,68,0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.35,
+          fill: true,
+          spanGaps: false,
+        },
+        {
+          data: futureData,
+          borderColor: 'rgba(255,255,255,0.2)',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          pointRadius: 0,
+          tension: 0.35,
+          fill: false,
+          spanGaps: false,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: 'rgba(255,255,255,0.5)',
+          bodyColor: '#fff',
+          callbacks: { label: (c) => ` ${c.parsed.y} pts` }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, maxTicksLimit: 6 },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, stepSize: 25 },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        }
+      }
+    }
+  });
+};
+
 const loadAll = async () => {
   await Promise.all([
     loadSummary(),
     loadActiveWorkout(),
+    loadTodayWeight(),
     getCalendarEventsForDate(todayStr).then((evs) => { todayEvents.value = evs; }),
     getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
   ]);
+  await new Promise(r => setTimeout(r, 60));
+  buildBatteryChart();
 };
 
 onIonViewWillEnter(loadAll);
@@ -535,6 +760,50 @@ onMounted(async () => {
   padding: 18px;
   border-radius: 12px;
   background: var(--ion-color-primary);
+}
+
+.workout-hero-card {
+  margin: 0;
+  padding: 20px 18px 18px;
+  border-radius: 12px;
+  background: var(--ion-color-primary);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.workout-hero__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.workout-hero__topline .section-kicker {
+  margin: 0;
+}
+
+.workout-hero__name {
+  margin: 0 0 16px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.workout-hero__metrics {
+  margin-bottom: 16px;
+}
+
+.workout-hero__start {
+  width: 100%;
+  padding: 12px;
+  background: var(--ion-color-accent-red);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
 }
 
 .active-card {
@@ -618,6 +887,13 @@ onMounted(async () => {
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.35);
   letter-spacing: 0.04em;
+}
+
+.battery-timeline {
+  height: 90px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Metric tiles */
@@ -716,7 +992,7 @@ onMounted(async () => {
 }
 
 .readiness-ring__progress {
-  stroke: rgb(239, 68, 68);
+  stroke: var(--ion-color-accent-red);
   stroke-linecap: round;
   stroke-dasharray: 289;
   transition: stroke-dashoffset 300ms linear;
@@ -808,8 +1084,8 @@ onMounted(async () => {
 }
 
 .habit-block--done .habit-block__check {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
 }
 
 .habit-block__name {
@@ -850,14 +1126,14 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.allday-pill--workout   { background: rgba(239, 68, 68, 0.2);   color: rgb(239, 68, 68); }
+.allday-pill--workout   { background: rgba(239, 68, 68, 0.2);   color: var(--ion-color-accent-red); }
 .allday-pill--recovery  { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
 .allday-pill--reminder  { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
 .allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.7); }
-.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: rgb(239, 68, 68); }
+.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: var(--ion-color-accent-red); }
 
 .allday-check { cursor: pointer; font-size: 0.75rem; }
-.allday-check--done { color: rgb(239, 68, 68); }
+.allday-check--done { color: var(--ion-color-accent-red); }
 
 /* Scrollable timeline */
 .day-view__scroll {
@@ -903,7 +1179,7 @@ onMounted(async () => {
   left: 40px;
   right: 0;
   height: 2px;
-  background: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -913,7 +1189,7 @@ onMounted(async () => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
   margin-left: -3px;
   flex-shrink: 0;
 }
@@ -978,7 +1254,7 @@ onMounted(async () => {
 
 .habit-pill__check {
   font-size: 0.7rem;
-  color: rgb(239, 68, 68);
+  color: var(--ion-color-accent-red);
   flex-shrink: 0;
 }
 
@@ -988,6 +1264,88 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.3);
 }
 
+.ev-start-btn {
+  margin-top: 3px;
+  padding: 2px 8px;
+  background: var(--ion-color-accent-red);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: block;
+}
+
+
+.weight-card {
+  margin: 0;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--ion-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.weight-card__left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.weight-card__left .section-kicker {
+  margin: 0 0 2px;
+}
+
+.weight-val {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.weight-goal-line {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.weight-quick-log {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.weight-input {
+  width: 70px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.log-btn {
+  padding: 6px 12px;
+  background: var(--ion-color-accent-red);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.weight-card__spark {
+  flex: 1;
+  height: 54px;
+  min-width: 0;
+}
 
 @media (min-width: 600px) {
   .summary-card__body {

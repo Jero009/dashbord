@@ -292,8 +292,8 @@ onIonViewWillEnter(loadHabits);
 }
 
 .habit-card--done .habit-check {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
 }
 
 .check-icon {
@@ -329,7 +329,7 @@ onIonViewWillEnter(loadHabits);
 .streak-num {
   font-size: 1rem;
   font-weight: 700;
-  color: rgb(239, 68, 68);
+  color: var(--ion-color-accent-red);
   line-height: 1;
 }
 
@@ -371,7 +371,7 @@ onIonViewWillEnter(loadHabits);
 .progress-bar-fill {
   height: 100%;
   border-radius: 2px;
-  background: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
   transition: width 0.3s ease;
 }
 
@@ -451,15 +451,15 @@ onIonViewWillEnter(loadHabits);
 }
 
 .freq-btn--active {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
   color: #fff;
 }
 
 .save-btn {
   padding: 0.65rem;
   border-radius: 8px;
-  background: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
   border: none;
   color: #fff;
   font-size: 0.9rem;

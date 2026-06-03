@@ -205,7 +205,7 @@ onIonViewWillEnter(async () => {
 }
 
 .add-btn {
-  --background: rgb(239, 68, 68);
+  --background: var(--ion-color-accent-red);
   --background-activated: rgb(220, 50, 50);
   --border-radius: 8px;
   --box-shadow: none;

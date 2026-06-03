@@ -730,6 +730,10 @@ export async function initDB() {
     if (!calColNames.has('time_end')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_end TEXT;`);
     }
+    const calColNamesArr = (calColumns.values ?? []).map((c: any) => c.name);
+    if (!calColNamesArr.includes('workout_template_id')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN workout_template_id INTEGER;`);
+    }
 
     return db;
   } catch (error) {
@@ -1110,14 +1114,15 @@ export async function getWorkouts() {
   if (!db) return [];
 
   const result = await db.query(`
-    SELECT 
+    SELECT
       w.id,
+      w.id_workout_template,
       COALESCE(w.name, wt.name) AS name,
       w.time_start,
       w.time_end,
       w.total_kg
     FROM workout w
-    LEFT JOIN workout_template wt 
+    LEFT JOIN workout_template wt
       ON wt.id = w.id_workout_template
     WHERE w.time_end IS NOT NULL
     ORDER BY w.time_start DESC
@@ -1672,13 +1677,14 @@ export async function addCalendarEvent(
   type: string,
   notes?: string,
   timeStart?: string,
-  timeEnd?: string
+  timeEnd?: string,
+  workoutTemplateId?: number
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end) VALUES (?, ?, ?, ?, ?, ?);`,
-      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null]
+      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null]
     );
     return result;
   } catch (error) {
@@ -2033,7 +2039,6 @@ export async function insertBodyLog(entry: {
   notes?: string
   photo_path?: string
 }): Promise<void> {
-  const db = await getDb()
   if (!db) return
   await db.run(
     `INSERT INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, ?, ?)`,
@@ -2042,16 +2047,27 @@ export async function insertBodyLog(entry: {
 }
 
 export async function getBodyLogs(): Promise<BodyLogEntry[]> {
-  const db = await getDb()
   if (!db) return []
   const result = await db.query(`SELECT * FROM body_log ORDER BY date DESC, id DESC`)
   return result.values ?? []
 }
 
 export async function deleteBodyLog(id: number): Promise<void> {
-  const db = await getDb()
   if (!db) return
   await db.run(`DELETE FROM body_log WHERE id = ?`, [id])
+}
+
+export async function bulkInsertBodyLog(entries: { date: string; weight_kg: number }[]): Promise<number> {
+  if (!db) return 0
+  let inserted = 0
+  for (const e of entries) {
+    await db.run(
+      `INSERT OR IGNORE INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, NULL, NULL)`,
+      [e.date, e.weight_kg]
+    )
+    inserted++
+  }
+  return inserted
 }
 
 // ============ PR & 1RM TRACKING ============

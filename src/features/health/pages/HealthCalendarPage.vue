@@ -71,6 +71,18 @@
                 </select>
                 <button class="save-btn" @click="saveEvent">Save</button>
               </div>
+              <div v-if="newType === 'workout'" class="form-row workout-picker">
+                <select v-model="newWorkoutTemplateId" class="form-select">
+                  <option :value="null">No template</option>
+                  <option
+                    v-for="t in templates"
+                    :key="t.id"
+                    :value="t.id"
+                  >
+                    {{ t.name }}{{ t.id === recommendedTemplateId ? ' (recommended)' : '' }}
+                  </option>
+                </select>
+              </div>
               <input v-model="newNotes" class="form-input" placeholder="Notes (optional)" />
             </div>
 
@@ -130,6 +142,8 @@ import {
   getHabitCompletedDatesForMonth,
   getHabitsWithStatus,
   toggleHabitCompletion,
+  getTemplates,
+  getWorkouts,
 } from '@/shared/db/app_db';
 
 const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -151,6 +165,10 @@ const newType = ref('general');
 const newNotes = ref('');
 const newTimeStart = ref('');
 const newTimeEnd = ref('');
+
+const templates = ref<{ id: number; name: string }[]>([]);
+const newWorkoutTemplateId = ref<number | null>(null);
+const recommendedTemplateId = ref<number | null>(null);
 
 const monthLabel = computed(() => {
   return new Date(viewYear.value, viewMonth.value, 1).toLocaleDateString('en-US', {
@@ -222,6 +240,43 @@ const loadDayDetail = async () => {
   habits.value = habs;
 };
 
+const computeRecommendation = async (timeStart: string) => {
+  if (!templates.value.length) return;
+  const workouts = await getWorkouts();
+
+  const hourMatch = timeStart ? parseInt(timeStart.split(':')[0]) : null;
+
+  const lastUsed: Record<number, string> = {};
+  for (const w of workouts as any[]) {
+    if (!w.id_workout_template || !w.time_end) continue;
+    const wHour = new Date(w.time_start).getHours();
+    if (hourMatch !== null && Math.abs(wHour - hourMatch) > 3) continue;
+    const existing = lastUsed[w.id_workout_template];
+    if (!existing || w.time_end > existing) {
+      lastUsed[w.id_workout_template] = w.time_end;
+    }
+  }
+
+  let recommended: number | null = null;
+  let oldestDate = 'zzzz';
+  for (const t of templates.value) {
+    const last = lastUsed[t.id] ?? '0000';
+    if (last < oldestDate) {
+      oldestDate = last;
+      recommended = t.id;
+    }
+  }
+  recommendedTemplateId.value = recommended;
+  if (recommended !== null && newWorkoutTemplateId.value === null) {
+    newWorkoutTemplateId.value = recommended;
+  }
+};
+
+watch([newType, newTimeStart], ([type, time]) => {
+  if (type === 'workout') computeRecommendation(time as string);
+  else { recommendedTemplateId.value = null; newWorkoutTemplateId.value = null; }
+});
+
 const saveEvent = async () => {
   if (!newTitle.value.trim()) {
     const t = await toastController.create({ message: 'Add a title.', duration: 1800, color: 'warning' });
@@ -234,13 +289,15 @@ const saveEvent = async () => {
     newType.value,
     newNotes.value.trim() || undefined,
     newTimeStart.value || undefined,
-    newTimeEnd.value || undefined
+    newTimeEnd.value || undefined,
+    newWorkoutTemplateId.value ?? undefined
   );
   newTitle.value = '';
   newNotes.value = '';
   newType.value = 'general';
   newTimeStart.value = '';
   newTimeEnd.value = '';
+  newWorkoutTemplateId.value = null;
   showAddEvent.value = false;
   await Promise.all([loadDayDetail(), loadMonthDots()]);
 };
@@ -259,6 +316,7 @@ watch(yearMonthStr, loadMonthDots);
 watch(selectedDate, loadDayDetail);
 
 onIonViewWillEnter(async () => {
+  templates.value = await getTemplates();
   await Promise.all([loadMonthDots(), loadDayDetail()]);
 });
 </script>
@@ -338,12 +396,12 @@ onIonViewWillEnter(async () => {
 }
 
 .cal-cell--today .cal-cell__num {
-  color: rgb(239, 68, 68);
+  color: var(--ion-color-accent-red);
   font-weight: 700;
 }
 
 .cal-cell--selected {
-  background: rgb(239, 68, 68) !important;
+  background: var(--ion-color-accent-red) !important;
 }
 
 .cal-cell--selected .cal-cell__num {
@@ -374,7 +432,7 @@ onIonViewWillEnter(async () => {
 }
 
 .dot--event {
-  background: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
 }
 
 .dot--habit {
@@ -489,7 +547,7 @@ onIonViewWillEnter(async () => {
 .save-btn {
   padding: 0.55rem 1.1rem;
   border-radius: 8px;
-  background: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
   border: none;
   color: #fff;
   font-size: 0.88rem;
@@ -525,7 +583,7 @@ onIonViewWillEnter(async () => {
   margin-top: 2px;
 }
 
-.item-tag--workout  { background: rgba(239, 68, 68, 0.2);   color: rgb(239, 68, 68); }
+.item-tag--workout  { background: rgba(239, 68, 68, 0.2);   color: var(--ion-color-accent-red); }
 .item-tag--recovery { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
 .item-tag--school   { background: rgba(96, 165, 250, 0.18); color: rgb(96, 165, 250); }
 .item-tag--sleep    { background: rgba(167, 139, 250, 0.18); color: rgb(167, 139, 250); }
@@ -586,8 +644,8 @@ onIonViewWillEnter(async () => {
 }
 
 .habit-check--done {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
 }
 
 .habit-name {

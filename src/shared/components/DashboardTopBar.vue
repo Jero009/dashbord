@@ -14,11 +14,17 @@
         <ion-label>Gym</ion-label>
       </ion-segment-button>
     </ion-segment>
+    <div slot="end" class="toolbar-end">
+      <button class="settings-btn" :class="{ 'settings-btn--active': isSettings }" @click="goToSettings">
+        <ion-icon :icon="settingsOutline" />
+      </button>
+    </div>
   </ion-toolbar>
 </template>
 
 <script setup lang="ts">
-import { IonToolbar, IonSegment, IonSegmentButton, IonLabel } from '@ionic/vue';
+import { IonToolbar, IonSegment, IonSegmentButton, IonLabel, IonIcon } from '@ionic/vue';
+import { settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -34,6 +40,8 @@ const activeTab = computed(() => {
   return 'home';
 });
 
+const isSettings = computed(() => route.path === '/settings');
+
 const handleSegmentChange = (event: CustomEvent) => {
   const value = (event.detail as { value?: string }).value;
   if (!value) return;
@@ -47,6 +55,12 @@ const handleSegmentChange = (event: CustomEvent) => {
 
   if (target && target !== route.path) {
     router.push(target);
+  }
+};
+
+const goToSettings = () => {
+  if (route.path !== '/settings') {
+    router.push('/settings');
   }
 };
 </script>
@@ -74,5 +88,32 @@ ion-segment-button {
   min-height: 34px;
   border-radius: 999px;
   font-weight: 600;
+}
+
+.toolbar-end {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 22px;
+  border-radius: 6px;
+}
+
+.settings-btn--active {
+  color: var(--ion-color-accent-red);
+}
+
+.settings-btn ion-icon {
+  font-size: 22px;
 }
 </style>

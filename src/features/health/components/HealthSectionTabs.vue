@@ -36,6 +36,7 @@ const activeSegment = computed(() => {
   if (route.path.includes('/goals')) return 'goals';
   if (route.path.includes('/habits')) return 'habits';
   if (route.path.includes('/calendar')) return 'calendar';
+  if (route.path.includes('/body')) return 'body';
   return 'overview';
 });
 
@@ -49,6 +50,7 @@ const handleSegmentChange = (event: CustomEvent) => {
     goals: '/health/goals',
     habits: '/health/habits',
     calendar: '/health/calendar',
+    body: '/health/body',
   };
 
   const dest = target[value];

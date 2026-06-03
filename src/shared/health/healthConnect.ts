@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type AuthorizationStatus, type HealthSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession } from '@/shared/db/app_db';
+import { getSleepGoalHours, getStepGoal } from '@/shared/utils/userSettings';
 
 export type HealthMetricType =
   | 'steps'
@@ -90,7 +91,7 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
   const restingHrScore = inputs.restingHr === null ? 6 : clamp(16 - Math.abs(inputs.restingHr - 60) * 1.2, 0, 16);
   const sleepHeartRateScore = inputs.sleepHeartRate === null ? 4 : clamp(12 - Math.abs(inputs.sleepHeartRate - 55) * 0.8, 0, 12);
   const respiratoryRateScore = inputs.respiratoryRate === null ? 3 : clamp(8 - Math.abs(inputs.respiratoryRate - 14.5) * 1.4, 0, 8);
-  const stepPenalty = inputs.steps === null ? 0 : clamp((inputs.steps - 10000) / 1500, 0, 10);
+  const stepPenalty = inputs.steps === null ? 0 : clamp((inputs.steps - getStepGoal()) / 1500, 0, 10);
 
   const score =
     24 +
@@ -214,7 +215,7 @@ function buildSleepSummary(
     heartRateTimeline: [],
     score: calculateSleepScore({
       timeAsleepHours,
-      targetSleepHours: options.targetSleepHours ?? 8.0,
+      targetSleepHours: options.targetSleepHours ?? getSleepGoalHours(),
       efficiency,
       deepPct,
       remPct,
