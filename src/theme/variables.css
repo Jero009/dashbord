@@ -37,6 +37,10 @@
   --ion-background-color: var(--ion-color-dark);
 }
 
+ion-header::after {
+  display: none !important;
+}
+
 ion-alert.app-confirm-alert,
 ion-alert.history-delete-alert {
   --background: var(--ion-color-primary);

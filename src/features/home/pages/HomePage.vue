@@ -666,6 +666,9 @@ const baseline = computed(() => {
     sleepHeartRate: null,
     respiratoryRate: null,
     steps: steps.value,
+    rhrBaseline: null,
+    sleepHrBaseline: null,
+    respiratoryRateBaseline: null,
   });
 });
 
@@ -759,6 +762,9 @@ const loadSummary = async () => {
       sleepHeartRate,
       respiratoryRate,
       steps: steps.value,
+      rhrBaseline: null,
+      sleepHrBaseline: null,
+      respiratoryRateBaseline: null,
     });
   }
 };

@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
-import { Health, type AuthorizationStatus, type HealthSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
+import { Health, type AuthorizationStatus, type HealthSample, type AggregatedSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession } from '@/shared/db/app_db';
-import { getSleepGoalHours, getStepGoal } from '@/shared/utils/userSettings';
+import { getSleepGoalHours } from '@/shared/utils/userSettings';
 
 export type HealthMetricType =
   | 'steps'
@@ -78,6 +78,9 @@ export interface ReadinessInputs {
   sleepHeartRate: number | null;
   respiratoryRate: number | null;
   steps: number | null;
+  rhrBaseline: number | null;
+  sleepHrBaseline: number | null;
+  respiratoryRateBaseline: number | null;
 }
 
 export function isHealthConnectAvailable() {
@@ -88,10 +91,12 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
   const sleepHoursScore = inputs.sleepHours === null ? 0 : clamp((inputs.sleepHours / 8) * 18, 0, 18);
   const sleepEfficiencyScore = inputs.sleepEfficiency === null ? 0 : clamp(inputs.sleepEfficiency * 12, 0, 12);
   const sleepScoreScore = inputs.sleepScore === null ? 0 : clamp((inputs.sleepScore / 100) * 22, 0, 22);
-  const restingHrScore = inputs.restingHr === null ? 6 : clamp(16 - Math.abs(inputs.restingHr - 60) * 1.2, 0, 16);
-  const sleepHeartRateScore = inputs.sleepHeartRate === null ? 4 : clamp(12 - Math.abs(inputs.sleepHeartRate - 55) * 0.8, 0, 12);
-  const respiratoryRateScore = inputs.respiratoryRate === null ? 3 : clamp(8 - Math.abs(inputs.respiratoryRate - 14.5) * 1.4, 0, 8);
-  const stepPenalty = inputs.steps === null ? 0 : clamp((inputs.steps - getStepGoal()) / 1500, 0, 10);
+  const rhrTarget = inputs.rhrBaseline ?? 60;
+  const restingHrScore = inputs.restingHr === null ? 0 : clamp(16 - Math.abs(inputs.restingHr - rhrTarget) * 1.6, 0, 16);
+  const sleepHrTarget = inputs.sleepHrBaseline ?? 55;
+  const sleepHeartRateScore = inputs.sleepHeartRate === null ? 0 : clamp(12 - Math.abs(inputs.sleepHeartRate - sleepHrTarget) * 0.8, 0, 12);
+  const rrTarget = inputs.respiratoryRateBaseline ?? 14.5;
+  const respiratoryRateScore = inputs.respiratoryRate === null ? 0 : clamp(8 - Math.abs(inputs.respiratoryRate - rrTarget) * 1.4, 0, 8);
 
   const score =
     24 +
@@ -100,8 +105,7 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
     sleepScoreScore +
     restingHrScore +
     sleepHeartRateScore +
-    respiratoryRateScore -
-    stepPenalty;
+    respiratoryRateScore;
 
   return Math.max(0, Math.min(100, Math.round(score)));
 }
@@ -246,27 +250,27 @@ function calculateSleepScore(inputs: SleepScoreInputs): number | null {
   // Duration vs user target: 25 pts
   const durationScore = clamp((inputs.timeAsleepHours / inputs.targetSleepHours) * 25, 0, 25);
 
-  // Sleep efficiency: 15 pts (reduced to make room for WASO)
-  const efficiencyScore = clamp(inputs.efficiency * 15, 0, 15);
+  // Sleep efficiency: 17.5 pts
+  const efficiencyScore = clamp(inputs.efficiency * 17.5, 0, 17.5);
 
-  // WASO — wake after sleep onset: 10 pts (full at ≤20 min, 0 at ≥50 min)
+  // WASO: 5 pts (full ≤10 min, 0 at ≥40 min). No stage data = 0, not half-credit.
   const wasoScore = inputs.wasoMinutes === null
-    ? 5
-    : clamp(10 - Math.max(0, inputs.wasoMinutes - 20) / 3, 0, 10);
+    ? 0
+    : clamp(5 - Math.max(0, inputs.wasoMinutes - 10) / 6, 0, 5);
 
-  // Stage composition — deep: 10 pts (target ≥18%), REM: 12.5 pts (target ≥22%)
+  // Stage composition — deep: 10 pts (≥18%), REM: 17.5 pts (≥22%). No stage data = 0.
   const hasStageData = inputs.deepPct !== null || inputs.remPct !== null;
-  const deepScore = !hasStageData ? 5
-    : inputs.deepPct === null ? 5
+  const deepScore = !hasStageData || inputs.deepPct === null
+    ? 0
     : clamp((inputs.deepPct / 0.18) * 10, 0, 10);
-  const remScore = !hasStageData ? 6.25
-    : inputs.remPct === null ? 6.25
-    : clamp((inputs.remPct / 0.22) * 12.5, 0, 12.5);
+  const remScore = !hasStageData || inputs.remPct === null
+    ? 0
+    : clamp((inputs.remPct / 0.22) * 17.5, 0, 17.5);
 
-  // Bedtime timing consistency: 15 pts (0 pts at ≥60 min variance)
+  // Bedtime timing consistency: 15 pts (0 pts at ≥45 min variance)
   const timingScore = inputs.timingVarianceMinutes === null
     ? 7.5
-    : clamp(15 - (inputs.timingVarianceMinutes / 60) * 15, 0, 15);
+    : clamp(15 - (inputs.timingVarianceMinutes / 45) * 15, 0, 15);
 
   // Respiratory deviation from personal baseline: 12.5 pts (0 pts at ≥3 bpm deviation)
   const respiratoryScore =
@@ -274,7 +278,7 @@ function calculateSleepScore(inputs: SleepScoreInputs): number | null {
       ? 6.25
       : clamp(12.5 - (Math.abs(inputs.respiratoryRate - inputs.respiratoryRateBaseline) / 3) * 12.5, 0, 12.5);
 
-  return Math.round(durationScore + efficiencyScore + wasoScore + deepScore + remScore + timingScore + respiratoryScore);
+  return Math.min(100, Math.round(durationScore + efficiencyScore + wasoScore + deepScore + remScore + timingScore + respiratoryScore));
 }
 
 function toDateKey(date: string): string {
@@ -540,18 +544,23 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
 
   const endDate = new Date().toISOString();
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
-  // Steps are recorded per-minute by the Amazfit, so 30 days = ~43k samples.
-  // Use a 7-day window newest-first so today is always in the first batch.
-  const stepsStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // Continuous HR is recorded per-minute by the Amazfit (~1440/day).
+  // 30 days = ~43k samples — far over any 1000-sample limit.
+  // Use a 7-day window newest-first so recent days are always in the result set.
+  const recentStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [stepsResult, sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
-    Health.readSamples({
+    // queryAggregated returns one pre-summed total per day — avoids overcounting
+    // that happens when per-minute delta samples are manually summed.
+    // .catch guards against native bridge errors on APKs built before queryAggregated
+    // was available — a missing native method bypasses JS try/catch on Capacitor Android.
+    Health.queryAggregated({
       dataType: 'steps',
-      startDate: stepsStartDate,
+      startDate: recentStartDate,
       endDate,
-      limit: 5000,
-      ascending: false,
-    }),
+      bucket: 'day',
+      aggregation: 'sum',
+    }).catch(() => ({ samples: [] as import('@capgo/capacitor-health').AggregatedSample[] })),
     Health.readSamples({
       dataType: 'sleep',
       startDate,
@@ -559,19 +568,20 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       limit: 1000,
       ascending: true,
     }),
-    Health.readSamples({
+    // queryAggregated with min matches the resting HR shown in Health Connect.
+    Health.queryAggregated({
       dataType: 'restingHeartRate',
       startDate,
       endDate,
-      limit: 1000,
-      ascending: true,
-    }),
+      bucket: 'day',
+      aggregation: 'min',
+    }).catch(() => ({ samples: [] as import('@capgo/capacitor-health').AggregatedSample[] })),
     Health.readSamples({
       dataType: 'heartRate',
-      startDate,
+      startDate: recentStartDate,
       endDate,
-      limit: 1000,
-      ascending: true,
+      limit: 5000,
+      ascending: false,
     }),
     Health.readSamples({
       dataType: 'respiratoryRate',
@@ -583,11 +593,10 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   ]);
 
   const stepsByDate = new Map<string, number>();
-  for (const sample of stepsResult.samples) {
-    if (!Number.isFinite(sample.value)) continue;
-
-    const key = toDateKey(sample.startDate || sample.endDate);
-    stepsByDate.set(key, (stepsByDate.get(key) ?? 0) + sample.value);
+  for (const sample of (stepsResult as { samples: AggregatedSample[] }).samples) {
+    if (!Number.isFinite(sample.value) || sample.value <= 0) continue;
+    const key = toDateKey(sample.startDate);
+    stepsByDate.set(key, sample.value);
   }
 
   const sleepByDate = new Map<string, { samples: HealthSample[] }>();
@@ -612,14 +621,11 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     heartRateByDate.set(key, bucket);
   }
 
-  const restingHeartRateByDate = new Map<string, { values: number[] }>();
-  for (const sample of restingHeartRateResult.samples) {
-    if (!Number.isFinite(sample.value)) continue;
-
-    const key = toDateKey(sample.startDate || sample.endDate);
-    const bucket = restingHeartRateByDate.get(key) ?? { values: [] };
-    bucket.values.push(sample.value);
-    restingHeartRateByDate.set(key, bucket);
+  const restingHeartRateByDate = new Map<string, number>();
+  for (const sample of (restingHeartRateResult as { samples: AggregatedSample[] }).samples) {
+    if (!Number.isFinite(sample.value) || sample.value <= 0) continue;
+    const key = toDateKey(sample.startDate);
+    restingHeartRateByDate.set(key, Math.round(sample.value));
   }
 
   const respiratoryRateByDate = new Map<string, { values: number[] }>();
@@ -765,11 +771,9 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     }
   }
 
-  for (const [date, bucket] of restingHeartRateByDate.entries()) {
-    const restingHr = average(bucket.values);
-    if (restingHr === null) continue;
+  for (const [date, restingHr] of restingHeartRateByDate.entries()) {
     try {
-      await replaceHealthMetric(date, 'resting_heart_rate', Math.round(restingHr), 'bpm', HEALTH_CONNECT_SOURCE);
+      await replaceHealthMetric(date, 'resting_heart_rate', restingHr, 'bpm', HEALTH_CONNECT_SOURCE);
       synced += 1;
     } catch (e) {
       console.error(`[healthConnect] Resting HR sync failed for ${date}:`, e);
@@ -787,14 +791,21 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     }
   }
 
-  const readinessDates = new Set([...sleepByDate.keys(), ...restingHeartRateByDate.keys()]);
+  const BASELINE_WINDOW = 14;
+  const rollingRhrValues: number[] = [];
+  const rollingSleepHrValues: number[] = [];
+  const rollingRespRateValues: number[] = [];
+
+  const readinessDates = new Set(
+    [...sleepByDate.keys(), ...restingHeartRateByDate.keys()].sort()
+  );
   for (const date of readinessDates) {
     const sleepBucket = sleepByDate.get(date);
     const latestSample = sleepBucket?.samples[sleepBucket.samples.length - 1] ?? null;
     const sleepHours = average(
       (sleepBucket?.samples ?? []).map((sample) => getSleepHours(sample)).filter((value): value is number => value !== null)
     );
-    const restingHr = average(restingHeartRateByDate.get(date)?.values ?? []);
+    const restingHr = restingHeartRateByDate.get(date) ?? null;
     const sleepHeartRate = average(heartRateByDate.get(date)?.values ?? []);
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
     const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate) : null;
@@ -802,6 +813,21 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     if (sleepHours === null && restingHr === null && sleepSummary === null) {
       continue;
     }
+
+    // Compute prior-N-night baselines before pushing today's values
+    const rhrBaseline = rollingRhrValues.length >= 3
+      ? rollingRhrValues.slice(-BASELINE_WINDOW).reduce((s, v) => s + v, 0) / Math.min(rollingRhrValues.length, BASELINE_WINDOW)
+      : null;
+    const sleepHrBaseline = rollingSleepHrValues.length >= 3
+      ? rollingSleepHrValues.slice(-BASELINE_WINDOW).reduce((s, v) => s + v, 0) / Math.min(rollingSleepHrValues.length, BASELINE_WINDOW)
+      : null;
+    const rrBaseline = rollingRespRateValues.length >= 3
+      ? rollingRespRateValues.slice(-BASELINE_WINDOW).reduce((s, v) => s + v, 0) / Math.min(rollingRespRateValues.length, BASELINE_WINDOW)
+      : null;
+
+    if (restingHr !== null) rollingRhrValues.push(restingHr);
+    if (sleepHeartRate !== null) rollingSleepHrValues.push(sleepHeartRate);
+    if (respiratoryRate !== null) rollingRespRateValues.push(respiratoryRate);
 
     const readinessInputs = {
       sleepHours: sleepSummary?.timeAsleepHours ?? sleepHours,
@@ -811,6 +837,9 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       sleepHeartRate,
       respiratoryRate,
       steps: stepsByDate.get(date) ?? null,
+      rhrBaseline,
+      sleepHrBaseline,
+      respiratoryRateBaseline: rrBaseline,
     };
 
     await upsertReadinessScore(date, calculateReadinessScore(readinessInputs), {
@@ -831,6 +860,7 @@ export interface BatteryDrains {
   workout: number;
   activity: number;
   event: number;
+  circadian: number;
 }
 
 export interface BatteryResult {
@@ -850,9 +880,10 @@ export function calculateBattery(
   events: { type: string; date: string; time_start: string | null; time_end: string | null }[],
   circadianScore: number | null = null
 ): BatteryResult {
-  // Circadian modifier: irregular rhythm (low score) reduces effective baseline by up to 10%
-  const circMod = circadianScore !== null ? (0.9 + 0.1 * circadianScore / 100) : 1.0;
+  // Circadian modifier: irregular rhythm reduces effective baseline by up to 18%
+  const circMod = circadianScore !== null ? (0.82 + 0.18 * circadianScore / 100) : 1.0;
   const adjustedBaseline = Math.round(clamp(baseline * circMod, 0, 100));
+  const circadianDrain = Math.round(baseline - adjustedBaseline);
 
   // 1. Time drain — gradual fatigue through the day
   const timeDrain = Math.max(0, adjustedBaseline - applyReadinessDrain(adjustedBaseline, now));
@@ -862,7 +893,7 @@ export function calculateBattery(
     workouts.reduce((sum, w) => {
       const durationMins = Math.max(0, (new Date(w.time_end).getTime() - new Date(w.time_start).getTime()) / 60000);
       const fromDuration = clamp(durationMins / 3, 0, 20);
-      const fromVolume = clamp((w.total_kg ?? 0) / 300, 0, 15);
+      const fromVolume = clamp((w.total_kg ?? 0) / 200, 0, 15);
       return sum + fromDuration + fromVolume;
     }, 0),
     0, 35
@@ -910,6 +941,7 @@ export function calculateBattery(
       workout: Math.round(workoutDrain),
       activity: Math.round(effectiveActivityDrain),
       event: Math.round(eventDrain),
+      circadian: circadianDrain,
     },
     readyToTrain: score >= 60,
     readyToStudy: score >= 40,

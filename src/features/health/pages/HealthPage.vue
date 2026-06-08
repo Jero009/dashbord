@@ -223,11 +223,14 @@ type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: s
 // --- State ---
 const sleepHours      = ref<number | null>(null);
 const sleepScore      = ref<number | null>(null);
-const sleepEfficiency = ref<number | null>(null);
-const sleepHr         = ref<number | null>(null);
-const respRate        = ref<number | null>(null);
-const restingHr       = ref<number | null>(null);
-const steps           = ref<number | null>(null);
+const sleepEfficiency  = ref<number | null>(null);
+const sleepHr          = ref<number | null>(null);
+const respRate         = ref<number | null>(null);
+const restingHr        = ref<number | null>(null);
+const steps            = ref<number | null>(null);
+const rhrBaseline      = ref<number | null>(null);
+const sleepHrBaseline  = ref<number | null>(null);
+const respRateBaseline = ref<number | null>(null);
 const readinessScore  = ref<number | null>(null);
 const batteryResult   = ref<BatteryResult | null>(null);
 const circScore       = ref<number | null>(null);
@@ -339,20 +342,24 @@ const loadMetrics = async () => {
 };
 
 const loadReadiness = async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const _d = new Date();
+  const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
   let stored = await getReadinessScore(today);
   if (!stored) stored = await getLatestReadinessScore();
 
   const baseline = stored?.score != null
     ? Number(stored.score)
     : calculateReadinessScore({
-        sleepHours:      sleepHours.value,
-        sleepEfficiency: sleepEfficiency.value,
-        sleepScore:      sleepScore.value,
-        restingHr:       restingHr.value,
-        sleepHeartRate:  sleepHr.value,
-        respiratoryRate: respRate.value,
-        steps:           steps.value,
+        sleepHours:               sleepHours.value,
+        sleepEfficiency:          sleepEfficiency.value,
+        sleepScore:               sleepScore.value,
+        restingHr:                restingHr.value,
+        sleepHeartRate:           sleepHr.value,
+        respiratoryRate:          respRate.value,
+        steps:                    steps.value,
+        rhrBaseline:              rhrBaseline.value,
+        sleepHrBaseline:          sleepHrBaseline.value,
+        respiratoryRateBaseline:  respRateBaseline.value,
       });
 
   const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, todayEvents.value, circScore.value);
@@ -403,11 +410,13 @@ const loadTodayContext = async () => {
 
 const loadCircadianScore = async () => {
   try {
-    const [sessions, logs, rhrMetric, rhrHistory] = await Promise.all([
+    const [sessions, logs, rhrMetric, rhrHistory, sleepHrHistory, respRateHistory] = await Promise.all([
       getRecentSleepSessions(14),
       getRecentCircadianLogs(14),
       getLatestHealthMetric('resting_heart_rate'),
       getRecentHealthMetrics('resting_heart_rate', 14),
+      getRecentHealthMetrics('sleep_heart_rate', 14),
+      getRecentHealthMetrics('respiratory_rate', 14),
     ]);
     const dayTypes = new Map<string, DayType>(logs.map(l => [l.date, l.day_type as DayType]));
     const recs = sessions.map(s => ({
@@ -419,6 +428,11 @@ const loadCircadianScore = async () => {
     const rhrBase  = rhrHistory.length
       ? rhrHistory.reduce((s, m) => s + Number(m.value), 0) / rhrHistory.length
       : null;
+    rhrBaseline.value     = rhrBase;
+    sleepHrBaseline.value = sleepHrHistory.length >= 3
+      ? sleepHrHistory.reduce((s, m) => s + Number(m.value), 0) / sleepHrHistory.length : null;
+    respRateBaseline.value = respRateHistory.length >= 3
+      ? respRateHistory.reduce((s, m) => s + Number(m.value), 0) / respRateHistory.length : null;
     circScore.value = computeCircadianScore(recs, rhrToday, rhrBase).total;
   } catch { circScore.value = null; }
 };

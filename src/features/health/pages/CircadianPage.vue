@@ -32,16 +32,19 @@
 
             <div class="metric-grid">
               <div class="card-metric">
-                <span class="metric-label">MSFsc</span>
+                <span class="metric-label">Sleep midpoint</span>
                 <strong class="metric-value">{{ profile?.msfsc != null ? formatHour(profile.msfsc) : '—' }}</strong>
+                <span class="metric-sub">free-day chronotype</span>
               </div>
               <div class="card-metric">
-                <span class="metric-label">Est. DLMO</span>
+                <span class="metric-label">Melatonin onset</span>
                 <strong class="metric-value">{{ profile?.dlmoEstimate != null ? formatHour(profile.dlmoEstimate) : '—' }}</strong>
+                <span class="metric-sub">est. sleep drive start</span>
               </div>
               <div class="card-metric">
-                <span class="metric-label">CTmin</span>
+                <span class="metric-label">Temp minimum</span>
                 <strong class="metric-value">{{ profile?.ctminEstimate != null ? formatHour(profile.ctminEstimate) : '—' }}</strong>
+                <span class="metric-sub">deepest sleep marker</span>
               </div>
               <div class="card-metric" :class="{ 'card-metric--warn': (profile?.socialJetlag ?? 0) > 1.5 }">
                 <span class="metric-label">Social jetlag</span>
@@ -49,6 +52,7 @@
                   {{ profile?.socialJetlag != null ? profile.socialJetlag.toFixed(1) + ' h' : '—' }}
                   <span v-if="(profile?.socialJetlag ?? 0) > 1.5" class="warn-flag">high</span>
                 </strong>
+                <span class="metric-sub">work vs free-day offset</span>
               </div>
             </div>
           </div>
@@ -101,6 +105,31 @@
                 class="alertness-svg"
                 aria-hidden="true"
               >
+                <!-- Recommended sleep band (wraps midnight: two rects) -->
+                <template v-if="windows">
+                  <!-- from bedtime to end of day -->
+                  <rect
+                    :x="windows.bedtimeTarget"
+                    y="0"
+                    :width="24 - windows.bedtimeTarget"
+                    height="10"
+                    class="sleep-band"
+                  />
+                  <!-- from start of day to wake -->
+                  <rect
+                    x="0"
+                    y="0"
+                    :width="avgWakeHour"
+                    height="10"
+                    class="sleep-band"
+                  />
+                  <text
+                    :x="(windows.bedtimeTarget + 24) / 2"
+                    y="5.5"
+                    class="sleep-band-label"
+                    text-anchor="middle"
+                  >sleep</text>
+                </template>
                 <!-- Area fill -->
                 <polygon
                   :points="`0,10 ${alertnessCurve.map(p => `${p.hour},${(1 - p.alertness) * 9 + 0.5}`).join(' ')} 23,10`"
@@ -362,6 +391,7 @@ const windows = ref<CircadianWindows | null>(null);
 const recs = ref<CircadianRecommendations | null>(null);
 const todayLog = ref<CircadianLogEntry | null>(null);
 const loading = ref(true);
+const avgWakeHour = ref(7.0);
 
 // Daily log form state
 const formDayType = ref<'work' | 'free'>('work');
@@ -432,15 +462,15 @@ const loadData = async () => {
   profile.value = computedProfile;
   score.value = computeCircadianScore(sleepRecords, rhrToday, rhrBaseline);
 
-  const avgWakeHour = sleepRecords.length
+  avgWakeHour.value = sleepRecords.length
     ? sleepRecords.slice(0, 7).reduce((s, r) => {
         const d = new Date(r.waketime);
         return s + d.getHours() + d.getMinutes() / 60;
       }, 0) / Math.min(sleepRecords.length, 7)
     : 7.0;
 
-  alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour);
-  const w = computeCircadianWindows(computedProfile, avgWakeHour);
+  alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour.value);
+  const w = computeCircadianWindows(computedProfile, avgWakeHour.value);
   windows.value = w;
   recs.value = computeCircadianRecommendations(computedProfile, w, computedProfile.socialJetlag, []);
 
@@ -550,6 +580,12 @@ const saveLog = async () => {
 
 .card-metric--warn {
   border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.metric-sub {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.03em;
 }
 
 .metric-label {
@@ -688,6 +724,16 @@ const saveLog = async () => {
   width: 100%;
   height: 80px;
   display: block;
+}
+
+.sleep-band {
+  fill: rgba(255, 255, 255, 0.05);
+}
+
+.sleep-band-label {
+  fill: rgba(255, 255, 255, 0.25);
+  font-size: 0.8px;
+  font-family: sans-serif;
 }
 
 .curve-area {

@@ -146,13 +146,20 @@ export function computeCircadianProfile(
     const freeMidSleeps = freeSessions.map(s => {
       const bed  = toDecimalHours(s.bedtime);
       const wake = toDecimalHours(s.waketime);
-      const ms   = midSleep(bed, wake);
-      // MSFsc correction: subtract half of sleep debt (free sleep - avg sleep)
-      const avgSleep = recent.reduce((acc, r) => acc + r.timeAsleepHours, 0) / recent.length;
-      const correction = Math.max(0, (s.timeAsleepHours - avgSleep) / 2);
-      return normalizeHour(ms - correction);
+      return midSleep(bed, wake);
     });
-    msfsc = circularMean(freeMidSleeps);
+    const msf = circularMean(freeMidSleeps);
+
+    // Roenneberg MSFsc: correct for sleep debt accumulated on free days
+    // MSFsc = MSF − (SDfree/2 − 5) × (SDwork − SDfree) / SDwork
+    const sdFree = freeSessions.reduce((s, r) => s + r.timeAsleepHours, 0) / freeSessions.length;
+    const sdWork = workSessions.length >= 1
+      ? workSessions.reduce((s, r) => s + r.timeAsleepHours, 0) / workSessions.length
+      : sdFree;
+    const correction = sdWork > 0
+      ? (sdFree / 2 - 5) * (sdWork - sdFree) / sdWork
+      : 0;
+    msfsc = normalizeHour(msf - correction);
 
     if (workSessions.length >= 2) {
       const workMidSleeps = workSessions.map(s => {
@@ -186,12 +193,10 @@ export function computeCircadianProfile(
     else chronotype = 'intermediate';
   }
 
-  // DLMO ≈ sleep onset (free days) − 2h, or avg onset − 2h
-  const dlmoBase = freeSessions.length >= 2
-    ? circularMean(freeSessions.map(s => toDecimalHours(s.bedtime)))
-    : avgSleepOnset;
-  const dlmoEstimate = dlmoBase !== null ? normalizeHour(dlmoBase - 2) : null;
-  const ctminEstimate = dlmoEstimate !== null ? normalizeHour(dlmoEstimate + 6) : null;
+  // DLMO ≈ MSFsc − 2.5h (Lockley/Burgess: DLMO precedes sleep midpoint by ~2–3h)
+  const dlmoEstimate = msfsc !== null ? normalizeHour(msfsc - 2.5) : null;
+  // CTmin ≈ DLMO + 7h (Czeisler/Van Dongen: body temp nadir ~7h after melatonin onset)
+  const ctminEstimate = dlmoEstimate !== null ? normalizeHour(dlmoEstimate + 7) : null;
 
   return {
     msfsc,
@@ -230,7 +235,8 @@ export function computeCircadianScore(
   // Higher daily activity contrast (long wake, good sleep) = higher RA
   const avgSleepH = recent.reduce((s, r) => s + r.timeAsleepHours, 0) / recent.length;
   const avgWakeH  = 24 - avgSleepH;
-  const ra        = Math.abs(avgWakeH - avgSleepH) / 24;   // 0–1
+  // True relative amplitude: (wake − sleep) / (wake + sleep), uses full 0–1 range
+  const ra        = avgWakeH + avgSleepH > 0 ? (avgWakeH - avgSleepH) / (avgWakeH + avgSleepH) : 0;
   const amplitude = clamp(Math.round(ra * 100), 0, 100);
 
   // Efficiency: mean sleep efficiency (0–100)

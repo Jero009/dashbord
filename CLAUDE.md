@@ -21,192 +21,154 @@ npm run test:e2e      # Cypress (requires dev server running separately)
 
 ### Feature Modules
 
-`src/features/` holds isolated feature modules: **gym**, **health**, **finance**, **home**, **plan**. Each follows:
-
-```
-features/[name]/
-├── routes.ts       # Vue Router config for this feature
-├── pages/          # Route-level components
-└── components/     # Components scoped to this feature
-```
-
-Routes are lazy-loaded and merged in `src/router/index.ts`.
+`src/features/` — isolated modules: **gym**, **health**, **finance**, **home**, **plan**. Each has `routes.ts`, `pages/`, `components/`. Routes are lazy-loaded and merged in `src/router/index.ts`.
 
 ### Shared Layer
 
 `src/shared/` for cross-feature concerns:
 - `db/app_db.ts` — single SQLite instance, all DB functions exported from here
-- `health/` — Health Connect sync (`HealthConnectAutoSync.vue` is mounted in `App.vue` and runs on startup)
-- `utils/` — formatting, type conversions
+- `health/` — Health Connect sync (`HealthConnectAutoSync.vue` mounted in `App.vue`, runs on startup)
+- `utils/` — formatting, type conversions, haptics, notifications
 - `components/` — global UI components
 
 ### Data Flow
 
-Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `upsertReadinessScore()`, `replaceHealthMetric()`). No global state store — state lives in Vue `ref`/`computed` local to each page. Rest timer state uses `sessionStorage`.
+Pages call exported functions from `src/shared/db/app_db.ts` directly. No global state store — state lives in `ref`/`computed` local to each page. Rest timer state uses `sessionStorage`.
 
 ### DB Conventions
 
 - All DB access goes through `app_db.ts`; function names follow `upsert*`, `replace*`, `delete*`, `query*`, `get*`
 - Booleans stored as `0`/`1`
 - SQLite unavailable on web — DB calls must tolerate empty/null results
+- **New DB tables**: Add to `EXPORT_DELETE_TABLES`, `EXPORT_INSERT_TABLES`, `deleteOrder`, and `insertOrder` in `importDatabaseFromSQL` — all four lists.
+- **Nullable unique columns**: Never `WHERE col = NULL`. Use `(col = ? OR (col IS NULL AND ? IS NULL))` in any upsert on a nullable unique column.
 
 ### Health Connect
 
 - Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
-- Check availability before calling — not present on all Android devices
-- `HealthConnectAutoSync.vue` does an initial sync on mount, then retries after 6 s to recover from cold-start race conditions where HC isn't ready yet
-- Readiness score is derived from sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, and steps
-- Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (15), WASO/wake-after-sleep-onset (10), deep% at ≥18% target (10), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (12.5). WASO sourced from `stageSummaries['awake']` minutes — no extra HC permissions. Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
+- `HealthConnectAutoSync.vue` — initial sync on mount + 6 s retry for cold-start race condition
+- Readiness score inputs: sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, steps
+- Sleep score (`calculateSleepScore` in `healthConnect.ts`) — 100-pt model: duration vs target (25), efficiency (15), WASO (10), deep% ≥18% (10), REM% ≥22% (12.5), bedtime timing variance vs 14-night mean (15), respiratory rate vs 14-night baseline (12.5). Returns `number | null` — null when `timeAsleepHours < 1`.
 - User device: Amazfit Active 2 via Zepp Health → Health Connect. Provides sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
+- **`toDateKey` uses local date**: extracts `YYYY-MM-DD` using `getFullYear/getMonth/getDate` (NOT `.toISOString().slice(0,10)`). UTC slice was off-by-one for UTC+ timezones.
+- **Steps sync**: separate query window (7 days, 5000-record limit, `ascending: false`) so today's steps are always in the result set.
 
-### Calendar Event Types, Recurrence & Battery Impact
+### Battery Score
 
-`HealthCalendarPage.vue` supports event types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. Each type has a CSS tag color class (`item-tag--<type>`). `calculateBattery()` in `healthConnect.ts` applies `drainPerHour` per event: school=+2/hr (reduced from 5), sleep=−5/hr (others defined separately).
+`calculateBattery(baseline, now, workouts, activities, events, circadianScore?)` in `healthConnect.ts`:
+- Drains: time (gradual), workout (gym log), activity (HC activities — only when no gym workout today), events (calendar)
+- `eventDrain` inner clamp is `(-5, 15)` per event; outer clamp is `(-20, 25)` — lower bound must stay negative to allow sleep/recovery events to benefit the score
+- School events drain `+2/hr`. Sleep events drain `−5/hr`.
+- Optional 6th param `circadianScore: number | null = null` applies a `0.90–1.00` multiplier to the baseline (irregular rhythm → up to 10% penalty). `HealthPage.vue` computes and passes it.
+- Shown as hero on `HealthPage.vue` and as tile on `HomePage.vue`.
 
-Calendar events have an `end_date` column for multi-day events. Smart delete: when deleting a recurring event, user is prompted to delete only that occurrence or all future occurrences.
+### Calendar Events
 
-Calendar events support a `recurrence` column: `none` | `daily` | `weekly`. `getCalendarEventsForDate` uses `strftime('%w', date)` matching for weekly recurrence. `getCalendarEventDatesForMonth` expands recurring events into month dot indicators. Any new event type must have a validated recurrence value (checked against allowlist in `addCalendarEvent`).
+`HealthCalendarPage.vue` supports types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. CSS class: `item-tag--<type>`.
 
-### Body Log Feature
+- `recurrence`: `none` | `daily` | `weekly`. Queries use `strftime('%w', date)` for weekly matching.
+- `end_date TEXT` column: set by `stopCalendarEventAt(id, lastDate)` to end a recurring event from a date forward without deleting history. `getCalendarEventsForDate` filters `end_date IS NULL OR end_date >= ?`.
+- New event types must pass the allowlist in `addCalendarEvent`. New event types need a drain rate in `calculateBattery`.
 
-- `body_log` table in `app_db.ts`: `id`, `date`, `weight_kg`, `notes`, `photo_path`
-- DB functions: `insertBodyLog`, `getBodyLogs` (DESC order), `deleteBodyLog`, `BodyLogEntry` interface
-- Photos stored via `@capacitor/filesystem` in `Directory.Data/body_photos/`; picked via `@capawesome/capacitor-file-picker`
-- Route: `/health/body` → `BodyPage.vue`; "Body" tab added to `HealthSectionTabs.vue`
-- `body_log` is included in both `EXPORT_DELETE_TABLES` and `EXPORT_INSERT_TABLES`; must remain in both if schema changes
-- After a successful weight log for today, `BodyPage.vue` calls `dismissWeightReminder()` from `src/shared/utils/notifications.ts`
+### Body Log
+
+- `body_log` table: `id, date, weight_kg, notes, photo_path`
+- Photos: `@capacitor/filesystem` in `Directory.Data/body_photos/`, picked via `@capawesome/capacitor-file-picker`
+- Route: `/health/body` → `BodyPage.vue`. After logging weight, calls `dismissWeightReminder()`.
 
 ### Health Overview Page
 
-`HealthPage.vue` uses plain `<div>` cards only (no `ion-card`). Sections: **battery hero** (full `calculateBattery()` score + color-coded bar + 3 mini tiles; loads `todayWorkouts` + `todayEvents` via `loadTodayContext`), sleep detail (5 metrics + insight line), body card (HR, resp rate, weight), activities list, 14-day readiness history SVG chart, compact sync button. DB function: `queryReadinessHistory(days)` in `app_db.ts`.
-
-Health tab (`HealthSectionTabs.vue`) now shows: Overview / Sleep / Body / Circadian. Goals, Habits, and Calendar moved to the Plan tab.
+`HealthPage.vue` — `<div>` cards only (no `ion-card`). Sections: battery hero (drain breakdown tiles + Train/Study badges), sleep detail (score + 4 metrics + insight), body (resting HR, steps, weight), today's schedule strip, 14-day readiness SVG chart, sync button. `HealthSectionTabs.vue` tabs: **Overview / Sleep / Body / Circadian**.
 
 ### Plan Feature Module
 
-`src/features/plan/` — routes: `/plan`, `/plan/goals`, `/plan/habits`, `/plan/calendar`. `PlanPage.vue` is the landing page with nav tiles. `PlanSectionTabs.vue` is the sub-nav (Overview/Goals/Habits/Calendar). `/plan/goals`, `/plan/habits`, `/plan/calendar` reuse the existing Health page components (`HealthGoalsPage`, `HealthHabitsPage`, `HealthCalendarPage`).
+`src/features/plan/` — routes `/plan`, `/plan/goals`, `/plan/habits`, `/plan/calendar`. `PlanPage.vue` shows a live "Today" snapshot card (habits done, next event, active goals). `/plan/goals`, `/plan/habits`, `/plan/calendar` reuse Health page components.
 
-**Conditional sub-nav pattern**: `HealthGoalsPage`, `HealthHabitsPage`, and `HealthCalendarPage` each render `PlanSectionTabs` when served under `/plan/*`, and `HealthSectionTabs` otherwise — detected via `useRoute().path.startsWith('/plan')`.
+**Conditional sub-nav**: `HealthGoalsPage`, `HealthHabitsPage`, `HealthCalendarPage` render `PlanSectionTabs` under `/plan/*`, `HealthSectionTabs` otherwise — detected via `route.path.startsWith('/plan')`.
 
-**Tab order** in `DashboardTopBar.vue`: Home / Finance / Health / Plan / Gym (Gym is last; `scrollable` enabled). Active-tab check tests `/plan` before `/health` so `/plan/*` paths correctly highlight Plan.
+**Tab order** in `DashboardTopBar.vue`: Home / Finance / Health / Plan / Gym. Active-tab check tests `/plan` before `/health`.
 
 ### Sleep Hypnogram
 
-`SleepPage.vue` uses a single SVG hypnogram (replaces old per-stage swimlane rows). Stages occupy fixed vertical bands top-to-bottom: Awake (yellow), REM (teal), Light (medium blue), Deep (dark blue). Vertical connector lines link transitions. Right-side labels: Aw/RE/Li/De. Removed computeds: `sleepStageLanes`, `stageClass`, `stageStyle`.
+`SleepPage.vue` — single SVG hypnogram. Fixed vertical bands (top→bottom): Awake (yellow), REM (teal), Light (blue), Deep (dark blue). Connector lines between stage transitions. Right-side labels: Aw/RE/Li/De. Stage name aliases handle Health Connect variants (`sleeping`, `out_of_bed`, `unknown`). `wakeHour` clamped to `[4, 13]` to guard UTC offset errors.
 
 ### Circadian Rhythm Module
 
-`src/shared/health/circadian.ts` — pure computation engine (no DB, no Vue):
-- `computeCircadianProfile(sessions, dayTypes)` — MSFsc chronotype, DLMO/CTmin estimates, sleep consistency, social jetlag
-- `computeCircadianScore(sessions, rhrToday, rhrBaseline)` — 100-pt health score: consistency (35%), amplitude/RA (25%), efficiency (25%), recovery (15%)
-- `computeAlertnessCurve(profile, wakeHour)` — two-process model (Borbély): Process C = `0.5 - 0.5*cos(phaseAngle)`, minimum at CTmin, maximum at CTmin+12h; Process S = exponential wake buildup / sleep decay
-- `computeCircadianWindows(profile, wakeHour)` — timing windows: cognitive peak (CTmin+2 → CTmin+8), exercise morning (wake+0.5 → wake+2.5), exercise afternoon (wake+6 → wake+9), last meal, bedtime target. Windows are **wake-anchored**, not CTmin-anchored (CTmin too noisy for scheduling)
-- `computeCircadianRecommendations(profile, windows, socialJetlag, workoutTimes)` — text nudges
+`src/shared/health/circadian.ts` — pure TS computation, no DB or Vue:
+- `computeCircadianProfile(sessions, dayTypes)` — MSFsc chronotype, DLMO/CTmin estimates, sleep consistency, social jetlag. Needs ≥3 sessions; free-day flag needed for accurate MSFsc.
+- `computeCircadianScore(sessions, rhrToday, rhrBaseline)` — 0–100: consistency 35%, amplitude 25%, efficiency 25%, recovery 15%
+- `computeAlertnessCurve(profile, wakeHour)` — two-process model. Process C = `0.5 - 0.5*cos(phaseAngle)`, minimum at CTmin, maximum at CTmin+12h. Process S = exponential buildup/decay.
+- `computeCircadianWindows(profile, wakeHour)` — timing windows **anchored to wake time** (not CTmin — too noisy): morning exercise = wake+0.5h→wake+2.5h, afternoon = wake+6h→wake+9h, cognitive peak = CTmin+2h→CTmin+8h.
+- `computeCircadianRecommendations(...)` — text nudges
 
-**Guard**: both `computeAlertnessCurve` and `computeCircadianWindows` clamp `wakeHour` to `[4, 13]` — protects against UTC offset errors from HC timestamps producing nonsense wake times (1–3am).
+**Guard**: `computeAlertnessCurve` and `computeCircadianWindows` clamp `wakeHour` to `[4, 13]`.
 
-**DB**: `circadian_log` table in `app_db.ts` (columns: `id, date, day_type, morning_light, wake_energy, noon_energy, evening_energy, notes`). Functions: `upsertCircadianLog`, `getCircadianLog(date)`, `getRecentCircadianLogs(days)`. Included in `EXPORT_DELETE_TABLES`, `EXPORT_INSERT_TABLES`, `deleteOrder`, `insertOrder`.
+**DB**: `circadian_log` table — `id, date, day_type, energy_wake, energy_noon, energy_evening, meal_first, meal_last, morning_light, notes`. Functions: `upsertCircadianLog`, `getCircadianLog(date)`, `getRecentCircadianLogs(days)`. In all 4 export/import lists.
 
 **Route**: `/health/circadian` → `CircadianPage.vue`. "Circadian" tab in `HealthSectionTabs.vue`.
 
-**Battery integration**: `calculateBattery()` accepts optional 6th param `circadianScore: number | null = null`. When provided, applies a `0.90–1.00` multiplier to the base score (low circadian score = 10% reduction). `HealthPage.vue` computes and passes it.
+**Notifications**: `scheduleCircadianNudges(morning, noon, cogPeakLabel)` in `notifications.ts` — IDs 8 (morning) and 9 (noon).
 
-**Notifications**: `scheduleCircadianNudges(morning, noon, cogPeakLabel)` in `notifications.ts` schedules IDs 8 (morning light) and 9 (cognitive peak).
+**HomePage integration**: alertness curve SVG card with zone bands + contextual daily log widget (shows different fields by time of day: morning = day type + morning light + wake energy; noon = noon energy; evening = evening energy). Auto-saves on tap.
 
 ### Google Drive Backup
 
-`src/shared/utils/driveBackup.ts` — daily DB export to Google Drive via `@codetrix-studio/capacitor-google-auth`. Triggered on app start from `HealthConnectAutoSync.vue` and manually from `SettingsPage.vue`. Requires external Google Cloud setup (Drive API + OAuth client ID + SHA-1 fingerprint) before the code has any effect.
+`src/shared/utils/driveBackup.ts` — daily DB export via `@codetrix-studio/capacitor-google-auth`. Triggered on app start and manually from `SettingsPage.vue`. Requires Google Cloud setup (Drive API + OAuth client ID + SHA-1 fingerprint).
 
 ## Key Conventions
 
 - `<script setup lang="ts">` for all components; no `reactive()` unless complex state demands it
-- Import types with `import type { ... }`
-- Use `@/` path alias for all imports (maps to `src/`)
-- Use scoped styles in feature flow pages to prevent leakage
-- `no-console` / `no-debugger` are warnings in dev, errors in production builds
-- **Chart.js**: Always destroy chart instance in `onUnmounted`. Use `flush: 'post'` in `watch` callbacks that re-render charts. Unified style: `rgb(239,68,68)` line, `rgba(255,255,255,0.4)` ticks, `rgba(255,255,255,0.1)` grid, `animation: false`, dark tooltip.
-- **DB nullable unique columns**: Never use `WHERE col = NULL`. Use `(col = ? OR (col IS NULL AND ? IS NULL))` pattern in `replaceHealthMetric` and any similar upsert.
-- **New DB tables**: Always add to both `EXPORT_DELETE_TABLES` and `EXPORT_INSERT_TABLES` immediately.
-- **Build + sync order**: `npm run build` THEN `npx cap sync` before any APK rebuild. Skipping build causes stale `dist/` to be synced.
-- **Progressive overload hint**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% weight increase rounded to nearest 2.5 kg, display-only.
-- **Weekly digest**: `getWeeklyDigest()` in `app_db.ts` exists but its UI card was removed from `HomePage.vue` (broken). Do not re-add without verifying the function.
-- **Battery score**: `calculateBattery()` in `healthConnect.ts` — shown as a tile on `HomePage.vue` (scores-row alongside Sleep Score) and as the hero on `HealthPage.vue`. `eventDrain` clamp lower bound is `-20` (not 0) — must stay negative to allow recovery/sleep events to benefit the score. Signature: `calculateBattery(workouts, events, sleep, hr, steps, circadianScore?)`.
-- **Workout double-drain bug (fixed)**: `calculateBattery` previously drained for both workout events in the calendar AND the same workouts in the gym log. Fixed by only draining calendar events; gym-log workouts are NOT double-counted.
-- **`toDateKey` uses local date**: `toDateKey(date)` extracts `YYYY-MM-DD` using `getFullYear/getMonth/getDate` (not `.toISOString().slice(0,10)`). Critical for steps sync — UTC slice was off-by-one for timezones ahead of UTC.
-- **Steps sync query**: Uses a separate query window (7 days, 5000-record limit, `ascending: false`) so today's steps are always in range regardless of offset.
-- **Haptics utility**: `src/shared/utils/haptics.ts` — `hapticLight`, `hapticMedium`, `hapticHeavy`, `hapticSuccess`, `hapticWarning`, `hapticError`, `hapticSelect`. All no-ops on web. Wire into interactive elements (buttons, tab taps, form submits) for native feel.
-- **No raw unicode checkmarks/crosses in templates** — use ionicons (`ion-icon`) instead of `✓`, `×`, `✕`.
-- **New DB tables**: Always add to both `EXPORT_DELETE_TABLES` and `EXPORT_INSERT_TABLES` AND to `deleteOrder`/`insertOrder` in `importDatabaseFromSQL`.
-- **Plan page live snapshot**: `PlanPage.vue` shows a "Today" card with live habit completion count, next upcoming event, and active goal count — loaded from DB on mount.
-- **Health overview additions**: Battery hero now shows drain breakdown tiles (workout drain, event drain, bonus). Sleep score tile has a colored left border indicating score level. Today's schedule strip shows upcoming events inline.
+- Import types with `import type { ... }`; use `@/` path alias for all imports
+- Scoped styles in feature pages to prevent leakage
+- `no-console` / `no-debugger` warnings in dev, errors in prod
+- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. Style: `rgb(239,68,68)` line, `rgba(255,255,255,0.4)` ticks, `rgba(255,255,255,0.1)` grid, `animation: false`.
+- **Build + sync order**: `npm run build` THEN `npx cap sync` before APK rebuild.
+- **No raw unicode checkmarks/crosses** — use `ion-icon` instead of `✓`, `×`, `✕`.
+- **No emojis** anywhere in the UI.
+- **Progressive overload**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% increase, rounded to nearest 2.5 kg, display-only.
+- **Weekly digest**: `getWeeklyDigest()` exists in `app_db.ts` but UI was removed (broken). Do not re-add without verifying.
+- **Haptics**: `src/shared/utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Wire into all interactive elements. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after successful save, Select = picker/option select.
+- **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment.
 
 ## Design System
 
-**ALWAYS follow these rules when writing or editing any component.** Do not invent new patterns — extend existing ones.
-
-### No emojis
-Never use emoji characters anywhere in the UI — not in templates, not in labels, not as icon substitutes. Use text initials, abbreviations, or ionicons instead.
+**ALWAYS follow these rules.** Do not invent new patterns — extend existing ones.
 
 ### Colors
 - Background: `#000` (page), `var(--ion-color-primary)` (cards)
 - Accent red: `rgb(239, 68, 68)` / `var(--ion-color-accent-red)` — primary interactive color
-- Accent yellow: `rgb(255, 215, 0)` / `var(--ion-color-accent-yellow)` — active/live states only
-- Success green: `rgb(34, 197, 94)` — positive states (ready, done)
-- Subtle text: `rgba(255,255,255,0.5)` for labels, `rgba(255,255,255,0.85)` for values
+- Accent yellow: `rgb(255, 215, 0)` — active/live states only
+- Success green: `rgb(34, 197, 94)` — positive states
+- Labels: `rgba(255,255,255,0.5)`, values: `rgba(255,255,255,0.85)`
 - Borders: `rgba(255,255,255,0.08)` standard, `rgba(255,255,255,0.12)` hover
 
-### Cards
-- Background: `var(--ion-color-primary)` — never use `rgba(255,255,255,0.04)` for primary cards
-- Border radius: `12px` for cards, `10px` for inner tiles, `8px` for inputs/buttons
-- Padding: `18px` inside cards, `14px` inside metric tiles
-- Gap between cards: `16px`, gap between tiles: `10–12px`
-- No box-shadow on cards
+### Cards & Tiles
+- Card: `background: var(--ion-color-primary)`, `border-radius: 12px`, `padding: 18px`, no box-shadow
+- Metric tile: `background: rgba(255,255,255,0.05)`, `border-radius: 10px`, `padding: 12px 14px`
+- Gap between cards: `16px`, between tiles: `10–12px`
 
-### Typography / Labels
-- Section label (above card title): `.section-kicker` — `0.72rem`, uppercase, `letter-spacing: 0.18em`, `rgba(255,255,255,0.5)`
-- Date / secondary info: `.card-date` — `0.72rem`, `rgba(255,255,255,0.4)`
+### Typography
+- `.section-kicker`: `0.72rem`, uppercase, `letter-spacing: 0.18em`, `rgba(255,255,255,0.5)`
 - Metric label: `0.75rem`, uppercase, `letter-spacing: 0.1em`, `rgba(255,255,255,0.5)`
 - Metric value: `0.95rem–1rem`, `#fff`, `font-weight: 600`
-- Timer / live value: `Doto` monospace font, yellow color
+- Timer/live value: `Doto` monospace, yellow
 
-### Metric Tiles
-```css
-.card-metric {
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.05);
-}
-```
-Grid: `repeat(2, 1fr)` default, `repeat(4, 1fr)` for workout stats on wide screens.
-
-### Inputs / Forms
+### Inputs / Buttons
 - Input: `background: rgba(255,255,255,0.06)`, `border: 1px solid rgba(255,255,255,0.1)`, `border-radius: 8px`, `color: #fff`
-- Time inputs: add `color-scheme: dark`
+- Time/date inputs: `color-scheme: dark`
 - Primary button: `background: rgb(239,68,68)`, `border-radius: 8px`, no border
 
-### Active / Live Cards
-- Active workout card: `border: 2px solid rgba(255,215,0,0.35)`, gradient background, yellow timer in Doto font
-
-### Habit / Checkbox Pattern
-```css
-/* 22–28px square, border-radius 6–8px */
-/* Unchecked: border: 1.5px solid rgba(255,255,255,0.2) */
-/* Checked: background + border-color: rgb(239,68,68) */
-```
-
 ### Responsive
-- Max content width: `760px` centered with `margin: 0 auto`
-- Breakpoint: `600px` for side-by-side layouts within cards
-- Breakpoint: `760px` for grid column changes
+- Max content width: `760px` centered
+- Breakpoints: `600px` (side-by-side within cards), `760px` (grid column changes)
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+Knowledge graph at `graphify-out/`.
 
-**MANDATORY rules — follow before any search or grep:**
-- For ANY question about where something is defined, what a file exports, or how two files relate: run `graphify query "<question>"` FIRST. Do not grep until graphify returns insufficient results.
-- Use `graphify path "<A>" "<B>"` to trace relationships between files or symbols (e.g. `graphify path "app_db" "HomePage"`).
-- Use `graphify explain "<concept>"` to understand a domain concept across the codebase (e.g. `graphify explain "battery score"`).
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review when query/path/explain are insufficient.
-- **After modifying code, run `graphify update .`** to keep the graph current (AST-only, no API cost). Do this before ending any session that changed files.
+**MANDATORY — run before any grep or source browsing:**
+- `graphify query "<question>"` — broad context, nearest neighbors first
+- `graphify path "<A>" "<B>"` — trace relationships between files/symbols
+- `graphify explain "<concept>"` — full explanation of a concept across the codebase
+- `graphify-out/GRAPH_REPORT.md` — only for broad architecture review when query/explain are insufficient
+- **After modifying code**: `graphify update .` to keep the graph current (AST-only, no API cost).
