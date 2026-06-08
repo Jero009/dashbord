@@ -49,15 +49,17 @@ const handleSegmentChange = (event: CustomEvent) => {
 <style scoped>
 .section-toolbar {
   --background: var(--ion-color-primary);
+  --border-width: 0;
   --padding-top: 0;
-  padding: 0 8px 4px;
+  padding: 2px 8px 6px;
   margin-top: -2px;
 }
 
 ion-segment {
   width: 100%;
-  --background: transparent;
-  padding: 0;
+  --background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px;
 }
 
 ion-segment-button {
@@ -67,7 +69,7 @@ ion-segment-button {
   --color-checked: var(--ion-color-accent-red);
   --indicator-color: var(--ion-color-accent-red);
   min-height: 34px;
+  border-radius: 999px;
   font-weight: 600;
-  min-width: 70px;
 }
 </style>

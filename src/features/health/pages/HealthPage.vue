@@ -8,7 +8,7 @@
     <ion-content :fullscreen="true" class="health-content">
       <div class="health-shell">
 
-        <!-- 1. Battery hero card -->
+        <!-- 1. Battery hero -->
         <div class="card readiness-card">
           <p class="section-kicker">Battery</p>
           <div class="readiness-hero">
@@ -16,12 +16,39 @@
               <span class="readiness-score-num">{{ readinessDisplay }}</span>
               <span class="readiness-score-denom" v-if="readinessScore !== null">/100</span>
             </div>
-            <span class="readiness-label" :class="readinessLabelClass">{{ readinessLabel }}</span>
+            <div class="hero-right">
+              <span class="readiness-label" :class="readinessLabelClass">{{ readinessLabel }}</span>
+              <div class="ready-badges" v-if="batteryResult">
+                <span class="ready-badge" :class="batteryResult.readyToTrain ? 'badge--green' : 'badge--muted'">Train</span>
+                <span class="ready-badge" :class="batteryResult.readyToStudy ? 'badge--green' : 'badge--muted'">Study</span>
+              </div>
+            </div>
           </div>
           <div class="readiness-bar-track">
             <div class="readiness-bar-fill" :style="{ width: readinessBarWidth, background: batteryBarColor }"></div>
           </div>
-          <div class="metric-grid readiness-mini-grid">
+          <!-- Drain breakdown -->
+          <div v-if="batteryResult" class="metric-grid drain-grid">
+            <div class="card-metric">
+              <span class="metric-label">Time</span>
+              <span class="metric-value drain-val">-{{ batteryResult.drains.time }}</span>
+            </div>
+            <div class="card-metric">
+              <span class="metric-label">Workout</span>
+              <span class="metric-value drain-val">-{{ batteryResult.drains.workout }}</span>
+            </div>
+            <div class="card-metric">
+              <span class="metric-label">Activity</span>
+              <span class="metric-value drain-val">-{{ batteryResult.drains.activity }}</span>
+            </div>
+            <div class="card-metric">
+              <span class="metric-label">Events</span>
+              <span class="metric-value" :class="batteryResult.drains.event < 0 ? 'drain-val--positive' : 'drain-val'">
+                {{ batteryResult.drains.event <= 0 ? '+' : '-' }}{{ Math.abs(batteryResult.drains.event) }}
+              </span>
+            </div>
+          </div>
+          <div v-else class="metric-grid readiness-mini-grid">
             <div class="card-metric">
               <span class="metric-label">Sleep</span>
               <span class="metric-value">{{ sleepDisplay }}</span>
@@ -37,35 +64,37 @@
           </div>
         </div>
 
-        <!-- 2. Sleep detail card -->
+        <!-- 2. Sleep card -->
         <div class="card">
-          <p class="section-kicker">Sleep</p>
-          <div class="metric-grid metric-grid--2col">
-            <div class="card-metric">
-              <span class="metric-label">Duration</span>
-              <span class="metric-value">{{ sleepDisplay }}</span>
+          <p class="section-kicker">Sleep · last night</p>
+          <div class="sleep-top">
+            <div class="sleep-score-block">
+              <span class="sleep-score-num" :class="sleepScoreClass">{{ sleepScoreDisplay }}</span>
+              <span class="sleep-score-sub">score</span>
             </div>
-            <div class="card-metric">
-              <span class="metric-label">Score</span>
-              <span class="metric-value">{{ sleepScoreDisplay }}</span>
-            </div>
-            <div class="card-metric">
-              <span class="metric-label">Efficiency</span>
-              <span class="metric-value">{{ sleepEfficiencyDisplay }}</span>
-            </div>
-            <div class="card-metric">
-              <span class="metric-label">Sleep HR</span>
-              <span class="metric-value">{{ sleepHrDisplay }}</span>
-            </div>
-            <div class="card-metric">
-              <span class="metric-label">Resp. Rate</span>
-              <span class="metric-value">{{ respRateDisplay }}</span>
+            <div class="metric-grid metric-grid--2col sleep-metrics">
+              <div class="card-metric">
+                <span class="metric-label">Duration</span>
+                <span class="metric-value">{{ sleepDisplay }}</span>
+              </div>
+              <div class="card-metric">
+                <span class="metric-label">Efficiency</span>
+                <span class="metric-value">{{ sleepEfficiencyDisplay }}</span>
+              </div>
+              <div class="card-metric">
+                <span class="metric-label">Sleep HR</span>
+                <span class="metric-value">{{ sleepHrDisplay }}</span>
+              </div>
+              <div class="card-metric">
+                <span class="metric-label">Resp. Rate</span>
+                <span class="metric-value">{{ respRateDisplay }}</span>
+              </div>
             </div>
           </div>
           <p v-if="sleepInsight" class="sleep-insight">{{ sleepInsight }}</p>
         </div>
 
-        <!-- 3. Body metrics card -->
+        <!-- 3. Body + vitals -->
         <div class="card">
           <p class="section-kicker">Body</p>
           <div class="metric-grid metric-grid--3col">
@@ -74,8 +103,8 @@
               <span class="metric-value">{{ restingHrDisplay }}</span>
             </div>
             <div class="card-metric">
-              <span class="metric-label">Resp. Rate</span>
-              <span class="metric-value">{{ respRateDisplay }}</span>
+              <span class="metric-label">Steps</span>
+              <span class="metric-value">{{ stepsDisplay }}</span>
             </div>
             <div class="card-metric">
               <span class="metric-label">Weight</span>
@@ -84,7 +113,20 @@
           </div>
         </div>
 
-        <!-- 4. Readiness history chart -->
+        <!-- 4. Today's plan events -->
+        <div v-if="todayEvents.length" class="card">
+          <p class="section-kicker">Today's schedule</p>
+          <ul class="event-list">
+            <li v-for="ev in todayEvents" :key="ev.id" class="event-row">
+              <span class="event-time">{{ ev.time_start ? ev.time_start.slice(0, 5) : '—' }}</span>
+              <span class="event-dot" :class="`dot--${ev.type}`"></span>
+              <span class="event-title">{{ ev.title }}</span>
+              <span class="event-tag" :class="`tag--${ev.type}`">{{ ev.type }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 5. Readiness history -->
         <div class="card">
           <p class="section-kicker">Readiness · last 14 days</p>
           <div v-if="readinessHistory.length >= 2" class="rh-chart">
@@ -112,7 +154,7 @@
           <p v-else class="empty-hint">No readiness data yet — sync Health Connect to populate</p>
         </div>
 
-        <!-- 5. Activities section -->
+        <!-- 6. Recent activities -->
         <section v-if="activities.length">
           <p class="section-kicker">Activity · last 7 days</p>
           <div class="activity-list">
@@ -126,18 +168,17 @@
                   <span v-if="act.calories"> · {{ act.calories }} kcal</span>
                   <span v-if="act.distanceKm"> · {{ act.distanceKm }} km</span>
                 </div>
-                <span v-if="act.sourceName" class="activity-source">{{ act.sourceName }}</span>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- 5. Sync card -->
+        <!-- 7. Sync -->
         <div class="card sync-card">
           <p class="section-kicker">Health Connect</p>
           <p class="sync-status">{{ healthConnectStatus }}</p>
           <button class="sync-btn" :disabled="syncing" @click="handleConnect">
-            {{ syncing ? 'Syncing...' : 'Sync' }}
+            {{ syncing ? 'Syncing...' : 'Sync now' }}
           </button>
         </div>
 
@@ -159,6 +200,8 @@ import {
   getLatestReadinessScore,
   getBodyLogs,
   queryReadinessHistory,
+  getTodayCompletedWorkouts,
+  getCalendarEventsForDate,
 } from '@/shared/db/app_db';
 import type { BodyLogEntry } from '@/shared/db/app_db';
 import {
@@ -167,10 +210,11 @@ import {
   requestHealthConnectPermissions,
   syncHealthConnectMetrics,
   getRecentActivities,
-  calculateReadinessScore, calculateBattery,
+  calculateReadinessScore,
+  calculateBattery,
   type ActivitySummary,
+  type BatteryResult,
 } from '@/shared/health/healthConnect';
-import { getTodayCompletedWorkouts, getCalendarEventsForDate } from '@/shared/db/app_db';
 
 type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
 
@@ -183,8 +227,9 @@ const respRate        = ref<number | null>(null);
 const restingHr       = ref<number | null>(null);
 const steps           = ref<number | null>(null);
 const readinessScore  = ref<number | null>(null);
+const batteryResult   = ref<BatteryResult | null>(null);
 const todayWorkouts   = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
-const todayEvents     = ref<{ type: string; date: string; time_start: string | null; time_end: string | null }[]>([]);
+const todayEvents     = ref<{ id?: number; type: string; title?: string; date: string; time_start: string | null; time_end: string | null }[]>([]);
 const latestBodyLog   = ref<BodyLogEntry | null>(null);
 const activities      = ref<ActivitySummary[]>([]);
 const syncing         = ref(false);
@@ -192,14 +237,22 @@ const readinessHistory = ref<RhPoint[]>([]);
 const selectedRhPoint  = ref<RhPoint | null>(null);
 
 // --- Displays ---
-const sleepDisplay          = computed(() => sleepHours.value === null      ? '—' : `${sleepHours.value.toFixed(1)} h`);
-const sleepScoreDisplay     = computed(() => sleepScore.value === null       ? '—' : `${Math.round(sleepScore.value)}`);
-const sleepEfficiencyDisplay= computed(() => sleepEfficiency.value === null  ? '—' : `${Math.round(sleepEfficiency.value)}%`);
-const sleepHrDisplay        = computed(() => sleepHr.value === null          ? '—' : `${Math.round(sleepHr.value)} bpm`);
-const respRateDisplay       = computed(() => respRate.value === null         ? '—' : `${respRate.value.toFixed(1)} /min`);
-const restingHrDisplay      = computed(() => restingHr.value === null        ? '—' : `${Math.round(restingHr.value)} bpm`);
-const stepsDisplay          = computed(() => steps.value === null            ? '—' : Math.round(steps.value).toLocaleString());
-const weightDisplay         = computed(() => latestBodyLog.value             ? `${latestBodyLog.value.weight_kg.toFixed(1)} kg` : '—');
+const sleepDisplay           = computed(() => sleepHours.value === null      ? '—' : `${sleepHours.value.toFixed(1)} h`);
+const sleepScoreDisplay      = computed(() => sleepScore.value === null       ? '—' : `${Math.round(sleepScore.value)}`);
+const sleepEfficiencyDisplay = computed(() => sleepEfficiency.value === null  ? '—' : `${Math.round(sleepEfficiency.value)}%`);
+const sleepHrDisplay         = computed(() => sleepHr.value === null          ? '—' : `${Math.round(sleepHr.value)} bpm`);
+const respRateDisplay        = computed(() => respRate.value === null         ? '—' : `${respRate.value.toFixed(1)} /min`);
+const restingHrDisplay       = computed(() => restingHr.value === null        ? '—' : `${Math.round(restingHr.value)} bpm`);
+const stepsDisplay           = computed(() => steps.value === null            ? '—' : Math.round(steps.value).toLocaleString());
+const weightDisplay          = computed(() => latestBodyLog.value             ? `${latestBodyLog.value.weight_kg.toFixed(1)} kg` : '—');
+
+const sleepScoreClass = computed(() => {
+  const s = sleepScore.value;
+  if (s === null) return 'score--muted';
+  if (s >= 80) return 'score--green';
+  if (s >= 60) return 'score--yellow';
+  return 'score--red';
+});
 
 // --- Readiness ---
 const readinessDisplay = computed(() => readinessScore.value === null ? '—' : String(readinessScore.value));
@@ -236,11 +289,10 @@ const readinessBarWidth = computed(() => {
 
 // --- Sleep insight ---
 const sleepInsight = computed((): string => {
-  const eff  = sleepEfficiency.value;
-  const hrs  = sleepHours.value;
-  const sc   = sleepScore.value;
-  const rr   = respRate.value;
-
+  const eff = sleepEfficiency.value;
+  const hrs = sleepHours.value;
+  const sc  = sleepScore.value;
+  const rr  = respRate.value;
   if (rr !== null && rr > 17) return 'Respiratory rate elevated — monitor for illness';
   if (eff !== null && eff < 80) return 'Efficiency below target — aim for 85%+';
   if (hrs !== null && hrs < 7)  return 'Sleep under 7 h — recovery may be limited';
@@ -259,19 +311,13 @@ const healthConnectStatus = computed(() =>
 // --- Formatters ---
 const formatWorkoutType = (t: string) =>
   t.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
-
-const workoutInitial = (t: string): string =>
-  formatWorkoutType(t).slice(0, 2).toUpperCase();
-
+const workoutInitial = (t: string): string => formatWorkoutType(t).slice(0, 2).toUpperCase();
 const formatActivityDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
 
 // --- Data loading ---
 const loadMetrics = async () => {
-  const [
-    mSleep, mSleepScore, mSleepEff, mSleepHr,
-    mRespRate, mRestingHr, mSteps,
-  ] = await Promise.all([
+  const [mSleep, mSleepScore, mSleepEff, mSleepHr, mRespRate, mRestingHr, mSteps] = await Promise.all([
     getLatestHealthMetric('sleep_duration'),
     getLatestHealthMetric('sleep_score'),
     getLatestHealthMetric('sleep_efficiency'),
@@ -280,7 +326,6 @@ const loadMetrics = async () => {
     getLatestHealthMetric('resting_heart_rate'),
     getLatestHealthMetric('steps'),
   ]);
-
   sleepHours.value      = mSleep      ? Number(mSleep.value)      : null;
   sleepScore.value      = mSleepScore ? Number(mSleepScore.value) : null;
   sleepEfficiency.value = mSleepEff   ? Number(mSleepEff.value)   : null;
@@ -307,14 +352,9 @@ const loadReadiness = async () => {
         steps:           steps.value,
       });
 
-  const battery = calculateBattery(
-    baseline,
-    new Date(),
-    todayWorkouts.value,
-    activities.value,
-    todayEvents.value,
-  );
-  readinessScore.value = battery.score;
+  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, todayEvents.value);
+  batteryResult.value  = result;
+  readinessScore.value = result.score;
 };
 
 const loadBody = async () => {
@@ -322,9 +362,7 @@ const loadBody = async () => {
   latestBodyLog.value = logs[0] ?? null;
 };
 
-const loadActivities = async () => {
-  activities.value = await getRecentActivities(7);
-};
+const loadActivities = async () => { activities.value = await getRecentActivities(7); };
 
 const loadReadinessHistory = async () => {
   const raw = await queryReadinessHistory(14);
@@ -341,9 +379,7 @@ const loadReadinessHistory = async () => {
   }));
 };
 
-const rhLinePoints = computed(() =>
-  readinessHistory.value.map(p => `${p.x},${p.y}`).join(' ')
-);
+const rhLinePoints = computed(() => readinessHistory.value.map(p => `${p.x},${p.y}`).join(' '));
 const rhAreaPoints = computed(() => {
   const pts = readinessHistory.value;
   if (!pts.length) return '';
@@ -357,7 +393,9 @@ const loadTodayContext = async () => {
     getCalendarEventsForDate(today),
   ]);
   todayWorkouts.value = workouts;
-  todayEvents.value = events;
+  todayEvents.value   = (events as typeof todayEvents.value).sort(
+    (a, b) => (a.time_start ?? '').localeCompare(b.time_start ?? '')
+  );
 };
 
 onIonViewWillEnter(async () => {
@@ -365,7 +403,6 @@ onIonViewWillEnter(async () => {
   await loadReadiness();
 });
 
-// --- Sync handler ---
 const handleConnect = async () => {
   syncing.value = true;
   try {
@@ -389,8 +426,7 @@ const handleConnect = async () => {
   } catch (error) {
     const t = await toastController.create({
       message: error instanceof Error ? error.message : 'Health Connect unavailable.',
-      duration: 2200,
-      color: 'danger',
+      duration: 2200, color: 'danger',
     });
     await t.present();
   } finally {
@@ -400,11 +436,7 @@ const handleConnect = async () => {
 </script>
 
 <style scoped>
-/* ── Shell ─────────────────────────────────────────────── */
-.health-content {
-  --padding-top: 16px;
-  --padding-bottom: 32px;
-}
+.health-content { --padding-top: 16px; --padding-bottom: 32px; }
 
 .health-shell {
   padding: 16px;
@@ -414,14 +446,12 @@ const handleConnect = async () => {
   margin: 0 auto;
 }
 
-/* ── Base card ──────────────────────────────────────────── */
 .card {
   background: var(--ion-color-primary);
   border-radius: 12px;
   padding: 18px;
 }
 
-/* ── Section kicker ─────────────────────────────────────── */
 .section-kicker {
   margin: 0 0 12px;
   font-size: 0.72rem;
@@ -430,19 +460,10 @@ const handleConnect = async () => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* ── Metric grid & tiles ────────────────────────────────── */
-.metric-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.metric-grid--2col {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.metric-grid--3col {
-  grid-template-columns: repeat(3, 1fr);
-}
+/* ── Metric tiles ── */
+.metric-grid { display: grid; gap: 10px; }
+.metric-grid--2col { grid-template-columns: repeat(2, 1fr); }
+.metric-grid--3col { grid-template-columns: repeat(3, 1fr); }
 
 .card-metric {
   background: rgba(255, 255, 255, 0.05);
@@ -460,29 +481,19 @@ const handleConnect = async () => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.metric-value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #fff;
-}
+.metric-value { font-size: 0.95rem; font-weight: 600; color: #fff; }
 
-/* ── Readiness hero ─────────────────────────────────────── */
-.readiness-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+/* ── Battery hero ── */
+.readiness-card { border: 1px solid rgba(255, 255, 255, 0.08); }
 
 .readiness-hero {
   display: flex;
-  align-items: baseline;
-  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 14px;
 }
 
-.readiness-score-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-}
+.readiness-score-wrap { display: flex; align-items: baseline; gap: 3px; }
 
 .readiness-score-num {
   font-size: 3.2rem;
@@ -497,10 +508,18 @@ const handleConnect = async () => {
   font-weight: 500;
 }
 
+.hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
 .readiness-label {
   font-size: 0.88rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .label--green  { color: rgb(34, 197, 94); }
@@ -508,27 +527,80 @@ const handleConnect = async () => {
 .label--red    { color: rgb(239, 68, 68); }
 .label--muted  { color: rgba(255, 255, 255, 0.4); }
 
-/* Readiness bar */
+.ready-badges { display: flex; gap: 6px; }
+
+.ready-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.badge--green { background: rgba(34,197,94,0.15); color: rgb(34,197,94); }
+.badge--muted { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.3); }
+
 .readiness-bar-track {
   height: 3px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   overflow: hidden;
 }
 
 .readiness-bar-fill {
   height: 100%;
   border-radius: 2px;
-  background: rgb(239, 68, 68);
   transition: width 0.4s ease;
 }
 
-.readiness-mini-grid {
-  grid-template-columns: repeat(3, 1fr);
+.drain-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+.drain-val { color: rgb(239, 68, 68); }
+.drain-val--positive { color: rgb(34, 197, 94); }
+
+.readiness-mini-grid { grid-template-columns: repeat(3, 1fr); }
+
+/* ── Sleep card ── */
+.sleep-top {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
 }
 
-/* ── Sleep insight line ─────────────────────────────────── */
+.sleep-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 14px 16px;
+  flex-shrink: 0;
+  min-width: 68px;
+}
+
+.sleep-score-num {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.score--green  { color: rgb(34, 197, 94); }
+.score--yellow { color: rgb(255, 215, 0); }
+.score--red    { color: rgb(239, 68, 68); }
+.score--muted  { color: rgba(255, 255, 255, 0.35); }
+
+.sleep-score-sub {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 4px;
+}
+
+.sleep-metrics { flex: 1; }
+
 .sleep-insight {
   margin: 12px 0 0;
   font-size: 0.8rem;
@@ -540,14 +612,69 @@ const handleConnect = async () => {
   border-left: 2px solid rgba(239, 68, 68, 0.5);
 }
 
-/* ── Readiness history chart ────────────────────────────── */
-.rh-chart { display: grid; gap: 8px; }
-
-.rh-svg {
-  width: 100%;
-  height: auto;
-  overflow: visible;
+/* ── Today's schedule ── */
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
+
+.event-row { display: flex; align-items: center; gap: 10px; }
+
+.event-time {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  width: 38px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot--workout  { background: rgb(239, 68, 68); }
+.dot--school   { background: rgb(59, 130, 246); }
+.dot--recovery { background: rgb(34, 197, 94); }
+.dot--sleep    { background: rgb(99, 102, 241); }
+.dot--reminder { background: rgb(234, 179, 8); }
+.dot--general  { background: rgba(255, 255, 255, 0.4); }
+
+.event-title {
+  flex: 1;
+  font-size: 0.88rem;
+  color: #fff;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tag--workout  { background: rgba(239,68,68,0.15);   color: rgb(239,68,68); }
+.tag--school   { background: rgba(59,130,246,0.15);  color: rgb(59,130,246); }
+.tag--recovery { background: rgba(34,197,94,0.15);   color: rgb(34,197,94); }
+.tag--sleep    { background: rgba(99,102,241,0.15);  color: rgb(99,102,241); }
+.tag--reminder { background: rgba(234,179,8,0.15);   color: rgb(234,179,8); }
+.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+
+/* ── Readiness chart ── */
+.rh-chart { display: grid; gap: 8px; }
+.rh-svg { width: 100%; height: auto; overflow: visible; }
 
 .rh-line {
   fill: none;
@@ -557,12 +684,12 @@ const handleConnect = async () => {
   stroke-linejoin: round;
 }
 
-.rh-area { fill: rgba(239, 68, 68, 0.15); stroke: none; }
+.rh-area { fill: rgba(239, 68, 68, 0.12); stroke: none; }
 
 .rh-dot {
   fill: rgb(239, 68, 68);
   cursor: pointer;
-  transition: r 0.15s;
+  transition: r 0.15s, filter 0.15s;
 }
 
 .rh-dot--selected { r: 2; filter: brightness(1.3); }
@@ -574,11 +701,11 @@ const handleConnect = async () => {
   padding: 8px 12px;
   border-radius: 8px;
   background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .rh-tooltip strong { font-size: 1.1rem; color: rgb(239, 68, 68); }
-.rh-tooltip small  { font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); }
+.rh-tooltip small  { font-size: 0.75rem; color: rgba(239, 68, 68, 0.7); }
 
 .rh-axis {
   display: flex;
@@ -587,17 +714,10 @@ const handleConnect = async () => {
   color: rgba(255, 255, 255, 0.35);
 }
 
-.empty-hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.35);
-}
+.empty-hint { margin: 0; font-size: 0.82rem; color: rgba(255, 255, 255, 0.35); }
 
-/* ── Activities ─────────────────────────────────────────── */
-.activity-list {
-  display: grid;
-  gap: 10px;
-}
+/* ── Activities ── */
+.activity-list { display: grid; gap: 10px; }
 
 .activity-card {
   display: flex;
@@ -624,23 +744,9 @@ const handleConnect = async () => {
   letter-spacing: 0.03em;
 }
 
-.activity-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.activity-name {
-  font-size: 0.95rem;
-  color: #fff;
-  font-weight: 600;
-}
-
-.activity-date {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
-}
+.activity-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.activity-name { font-size: 0.95rem; color: #fff; font-weight: 600; }
+.activity-date { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
 
 .activity-metrics {
   display: flex;
@@ -651,16 +757,8 @@ const handleConnect = async () => {
   color: rgba(255, 255, 255, 0.75);
 }
 
-.activity-source {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.28);
-  margin-top: 2px;
-}
-
-/* ── Sync card ──────────────────────────────────────────── */
-.sync-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+/* ── Sync card ── */
+.sync-card { border: 1px solid rgba(255, 255, 255, 0.08); }
 
 .sync-status {
   margin: 0 0 14px;
@@ -682,29 +780,17 @@ const handleConnect = async () => {
   transition: opacity 0.15s ease;
 }
 
-.sync-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sync-btn:not(:disabled):active { opacity: 0.85; }
 
-.sync-btn:not(:disabled):active {
-  opacity: 0.85;
-}
-
-/* ── Responsive ─────────────────────────────────────────── */
+/* ── Responsive ── */
 @media (max-width: 400px) {
-  .readiness-mini-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .metric-grid--3col {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .drain-grid { grid-template-columns: repeat(2, 1fr); }
+  .sleep-top { flex-direction: column; }
+  .sleep-score-block { flex-direction: row; gap: 10px; align-items: center; width: 100%; }
 }
 
 @media (min-width: 600px) {
-  .activity-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .activity-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

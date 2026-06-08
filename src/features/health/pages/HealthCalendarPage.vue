@@ -77,6 +77,10 @@
                   <option value="weekly">Every week</option>
                 </select>
               </div>
+              <div v-if="newRecurrence !== 'none'" class="form-row">
+                <label class="form-label">Ends on (optional)</label>
+                <input v-model="newEndDate" class="form-input form-input--date" type="date" />
+              </div>
               <div class="form-row form-row--end">
                 <button class="save-btn" @click="saveEvent">Save</button>
               </div>
@@ -108,7 +112,7 @@
                   </span>
                   <span v-if="ev.notes" class="item-note">{{ ev.notes }}</span>
                 </div>
-                <button class="delete-btn" @click="removeEvent(ev.id)"><ion-icon :icon="close" /></button>
+                <button class="delete-btn" @click="removeEvent(ev)"><ion-icon :icon="close" /></button>
               </li>
             </ul>
             <p v-else class="empty-hint">No events on this day</p>
@@ -153,6 +157,7 @@ const route = useRoute();
 import {
   addCalendarEvent,
   deleteCalendarEvent,
+  stopCalendarEventAt,
   getCalendarEventsForDate,
   getCalendarEventDatesForMonth,
   getHabitCompletedDatesForMonth,
@@ -182,6 +187,7 @@ const newNotes = ref('');
 const newTimeStart = ref('');
 const newTimeEnd = ref('');
 const newRecurrence = ref('none');
+const newEndDate = ref('');
 
 const templates = ref<{ id: number; name: string }[]>([]);
 const newWorkoutTemplateId = ref<number | null>(null);
@@ -302,6 +308,7 @@ const resetEventForm = () => {
   newTimeEnd.value = '';
   newWorkoutTemplateId.value = null;
   newRecurrence.value = 'none';
+  newEndDate.value = '';
   recommendedTemplateId.value = null;
 };
 
@@ -319,15 +326,28 @@ const saveEvent = async () => {
     newTimeStart.value || undefined,
     newTimeEnd.value || undefined,
     newWorkoutTemplateId.value ?? undefined,
-    newRecurrence.value
+    newRecurrence.value,
+    newEndDate.value || undefined
   );
   resetEventForm();
   showAddEvent.value = false;
   await Promise.all([loadDayDetail(), loadMonthDots()]);
 };
 
-const removeEvent = async (id: number) => {
-  await deleteCalendarEvent(id);
+function prevDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+const removeEvent = async (ev: Record<string, any>) => {
+  const isRecurring = ev.recurrence && ev.recurrence !== 'none';
+  const isOnOriginalDate = ev.date === selectedDate.value;
+  if (isRecurring && !isOnOriginalDate) {
+    await stopCalendarEventAt(ev.id, prevDay(selectedDate.value));
+  } else {
+    await deleteCalendarEvent(ev.id);
+  }
   await Promise.all([loadDayDetail(), loadMonthDots()]);
 };
 
@@ -559,6 +579,21 @@ onIonViewWillEnter(async () => {
 .form-input--time {
   color-scheme: dark;
   flex: 1;
+}
+
+.form-input--date {
+  color-scheme: dark;
+  flex: 1;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  align-self: center;
+  flex-shrink: 0;
+  margin-right: 8px;
 }
 
 .time-sep {

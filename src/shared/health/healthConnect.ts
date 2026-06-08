@@ -53,7 +53,7 @@ export interface SleepHeartRatePoint {
 }
 
 export interface SleepSummary {
-  score: number;
+  score: number | null;
   timeAsleepHours: number;
   timeInBedHours: number;
   efficiency: number;
@@ -240,7 +240,9 @@ interface SleepScoreInputs {
   wasoMinutes: number | null;               // wake-after-sleep-onset minutes; null = no stage data
 }
 
-function calculateSleepScore(inputs: SleepScoreInputs): number {
+function calculateSleepScore(inputs: SleepScoreInputs): number | null {
+  if (inputs.timeAsleepHours < 1) return null;
+
   // Duration vs user target: 25 pts
   const durationScore = clamp((inputs.timeAsleepHours / inputs.targetSleepHours) * 25, 0, 25);
 
@@ -275,8 +277,14 @@ function calculateSleepScore(inputs: SleepScoreInputs): number {
   return Math.round(durationScore + efficiencyScore + wasoScore + deepScore + remScore + timingScore + respiratoryScore);
 }
 
-function toDateKey(date: string) {
-  return date.slice(0, 10);
+function toDateKey(date: string): string {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function getSleepHours(sample: HealthSample) {
@@ -532,14 +540,17 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
 
   const endDate = new Date().toISOString();
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+  // Steps are recorded per-minute by the Amazfit, so 30 days = ~43k samples.
+  // Use a 7-day window newest-first so today is always in the first batch.
+  const stepsStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [stepsResult, sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
     Health.readSamples({
       dataType: 'steps',
-      startDate,
+      startDate: stepsStartDate,
       endDate,
-      limit: 1000,
-      ascending: true,
+      limit: 5000,
+      ascending: false,
     }),
     Health.readSamples({
       dataType: 'sleep',
@@ -684,8 +695,10 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       synced += 1;
       await replaceHealthMetric(date, 'sleep_efficiency', Number((sleepSummary.efficiency * 100).toFixed(0)), 'percent', HEALTH_CONNECT_SOURCE);
       synced += 1;
-      await replaceHealthMetric(date, 'sleep_score', sleepSummary.score, 'score', HEALTH_CONNECT_SOURCE);
-      synced += 1;
+      if (sleepSummary.score !== null) {
+        await replaceHealthMetric(date, 'sleep_score', sleepSummary.score, 'score', HEALTH_CONNECT_SOURCE);
+        synced += 1;
+      }
 
       for (const stage of sleepSummary.stages) {
         await replaceHealthMetric(date, `sleep_stage_${stage.stage}`, Number(stage.minutes.toFixed(0)), 'minutes', HEALTH_CONNECT_SOURCE);
@@ -851,8 +864,8 @@ export function calculateBattery(
   );
 
   // 3. Activity drain — Health Connect workouts today
-  const todayStr = now.toISOString().slice(0, 10);
-  const todayActivities = activities.filter((a) => a.startDate.slice(0, 10) === todayStr);
+  const todayStr = toDateKey(now.toISOString());
+  const todayActivities = activities.filter((a) => toDateKey(a.startDate) === todayStr);
   const activityDrain = clamp(
     todayActivities.reduce((sum, a) => {
       const fromDuration = clamp(a.durationMinutes / 3, 0, 20);
@@ -874,14 +887,15 @@ export function calculateBattery(
         e.type === 'sleep'    ? -5 :
         e.type === 'recovery' ? -2 :
         e.type === 'workout'  ?  6 :
-        e.type === 'school'   ?  5 :
+        e.type === 'school'   ?  2 :
         e.type === 'reminder' ?  0 : 4;
       return sum + clamp(durationHours * drainPerHour, -5, 15);
     }, 0),
     -20, 25
   );
 
-  const score = clamp(Math.round(baseline - timeDrain - workoutDrain - activityDrain - eventDrain), 0, 100);
+  const effectiveActivityDrain = workoutDrain > 0 ? 0 : activityDrain;
+  const score = clamp(Math.round(baseline - timeDrain - workoutDrain - effectiveActivityDrain - eventDrain), 0, 100);
 
   return {
     score,
@@ -889,7 +903,7 @@ export function calculateBattery(
     drains: {
       time: Math.round(timeDrain),
       workout: Math.round(workoutDrain),
-      activity: Math.round(activityDrain),
+      activity: Math.round(effectiveActivityDrain),
       event: Math.round(eventDrain),
     },
     readyToTrain: score >= 60,

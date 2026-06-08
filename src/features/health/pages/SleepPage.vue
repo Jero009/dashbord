@@ -82,7 +82,7 @@
                 <line
                   v-for="(conn, i) in hypnogramConnectors" :key="`c${i}`"
                   :x1="conn.x" :y1="conn.y1" :x2="conn.x" :y2="conn.y2"
-                  stroke="rgba(0,0,0,0.6)" stroke-width="0.4"
+                  stroke="rgba(255,255,255,0.5)" stroke-width="0.4"
                 />
               </svg>
               <div class="hypnogram-labels">
@@ -178,11 +178,11 @@
                 :cx="point.x"
                 :cy="point.y"
                 r="1"
-                @click="selectedScorePoint = { date: point.date, score: point.score ?? 0 }"
+                @click="selectedScorePoint = { date: point.date, score: point.score }"
               />
             </svg>
             <div v-if="selectedScorePoint" class="chart-tooltip">
-              <strong>{{ selectedScorePoint.score }}</strong>
+              <strong>{{ selectedScorePoint.score ?? '—' }}</strong>
               <small>{{ new Date(`${selectedScorePoint.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
             </div>
             <div class="score-history__labels">
@@ -220,7 +220,7 @@ const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
 const selectedHeartRatePoint = ref<{ time: string; value: number; offset: number } | null>(null);
-const selectedScorePoint = ref<{ date: string; score: number } | null>(null);
+const selectedScorePoint = ref<{ date: string; score: number | null } | null>(null);
 const sessionDates = ref<string[]>([]);
 const selectedDate = ref<string | null>(null);
 
@@ -376,6 +376,7 @@ const score = computed(() => summary.value?.score ?? null);
 const sleepScoreRatio = computed(() => (score.value === null ? 0 : Math.min(1, score.value / 100)));
 const sleepScoreDisplay = computed(() => (score.value === null ? '—' : `${score.value}`));
 const sleepSubtitle = computed(() => {
+  if (score.value === null && summary.value !== null) return 'Sleep score unavailable';
   if (score.value === null) return 'No sleep session yet';
   if (score.value >= 80) return 'Excellent recovery';
   if (score.value >= 60) return 'Good enough';
@@ -407,19 +408,14 @@ const heartRatePoints = computed(() => {
   }));
 });
 const heartRateLinePoints = computed(() => heartRatePoints.value.map((point) => `${point.offset.toFixed(2)},${point.y.toFixed(2)}`).join(' '));
-const sleepScoreHistory = computed(() =>
-  [...sleepHistory.value]
-    .reverse()
-    .map((row, index, rows) => {
-      const x = rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100;
-      const score = row.score ?? 0;
-      return {
-        ...row,
-        x,
-        y: 44 - (Math.min(100, Math.max(0, score)) / 100) * 36,
-      };
-    })
-);
+const sleepScoreHistory = computed(() => {
+  const rows = [...sleepHistory.value].reverse().filter((r) => r.score !== null);
+  return rows.map((row, index) => {
+    const x = rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100;
+    const score = row.score as number;
+    return { ...row, x, y: 44 - (Math.min(100, Math.max(0, score)) / 100) * 36 };
+  });
+});
 const scoreHistoryLinePoints = computed(() =>
   sleepScoreHistory.value.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
 );
