@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { IonToolbar, IonSegment, IonSegmentButton, IonLabel, IonIcon } from '@ionic/vue';
+import { hapticLight } from '@/shared/utils/haptics';
 import { settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -47,6 +48,7 @@ const isSettings = computed(() => route.path === '/settings');
 const handleSegmentChange = (event: CustomEvent) => {
   const value = (event.detail as { value?: string }).value;
   if (!value) return;
+  hapticLight();
 
   const target = {
     home: '/home',
@@ -62,6 +64,7 @@ const handleSegmentChange = (event: CustomEvent) => {
 };
 
 const goToSettings = () => {
+  hapticLight();
   if (route.path !== '/settings') {
     router.push('/settings');
   }

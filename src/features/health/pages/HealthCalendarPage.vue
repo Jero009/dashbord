@@ -166,6 +166,7 @@ import {
   getTemplates,
   getWorkouts,
 } from '@/shared/db/app_db';
+import { hapticHeavy, hapticLight, hapticMedium, hapticSelect } from '@/shared/utils/haptics';
 
 const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -242,6 +243,7 @@ const nextMonth = () => {
 };
 
 const selectDay = (dateStr: string) => {
+  hapticSelect();
   selectedDate.value = dateStr;
 };
 
@@ -313,6 +315,7 @@ const resetEventForm = () => {
 };
 
 const saveEvent = async () => {
+  hapticMedium();
   if (!newTitle.value.trim()) {
     const t = await toastController.create({ message: 'Add a title.', duration: 1800, color: 'warning' });
     await t.present();
@@ -341,6 +344,7 @@ function prevDay(dateStr: string): string {
 }
 
 const removeEvent = async (ev: Record<string, any>) => {
+  hapticHeavy();
   const isRecurring = ev.recurrence && ev.recurrence !== 'none';
   const isOnOriginalDate = ev.date === selectedDate.value;
   if (isRecurring && !isOnOriginalDate) {
@@ -352,6 +356,7 @@ const removeEvent = async (ev: Record<string, any>) => {
 };
 
 const toggleHabit = async (h: Record<string, any>) => {
+  hapticLight();
   await toggleHabitCompletion(h.id, selectedDate.value, h.completed !== 1);
   await Promise.all([loadDayDetail(), loadMonthDots()]);
 };

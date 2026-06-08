@@ -215,6 +215,8 @@ import {
   type ActivitySummary,
   type BatteryResult,
 } from '@/shared/health/healthConnect';
+import { computeCircadianProfile, computeCircadianScore, type DayType } from '@/shared/health/circadian';
+import { getRecentCircadianLogs, getRecentSleepSessions, getRecentHealthMetrics } from '@/shared/db/app_db';
 
 type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
 
@@ -228,6 +230,7 @@ const restingHr       = ref<number | null>(null);
 const steps           = ref<number | null>(null);
 const readinessScore  = ref<number | null>(null);
 const batteryResult   = ref<BatteryResult | null>(null);
+const circScore       = ref<number | null>(null);
 const todayWorkouts   = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
 const todayEvents     = ref<{ id?: number; type: string; title?: string; date: string; time_start: string | null; time_end: string | null }[]>([]);
 const latestBodyLog   = ref<BodyLogEntry | null>(null);
@@ -352,7 +355,7 @@ const loadReadiness = async () => {
         steps:           steps.value,
       });
 
-  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, todayEvents.value);
+  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, todayEvents.value, circScore.value);
   batteryResult.value  = result;
   readinessScore.value = result.score;
 };
@@ -398,8 +401,30 @@ const loadTodayContext = async () => {
   );
 };
 
+const loadCircadianScore = async () => {
+  try {
+    const [sessions, logs, rhrMetric, rhrHistory] = await Promise.all([
+      getRecentSleepSessions(14),
+      getRecentCircadianLogs(14),
+      getLatestHealthMetric('resting_heart_rate'),
+      getRecentHealthMetrics('resting_heart_rate', 14),
+    ]);
+    const dayTypes = new Map<string, DayType>(logs.map(l => [l.date, l.day_type as DayType]));
+    const recs = sessions.map(s => ({
+      date: s.date, bedtime: s.bedtime, waketime: s.waketime,
+      timeAsleepHours: s.time_asleep_hours, efficiency: s.efficiency,
+    }));
+    const profile  = computeCircadianProfile(recs, dayTypes);
+    const rhrToday = rhrMetric ? Number(rhrMetric.value) : null;
+    const rhrBase  = rhrHistory.length
+      ? rhrHistory.reduce((s, m) => s + Number(m.value), 0) / rhrHistory.length
+      : null;
+    circScore.value = computeCircadianScore(recs, rhrToday, rhrBase).total;
+  } catch { circScore.value = null; }
+};
+
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadTodayContext()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadTodayContext(), loadCircadianScore()]);
   await loadReadiness();
 });
 
@@ -419,7 +444,7 @@ const handleConnect = async () => {
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities(), loadTodayContext()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadTodayContext(), loadCircadianScore()]);
     await loadReadiness();
     const t = await toastController.create({ message: `Synced ${syncResult.synced} records.`, duration: 2200, color: 'success' });
     await t.present();

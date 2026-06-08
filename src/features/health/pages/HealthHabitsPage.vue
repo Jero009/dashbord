@@ -102,6 +102,7 @@ import {
   toggleHabitCompletion,
   getRecentHabitLogs,
 } from '@/shared/db/app_db';
+import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 
 const todayStr = new Date().toISOString().slice(0, 10);
 const selectedDate = ref(todayStr);
@@ -167,7 +168,13 @@ const loadHabits = async () => {
 };
 
 const toggleHabit = async (h: Record<string, any>) => {
-  await toggleHabitCompletion(h.id, selectedDate.value, h.completed !== 1);
+  const completing = h.completed !== 1;
+  if (completing) {
+    hapticSuccess();
+  } else {
+    hapticLight();
+  }
+  await toggleHabitCompletion(h.id, selectedDate.value, completing);
   await loadHabits();
 };
 
@@ -177,6 +184,7 @@ const removeHabit = async (id: number) => {
 };
 
 const saveHabit = async () => {
+  hapticMedium();
   if (!newName.value.trim()) {
     const t = await toastController.create({ message: 'Enter a habit name.', duration: 1800, color: 'warning' });
     await t.present();

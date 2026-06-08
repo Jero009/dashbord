@@ -73,7 +73,7 @@
           <p class="section-kicker">Stage timeline</p>
           <div v-if="hypnogramBlocks.length" class="hypnogram-wrap">
             <div class="hypnogram-inner">
-              <svg viewBox="0 0 100 52" class="hypnogram-svg" preserveAspectRatio="none">
+              <svg viewBox="0 0 100 63" class="hypnogram-svg" preserveAspectRatio="none">
                 <rect
                   v-for="(block, i) in hypnogramBlocks" :key="i"
                   :x="block.x" :y="block.y" :width="block.w" :height="block.h"
@@ -481,22 +481,26 @@ const stageLabel = (stage: string) =>
     inBed: 'In bed',
   }[stage] ?? stage);
 
-// Hypnogram — each stage occupies a fixed vertical band; blocks fill the band width for their duration
+// Hypnogram — fixed vertical bands top→bottom: Awake, REM, Light, Deep
 const STAGE_BANDS: Record<string, { y: number; h: number; fill: string }> = {
-  awake:  { y: 1,  h: 9,  fill: 'rgba(255,215,0,0.88)' },
-  inBed:  { y: 1,  h: 9,  fill: 'rgba(148,163,184,0.35)' },
-  rem:    { y: 14, h: 10, fill: 'rgba(34,211,238,0.82)' },
-  light:  { y: 28, h: 11, fill: 'rgba(96,149,240,0.78)' },
-  asleep: { y: 28, h: 11, fill: 'rgba(96,149,240,0.55)' },
-  deep:   { y: 42, h: 10, fill: 'rgba(37,78,195,0.92)' },
+  awake:              { y: 2,  h: 11, fill: 'rgba(255,215,0,0.88)' },
+  inBed:              { y: 2,  h: 11, fill: 'rgba(148,163,184,0.30)' },
+  out_of_bed:         { y: 2,  h: 11, fill: 'rgba(148,163,184,0.30)' },
+  unknown:            { y: 2,  h: 11, fill: 'rgba(148,163,184,0.20)' },
+  rem:                { y: 17, h: 12, fill: 'rgba(34,211,238,0.82)' },
+  light:              { y: 33, h: 12, fill: 'rgba(96,149,240,0.78)' },
+  asleep:             { y: 33, h: 12, fill: 'rgba(96,149,240,0.55)' },
+  sleeping:           { y: 33, h: 12, fill: 'rgba(96,149,240,0.55)' },
+  deep:               { y: 49, h: 12, fill: 'rgba(37,78,195,0.92)' },
 };
 
 const hypnogramBlocks = computed(() => {
   const segs = [...(summary.value?.timeline ?? [])]
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
   return segs.map(s => {
-    const band = STAGE_BANDS[s.stage] ?? STAGE_BANDS.inBed;
-    return { x: s.offset, y: band.y, w: Math.max(s.width, 0.5), h: band.h, fill: band.fill };
+    const key = s.stage?.toLowerCase() ?? '';
+    const band = STAGE_BANDS[key] ?? STAGE_BANDS.inBed;
+    return { x: s.offset, y: band.y, w: Math.max(s.width, 0.3), h: band.h, fill: band.fill };
   });
 });
 
@@ -506,10 +510,14 @@ const hypnogramConnectors = computed(() => {
   for (let i = 1; i < blocks.length; i++) {
     const prev = blocks[i - 1];
     const curr = blocks[i];
-    const prevMid = prev.y + prev.h / 2;
-    const currMid = curr.y + curr.h / 2;
-    if (Math.abs(prevMid - currMid) > 1) {
-      result.push({ x: curr.x, y1: Math.min(prevMid, currMid), y2: Math.max(prevMid, currMid) });
+    const prevBottom = prev.y + prev.h;
+    const currTop = curr.y;
+    if (Math.abs(prev.y - curr.y) > 0.5) {
+      // connector at end of previous block, spanning from prev band edge to curr band edge
+      const x = prev.x + prev.w;
+      const y1 = Math.min(prevBottom, curr.y + curr.h);
+      const y2 = Math.max(curr.y, prev.y);
+      result.push({ x, y1, y2 });
     }
   }
   return result;
@@ -721,17 +729,27 @@ onIonViewWillEnter(async () => {
 }
 
 .hypnogram-labels {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
+  position: relative;
   width: 22px;
-  padding: 1px 0;
-  text-align: right;
+  height: 90px;
   font-size: 0.58rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
 }
+
+.hypnogram-labels span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+/* band midpoints as % of viewBox height (63): 7.5, 23, 39, 55 */
+.hypnogram-labels span:nth-child(1) { top: 11.9%; }
+.hypnogram-labels span:nth-child(2) { top: 36.5%; }
+.hypnogram-labels span:nth-child(3) { top: 61.9%; }
+.hypnogram-labels span:nth-child(4) { top: 87.3%; }
 
 .axis-row {
   display: flex;

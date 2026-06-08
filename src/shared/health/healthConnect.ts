@@ -847,10 +847,15 @@ export function calculateBattery(
   now: Date,
   workouts: { time_start: string; time_end: string; total_kg: number | null }[],
   activities: ActivitySummary[],
-  events: { type: string; date: string; time_start: string | null; time_end: string | null }[]
+  events: { type: string; date: string; time_start: string | null; time_end: string | null }[],
+  circadianScore: number | null = null
 ): BatteryResult {
+  // Circadian modifier: irregular rhythm (low score) reduces effective baseline by up to 10%
+  const circMod = circadianScore !== null ? (0.9 + 0.1 * circadianScore / 100) : 1.0;
+  const adjustedBaseline = Math.round(clamp(baseline * circMod, 0, 100));
+
   // 1. Time drain — gradual fatigue through the day
-  const timeDrain = Math.max(0, baseline - applyReadinessDrain(baseline, now));
+  const timeDrain = Math.max(0, adjustedBaseline - applyReadinessDrain(adjustedBaseline, now));
 
   // 2. Workout drain — gym sessions completed today
   const workoutDrain = clamp(
@@ -895,11 +900,11 @@ export function calculateBattery(
   );
 
   const effectiveActivityDrain = workoutDrain > 0 ? 0 : activityDrain;
-  const score = clamp(Math.round(baseline - timeDrain - workoutDrain - effectiveActivityDrain - eventDrain), 0, 100);
+  const score = clamp(Math.round(adjustedBaseline - timeDrain - workoutDrain - effectiveActivityDrain - eventDrain), 0, 100);
 
   return {
     score,
-    baseline,
+    baseline: adjustedBaseline,
     drains: {
       time: Math.round(timeDrain),
       workout: Math.round(workoutDrain),

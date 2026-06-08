@@ -97,6 +97,121 @@
           </div>
         </ion-card>
 
+        <!-- Circadian alertness card -->
+        <ion-card v-if="circCurve.length" class="circ-card">
+          <div class="circ-header">
+            <p class="section-kicker">Circadian · alertness</p>
+            <span class="circ-now-pill" v-if="circNowLabel">{{ circNowLabel }}</span>
+          </div>
+
+          <!-- Colored alertness chart -->
+          <div class="circ-chart-wrap">
+            <svg viewBox="0 0 24 10" class="circ-svg" preserveAspectRatio="none">
+              <!-- Zone bands (cognitive / exercise / rest) -->
+              <rect v-if="circWindows?.cognitiveStart != null"
+                :x="circWindows.cognitiveStart"
+                y="0"
+                :width="((circWindows.cognitiveEnd - circWindows.cognitiveStart + 24) % 24)"
+                height="10"
+                fill="rgba(59,130,246,0.18)" />
+              <rect v-if="circWindows?.exerciseMorning"
+                :x="circWindows.exerciseMorning.start"
+                y="0"
+                :width="circWindows.exerciseMorning.end - circWindows.exerciseMorning.start"
+                height="10"
+                fill="rgba(255,215,0,0.12)" />
+              <rect v-if="circWindows?.exerciseAfternoon"
+                :x="circWindows.exerciseAfternoon.start"
+                y="0"
+                :width="circWindows.exerciseAfternoon.end - circWindows.exerciseAfternoon.start"
+                height="10"
+                fill="rgba(255,215,0,0.12)" />
+              <!-- Alertness area -->
+              <polygon :points="circAreaPoints" fill="rgba(239,68,68,0.12)" />
+              <!-- Alertness line -->
+              <polyline :points="circLinePoints" fill="none" stroke="rgb(239,68,68)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
+              <!-- Now line -->
+              <line :x1="circNowX" :x2="circNowX" y1="0" y2="10"
+                stroke="rgba(255,255,255,0.55)" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
+            </svg>
+            <div class="circ-axis">
+              <span>0</span><span>6</span><span>12</span><span>18</span>
+            </div>
+          </div>
+
+          <!-- Zone legend -->
+          <div class="circ-legend">
+            <span class="circ-legend-dot circ-legend-dot--blue"></span><span>Focus</span>
+            <span class="circ-legend-dot circ-legend-dot--yellow"></span><span>Exercise</span>
+            <span class="circ-legend-dot circ-legend-dot--red"></span><span>Curve</span>
+          </div>
+
+          <!-- Contextual log — changes by time of day -->
+          <div class="circ-log-section">
+
+            <!-- Day type: always shown in morning or if not yet set -->
+            <div v-if="timeSlot === 'morning' || circDayType === 'work'" class="circ-log-row">
+              <span class="circ-log-label">Today</span>
+              <button class="circ-type-btn" :class="{ 'circ-type-btn--active': circDayType === 'work' }"
+                @click="circDayType = 'work'; logCircadianField('day_type', 'work')">Work</button>
+              <button class="circ-type-btn" :class="{ 'circ-type-btn--active': circDayType === 'free' }"
+                @click="circDayType = 'free'; logCircadianField('day_type', 'free')">Free day</button>
+            </div>
+
+            <!-- Morning: morning light + wake energy -->
+            <template v-if="timeSlot === 'morning'">
+              <div class="circ-log-row">
+                <span class="circ-log-label">Morning light</span>
+                <button class="circ-light-btn" :class="{ 'circ-light-btn--on': circMorningLight }"
+                  @click="circMorningLight = !circMorningLight; logCircadianField('morning_light', circMorningLight ? 1 : 0)">
+                  {{ circMorningLight ? 'Got it' : 'Not yet' }}
+                </button>
+              </div>
+              <div class="circ-log-row">
+                <span class="circ-log-label">Wake energy</span>
+                <div class="circ-energy-row">
+                  <button v-for="v in [2,4,6,8,10]" :key="v"
+                    class="circ-energy-btn"
+                    :class="{ 'circ-energy-btn--active': circEnergyWake === v }"
+                    @click="circEnergyWake = v; logCircadianField('energy_wake', v)">{{ v }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Noon: noon energy -->
+            <template v-if="timeSlot === 'noon'">
+              <div class="circ-log-row">
+                <span class="circ-log-label">Noon energy</span>
+                <div class="circ-energy-row">
+                  <button v-for="v in [2,4,6,8,10]" :key="v"
+                    class="circ-energy-btn"
+                    :class="{ 'circ-energy-btn--active': circEnergyNoon === v }"
+                    @click="circEnergyNoon = v; logCircadianField('energy_noon', v)">{{ v }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Evening: evening energy -->
+            <template v-if="timeSlot === 'evening'">
+              <div class="circ-log-row">
+                <span class="circ-log-label">Evening energy</span>
+                <div class="circ-energy-row">
+                  <button v-for="v in [2,4,6,8,10]" :key="v"
+                    class="circ-energy-btn"
+                    :class="{ 'circ-energy-btn--active': circEnergyEvening === v }"
+                    @click="circEnergyEvening = v; logCircadianField('energy_evening', v)">{{ v }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Night: nothing to log -->
+            <div v-if="timeSlot === 'night'" class="circ-log-complete">
+              <span>Day logged · rest well</span>
+            </div>
+
+          </div>
+        </ion-card>
+
         <!-- Last workout card (big) -->
         <ion-card v-if="!activeWorkout && latestWorkout" class="workout-hero-card">
           <div class="workout-hero__topline">
@@ -258,9 +373,13 @@ import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
+import { computeCircadianProfile, computeAlertnessCurve, computeCircadianWindows, type CircadianProfile, type AlertnessPoint, type CircadianWindows, type DayType } from '@/shared/health/circadian';
+import { getRecentCircadianLogs, upsertCircadianLog, getRecentSleepSessions } from '@/shared/db/app_db';
+import { scheduleCircadianNudges } from '@/shared/utils/notifications';
 import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
+import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess, hapticSelect } from '@/shared/utils/haptics';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
@@ -326,11 +445,13 @@ const loadTodayWeight = async () => {
 };
 
 const logQuickWeight = async () => {
+  hapticMedium();
   const val = parseFloat(quickWeightInput.value);
   if (!val || val <= 0) return;
   await insertBodyLog({ date: todayStr, weight_kg: val });
   quickWeightInput.value = '';
   await loadTodayWeight();
+  hapticSuccess();
   const t = await toastController.create({ message: 'Logged', duration: 1500, color: 'success' });
   await t.present();
 };
@@ -410,11 +531,13 @@ const loadActiveWorkout = async () => {
 };
 
 const backToWorkout = async () => {
+  hapticLight();
   const w = await getActiveWorkout();
   if (w) router.push(`/workout/${w.id}`);
 };
 
 const repeatLastWorkout = async () => {
+  hapticMedium();
   const templateId = latestWorkout.value?.id_workout_template
   if (!templateId) return
   const workoutId = await startWorkoutFromTemplate(templateId)
@@ -422,6 +545,7 @@ const repeatLastWorkout = async () => {
 }
 
 const startEventWorkout = async (templateId: number) => {
+  hapticHeavy();
   const workoutId = await startWorkoutFromTemplate(templateId);
   if (workoutId) router.push(`/workout/${workoutId}`);
 };
@@ -641,8 +765,14 @@ const loadSummary = async () => {
 
 
 const toggleTodayHabit = async (h: Record<string, any>) => {
+  const completing = h.completed !== 1;
+  if (completing) {
+    hapticSuccess();
+  } else {
+    hapticLight();
+  }
   const today = new Date().toISOString().slice(0, 10);
-  await toggleHabitCompletion(h.id, today, h.completed !== 1);
+  await toggleHabitCompletion(h.id, today, completing);
   todayHabits.value = await getHabitsWithStatus(today);
 };
 
@@ -732,11 +862,129 @@ const buildBatteryChart = () => {
   });
 };
 
+// ── Circadian ────────────────────────────────────────────────────────────────
+
+const circProfile     = ref<CircadianProfile | null>(null);
+const circCurve       = ref<AlertnessPoint[]>([]);
+const circWindows     = ref<CircadianWindows | null>(null);
+const circDayType     = ref<'work' | 'free'>('work');
+const circEnergyWake  = ref<number | null>(null);
+const circEnergyNoon  = ref<number | null>(null);
+const circEnergyEvening = ref<number | null>(null);
+const circMorningLight  = ref(false);
+
+const timeSlot = computed((): 'morning' | 'noon' | 'evening' | 'night' => {
+  const h = new Date(nowTick.value).getHours();
+  if (h >= 5  && h < 11) return 'morning';
+  if (h >= 11 && h < 16) return 'noon';
+  if (h >= 16 && h < 22) return 'evening';
+  return 'night';
+});
+
+function circFmtHour(h: number): string {
+  const n = ((h % 24) + 24) % 24;
+  return `${String(Math.floor(n)).padStart(2,'0')}:${String(Math.round((n % 1) * 60)).padStart(2,'0')}`;
+}
+
+function circInWindow(h: number, start: number, end: number): boolean {
+  if (end >= start) return h >= start && h <= end;
+  return h >= start || h <= end;
+}
+
+const circNowX = computed(() => {
+  const now = new Date(nowTick.value);
+  return now.getHours() + now.getMinutes() / 60;
+});
+
+const circLinePoints = computed(() =>
+  circCurve.value.map(p => `${p.hour},${(1 - p.alertness) * 9 + 0.5}`).join(' ')
+);
+
+const circAreaPoints = computed(() => {
+  if (!circCurve.value.length) return '';
+  const line = circLinePoints.value;
+  return `0,10 ${line} 23,10`;
+});
+
+const circNowLabel = computed(() => {
+  const w = circWindows.value;
+  if (!w) return '';
+  const h = circNowX.value;
+  if (circInWindow(h, w.cognitiveStart, w.cognitiveEnd)) return 'Focus time';
+  if (w.exerciseMorning && circInWindow(h, w.exerciseMorning.start, w.exerciseMorning.end)) return 'Good for exercise';
+  if (w.exerciseAfternoon && circInWindow(h, w.exerciseAfternoon.start, w.exerciseAfternoon.end)) return 'Good for exercise';
+  const sleepOnset = circProfile.value?.avgSleepOnset ?? 23;
+  if (circInWindow(h, sleepOnset - 1, sleepOnset + 1)) return 'Wind down';
+  if (h > w.lastMealBy || h < 6) return 'Rest period';
+  return 'Light tasks';
+});
+
+const loadCircadian = async () => {
+  try {
+    const sessions = await getRecentSleepSessions(14);
+    const logs     = await getRecentCircadianLogs(14);
+
+    const dayTypes = new Map<string, DayType>(logs.map(l => [l.date, l.day_type as DayType]));
+    const sleepRecs = sessions.map(s => ({
+      date: s.date, bedtime: s.bedtime, waketime: s.waketime,
+      timeAsleepHours: s.time_asleep_hours, efficiency: s.efficiency,
+    }));
+
+    const profile = computeCircadianProfile(sleepRecs, dayTypes);
+    circProfile.value = profile;
+
+    const avgWake = sleepRecs.length
+      ? sleepRecs.slice(0, 7).reduce((acc, r) => {
+          const d = new Date(r.waketime); return acc + d.getHours() + d.getMinutes() / 60;
+        }, 0) / Math.min(sleepRecs.length, 7)
+      : 7.0;
+
+    circCurve.value   = computeAlertnessCurve(profile, avgWake);
+    circWindows.value = computeCircadianWindows(profile, avgWake);
+
+    // Restore today's log state
+    const todayLog = logs.find(l => l.date === todayStr);
+    if (todayLog) {
+      circDayType.value       = todayLog.day_type as 'work' | 'free';
+      circEnergyWake.value    = todayLog.energy_wake    ?? null;
+      circEnergyNoon.value    = todayLog.energy_noon    ?? null;
+      circEnergyEvening.value = todayLog.energy_evening ?? null;
+      circMorningLight.value  = todayLog.morning_light  === 1;
+    }
+
+    // Schedule morning + noon nudges
+    if (circWindows.value) {
+      const cogLabel = `${circFmtHour(circWindows.value.cognitiveStart)}–${circFmtHour(circWindows.value.cognitiveEnd)}`;
+      scheduleCircadianNudges('08:00', '12:00', cogLabel).catch(() => {});
+    }
+  } catch (e) {
+    console.error('[HomePage] circadian load failed:', e);
+  }
+};
+
+const logCircadianField = async (field: string, value: unknown) => {
+  hapticSelect();
+  const existing = (await getRecentCircadianLogs(1)).find(l => l.date === todayStr);
+  await upsertCircadianLog({
+    date:           todayStr,
+    day_type:       circDayType.value,
+    energy_wake:    circEnergyWake.value,
+    energy_noon:    circEnergyNoon.value,
+    energy_evening: circEnergyEvening.value,
+    meal_first:     existing?.meal_first  ?? null,
+    meal_last:      existing?.meal_last   ?? null,
+    morning_light:  circMorningLight.value ? 1 : 0,
+    notes:          existing?.notes       ?? null,
+    [field]: value,
+  });
+};
+
 const loadAll = async () => {
   await Promise.all([
     loadSummary(),
     loadActiveWorkout(),
     loadTodayWeight(),
+    loadCircadian(),
     getCalendarEventsForDate(todayStr).then((evs) => { todayEvents.value = evs; }),
     getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
@@ -1421,5 +1669,158 @@ onMounted(async () => {
   .active-card__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ── Circadian card ─────────────────────────────────────────────── */
+.circ-card { padding: 16px 16px 14px; }
+
+.circ-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.circ-header .section-kicker { margin: 0; }
+
+.circ-now-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgb(239, 68, 68);
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 999px;
+  padding: 3px 10px;
+  letter-spacing: 0.04em;
+}
+
+.circ-chart-wrap { position: relative; }
+
+.circ-svg {
+  width: 100%;
+  height: 72px;
+  display: block;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.circ-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 3px;
+  padding: 0 2px;
+}
+
+.circ-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.circ-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.circ-legend-dot--blue   { background: rgb(59, 130, 246); }
+.circ-legend-dot--yellow { background: rgb(255, 215, 0); }
+.circ-legend-dot--red    { background: rgb(239, 68, 68); }
+
+.circ-log-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.circ-log-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.circ-log-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+  width: 82px;
+}
+
+.circ-type-btn {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.circ-type-btn--active {
+  background: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+  color: #fff;
+}
+
+.circ-light-btn {
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.circ-light-btn--on {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgb(34, 197, 94);
+  color: rgb(34, 197, 94);
+}
+
+.circ-energy-row {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+}
+
+.circ-energy-btn {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.circ-energy-btn--active {
+  background: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+  color: #fff;
+}
+
+.circ-log-complete {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  padding: 4px 0;
 }
 </style>

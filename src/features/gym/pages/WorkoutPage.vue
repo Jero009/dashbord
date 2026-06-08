@@ -403,6 +403,7 @@ import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDo
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
+import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds } from '@/shared/db/app_db';
 
@@ -478,6 +479,7 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
   const checked = (event as any)?.detail?.checked;
   const isChecked = typeof checked === 'boolean' ? checked : !!set.completed;
   set.completed = isChecked;
+  hapticMedium();
 
   if (isChecked) {
     startRestTimer(Number(exercise.rest_seconds) || 60);
@@ -515,6 +517,7 @@ const editRestTime = async (exercise: any) => {
 };
 
 const saveWorkout = async () => {
+  hapticHeavy();
   const alert = await alertController.create({
     header: 'End Workout?',
     message: 'This will save the workout and return you to the home screen.',
@@ -525,6 +528,7 @@ const saveWorkout = async () => {
         text: 'End Workout',
         role: 'destructive',
         handler: async () => {
+          hapticSuccess();
           await endWorkout(workoutId);
           if (interval) clearInterval(interval);
           interval = null;
@@ -623,6 +627,7 @@ const addNewExercise = async () => {
 
 // Add new set to existing exercise
 const addNewSet = async (exercise: any) => {
+  hapticLight();
   const nextSetNum = await getNextSetNumber(exercise.id);
   const previousSets = await getLatestCompletedSetsForExercise(exercise.exercise_id, workoutId);
   
@@ -791,6 +796,7 @@ const restoreTimerState = () => {
 };
 
 const startRestTimer = (seconds: number) => {
+  hapticLight();
   // Stop any existing timer before starting a new one
   stopRestTimer();
 

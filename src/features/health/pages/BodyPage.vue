@@ -119,6 +119,7 @@ import { FilePicker } from '@capawesome/capacitor-file-picker'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
+import { hapticHeavy, hapticMedium, hapticSuccess } from '@/shared/utils/haptics'
 import { dismissWeightReminder } from '@/shared/utils/notifications'
 import type { BodyLogEntry } from '@/shared/db/app_db'
 import { getGoalWeightKg } from '@/shared/utils/userSettings'
@@ -303,6 +304,7 @@ const pickPhoto = async () => {
 }
 
 const saveEntry = async () => {
+  hapticMedium();
   const weight = parseFloat(form.value.weight)
   if (!weight || weight <= 0) {
     const t = await toastController.create({ message: 'Enter a valid weight.', duration: 1800, color: 'warning' })
@@ -347,6 +349,7 @@ const saveEntry = async () => {
 
     await loadEntries()
 
+    hapticSuccess();
     const t = await toastController.create({ message: 'Saved!', duration: 1500, color: 'success' })
     await t.present()
   } catch (err) {
@@ -356,6 +359,7 @@ const saveEntry = async () => {
 }
 
 const removeEntry = async (entry: BodyLogEntry) => {
+  hapticHeavy();
   if (entry.photo_path) {
     try {
       await Filesystem.deleteFile({ path: entry.photo_path, directory: Directory.Data })

@@ -26,7 +26,8 @@ const EXPORT_DELETE_TABLES = [
   'finance_subscription',
   'finance_investment',
   'finance_account',
-  'net_worth_snapshot'
+  'net_worth_snapshot',
+  'circadian_log'
 ];
 
 const EXPORT_INSERT_TABLES = [
@@ -50,7 +51,8 @@ const EXPORT_INSERT_TABLES = [
   'finance_account',
   'finance_investment',
   'finance_subscription',
-  'net_worth_snapshot'
+  'net_worth_snapshot',
+  'circadian_log'
 ];
 
 function toSqlLiteral(value: unknown) {
@@ -271,6 +273,19 @@ export async function initDB() {
     title TEXT NOT NULL,
     date TEXT NOT NULL,
     type TEXT DEFAULT 'general',
+    notes TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS circadian_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL UNIQUE,
+    day_type TEXT NOT NULL DEFAULT 'work',
+    energy_wake INTEGER,
+    energy_noon INTEGER,
+    energy_evening INTEGER,
+    meal_first TEXT,
+    meal_last TEXT,
+    morning_light INTEGER NOT NULL DEFAULT 0,
     notes TEXT
   );
 
@@ -2023,7 +2038,8 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     'finance_subscription',
     'finance_investment',
     'finance_account',
-    'net_worth_snapshot'
+    'net_worth_snapshot',
+    'circadian_log'
   ];
 
   const insertOrder = [
@@ -2044,7 +2060,8 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     'finance_account',
     'finance_investment',
     'finance_subscription',
-    'net_worth_snapshot'
+    'net_worth_snapshot',
+    'circadian_log'
   ];
 
   const deleteStatementsByTable = new Map<string, string>();
@@ -2318,4 +2335,61 @@ export async function getExerciseStats(exerciseId: number) {
     pr,
     history
   };
+}
+
+// ── Circadian log ────────────────────────────────────────────────────────────
+
+export interface CircadianLogEntry {
+  id?: number;
+  date: string;
+  day_type: string;        // 'work' | 'free'
+  energy_wake: number | null;
+  energy_noon: number | null;
+  energy_evening: number | null;
+  meal_first: string | null;  // HH:MM
+  meal_last: string | null;   // HH:MM
+  morning_light: number;      // 0 | 1
+  notes: string | null;
+}
+
+export async function upsertCircadianLog(entry: Omit<CircadianLogEntry, 'id'>) {
+  if (!db) return;
+  await db.run(
+    `INSERT INTO circadian_log
+       (date, day_type, energy_wake, energy_noon, energy_evening,
+        meal_first, meal_last, morning_light, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET
+       day_type       = excluded.day_type,
+       energy_wake    = excluded.energy_wake,
+       energy_noon    = excluded.energy_noon,
+       energy_evening = excluded.energy_evening,
+       meal_first     = excluded.meal_first,
+       meal_last      = excluded.meal_last,
+       morning_light  = excluded.morning_light,
+       notes          = excluded.notes;`,
+    [
+      entry.date, entry.day_type,
+      entry.energy_wake ?? null, entry.energy_noon ?? null, entry.energy_evening ?? null,
+      entry.meal_first ?? null, entry.meal_last ?? null,
+      entry.morning_light, entry.notes ?? null,
+    ]
+  );
+}
+
+export async function getCircadianLog(date: string): Promise<CircadianLogEntry | null> {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM circadian_log WHERE date = ?;`, [date]
+  );
+  return ((result.values ?? []) as CircadianLogEntry[])[0] ?? null;
+}
+
+export async function getRecentCircadianLogs(days = 30): Promise<CircadianLogEntry[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM circadian_log WHERE date >= date('now', ?) ORDER BY date DESC;`,
+    [`-${days} days`]
+  );
+  return (result.values ?? []) as CircadianLogEntry[];
 }

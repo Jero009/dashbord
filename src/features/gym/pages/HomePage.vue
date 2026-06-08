@@ -126,7 +126,7 @@ import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
 import { formatDuration, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
-
+import { hapticHeavy, hapticLight, hapticMedium } from '@/shared/utils/haptics';
 
 const activeWorkout = ref(false);
 const activeRestTimer = ref({
@@ -144,6 +144,7 @@ const startWorkout = async (templateId: number) => {
   if (activeWorkout.value) {
     return;
   }
+  hapticHeavy();
 
   const workoutId = await startWorkoutFromTemplate(templateId);
 
@@ -156,6 +157,7 @@ const startWorkout = async (templateId: number) => {
 };
 // active workout id
 const backToWorkout = async () => {
+  hapticLight();
   const workout = await getActiveWorkout();
 
   if (workout) {

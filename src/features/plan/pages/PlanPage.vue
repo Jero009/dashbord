@@ -12,20 +12,20 @@
         <div class="card today-card">
           <p class="section-kicker">Today · {{ todayLabel }}</p>
           <div class="snapshot-grid">
-            <div class="snapshot-tile" @click="router.push('/plan/habits')">
+            <div class="snapshot-tile" @click="navTo('/plan/habits')">
               <span class="snapshot-value" :class="{ 'value--done': allHabitsDone }">
                 {{ habitsDone }}<span class="snapshot-denom">/{{ habitsTotal }}</span>
               </span>
               <span class="snapshot-label">Habits</span>
             </div>
-            <div class="snapshot-tile" @click="router.push('/plan/calendar')">
+            <div class="snapshot-tile" @click="navTo('/plan/calendar')">
               <span class="snapshot-value snapshot-value--event" v-if="nextEvent">
                 {{ nextEvent.time_start ? nextEvent.time_start.slice(0, 5) : 'All day' }}
               </span>
               <span class="snapshot-value snapshot-value--muted" v-else">—</span>
               <span class="snapshot-label">{{ nextEvent ? nextEvent.title : 'No events' }}</span>
             </div>
-            <div class="snapshot-tile" @click="router.push('/plan/goals')">
+            <div class="snapshot-tile" @click="navTo('/plan/goals')">
               <span class="snapshot-value">{{ activeGoals }}</span>
               <span class="snapshot-label">Goals active</span>
             </div>
@@ -48,7 +48,7 @@
         <!-- Nav tiles -->
         <p class="section-kicker nav-kicker">Sections</p>
         <div class="nav-grid">
-          <button class="nav-tile" @click="router.push('/plan/goals')">
+          <button class="nav-tile" @click="navTo('/plan/goals')">
             <ion-icon :icon="flagOutline" class="nav-tile__icon" />
             <div class="nav-tile__text">
               <span class="nav-tile__label">Goals</span>
@@ -57,7 +57,7 @@
             <ion-icon :icon="chevronForwardOutline" class="nav-tile__arrow" />
           </button>
 
-          <button class="nav-tile" @click="router.push('/plan/habits')">
+          <button class="nav-tile" @click="navTo('/plan/habits')">
             <ion-icon :icon="checkboxOutline" class="nav-tile__icon" />
             <div class="nav-tile__text">
               <span class="nav-tile__label">Habits</span>
@@ -66,7 +66,7 @@
             <ion-icon :icon="chevronForwardOutline" class="nav-tile__arrow" />
           </button>
 
-          <button class="nav-tile" @click="router.push('/plan/calendar')">
+          <button class="nav-tile" @click="navTo('/plan/calendar')">
             <ion-icon :icon="calendarOutline" class="nav-tile__icon" />
             <div class="nav-tile__text">
               <span class="nav-tile__label">Calendar</span>
@@ -89,8 +89,14 @@ import { useRouter } from 'vue-router'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue'
 import { getHabitsWithStatus, getGoals, getCalendarEventsForDate } from '@/shared/db/app_db'
+import { hapticLight } from '@/shared/utils/haptics'
 
 const router = useRouter()
+
+const navTo = (path: string) => {
+  hapticLight();
+  router.push(path);
+};
 
 const today = new Date().toISOString().slice(0, 10)
 const todayLabel = new Date(today + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })

@@ -2,11 +2,13 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 import { Capacitor } from '@capacitor/core'
 
 // Notification ID ranges — must be stable integers
-const ID_WEIGHT   = 1
-const ID_HABIT    = 2
-const ID_SLEEP    = 3
-const ID_CAL_BASE = 4000   // 4000 + event id
-const ID_SUB_BASE = 5000   // 5000 + sub id
+const ID_WEIGHT        = 1
+const ID_HABIT         = 2
+const ID_SLEEP         = 3
+const ID_CIRC_MORNING  = 8
+const ID_CIRC_NOON     = 9
+const ID_CAL_BASE      = 4000   // 4000 + event id
+const ID_SUB_BASE      = 5000   // 5000 + sub id
 
 function nextOccurrence(hhmm: string): Date {
   const [h, m] = hhmm.split(':').map(Number)
@@ -70,6 +72,33 @@ export async function scheduleSleepReminder(time: string): Promise<void> {
       schedule: { at: nextOccurrence(time), repeats: true, every: 'day' },
       smallIcon: 'ic_stat_icon_config_sample',
     }]
+  })
+}
+
+export async function scheduleCircadianNudges(
+  morningTime: string,
+  noonTime: string,
+  cogPeakLabel: string
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_CIRC_MORNING }, { id: ID_CIRC_NOON }] })
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: ID_CIRC_MORNING,
+        title: 'Morning check-in',
+        body: `Focus window today: ${cogPeakLabel}. Get outdoor light now to strengthen your rhythm.`,
+        schedule: { at: nextOccurrence(morningTime), repeats: true, every: 'day' },
+        smallIcon: 'ic_stat_icon_config_sample',
+      },
+      {
+        id: ID_CIRC_NOON,
+        title: 'Midday energy log',
+        body: 'How is your energy? Log it to calibrate your circadian profile.',
+        schedule: { at: nextOccurrence(noonTime), repeats: true, every: 'day' },
+        smallIcon: 'ic_stat_icon_config_sample',
+      },
+    ]
   })
 }
 
