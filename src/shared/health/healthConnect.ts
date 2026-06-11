@@ -15,7 +15,19 @@ export type HealthMetricType =
 
 type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'workouts';
 
-const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate', 'workouts'];
+// Core metrics the app actually depends on. These — and ONLY these — gate sync.
+const HEALTH_CONNECT_CORE_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate'];
+// 'workouts' maps to READ_EXERCISE. It is optional — only used for the activity-drain
+// component of the battery score (getRecentActivities, which degrades gracefully).
+// It is requested so users CAN grant it, but it must never gate core sync: the Amazfit
+// produces no exercise sessions, so this permission is commonly ungranted/reset and
+// requiring it silently blocked all metric syncing.
+const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = [...HEALTH_CONNECT_CORE_READ_TYPES, 'workouts'];
+
+// True when every core metric is granted. Optional 'workouts' is intentionally ignored.
+const hasCoreReadAccess = (readAuthorized: string[]) =>
+  HEALTH_CONNECT_CORE_READ_TYPES.every((type) => readAuthorized.includes(type));
+
 const HEALTH_CONNECT_SOURCE = 'health-connect';
 
 export interface HealthConnectAccessResult {
@@ -341,7 +353,7 @@ export async function requestHealthConnectPermissions(): Promise<HealthConnectAc
     read: HEALTH_CONNECT_READ_TYPES,
   });
 
-  const granted = HEALTH_CONNECT_READ_TYPES.every((type) => status.readAuthorized.includes(type));
+  const granted = hasCoreReadAccess(status.readAuthorized);
 
   return {
     available: true,
@@ -363,16 +375,23 @@ export async function canAutoSyncHealthConnectMetrics() {
     return false;
   }
 
-  const availability = await ensureAvailability();
-  if (!availability.available) {
+  // Any native rejection (e.g. corrupted Health Connect / Play Services auth state)
+  // must resolve to "cannot sync" — never propagate and risk killing startup.
+  try {
+    const availability = await ensureAvailability();
+    if (!availability.available) {
+      return false;
+    }
+
+    const auth = await Health.checkAuthorization({
+      read: HEALTH_CONNECT_READ_TYPES,
+    });
+
+    return hasCoreReadAccess(auth.readAuthorized);
+  } catch (error) {
+    console.error('Health Connect authorization check failed:', error);
     return false;
   }
-
-  const auth = await Health.checkAuthorization({
-    read: HEALTH_CONNECT_READ_TYPES,
-  });
-
-  return HEALTH_CONNECT_READ_TYPES.every((type) => auth.readAuthorized.includes(type));
 }
 
 export async function readHealthMetrics(_type: HealthMetricType, _startDate: string, _endDate: string) {
@@ -427,7 +446,7 @@ export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummary
   const auth = await Health.checkAuthorization({
     read: HEALTH_CONNECT_READ_TYPES,
   });
-  const granted = HEALTH_CONNECT_READ_TYPES.every((type) => auth.readAuthorized.includes(type));
+  const granted = hasCoreReadAccess(auth.readAuthorized);
 
   if (!granted) {
     return {
@@ -533,7 +552,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     read: HEALTH_CONNECT_READ_TYPES,
   });
 
-  const granted = HEALTH_CONNECT_READ_TYPES.every((type) => auth.readAuthorized.includes(type));
+  const granted = hasCoreReadAccess(auth.readAuthorized);
   if (!granted) {
     return {
       available: true,

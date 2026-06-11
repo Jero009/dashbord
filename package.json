@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "postinstall": "patch-package",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "test:e2e": "cypress run",
@@ -25,7 +26,6 @@
     "@capacitor/status-bar": "8.0.1",
     "@capawesome/capacitor-file-picker": "^8.0.2",
     "@capgo/capacitor-health": "^8.6.0",
-    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "@ionic/vue": "^8.0.0",
     "@ionic/vue-router": "^8.0.0",
     "chart.js": "^4.5.1",
@@ -44,6 +44,7 @@
     "eslint": "^8.35.0",
     "eslint-plugin-vue": "^9.9.0",
     "jsdom": "^22.1.0",
+    "patch-package": "^8.0.1",
     "terser": "^5.4.0",
     "typescript": "~5.9.0",
     "vite": "^5.0.0",

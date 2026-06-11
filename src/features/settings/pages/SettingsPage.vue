@@ -189,24 +189,6 @@
           <input ref="importFileInput" type="file" accept=".sql,text/plain" style="display:none" @change="handleImportFile" />
         </div>
 
-        <div class="card">
-          <p class="section-kicker">Google Drive backup</p>
-          <div class="notif-row">
-            <div class="notif-info">
-              <span class="notif-label">Auto-backup daily</span>
-              <span class="notif-desc">Uploads a SQL export to your Google Drive once per day</span>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" :checked="driveEnabled" @change="toggleDriveBackup" />
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <p v-if="lastBackupDate" class="hint-text">Last backup: {{ lastBackupDate }}</p>
-          <button class="btn-primary" style="margin-top:10px" :disabled="driveBackingUp" @click="handleDriveBackupNow">
-            {{ driveBackingUp ? 'Backing up...' : 'Back up now' }}
-          </button>
-        </div>
-
       </div>
     </ion-content>
   </ion-page>
@@ -232,8 +214,7 @@ import {
 } from '@/shared/utils/notifications'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
-import { getDriveBackupEnabled, setDriveBackupEnabled, getLastBackupDate, runBackupNow } from '@/shared/utils/driveBackup'
-import { bulkInsertBodyLog, exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
+import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -288,32 +269,6 @@ const alreadyImported = ref(localStorage.getItem(IMPORT_KEY) === '1')
 const importHistory = () => {
   localStorage.setItem(IMPORT_KEY, '1')
   alreadyImported.value = true
-}
-
-// --- Google Drive backup ---
-const driveEnabled   = ref(getDriveBackupEnabled())
-const driveBackingUp = ref(false)
-const lastBackupDate = ref(getLastBackupDate())
-
-const toggleDriveBackup = (e: Event) => {
-  const enabled = (e.target as HTMLInputElement).checked
-  setDriveBackupEnabled(enabled)
-  driveEnabled.value = enabled
-}
-
-const handleDriveBackupNow = async () => {
-  driveBackingUp.value = true
-  try {
-    await runBackupNow()
-    lastBackupDate.value = getLastBackupDate()
-    const t = await toastController.create({ message: 'Backed up to Google Drive.', duration: 2000, color: 'success' })
-    await t.present()
-  } catch (err) {
-    const t = await toastController.create({ message: err instanceof Error ? err.message : 'Backup failed.', duration: 2500, color: 'danger' })
-    await t.present()
-  } finally {
-    driveBackingUp.value = false
-  }
 }
 
 // --- Goals ---
