@@ -1,5 +1,9 @@
 # AI Agent Context
 
+> **Start here:** `docs/CODEBASE_ANALYSIS.md` is the comprehensive, up-to-date analysis
+> of the whole app (schema, scoring models, every feature page, storage keys, gotchas).
+> Other files in this folder may predate the health/finance/home features.
+
 ## Quick Commands
 - Dev server: `npm run dev`
 - Lint: `npm run lint`
