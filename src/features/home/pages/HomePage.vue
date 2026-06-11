@@ -104,8 +104,13 @@
             <span class="circ-now-pill" v-if="circNowLabel">{{ circNowLabel }}</span>
           </div>
 
+          <!-- Insufficient data: don't present a fallback curve as if it were real -->
+          <div v-if="circInsufficient" class="circ-insufficient">
+            <span>Log 3+ nights of sleep to map your alertness curve.</span>
+          </div>
+
           <!-- Colored alertness chart -->
-          <div class="circ-chart-wrap">
+          <div v-else class="circ-chart-wrap">
             <svg viewBox="0 0 24 10" class="circ-svg" preserveAspectRatio="none">
               <!-- Zone bands (cognitive / exercise / rest) -->
               <rect v-if="circWindows?.cognitiveStart != null"
@@ -140,16 +145,29 @@
           </div>
 
           <!-- Zone legend -->
-          <div class="circ-legend">
+          <div v-if="!circInsufficient" class="circ-legend">
             <span class="circ-legend-dot circ-legend-dot--focus"></span><span>Focus</span>
             <span class="circ-legend-dot circ-legend-dot--exercise"></span><span>Exercise</span>
             <span class="circ-legend-dot circ-legend-dot--curve"></span><span>Curve</span>
           </div>
 
-          <!-- Contextual log — changes by time of day -->
-          <div class="circ-log-section">
+          <!-- Quick-log trigger → opens a focused bottom sheet for the current slot -->
+          <button v-if="timeSlot !== 'night'" class="circ-log-trigger" @click="openCircSheet">
+            <span class="circ-log-trigger-label">{{ circSlotPrompt }}</span>
+            <ion-icon :icon="chevronUpOutline" />
+          </button>
+          <div v-else class="circ-log-complete">
+            <span>Day logged · rest well</span>
+          </div>
+        </ion-card>
 
-            <!-- Day type: always shown in morning or if not yet set -->
+        <!-- Circadian quick-log bottom sheet -->
+        <ion-modal :is-open="circSheetOpen" :breakpoints="[0, 0.5]" :initial-breakpoint="0.5"
+          class="circ-sheet" @didDismiss="circSheetOpen = false">
+          <div class="circ-sheet-body">
+            <p class="section-kicker">{{ circSlotTitle }}</p>
+
+            <!-- Day type: morning, or any time it isn't set yet -->
             <div v-if="timeSlot === 'morning' || circDayType === 'work'" class="circ-log-row">
               <span class="circ-log-label">Today</span>
               <button class="circ-type-btn" :class="{ 'circ-type-btn--active': circDayType === 'work' }"
@@ -204,13 +222,9 @@
               </div>
             </template>
 
-            <!-- Night: nothing to log -->
-            <div v-if="timeSlot === 'night'" class="circ-log-complete">
-              <span>Day logged · rest well</span>
-            </div>
-
+            <button class="circ-sheet-done" @click="circSheetOpen = false">Done</button>
           </div>
-        </ion-card>
+        </ion-modal>
 
         <!-- Last workout card (big) -->
         <ion-card v-if="!activeWorkout && latestWorkout" class="workout-hero-card">
@@ -368,7 +382,7 @@
 
 <script setup lang="ts">
 import { IonCard, IonContent, IonHeader, IonIcon, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
-import { checkmark, ellipseOutline } from 'ionicons/icons';
+import { checkmark, ellipseOutline, chevronUpOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
@@ -879,14 +893,40 @@ const circEnergyWake  = ref<number | null>(null);
 const circEnergyNoon  = ref<number | null>(null);
 const circEnergyEvening = ref<number | null>(null);
 const circMorningLight  = ref(false);
+const circWakeHour    = ref(7);
+const circSheetOpen   = ref(false);
 
+const circInsufficient = computed(() => (circProfile.value?.dataQuality ?? 'insufficient') === 'insufficient');
+
+// Time-of-day slot anchored to the user's wake time (not wall clock), so the right
+// question surfaces for early/late chronotypes. Hours since wake: 0–5 morning,
+// 5–10 noon, 10–16 evening, otherwise night/pre-wake.
 const timeSlot = computed((): 'morning' | 'noon' | 'evening' | 'night' => {
-  const h = new Date(nowTick.value).getHours();
-  if (h >= 5  && h < 11) return 'morning';
-  if (h >= 11 && h < 16) return 'noon';
-  if (h >= 16 && h < 22) return 'evening';
+  const now = new Date(nowTick.value);
+  const h = now.getHours() + now.getMinutes() / 60;
+  let sinceWake = h - circWakeHour.value;
+  if (sinceWake < 0) sinceWake += 24;
+  if (sinceWake < 5)  return 'morning';
+  if (sinceWake < 10) return 'noon';
+  if (sinceWake < 16) return 'evening';
   return 'night';
 });
+
+const circSlotTitle = computed(() => (
+  timeSlot.value === 'morning' ? 'Morning check-in'
+  : timeSlot.value === 'noon'  ? 'Midday energy'
+  : timeSlot.value === 'evening' ? 'Evening wind-down'
+  : 'Today'
+));
+
+const circSlotPrompt = computed(() => {
+  if (timeSlot.value === 'morning') return circEnergyWake.value == null ? 'Log morning light & energy' : 'Morning logged · edit';
+  if (timeSlot.value === 'noon')    return circEnergyNoon.value == null ? 'Log your midday energy' : 'Midday logged · edit';
+  if (timeSlot.value === 'evening') return circEnergyEvening.value == null ? 'Log your evening energy' : 'Evening logged · edit';
+  return 'Log today';
+});
+
+const openCircSheet = () => { hapticLight(); circSheetOpen.value = true; };
 
 function circFmtHour(h: number): string {
   const n = ((h % 24) + 24) % 24;
@@ -946,6 +986,7 @@ const loadCircadian = async () => {
         }, 0) / Math.min(sleepRecs.length, 7)
       : 7.0;
 
+    circWakeHour.value = avgWake;
     circCurve.value   = computeAlertnessCurve(profile, avgWake);
     circWindows.value = computeCircadianWindows(profile, avgWake);
 
@@ -959,10 +1000,29 @@ const loadCircadian = async () => {
       circMorningLight.value  = todayLog.morning_light  === 1;
     }
 
-    // Schedule morning + noon nudges
-    if (circWindows.value) {
-      const cogLabel = `${circFmtHour(circWindows.value.cognitiveStart)}–${circFmtHour(circWindows.value.cognitiveEnd)}`;
-      scheduleCircadianNudges('08:00', '12:00', cogLabel).catch(() => {});
+    // Wake-relative nudges; skip any slot already logged today. Only meaningful once
+    // there's enough data to anchor a personalized schedule.
+    if (circWindows.value && !circInsufficient.value) {
+      const w = circWindows.value;
+      const cogLabel = `${circFmtHour(w.cognitiveStart)}–${circFmtHour(w.cognitiveEnd)}`;
+      const eveningHour = (w.bedtimeTarget - 2 + 24) % 24;
+      scheduleCircadianNudges({
+        morning: todayLog?.energy_wake == null ? {
+          time: circFmtHour(avgWake + 0.5),
+          title: 'Morning check-in',
+          body: `Focus window today: ${cogLabel}. Get outdoor light now and log your wake energy.`,
+        } : null,
+        noon: todayLog?.energy_noon == null ? {
+          time: circFmtHour(avgWake + 5),
+          title: 'Midday energy log',
+          body: 'How is your energy? Log it to calibrate your circadian profile.',
+        } : null,
+        evening: todayLog?.energy_evening == null ? {
+          time: circFmtHour(eveningHour),
+          title: 'Evening wind-down',
+          body: 'Log your evening energy and start winding down for a consistent bedtime.',
+        } : null,
+      }).catch(() => {});
     }
   } catch (e) {
     console.error('[HomePage] circadian load failed:', e);
@@ -1736,6 +1796,17 @@ onMounted(async () => {
 
 .circ-chart-wrap { position: relative; }
 
+.circ-insufficient {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .circ-svg {
   width: 100%;
   height: 72px;
@@ -1780,6 +1851,53 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.circ-log-trigger {
+  margin-top: 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.circ-log-trigger ion-icon {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.circ-sheet::part(content) {
+  border-radius: 18px 18px 0 0;
+}
+
+.circ-sheet-body {
+  background: var(--ion-color-primary);
+  height: 100%;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.circ-sheet-done {
+  margin-top: auto;
+  padding: 12px 0;
+  border: none;
+  border-radius: 8px;
+  background: rgb(239, 68, 68);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .circ-log-row {

@@ -92,6 +92,10 @@
                 <span class="metric-label">Recovery</span>
                 <strong class="metric-value">{{ score?.recovery ?? '—' }}</strong>
               </div>
+              <div class="card-metric">
+                <span class="metric-label">Light</span>
+                <strong class="metric-value">{{ score?.light ?? '—' }}</strong>
+              </div>
             </div>
           </div>
 
@@ -459,9 +463,10 @@ const loadData = async () => {
     : null;
   const rhrToday = rhrMetric ? Number(rhrMetric.value) : null;
 
+  const lightFraction = logs.length ? logs.filter(l => l.morning_light === 1).length / logs.length : null;
   const computedProfile = computeCircadianProfile(sleepRecords, dayTypes);
   profile.value = computedProfile;
-  score.value = computeCircadianScore(sleepRecords, rhrToday, rhrBaseline);
+  score.value = computeCircadianScore(sleepRecords, rhrToday, rhrBaseline, lightFraction);
 
   avgWakeHour.value = sleepRecords.length
     ? sleepRecords.slice(0, 7).reduce((s, r) => {
@@ -473,7 +478,10 @@ const loadData = async () => {
   alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour.value);
   const w = computeCircadianWindows(computedProfile, avgWakeHour.value);
   windows.value = w;
-  recs.value = computeCircadianRecommendations(computedProfile, w, computedProfile.socialJetlag, []);
+  recs.value = computeCircadianRecommendations(
+    computedProfile, w, computedProfile.socialJetlag, [],
+    logs.map(l => ({ energy_wake: l.energy_wake, energy_noon: l.energy_noon, energy_evening: l.energy_evening }))
+  );
 
   const log = await getCircadianLog(today);
   todayLog.value = log;
@@ -522,7 +530,7 @@ const saveLog = async () => {
     meal_first: formMealFirst.value || null,
     meal_last: formMealLast.value || null,
     morning_light: formMorningLight.value ? 1 : 0,
-    notes: null,
+    notes: todayLog.value?.notes ?? null,
   });
   showLogForm.value = false;
   await loadData();

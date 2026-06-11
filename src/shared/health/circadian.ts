@@ -26,9 +26,10 @@ export interface CircadianProfile {
 export interface CircadianScore {
   total: number | null; // 0–100, or null when there is insufficient data (<3 nights)
   consistency: number; // 0–100  sleep timing regularity
-  amplitude: number;   // 0–100  sleep/wake contrast (RA proxy)
+  amplitude: number;   // 0–100  rest-phase robustness (duration adequacy + regularity)
   efficiency: number;  // 0–100  from sleep efficiency
   recovery: number;    // 0–100  RHR vs baseline
+  light: number;       // 0–100  regular morning light exposure (entrainment)
 }
 
 export interface AlertnessPoint {
@@ -221,7 +222,8 @@ export function computeCircadianProfile(
 export function computeCircadianScore(
   sessions: SleepRecord[],
   rhrToday: number | null,
-  rhrBaseline: number | null
+  rhrBaseline: number | null,
+  morningLightFraction: number | null = null  // 0–1 share of recent days with morning light; null = no data
 ): CircadianScore {
   const recent = [...sessions]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -231,21 +233,25 @@ export function computeCircadianScore(
     // Insufficient data: total = null (not 0). A real 0 means "worst rhythm" and would
     // both display as 0/100 and apply the battery's 10% circadian penalty; null lets
     // callers show "—" and skip the multiplier (multiplier = 1.0).
-    return { total: null, consistency: 0, amplitude: 0, efficiency: 0, recovery: 50 };
+    return { total: null, consistency: 0, amplitude: 0, efficiency: 0, recovery: 50, light: 0 };
   }
 
   // Consistency: sleep onset SD (0h=100, 3h+=0)
   const onsetSD = circularSD(recent.map(s => toDecimalHours(s.bedtime)));
   const consistency = clamp(Math.round((1 - onsetSD / 3) * 100), 0, 100);
 
-  // Amplitude (RA proxy): average sleep fraction of 24h relative to a 50% target
-  // RA = (active_hours - rest_hours) / 24 — for sleep we use time-in-bed
-  // Higher daily activity contrast (long wake, good sleep) = higher RA
-  const avgSleepH = recent.reduce((s, r) => s + r.timeAsleepHours, 0) / recent.length;
-  const avgWakeH  = 24 - avgSleepH;
-  // True relative amplitude: (wake − sleep) / (wake + sleep), uses full 0–1 range
-  const ra        = avgWakeH + avgSleepH > 0 ? (avgWakeH - avgSleepH) / (avgWakeH + avgSleepH) : 0;
-  const amplitude = clamp(Math.round(ra * 100), 0, 100);
+  // Amplitude (rest-phase robustness): a strong circadian rest phase = an adequate,
+  // consolidated sleep block that recurs at a stable length. The Amazfit gives no
+  // reliable *daytime* HR for a true HR rest/active contrast, so we proxy amplitude
+  // from (a) how close mean sleep is to a consolidated ~8h block and (b) how stable
+  // that length is night to night. Unlike the old (wake−sleep)/(wake+sleep) formula,
+  // this no longer rewards short sleep (which previously scored *higher* amplitude).
+  const durations = recent.map(r => r.timeAsleepHours);
+  const avgSleepH = durations.reduce((s, v) => s + v, 0) / durations.length;
+  const durAdequacy = clamp(1 - Math.abs(avgSleepH - 8) / 4, 0, 1);       // 8h=1.0, ≤4h or ≥12h=0
+  const durSD = Math.sqrt(durations.reduce((s, v) => s + (v - avgSleepH) ** 2, 0) / durations.length);
+  const durRegularity = clamp(1 - durSD / 2, 0, 1);                        // SD 0h=1.0, SD≥2h=0
+  const amplitude = clamp(Math.round((durAdequacy * 0.6 + durRegularity * 0.4) * 100), 0, 100);
 
   // Efficiency: mean sleep efficiency (0–100)
   const avgEff  = recent.reduce((s, r) => s + r.efficiency, 0) / recent.length;
@@ -260,14 +266,19 @@ export function computeCircadianScore(
     recovery = clamp(Math.round((1.3 - ratio) / 0.6 * 100), 0, 100);
   }
 
+  // Light: regular morning light exposure is the strongest entrainment signal.
+  // null (no logging) → neutral 50 so it neither rewards nor penalizes.
+  const light = morningLightFraction === null ? 50 : clamp(Math.round(morningLightFraction * 100), 0, 100);
+
   const total = Math.round(
-    consistency * 0.35 +
-    amplitude   * 0.25 +
-    efficiency  * 0.25 +
-    recovery    * 0.15
+    consistency * 0.30 +
+    amplitude   * 0.20 +
+    efficiency  * 0.20 +
+    recovery    * 0.15 +
+    light       * 0.15
   );
 
-  return { total, consistency, amplitude, efficiency, recovery };
+  return { total, consistency, amplitude, efficiency, recovery, light };
 }
 
 // ── Two-Process Alertness Curve ─────────────────────────────────────────────
@@ -375,11 +386,18 @@ export function computeCircadianWindows(
 
 // ── Recommendations ─────────────────────────────────────────────────────────
 
+export interface EnergyLog {
+  energy_wake: number | null;
+  energy_noon: number | null;
+  energy_evening: number | null;
+}
+
 export function computeCircadianRecommendations(
   profile: CircadianProfile,
   windows: CircadianWindows,
   socialJetlag: number | null,
-  workoutTimesHours: number[]   // today's workout start hours
+  workoutTimesHours: number[],   // today's workout start hours
+  energyLogs: EnergyLog[] = []    // recent subjective energy self-reports
 ): CircadianRecommendations {
   const nudges: string[] = [];
 
@@ -420,6 +438,23 @@ export function computeCircadianRecommendations(
 
   // Meal timing
   nudges.push(`Aim to eat your last meal by ${formatHourStatic(windows.lastMealBy)} — eating later shifts peripheral clocks and raises hunger hormones overnight.`);
+
+  // Subjective energy: compare logged alertness to the chronotype to validate the model.
+  const avgOf = (vals: (number | null)[]) => {
+    const nums = vals.filter((v): v is number => v !== null);
+    return nums.length ? nums.reduce((s, v) => s + v, 0) / nums.length : null;
+  };
+  const wakeE = avgOf(energyLogs.map(l => l.energy_wake));
+  const eveE  = avgOf(energyLogs.map(l => l.energy_evening));
+  if (wakeE !== null && eveE !== null && energyLogs.length >= 3) {
+    if (eveE - wakeE >= 2 && profile.chronotype !== 'late') {
+      nudges.push('You consistently report more energy in the evening than at wake — an evening-leaning pattern. Anchoring morning light and a fixed wake time can pull your peak earlier.');
+    } else if (wakeE - eveE >= 2) {
+      nudges.push('Your energy fades noticeably by evening — protect a wind-down routine and avoid late stimulants to preserve sleep pressure.');
+    } else if (wakeE <= 3) {
+      nudges.push('Low morning energy is common with sleep debt or misaligned light — bright light within 30 min of waking is the fastest lever.');
+    }
+  }
 
   // Social jetlag warning
   let socialJetlagWarning: string | null = null;

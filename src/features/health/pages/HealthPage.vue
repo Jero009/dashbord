@@ -347,6 +347,16 @@ const loadReadiness = async () => {
   let stored = await getReadinessScore(today);
   if (!stored) stored = await getLatestReadinessScore();
 
+  // No stored readiness and no live metrics → genuinely no data. Show "—"/"No data"
+  // instead of a real-looking number derived from an all-null baseline.
+  const hasLiveData = [sleepHours.value, sleepEfficiency.value, sleepScore.value, restingHr.value, sleepHr.value, respRate.value]
+    .some(v => v !== null);
+  if (stored?.score == null && !hasLiveData) {
+    readinessScore.value = null;
+    batteryResult.value = null;
+    return;
+  }
+
   const baseline = stored?.score != null
     ? Number(stored.score)
     : calculateReadinessScore({
@@ -433,7 +443,8 @@ const loadCircadianScore = async () => {
       ? sleepHrHistory.reduce((s, m) => s + Number(m.value), 0) / sleepHrHistory.length : null;
     respRateBaseline.value = respRateHistory.length >= 3
       ? respRateHistory.reduce((s, m) => s + Number(m.value), 0) / respRateHistory.length : null;
-    circScore.value = computeCircadianScore(recs, rhrToday, rhrBase).total;
+    const lightFraction = logs.length ? logs.filter(l => l.morning_light === 1).length / logs.length : null;
+    circScore.value = computeCircadianScore(recs, rhrToday, rhrBase, lightFraction).total;
   } catch { circScore.value = null; }
 };
 
