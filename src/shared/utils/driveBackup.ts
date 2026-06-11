@@ -17,6 +17,7 @@ export function getLastBackupDate(): string | null {
 }
 
 async function getAccessToken(): Promise<string> {
+  await GoogleAuth.initialize()
   const user = await GoogleAuth.signIn()
   const token = (user as any)?.authentication?.accessToken
   if (!token) throw new Error('Google sign-in failed — no access token returned')
