@@ -47,8 +47,6 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 
 - Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
 - `HealthConnectAutoSync.vue` — initial sync on mount + 6 s retry for cold-start race condition
-- **Core vs optional permissions**: only `HEALTH_CONNECT_CORE_READ_TYPES` (steps, sleep, restingHeartRate, heartRate, respiratoryRate) gate sync — checked via `hasCoreReadAccess()`. `'workouts'` (→ `READ_EXERCISE`) is requested but OPTIONAL; it only feeds activity-drain (`getRecentActivities`, which degrades to `[]`). Never re-add workouts to the core gate — the Amazfit produces no exercise sessions, so requiring it silently blocked all sync.
-- `canAutoSyncHealthConnectMetrics` is wrapped in try/catch → returns `false` on any native rejection (never propagates to crash startup).
 - Readiness score inputs: sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, steps
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`) — 100-pt model: duration vs target (25), efficiency (15), WASO (10), deep% ≥18% (10), REM% ≥22% (12.5), bedtime timing variance vs 14-night mean (15), respiratory rate vs 14-night baseline (12.5). Returns `number | null` — null when `timeAsleepHours < 1`.
 - User device: Amazfit Active 2 via Zepp Health → Health Connect. Provides sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
@@ -113,13 +111,13 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 
 **HomePage integration**: alertness curve SVG card with zone bands + contextual daily log widget (shows different fields by time of day: morning = day type + morning light + wake energy; noon = noon energy; evening = evening energy). Auto-saves on tap.
 
-### Backup / Restore
+### Google Drive Backup
 
-Local SQL export/import only, via `SettingsPage.vue` (`exportDatabaseToSQL`/`importDatabaseFromSQL`). Google Drive auto-backup was removed — the `@codetrix-studio/capacitor-google-auth` plugin threw uncatchable native exceptions on startup when Play Services auth state was corrupted. Do not re-add cloud backup without an auth flow that can't crash the boot path.
+`src/shared/utils/driveBackup.ts` — daily DB export via `@codetrix-studio/capacitor-google-auth`. Triggered on app start and manually from `SettingsPage.vue`. Requires Google Cloud setup (Drive API + OAuth client ID + SHA-1 fingerprint).
+- **Always call `GoogleAuth.initialize()` before `GoogleAuth.signIn()`** in `getAccessToken()`. Skipping it causes a native NullPointerException (bypasses JS try/catch) on devices where Google Play Services auth state was disrupted (e.g., after installing Fitbit).
 
 ### Health Connect Known Issues
-- **READ_EXERCISE (resolved)**: previously, requiring the workouts/`READ_EXERCISE` grant gated all sync and an ungranted state could surface a native crash. Fixed two ways: (1) workouts decoupled from the core sync gate (see Health Connect section); (2) the plugin's `checkAuthorization`/`requestAuthorization`/`handlePermissionResult` coroutines are patched via **patch-package** (`patches/@capgo+capacitor-health+8.6.0.patch`) to wrap `getGrantedPermissions()`/`authorizationStatus()` in try/catch so a thrown exception rejects the JS promise instead of killing the process. The patch reapplies on `npm install` via the `postinstall` script; Android Studio compiles the patched Kotlin from `node_modules`.
-- **patch-package**: native plugin patches live in `patches/`. After editing a file under `node_modules/<pkg>`, run `npx patch-package <pkg>` to regenerate the patch, then `npx cap sync`.
+- **READ_EXERCISE SecurityException**: `@capgo/capacitor-health` declares `READ_EXERCISE` and reads `ExerciseSessionRecord` internally. After any HC permission reset, this permission may not be granted, causing a native SecurityException that kills the process. The app does not use exercise data but cannot prevent the plugin read. **Workaround**: user must manually grant Exercise permission in HC settings. A proper fix requires forking the plugin.
 
 ## Key Conventions
 
