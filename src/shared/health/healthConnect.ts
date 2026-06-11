@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type AuthorizationStatus, type HealthSample, type AggregatedSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
-import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession } from '@/shared/db/app_db';
+import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 
 export type HealthMetricType =
@@ -110,8 +110,18 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
   const rrTarget = inputs.respiratoryRateBaseline ?? 14.5;
   const respiratoryRateScore = inputs.respiratoryRate === null ? 0 : clamp(8 - Math.abs(inputs.respiratoryRate - rrTarget) * 1.4, 0, 8);
 
+  // Base floor scaled by how many of the 6 scored inputs are present, so a day with
+  // little data doesn't get the same +24 floor as a fully-measured day. Full data
+  // keeps the original +24 (preserving downstream battery-baseline calibration).
+  const scoredInputs = [
+    inputs.sleepHours, inputs.sleepEfficiency, inputs.sleepScore,
+    inputs.restingHr, inputs.sleepHeartRate, inputs.respiratoryRate,
+  ];
+  const presentCount = scoredInputs.filter((v) => v !== null).length;
+  const base = 24 * (presentCount / scoredInputs.length);
+
   const score =
-    24 +
+    base +
     sleepHoursScore +
     sleepEfficiencyScore +
     sleepScoreScore +
@@ -262,22 +272,24 @@ function calculateSleepScore(inputs: SleepScoreInputs): number | null {
   // Duration vs user target: 25 pts
   const durationScore = clamp((inputs.timeAsleepHours / inputs.targetSleepHours) * 25, 0, 25);
 
-  // Sleep efficiency: 17.5 pts
-  const efficiencyScore = clamp(inputs.efficiency * 17.5, 0, 17.5);
+  // Sleep efficiency: 15 pts
+  const efficiencyScore = clamp(inputs.efficiency * 15, 0, 15);
 
-  // WASO: 5 pts (full ≤10 min, 0 at ≥40 min). No stage data = 0, not half-credit.
+  // WASO: 10 pts (full ≤10 min, 0 at ≥40 min). No stage data = neutral half-credit
+  // so a device without sleep staging degrades gracefully instead of capping ~70.
   const wasoScore = inputs.wasoMinutes === null
-    ? 0
-    : clamp(5 - Math.max(0, inputs.wasoMinutes - 10) / 6, 0, 5);
+    ? 5
+    : clamp(10 - Math.max(0, inputs.wasoMinutes - 10) / 3, 0, 10);
 
-  // Stage composition — deep: 10 pts (≥18%), REM: 17.5 pts (≥22%). No stage data = 0.
+  // Stage composition — deep: 10 pts (≥18%), REM: 12.5 pts (≥22%).
+  // No stage data = neutral half-credit (5 / 6.25), not 0.
   const hasStageData = inputs.deepPct !== null || inputs.remPct !== null;
-  const deepScore = !hasStageData || inputs.deepPct === null
-    ? 0
+  const deepScore = inputs.deepPct === null
+    ? (hasStageData ? 0 : 5)
     : clamp((inputs.deepPct / 0.18) * 10, 0, 10);
-  const remScore = !hasStageData || inputs.remPct === null
-    ? 0
-    : clamp((inputs.remPct / 0.22) * 17.5, 0, 17.5);
+  const remScore = inputs.remPct === null
+    ? (hasStageData ? 0 : 6.25)
+    : clamp((inputs.remPct / 0.22) * 12.5, 0, 12.5);
 
   // Bedtime timing consistency: 15 pts (0 pts at ≥45 min variance)
   const timingScore = inputs.timingVarianceMinutes === null
@@ -303,9 +315,23 @@ function toDateKey(date: string): string {
   return `${y}-${m}-${day}`;
 }
 
+// When a day bucket holds multiple sleep samples (naps / split sessions), the
+// main overnight sleep is the one with the most time asleep — not necessarily the
+// last-recorded one. Picking by duration avoids a short nap overriding it.
+function pickPrimarySleepSample(samples: HealthSample[]): HealthSample | null {
+  if (!samples.length) return null;
+  return samples.reduce((best, s) =>
+    (getSleepHours(s) ?? 0) > (getSleepHours(best) ?? 0) ? s : best
+  );
+}
+
 function getSleepHours(sample: HealthSample) {
   if (sample.stages?.length) {
-    return sample.stages.reduce((sum, stage) => sum + stage.durationMinutes, 0) / 60;
+    // Time actually asleep — exclude awake/inBed so this matches sumStageMinutes
+    // (which feeds timeAsleepHours). Summing all stages overcounts as time-in-bed.
+    return sample.stages
+      .filter((stage) => stage.stage !== 'awake' && stage.stage !== 'inBed')
+      .reduce((sum, stage) => sum + stage.durationMinutes, 0) / 60;
   }
 
   const start = new Date(sample.startDate).getTime();
@@ -674,8 +700,20 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   const rollingRespRates: number[] = [];
   const ROLLING_WINDOW = 14;
 
+  // Seed rolling baselines from sleep sessions persisted before this window so the
+  // first nights in the window are scored against real history, not null baselines.
+  const earliestSleepDate = sortedSleepEntries[0]?.[0];
+  if (earliestSleepDate) {
+    const priorSessions = await getSleepSessionsBefore(earliestSleepDate, ROLLING_WINDOW);
+    for (const s of [...priorSessions].reverse()) { // chronological (oldest first)
+      const bm = new Date(s.bedtime);
+      if (!isNaN(bm.getTime())) rollingBedtimeMinutes.push(bm.getHours() * 60 + bm.getMinutes());
+      if (s.respiratory_rate !== null) rollingRespRates.push(s.respiratory_rate);
+    }
+  }
+
   for (const [date, bucket] of sortedSleepEntries) {
-    const latestSample = bucket.samples[bucket.samples.length - 1];
+    const latestSample = pickPrimarySleepSample(bucket.samples);
     if (!latestSample) continue;
 
     const hrBucket = heartRateByDate.get(date);
@@ -818,9 +856,23 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   const readinessDates = new Set(
     [...sleepByDate.keys(), ...restingHeartRateByDate.keys()].sort()
   );
+
+  // Seed readiness baselines from history persisted before this window.
+  const earliestReadinessDate = [...readinessDates][0];
+  if (earliestReadinessDate) {
+    const [priorRhr, priorSessionsForReadiness] = await Promise.all([
+      getHealthMetricValuesBefore('resting_heart_rate', earliestReadinessDate, BASELINE_WINDOW),
+      getSleepSessionsBefore(earliestReadinessDate, BASELINE_WINDOW),
+    ]);
+    for (const v of [...priorRhr].reverse()) rollingRhrValues.push(v);
+    for (const s of [...priorSessionsForReadiness].reverse()) {
+      if (s.sleep_hr !== null) rollingSleepHrValues.push(s.sleep_hr);
+      if (s.respiratory_rate !== null) rollingRespRateValues.push(s.respiratory_rate);
+    }
+  }
   for (const date of readinessDates) {
     const sleepBucket = sleepByDate.get(date);
-    const latestSample = sleepBucket?.samples[sleepBucket.samples.length - 1] ?? null;
+    const latestSample = pickPrimarySleepSample(sleepBucket?.samples ?? []);
     const sleepHours = average(
       (sleepBucket?.samples ?? []).map((sample) => getSleepHours(sample)).filter((value): value is number => value !== null)
     );
@@ -899,8 +951,9 @@ export function calculateBattery(
   events: { type: string; date: string; time_start: string | null; time_end: string | null }[],
   circadianScore: number | null = null
 ): BatteryResult {
-  // Circadian modifier: irregular rhythm reduces effective baseline by up to 18%
-  const circMod = circadianScore !== null ? (0.82 + 0.18 * circadianScore / 100) : 1.0;
+  // Circadian modifier: irregular rhythm reduces effective baseline by up to 10%
+  // (score 0 → ×0.90, score 100 → ×1.00). Matches the documented 0.90–1.00 range.
+  const circMod = circadianScore !== null ? (0.90 + 0.10 * circadianScore / 100) : 1.0;
   const adjustedBaseline = Math.round(clamp(baseline * circMod, 0, 100));
   const circadianDrain = Math.round(baseline - adjustedBaseline);
 
@@ -910,7 +963,12 @@ export function calculateBattery(
   // 2. Workout drain — gym sessions completed today
   const workoutDrain = clamp(
     workouts.reduce((sum, w) => {
-      const durationMins = Math.max(0, (new Date(w.time_end).getTime() - new Date(w.time_start).getTime()) / 60000);
+      const startMs = new Date(w.time_start).getTime();
+      const endMs = new Date(w.time_end).getTime();
+      // Malformed/missing timestamps must degrade to 0 duration, not NaN.
+      const durationMins = Number.isFinite(startMs) && Number.isFinite(endMs)
+        ? Math.max(0, (endMs - startMs) / 60000)
+        : 0;
       const fromDuration = clamp(durationMins / 3, 0, 20);
       const fromVolume = clamp((w.total_kg ?? 0) / 200, 0, 15);
       return sum + fromDuration + fromVolume;
@@ -930,13 +988,18 @@ export function calculateBattery(
     0, 30
   );
 
-  // 4. Event drain — calendar events that have already started
+  // 4. Event drain — calendar events that have already started.
+  // Anchor the window to TODAY (recurring events carry their original past date,
+  // so using e.date would always count the full historical duration regardless of
+  // how much of today's occurrence has actually elapsed).
   const eventDrain = clamp(
     events.reduce((sum, e) => {
       if (!e.time_start) return sum;
-      const start = new Date(`${e.date}T${e.time_start}`);
+      const start = new Date(`${todayStr}T${e.time_start}`);
       if (start > now) return sum; // future event, no drain yet
-      const endTime = e.time_end ? new Date(`${e.date}T${e.time_end}`) : new Date(start.getTime() + 3600000);
+      let endTime = e.time_end ? new Date(`${todayStr}T${e.time_end}`) : new Date(start.getTime() + 3600000);
+      // Overnight window (e.g. sleep 23:00→07:00): end rolls into the next day.
+      if (endTime.getTime() <= start.getTime()) endTime = new Date(endTime.getTime() + 24 * 3600000);
       const durationHours = Math.max(0, (Math.min(endTime.getTime(), now.getTime()) - start.getTime()) / 3600000);
       const drainPerHour =
         e.type === 'sleep'    ? -5 :

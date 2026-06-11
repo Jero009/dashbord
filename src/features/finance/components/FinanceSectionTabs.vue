@@ -59,14 +59,14 @@ const handleSegmentChange = (event: CustomEvent) => {
   --border-width: 0;
   --box-shadow: none;
   --padding-top: 0px;
-  padding: 2px 8px 6px;
+  padding: 2px 10px 6px;
   margin-top: -2px;
 }
 
 .seg-pill {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  padding: 4px;
+  padding: 6px;
   overflow: hidden;
 }
 
@@ -78,7 +78,7 @@ ion-segment {
 ion-segment-button {
   --background: transparent;
   --background-checked: transparent;
-  --color: rgba(255, 255, 255, 0.7);
+  --color: rgba(255, 255, 255, 0.5);
   --color-checked: var(--ion-color-accent-red);
   --indicator-color: var(--ion-color-accent-red);
   min-height: 34px;

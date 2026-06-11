@@ -11,9 +11,9 @@
   --ion-color-light: #ffffff;         /* true white for high contrast */
 
     /* Signature accent colors */
-  --ion-color-danger: #f32121;
+  --ion-color-danger: #ef4444;
   --ion-color-danger-rgb: 239,68,68;
-  --ion-color-accent-red: #f32121;
+  --ion-color-accent-red: #ef4444;
   --ion-color-accent-yellow: #FFD700; /* vibrant gold pop */
 
   /* Toolbar & background */
@@ -212,6 +212,14 @@ ion-list {
 
 html, body, ion-app ion-content {
   background: black !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 

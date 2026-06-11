@@ -22,7 +22,7 @@
               <span class="snapshot-value snapshot-value--event" v-if="nextEvent">
                 {{ nextEvent.time_start ? nextEvent.time_start.slice(0, 5) : 'All day' }}
               </span>
-              <span class="snapshot-value snapshot-value--muted" v-else">—</span>
+              <span class="snapshot-value snapshot-value--muted" v-else>—</span>
               <span class="snapshot-label">{{ nextEvent ? nextEvent.title : 'No events' }}</span>
             </div>
             <div class="snapshot-tile" @click="navTo('/plan/goals')">
@@ -144,7 +144,7 @@ onIonViewWillEnter(async () => {
   margin: 0 0 12px 2px;
 }
 
-.nav-kicker { margin-top: 4px; }
+.nav-kicker { margin-top: 6px; }
 
 /* ── Card base ── */
 .card {
@@ -166,12 +166,12 @@ onIonViewWillEnter(async () => {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color 150ms ease;
 }
 
-.snapshot-tile:active { background: rgba(255, 255, 255, 0.09); }
+.snapshot-tile:active { background: rgba(255, 255, 255, 0.08); }
 
 .snapshot-value {
   font-size: 1.5rem;
@@ -183,7 +183,7 @@ onIonViewWillEnter(async () => {
 .snapshot-denom {
   font-size: 0.9rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .snapshot-value--event {
@@ -191,15 +191,15 @@ onIonViewWillEnter(async () => {
   color: rgb(239, 68, 68);
 }
 
-.snapshot-value--muted { color: rgba(255, 255, 255, 0.3); }
+.snapshot-value--muted { color: rgba(255, 255, 255, 0.25); }
 
 .value--done { color: rgb(34, 197, 94); }
 
 .snapshot-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,7 +212,7 @@ onIonViewWillEnter(async () => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .event-row {
@@ -222,8 +222,8 @@ onIonViewWillEnter(async () => {
 }
 
 .event-time {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   width: 38px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -232,42 +232,42 @@ onIonViewWillEnter(async () => {
 .event-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .dot--workout  { background: rgb(239, 68, 68); }
-.dot--school   { background: rgb(59, 130, 246); }
+.dot--school   { background: rgba(255, 255, 255, 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
-.dot--sleep    { background: rgb(99, 102, 241); }
-.dot--reminder { background: rgb(234, 179, 8); }
-.dot--general  { background: rgba(255, 255, 255, 0.4); }
+.dot--sleep    { background: rgba(255, 255, 255, 0.5); }
+.dot--reminder { background: rgba(255, 255, 255, 0.35); }
+.dot--general  { background: rgba(255, 255, 255, 0.25); }
 
 .event-title {
   flex: 1;
-  font-size: 0.88rem;
-  color: #fff;
-  font-weight: 500;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .event-tag {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .tag--workout  { background: rgba(239,68,68,0.15);  color: rgb(239,68,68); }
-.tag--school   { background: rgba(59,130,246,0.15); color: rgb(59,130,246); }
+.tag--school   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);  color: rgb(34,197,94); }
-.tag--sleep    { background: rgba(99,102,241,0.15); color: rgb(99,102,241); }
-.tag--reminder { background: rgba(234,179,8,0.15);  color: rgb(234,179,8); }
-.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+.tag--sleep    { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.tag--reminder { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
 
 /* ── Nav tiles ── */
 .nav-grid {
@@ -287,13 +287,13 @@ onIonViewWillEnter(async () => {
   cursor: pointer;
   text-align: left;
   width: 100%;
-  transition: background 0.15s ease;
+  transition: background-color 150ms ease;
 }
 
 .nav-tile:active { background: rgba(255, 255, 255, 0.08); }
 
 .nav-tile__icon {
-  font-size: 22px;
+  font-size: 20px;
   color: rgb(239, 68, 68);
   flex-shrink: 0;
 }
@@ -312,12 +312,12 @@ onIonViewWillEnter(async () => {
 }
 
 .nav-tile__hint {
-  font-size: 0.76rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .nav-tile__arrow {
-  font-size: 16px;
+  font-size: 20px;
   color: rgba(255, 255, 255, 0.25);
   flex-shrink: 0;
 }

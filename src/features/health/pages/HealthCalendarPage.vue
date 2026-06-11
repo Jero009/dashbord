@@ -10,9 +10,9 @@
 
         <!-- Month navigation -->
         <div class="month-nav">
-          <button class="month-nav__btn" @click="prevMonth">&#8249;</button>
+          <button class="month-nav__btn" @click="prevMonth"><ion-icon :icon="chevronBackOutline" /></button>
           <span class="month-nav__label">{{ monthLabel }}</span>
-          <button class="month-nav__btn" @click="nextMonth">&#8250;</button>
+          <button class="month-nav__btn" @click="nextMonth"><ion-icon :icon="chevronForwardOutline" /></button>
         </div>
 
         <!-- Day-of-week headers -->
@@ -51,7 +51,7 @@
               <h3>Events</h3>
               <button class="icon-btn" @click="showAddEvent ? (resetEventForm(), showAddEvent = false) : (showAddEvent = true)">
                 <ion-icon v-if="showAddEvent" :icon="close" />
-                <span v-else>+</span>
+                <ion-icon v-else :icon="add" />
               </button>
             </div>
 
@@ -149,7 +149,7 @@
 import { IonPage, IonHeader, IonContent, IonIcon, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { checkmark, close } from 'ionicons/icons';
+import { checkmark, close, add, chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
@@ -376,10 +376,10 @@ onIonViewWillEnter(async () => {
 }
 
 .cal-shell {
-  padding: 1rem 1rem 3rem;
+  padding: 16px 16px 24px;
   display: grid;
-  gap: 1.25rem;
-  max-width: 520px;
+  gap: 18px;
+  max-width: 760px;
   margin: 0 auto;
 }
 
@@ -388,7 +388,7 @@ onIonViewWillEnter(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .month-nav__label {
@@ -398,34 +398,38 @@ onIonViewWillEnter(async () => {
 }
 
 .month-nav__btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 1.4rem;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.month-nav__btn ion-icon {
+  font-size: 20px;
 }
 
 /* Calendar grid */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 6px;
 }
 
 .cal-dow {
   text-align: center;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
-  padding-bottom: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  padding-bottom: 6px;
 }
 
 .cal-cell {
@@ -437,7 +441,7 @@ onIonViewWillEnter(async () => {
   gap: 2px;
   border-radius: 10px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color 150ms ease;
 }
 
 .cal-cell--blank {
@@ -446,7 +450,7 @@ onIonViewWillEnter(async () => {
 
 .cal-cell--today .cal-cell__num {
   color: var(--ion-color-accent-red);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cal-cell--selected {
@@ -455,11 +459,11 @@ onIonViewWillEnter(async () => {
 
 .cal-cell--selected .cal-cell__num {
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cal-cell:not(.cal-cell--blank):not(.cal-cell--selected):hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .cal-cell__num {
@@ -477,7 +481,7 @@ onIonViewWillEnter(async () => {
 .dot {
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: 999px;
 }
 
 .dot--event {
@@ -489,75 +493,80 @@ onIonViewWillEnter(async () => {
 }
 
 .cal-cell--selected .dot--event {
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
 }
 
 .cal-cell--selected .dot--habit {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* Day detail */
 .eyebrow {
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
 .day-detail {
   display: grid;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .detail-card {
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  background: var(--ion-color-primary);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1rem;
+  padding: 18px;
 }
 
 .detail-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
+  margin-bottom: 12px;
 }
 
 .detail-card__header h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: #fff;
 }
 
 .icon-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   border: none;
   color: #fff;
-  font-size: 1.1rem;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.icon-btn ion-icon {
+  font-size: 20px;
 }
 
 /* Add form */
 .add-form {
   display: grid;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .form-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
 .form-input,
@@ -566,11 +575,17 @@ onIonViewWillEnter(async () => {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 0.55rem 0.75rem;
+  padding: 10px 12px;
   color: #fff;
   font-size: 0.9rem;
   outline: none;
   box-sizing: border-box;
+  transition: border-color 150ms ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: rgb(239, 68, 68);
 }
 
 .form-select {
@@ -602,22 +617,27 @@ onIonViewWillEnter(async () => {
 }
 
 .time-sep {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 1rem;
   align-self: center;
   flex-shrink: 0;
 }
 
 .save-btn {
-  padding: 0.55rem 1.1rem;
+  padding: 10px 18px;
   border-radius: 8px;
-  background: var(--ion-color-accent-red);
+  background: rgb(239, 68, 68);
   border: none;
   color: #fff;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+
+.save-btn:hover {
+  background: rgb(220, 38, 38);
 }
 
 /* Event list */
@@ -626,32 +646,32 @@ onIonViewWillEnter(async () => {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
 .item-row {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: 10px;
 }
 
 .item-tag {
   flex-shrink: 0;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 2px;
 }
 
-.item-tag--workout  { background: rgba(239, 68, 68, 0.2);   color: var(--ion-color-accent-red); }
-.item-tag--recovery { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
-.item-tag--school   { background: rgba(96, 165, 250, 0.18); color: rgb(96, 165, 250); }
-.item-tag--sleep    { background: rgba(167, 139, 250, 0.18); color: rgb(167, 139, 250); }
-.item-tag--reminder { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
+.item-tag--workout  { background: rgba(239, 68, 68, 0.15);  color: rgb(239, 68, 68); }
+.item-tag--recovery { background: rgba(34, 197, 94, 0.15);  color: rgb(34, 197, 94); }
+.item-tag--school   { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.item-tag--sleep    { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.item-tag--reminder { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
 
 .item-body {
   flex: 1;
@@ -662,49 +682,58 @@ onIonViewWillEnter(async () => {
 
 .item-body strong {
   font-size: 0.9rem;
+  font-weight: 600;
   color: #fff;
 }
 
 .item-note {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
 .delete-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.25);
   line-height: 1;
   cursor: pointer;
-  padding: 0 2px;
+  min-width: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn ion-icon {
+  font-size: 20px;
 }
 
 .delete-btn:hover {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Habit rows */
 .habit-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.35rem 0;
+  gap: 12px;
+  padding: 6px 0;
+  min-height: 40px;
   cursor: pointer;
 }
 
 .habit-check {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 0.85rem;
+  font-size: 20px;
   color: #fff;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .habit-check--done {
@@ -719,8 +748,8 @@ onIonViewWillEnter(async () => {
 
 .empty-hint {
   margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .form-row--end {
@@ -728,6 +757,6 @@ onIonViewWillEnter(async () => {
 }
 
 .item-note--recur {
-  color: rgba(255, 215, 0, 0.7);
+  color: rgba(255, 255, 255, 0.5);
 }
 </style>

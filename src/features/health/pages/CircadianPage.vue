@@ -10,6 +10,7 @@
 
         <!-- Loading state -->
         <div v-if="loading" class="loading-state">
+          <ion-spinner name="crescent" class="loading-spinner" />
           <span class="loading-text">Loading circadian data...</span>
         </div>
 
@@ -352,7 +353,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonSpinner, onIonViewWillEnter, toastController } from '@ionic/vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 
@@ -575,7 +576,7 @@ const saveLog = async () => {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .card-metric--warn {
@@ -583,9 +584,8 @@ const saveLog = async () => {
 }
 
 .metric-sub {
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.3);
-  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .metric-label {
@@ -607,7 +607,7 @@ const saveLog = async () => {
 .metric-unit {
   font-size: 0.72rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ── Chronotype ─────────────────────────────────────────────────────────────── */
@@ -615,7 +615,7 @@ const saveLog = async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .chronotype-label {
@@ -630,7 +630,7 @@ const saveLog = async () => {
 }
 
 .chronotype-label--intermediate {
-  color: rgb(255, 215, 0);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .chronotype-label--late {
@@ -638,12 +638,12 @@ const saveLog = async () => {
 }
 
 .quality-badge {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 3px 8px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -653,8 +653,8 @@ const saveLog = async () => {
 }
 
 .quality-badge--medium {
-  border-color: rgba(255, 215, 0, 0.4);
-  color: rgb(255, 215, 0);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .quality-badge--low {
@@ -663,11 +663,11 @@ const saveLog = async () => {
 }
 
 .warn-flag {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 400;
   color: rgb(239, 68, 68);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 /* ── Score ──────────────────────────────────────────────────────────────────── */
@@ -686,25 +686,24 @@ const saveLog = async () => {
 }
 
 .score-number.score--green { color: rgb(34, 197, 94); }
-.score-number.score--yellow { color: rgb(255, 215, 0); }
+.score-number.score--yellow { color: rgba(255, 255, 255, 0.85); }
 .score-number.score--red { color: rgb(239, 68, 68); }
 
 .score-bar-track {
   flex: 1;
   height: 4px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .score-bar-fill {
   height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease;
+  border-radius: 999px;
 }
 
 .score-bar-fill.score--green { background: rgb(34, 197, 94); }
-.score-bar-fill.score--yellow { background: rgb(255, 215, 0); }
+.score-bar-fill.score--yellow { background: rgba(255, 255, 255, 0.85); }
 .score-bar-fill.score--red { background: rgb(239, 68, 68); }
 
 .component-grid {
@@ -717,7 +716,7 @@ const saveLog = async () => {
 .curve-wrap {
   width: 100%;
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 .alertness-svg {
@@ -749,14 +748,14 @@ const saveLog = async () => {
 }
 
 .now-line {
-  stroke: rgba(255, 255, 255, 0.3);
+  stroke: rgba(255, 255, 255, 0.25);
   stroke-width: 0.25;
   stroke-dasharray: 0.5 0.4;
   vector-effect: non-scaling-stroke;
 }
 
 .peak-label {
-  fill: rgba(255, 255, 255, 0.6);
+  fill: rgba(255, 255, 255, 0.5);
   font-size: 0.9px;
   font-family: sans-serif;
 }
@@ -764,9 +763,9 @@ const saveLog = async () => {
 .axis-labels {
   display: flex;
   justify-content: space-between;
-  padding: 4px 0 0;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
+  padding: 6px 0 0;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .curve-empty {
@@ -774,8 +773,8 @@ const saveLog = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ── Timing windows ─────────────────────────────────────────────────────────── */
@@ -794,25 +793,25 @@ const saveLog = async () => {
 .window-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .window-dot--red    { background: rgb(239, 68, 68); }
-.window-dot--yellow { background: rgb(255, 215, 0); }
+.window-dot--yellow { background: rgba(255, 255, 255, 0.85); }
 .window-dot--green  { background: rgb(34, 197, 94); }
-.window-dot--blue   { background: rgb(96, 165, 250); }
+.window-dot--blue   { background: rgba(255, 255, 255, 0.35); }
 
 .window-label {
   flex: 1;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .window-time {
   font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: #fff;
 }
 
 /* ── Recommendations ────────────────────────────────────────────────────────── */
@@ -831,15 +830,15 @@ const saveLog = async () => {
 .nudge-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 999px;
   background: rgb(239, 68, 68);
   flex-shrink: 0;
-  margin-top: 5px;
+  margin-top: 6px;
 }
 
 .nudge-text {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.5;
 }
 
@@ -848,7 +847,7 @@ const saveLog = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .log-card-header .section-kicker {
@@ -856,20 +855,25 @@ const saveLog = async () => {
 }
 
 .toggle-btn {
-  font-size: 0.78rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.9rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
-  padding: 5px 12px;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 6px 12px;
   cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.toggle-btn:hover {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .log-summary {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .log-meals {
@@ -879,8 +883,8 @@ const saveLog = async () => {
 }
 
 .meal-item {
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .morning-light-row {
@@ -890,15 +894,15 @@ const saveLog = async () => {
 }
 
 .text-green  { color: rgb(34, 197, 94); }
-.text-subtle { color: rgba(255, 255, 255, 0.4); }
+.text-subtle { color: rgba(255, 255, 255, 0.5); }
 
 .empty-log {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .empty-text {
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ── Log form ───────────────────────────────────────────────────────────────── */
@@ -912,7 +916,7 @@ const saveLog = async () => {
 .form-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .form-row {
@@ -936,19 +940,19 @@ const saveLog = async () => {
 
 .type-btns {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .type-btn {
   flex: 1;
-  padding: 9px;
+  padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .type-btn--active {
@@ -960,23 +964,31 @@ const saveLog = async () => {
 
 .energy-selector {
   display: flex;
-  gap: 5px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .energy-box {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.78rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s, border-color 0.12s;
+  position: relative;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+/* extend tap target to 40x40 without changing visual size */
+.energy-box::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
 }
 
 .energy-box--active {
@@ -991,23 +1003,28 @@ const saveLog = async () => {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #fff;
-  padding: 9px 12px;
+  padding: 10px 12px;
   font-size: 0.9rem;
   width: 100%;
   box-sizing: border-box;
   color-scheme: dark;
+  transition: border-color 150ms ease;
+}
+
+.form-input:focus {
+  border-color: rgb(239, 68, 68);
 }
 
 .light-toggle {
   align-self: flex-start;
-  padding: 8px 18px;
+  padding: 10px 18px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .light-toggle--yes {
@@ -1027,16 +1044,29 @@ const saveLog = async () => {
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.save-btn:hover {
+  background: rgb(220, 38, 38);
 }
 
 /* ── Loading ────────────────────────────────────────────────────────────────── */
 .loading-state {
-  padding: 48px 0;
+  padding: 24px 0;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.loading-spinner {
+  color: rgb(239, 68, 68);
 }
 
 .loading-text {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 </style>

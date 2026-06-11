@@ -13,9 +13,9 @@
           <div class="card-topline">
             <p class="section-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
-              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1">&#8249;</button>
+              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
-              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0">&#8250;</button>
+              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
             </div>
           </div>
 
@@ -204,10 +204,12 @@ import {
   IonCard,
   IonContent,
   IonHeader,
+  IonIcon,
   IonPage,
   toastController,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
@@ -611,47 +613,49 @@ onIonViewWillEnter(async () => {
   width: 100%;
   padding: 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.88rem;
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: border-color 150ms ease;
 }
 .sync-btn:disabled { opacity: 0.4; }
-.sync-btn:not(:disabled):active { background: rgba(255,255,255,0.1); }
+.sync-btn:not(:disabled):active { border-color: rgba(255, 255, 255, 0.12); }
 
 /* Date nav */
 .date-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .date-nav__label {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
   min-width: 110px;
   text-align: center;
 }
 
 .date-nav__btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   line-height: 1;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.date-nav__btn:disabled { opacity: 0.25; }
+.date-nav__btn ion-icon { font-size: 20px; }
+
+.date-nav__btn:disabled { opacity: 0.4; }
 
 /* Two-col layout */
 .two-col {
@@ -697,7 +701,7 @@ onIonViewWillEnter(async () => {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 6px;
   text-align: center;
 }
 
@@ -710,7 +714,7 @@ onIonViewWillEnter(async () => {
 
 .sleep-ring__content span {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Hypnogram */
@@ -732,10 +736,10 @@ onIonViewWillEnter(async () => {
   position: relative;
   width: 22px;
   height: 90px;
-  font-size: 0.58rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
   flex-shrink: 0;
 }
 
@@ -754,10 +758,9 @@ onIonViewWillEnter(async () => {
 .axis-row {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.08em;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Two-column sections */
@@ -775,7 +778,7 @@ onIonViewWillEnter(async () => {
 .stage-dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
@@ -787,18 +790,19 @@ onIonViewWillEnter(async () => {
 
 .stage-row span {
   flex: 1;
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .stage-row strong {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: #fff;
 }
 
 .stage-row small {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   min-width: 32px;
   text-align: right;
 }
@@ -814,7 +818,7 @@ onIonViewWillEnter(async () => {
 .heart-rate-chart,
 .score-history {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chart-svg {
@@ -836,7 +840,6 @@ onIonViewWillEnter(async () => {
 .chart-dot {
   fill: rgb(239, 68, 68);
   cursor: pointer;
-  transition: r 0.15s, filter 0.15s;
 }
 
 .chart-dot:hover,
@@ -873,14 +876,14 @@ onIonViewWillEnter(async () => {
 .score-history__labels span {
   position: absolute;
   transform: translateX(-50%);
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .empty-state {
   margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 @media (min-width: 600px) {

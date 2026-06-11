@@ -1,6 +1,7 @@
 <template>
   <ion-toolbar class="dashboard-toolbar">
-    <ion-segment :value="activeTab" @ionChange="handleSegmentChange" scrollable>
+    <div class="seg-pill">
+      <ion-segment :value="activeTab" @ionChange="handleSegmentChange" scrollable>
       <ion-segment-button value="home">
         <ion-label>Home</ion-label>
       </ion-segment-button>
@@ -16,7 +17,8 @@
       <ion-segment-button value="gym">
         <ion-label>Gym</ion-label>
       </ion-segment-button>
-    </ion-segment>
+      </ion-segment>
+    </div>
     <div slot="end" class="toolbar-end">
       <button class="settings-btn" :class="{ 'settings-btn--active': isSettings }" @click="goToSettings">
         <ion-icon :icon="settingsOutline" />
@@ -76,20 +78,25 @@ const goToSettings = () => {
   --background: transparent;
   --border-width: 0;
   --padding-top: calc(env(safe-area-inset-top, 0px) + 2px);
-  padding: 4px 8px 6px;
+  padding: 6px 10px;
+}
+
+.seg-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 6px;
+  overflow: hidden;
 }
 
 ion-segment {
   width: 100%;
-  --background: rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  padding: 4px;
+  --background: transparent;
 }
 
 ion-segment-button {
   --background: transparent;
   --background-checked: transparent;
-  --color: rgba(255, 255, 255, 0.7);
+  --color: rgba(255, 255, 255, 0.5);
   --color-checked: var(--ion-color-accent-red);
   --indicator-color: var(--ion-color-accent-red);
   min-height: 34px;
@@ -100,20 +107,21 @@ ion-segment-button {
 .toolbar-end {
   display: flex;
   align-items: center;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
 .settings-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 22px;
-  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  transition: background-color 150ms ease;
 }
 
 .settings-btn--active {
@@ -121,6 +129,6 @@ ion-segment-button {
 }
 
 .settings-btn ion-icon {
-  font-size: 22px;
+  font-size: 24px;
 }
 </style>

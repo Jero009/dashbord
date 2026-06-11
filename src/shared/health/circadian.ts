@@ -24,7 +24,7 @@ export interface CircadianProfile {
 }
 
 export interface CircadianScore {
-  total: number;       // 0–100
+  total: number | null; // 0–100, or null when there is insufficient data (<3 nights)
   consistency: number; // 0–100  sleep timing regularity
   amplitude: number;   // 0–100  sleep/wake contrast (RA proxy)
   efficiency: number;  // 0–100  from sleep efficiency
@@ -150,15 +150,20 @@ export function computeCircadianProfile(
     });
     const msf = circularMean(freeMidSleeps);
 
-    // Roenneberg MSFsc: correct for sleep debt accumulated on free days
-    // MSFsc = MSF − (SDfree/2 − 5) × (SDwork − SDfree) / SDwork
-    const sdFree = freeSessions.reduce((s, r) => s + r.timeAsleepHours, 0) / freeSessions.length;
-    const sdWork = workSessions.length >= 1
-      ? workSessions.reduce((s, r) => s + r.timeAsleepHours, 0) / workSessions.length
+    // Roenneberg MCTQ sleep-debt correction:
+    //   SDweek = (SDw·nw + SDf·nf) / (nw + nf)   — average sleep duration across the week
+    //   MSFsc  = MSF − (SDf − SDweek)/2,  applied only when SDf > SDweek
+    // (oversleeping on free days indicates debt; otherwise no correction).
+    const nFree = freeSessions.length;
+    const nWork = workSessions.length;
+    const sdFree = freeSessions.reduce((s, r) => s + r.timeAsleepHours, 0) / nFree;
+    const sdWork = nWork >= 1
+      ? workSessions.reduce((s, r) => s + r.timeAsleepHours, 0) / nWork
       : sdFree;
-    const correction = sdWork > 0
-      ? (sdFree / 2 - 5) * (sdWork - sdFree) / sdWork
-      : 0;
+    const sdWeek = (nWork + nFree) > 0
+      ? (sdWork * nWork + sdFree * nFree) / (nWork + nFree)
+      : sdFree;
+    const correction = sdFree > sdWeek ? (sdFree - sdWeek) / 2 : 0;
     msfsc = normalizeHour(msf - correction);
 
     if (workSessions.length >= 2) {
@@ -223,7 +228,10 @@ export function computeCircadianScore(
     .slice(0, 14);
 
   if (recent.length < 3) {
-    return { total: 0, consistency: 0, amplitude: 0, efficiency: 0, recovery: 50 };
+    // Insufficient data: total = null (not 0). A real 0 means "worst rhythm" and would
+    // both display as 0/100 and apply the battery's 10% circadian penalty; null lets
+    // callers show "—" and skip the multiplier (multiplier = 1.0).
+    return { total: null, consistency: 0, amplitude: 0, efficiency: 0, recovery: 50 };
   }
 
   // Consistency: sleep onset SD (0h=100, 3h+=0)
@@ -287,9 +295,10 @@ export function computeAlertnessCurve(
     const phaseAngle = ((hour - ctmin) / 24) * 2 * Math.PI;
     const processC = 0.5 - 0.5 * Math.cos(phaseAngle);
 
-    // Process S: exponential wake buildup / sleep decay
+    // Process S: exponential wake buildup / sleep decay.
+    // Use safeWake (clamped) so a bad HC timestamp can't desync S from C/sleepStart.
     let processS: number;
-    const hoursAwake = normalizeHour(hour - wakeHour);
+    const hoursAwake = normalizeHour(hour - safeWake);
     const hoursSleep = normalizeHour(hour - sleepStart);
 
     if (hoursAwake <= avgSleep) {
@@ -325,7 +334,7 @@ export function computeCircadianWindows(
   // Guard against bad HC timestamp data (e.g. UTC offset errors producing 1–3am)
   const safeWake = (wakeHour >= 4 && wakeHour <= 13) ? wakeHour : 7.0;
   const ctmin = profile.ctminEstimate ?? normalizeHour(safeWake - 1);
-  const dlmo  = profile.dlmoEstimate ?? normalizeHour(wakeHour + 14);
+  const dlmo  = profile.dlmoEstimate ?? normalizeHour(safeWake + 14);
 
   // Cognitive peak: CTmin + 2h → CTmin + 8h (peak alertness window)
   const cognitiveStart = normalizeHour(ctmin + 2);

@@ -113,26 +113,26 @@
                 y="0"
                 :width="((circWindows.cognitiveEnd - circWindows.cognitiveStart + 24) % 24)"
                 height="10"
-                fill="rgba(59,130,246,0.18)" />
+                fill="rgba(255,255,255,0.08)" />
               <rect v-if="circWindows?.exerciseMorning"
                 :x="circWindows.exerciseMorning.start"
                 y="0"
                 :width="circWindows.exerciseMorning.end - circWindows.exerciseMorning.start"
                 height="10"
-                fill="rgba(255,215,0,0.12)" />
+                fill="rgba(34,197,94,0.12)" />
               <rect v-if="circWindows?.exerciseAfternoon"
                 :x="circWindows.exerciseAfternoon.start"
                 y="0"
                 :width="circWindows.exerciseAfternoon.end - circWindows.exerciseAfternoon.start"
                 height="10"
-                fill="rgba(255,215,0,0.12)" />
+                fill="rgba(34,197,94,0.12)" />
               <!-- Alertness area -->
               <polygon :points="circAreaPoints" fill="rgba(239,68,68,0.12)" />
               <!-- Alertness line -->
               <polyline :points="circLinePoints" fill="none" stroke="rgb(239,68,68)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
               <!-- Now line -->
               <line :x1="circNowX" :x2="circNowX" y1="0" y2="10"
-                stroke="rgba(255,255,255,0.55)" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
+                stroke="rgba(255,255,255,0.5)" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
             </svg>
             <div class="circ-axis">
               <span>0</span><span>6</span><span>12</span><span>18</span>
@@ -141,9 +141,9 @@
 
           <!-- Zone legend -->
           <div class="circ-legend">
-            <span class="circ-legend-dot circ-legend-dot--blue"></span><span>Focus</span>
-            <span class="circ-legend-dot circ-legend-dot--yellow"></span><span>Exercise</span>
-            <span class="circ-legend-dot circ-legend-dot--red"></span><span>Curve</span>
+            <span class="circ-legend-dot circ-legend-dot--focus"></span><span>Focus</span>
+            <span class="circ-legend-dot circ-legend-dot--exercise"></span><span>Exercise</span>
+            <span class="circ-legend-dot circ-legend-dot--curve"></span><span>Curve</span>
           </div>
 
           <!-- Contextual log — changes by time of day -->
@@ -284,7 +284,7 @@
               @click="toggleTodayHabit(h)"
             >
               <div class="habit-block__check">
-                <span v-if="h.completed === 1">&#10003;</span>
+                <ion-icon v-if="h.completed === 1" :icon="checkmark" />
               </div>
               <span class="habit-block__name">{{ h.name }}</span>
               <span v-if="h.time" class="habit-block__time">{{ h.time }}</span>
@@ -295,7 +295,7 @@
           <div v-if="allDayItems.length" class="allday-strip">
             <div v-for="item in allDayItems" :key="item.key" class="allday-pill" :class="item.cls">
               <span v-if="item.isHabit" class="allday-check" :class="{ 'allday-check--done': item.done }" @click="item.toggle && item.toggle()">
-                {{ item.done ? '&#10003;' : '&#9900;' }}
+                <ion-icon :icon="item.done ? checkmark : ellipseOutline" />
               </span>
               {{ item.label }}
               <button
@@ -352,7 +352,7 @@
                 :style="{ top: h.top + 'px' }"
                 @click="toggleTodayHabit(h)"
               >
-                <span class="habit-pill__check">{{ h.completed === 1 ? '&#10003;' : '&#9900;' }}</span>
+                <span class="habit-pill__check"><ion-icon :icon="h.completed === 1 ? checkmark : ellipseOutline" /></span>
                 {{ h.name }}, {{ h.time }}
               </div>
 
@@ -367,14 +367,15 @@
 </template>
 
 <script setup lang="ts">
-import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonCard, IonContent, IonHeader, IonIcon, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { checkmark, ellipseOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { computeCircadianProfile, computeAlertnessCurve, computeCircadianWindows, type CircadianProfile, type AlertnessPoint, type CircadianWindows, type DayType } from '@/shared/health/circadian';
-import { getRecentCircadianLogs, upsertCircadianLog, getRecentSleepSessions } from '@/shared/db/app_db';
+import { getRecentCircadianLogs, getCircadianLog, upsertCircadianLog, getRecentSleepSessions } from '@/shared/db/app_db';
 import { scheduleCircadianNudges } from '@/shared/utils/notifications';
 import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
@@ -688,16 +689,16 @@ const batteryRatio = computed(() => batteryScore.value === null ? 0 : batterySco
 const batteryDashOffset = computed(() => 289 - 289 * batteryRatio.value);
 const batteryColor = computed(() => {
   const s = batteryScore.value;
-  if (s === null) return 'rgba(255,255,255,0.2)';
+  if (s === null) return 'rgba(255,255,255,0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgb(234,179,8)';
+  if (s >= 45) return 'rgba(255,255,255,0.85)';
   return 'var(--ion-color-accent-red)';
 });
 const sleepScoreColor = computed(() => {
   const s = sleepScoreVal.value;
   if (s === null) return '#fff';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgb(234,179,8)';
+  if (s >= 45) return 'rgba(255,255,255,0.85)';
   return 'var(--ion-color-accent-red)';
 });
 
@@ -828,7 +829,7 @@ const buildBatteryChart = () => {
         },
         {
           data: futureData,
-          borderColor: 'rgba(255,255,255,0.2)',
+          borderColor: 'rgba(255,255,255,0.25)',
           backgroundColor: 'transparent',
           borderWidth: 1.5,
           borderDash: [5, 4],
@@ -854,14 +855,14 @@ const buildBatteryChart = () => {
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, maxTicksLimit: 6 },
-          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, maxTicksLimit: 6 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
         y: {
           min: 0,
           max: 100,
-          ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, stepSize: 25 },
-          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, stepSize: 25 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         }
       }
     }
@@ -970,17 +971,20 @@ const loadCircadian = async () => {
 
 const logCircadianField = async (field: string, value: unknown) => {
   hapticSelect();
-  const existing = (await getRecentCircadianLogs(1)).find(l => l.date === todayStr);
+  // Merge onto the freshly-read persisted row and change only the tapped field.
+  // Rebuilding from refs could clobber values set on another surface (e.g. day_type
+  // chosen on CircadianPage) with a stale ref.
+  const existing = await getCircadianLog(todayStr);
   await upsertCircadianLog({
     date:           todayStr,
-    day_type:       circDayType.value,
-    energy_wake:    circEnergyWake.value,
-    energy_noon:    circEnergyNoon.value,
-    energy_evening: circEnergyEvening.value,
-    meal_first:     existing?.meal_first  ?? null,
-    meal_last:      existing?.meal_last   ?? null,
-    morning_light:  circMorningLight.value ? 1 : 0,
-    notes:          existing?.notes       ?? null,
+    day_type:       existing?.day_type     ?? circDayType.value,
+    energy_wake:    existing?.energy_wake   ?? null,
+    energy_noon:    existing?.energy_noon   ?? null,
+    energy_evening: existing?.energy_evening ?? null,
+    meal_first:     existing?.meal_first    ?? null,
+    meal_last:      existing?.meal_last     ?? null,
+    morning_light:  existing?.morning_light ?? 0,
+    notes:          existing?.notes         ?? null,
     [field]: value,
   });
 };
@@ -1044,10 +1048,10 @@ onMounted(async () => {
 
 .workout-hero-card {
   margin: 0;
-  padding: 20px 18px 18px;
+  padding: 18px;
   border-radius: 12px;
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .workout-hero__topline {
@@ -1063,8 +1067,8 @@ onMounted(async () => {
 
 .workout-hero__name {
   margin: 0 0 16px;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: #fff;
   line-height: 1.2;
 }
@@ -1076,24 +1080,26 @@ onMounted(async () => {
 .workout-hero__start {
   width: 100%;
   padding: 12px;
-  background: var(--ion-color-accent-red);
+  background: rgb(239, 68, 68);
   border: none;
   border-radius: 8px;
   color: #fff;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.02em;
+  transition: background-color 150ms ease;
+}
+
+.workout-hero__start:hover {
+  background: rgb(220, 38, 38);
 }
 
 .active-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  border: 2px solid rgba(255, 215, 0, 0.35);
+  background: var(--ion-color-primary);
+  border: 1px solid rgba(255, 215, 0, 0.35);
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 150ms ease;
 }
-
-.active-card:active { transform: scale(0.98); }
 
 .card-topline {
   display: flex;
@@ -1112,7 +1118,7 @@ onMounted(async () => {
 
 .card-date {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* 3-score row */
@@ -1168,17 +1174,17 @@ onMounted(async () => {
 
 .ready-chips {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ready-chip {
   flex: 1;
-  padding: 8px 10px;
+  padding: 10px;
   border-radius: 10px;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-align: center;
-  transition: background 0.2s;
+  transition: background-color 150ms ease;
 }
 
 .ready-chip--on {
@@ -1188,23 +1194,22 @@ onMounted(async () => {
 }
 
 .ready-chip--off {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .drain-line {
   margin: 0;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .battery-timeline {
   height: 90px;
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Metric tiles */
@@ -1236,6 +1241,7 @@ onMounted(async () => {
 .card-metric strong {
   display: block;
   font-size: 0.95rem;
+  font-weight: 600;
   color: #fff;
 }
 
@@ -1267,7 +1273,6 @@ onMounted(async () => {
   font-weight: 700;
   color: rgb(255, 215, 0);
   font-family: 'Doto', monospace;
-  letter-spacing: 0.05em;
 }
 
 .active-card__timer--rest {
@@ -1306,7 +1311,6 @@ onMounted(async () => {
   stroke: var(--ion-color-accent-red);
   stroke-linecap: round;
   stroke-dasharray: 289;
-  transition: stroke-dashoffset 300ms linear;
 }
 
 .readiness-ring__content {
@@ -1316,19 +1320,20 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 6px;
   text-align: center;
   color: #fff;
 }
 
 .readiness-ring__content strong {
   font-size: 3rem;
+  font-weight: 700;
   line-height: 1;
   color: #fff;
 }
 
 .readiness-ring__content span {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Day view */
@@ -1359,20 +1364,20 @@ onMounted(async () => {
   gap: 10px;
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .habit-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.4rem;
+  gap: 6px;
   padding: 12px 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .habit-block--done {
@@ -1383,15 +1388,18 @@ onMounted(async () => {
 .habit-block__check {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
   color: #fff;
   flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.habit-block__check ion-icon {
+  font-size: 20px;
 }
 
 .habit-block--done .habit-block__check {
@@ -1400,7 +1408,7 @@ onMounted(async () => {
 }
 
 .habit-block__name {
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.85);
   line-height: 1.2;
 }
@@ -1411,39 +1419,53 @@ onMounted(async () => {
 }
 
 .habit-block__time {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* All-day strip */
 .allday-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .allday-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 6px;
   padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
   background: rgba(255, 255, 255, 0.08);
 }
 
-.allday-pill--workout   { background: rgba(239, 68, 68, 0.2);   color: var(--ion-color-accent-red); }
-.allday-pill--recovery  { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
-.allday-pill--reminder  { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
-.allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.7); }
-.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: var(--ion-color-accent-red); }
+.allday-pill--workout   { background: rgba(239, 68, 68, 0.15);  color: rgb(239, 68, 68); }
+.allday-pill--recovery  { background: rgba(34, 197, 94, 0.15);  color: rgb(34, 197, 94); }
+.allday-pill--reminder  { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.85); }
+.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: rgb(239, 68, 68); }
 
-.allday-check { cursor: pointer; font-size: 0.75rem; }
+.allday-check {
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.allday-check ion-icon { font-size: 20px; }
+
+/* extend tap target without changing visual size */
+.allday-check::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
 .allday-check--done { color: var(--ion-color-accent-red); }
 
 /* Scrollable timeline */
@@ -1470,10 +1492,10 @@ onMounted(async () => {
 .hour-label {
   width: 40px;
   flex-shrink: 0;
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.28);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.25);
   text-align: right;
-  padding-right: 8px;
+  padding-right: 10px;
   margin-top: -0.45em;
   line-height: 1;
 }
@@ -1481,7 +1503,7 @@ onMounted(async () => {
 .hour-line {
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Now line */
@@ -1499,7 +1521,7 @@ onMounted(async () => {
 .now-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--ion-color-accent-red);
   margin-left: -3px;
   flex-shrink: 0;
@@ -1510,20 +1532,20 @@ onMounted(async () => {
   position: absolute;
   left: 48px;
   right: 4px;
-  border-radius: 8px;
-  padding: 5px 8px;
+  border-radius: 10px;
+  padding: 6px 10px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ev-block--workout  { background: rgba(239, 68, 68, 0.25); }
-.ev-block--recovery { background: rgba(52, 211, 153, 0.18); }
-.ev-block--reminder { background: rgba(251, 191, 36, 0.18); }
-.ev-block--sleep    { background: rgba(255, 255, 255, 0.06); }
+.ev-block--recovery { background: rgba(34, 197, 94, 0.15); }
+.ev-block--reminder { background: rgba(255, 255, 255, 0.08); }
+.ev-block--sleep    { background: rgba(255, 255, 255, 0.05); }
 
 .ev-title {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -1533,8 +1555,8 @@ onMounted(async () => {
 
 .ev-time {
   display: block;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 1px;
 }
 
@@ -1543,14 +1565,14 @@ onMounted(async () => {
   position: absolute;
   left: 48px;
   right: 4px;
-  height: 22px;
-  border-radius: 20px;
+  height: 24px;
+  border-radius: 999px;
   padding: 0 10px;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
   cursor: pointer;
@@ -1564,34 +1586,38 @@ onMounted(async () => {
 }
 
 .habit-pill__check {
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
   color: var(--ion-color-accent-red);
   flex-shrink: 0;
 }
 
+.habit-pill__check ion-icon { font-size: 20px; }
+
 .day-view__empty {
   margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .ev-start-btn {
   margin-top: 3px;
-  padding: 2px 8px;
-  background: var(--ion-color-accent-red);
+  padding: 2px 10px;
+  background: rgb(239, 68, 68);
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
   display: block;
+  transition: background-color 150ms ease;
 }
 
 
 .weight-card {
   margin: 0;
-  padding: 14px 18px;
+  padding: 18px;
   border-radius: 12px;
   background: var(--ion-color-primary);
   display: flex;
@@ -1619,37 +1645,47 @@ onMounted(async () => {
 
 .weight-goal-line {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .weight-quick-log {
   display: flex;
   gap: 6px;
   align-items: center;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .weight-input {
   width: 70px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   outline: none;
+  transition: border-color 150ms ease;
+}
+
+.weight-input:focus {
+  border-color: rgb(239, 68, 68);
 }
 
 .log-btn {
   padding: 6px 12px;
-  background: var(--ion-color-accent-red);
+  background: rgb(239, 68, 68);
   border: none;
   border-radius: 8px;
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+
+.log-btn:hover {
+  background: rgb(220, 38, 38);
 }
 
 .weight-card__spark {
@@ -1678,7 +1714,7 @@ onMounted(async () => {
 }
 
 /* ── Circadian card ─────────────────────────────────────────────── */
-.circ-card { padding: 16px 16px 14px; }
+.circ-card { padding: 18px; }
 
 .circ-header {
   display: flex;
@@ -1695,8 +1731,7 @@ onMounted(async () => {
   color: rgb(239, 68, 68);
   background: rgba(239, 68, 68, 0.1);
   border-radius: 999px;
-  padding: 3px 10px;
-  letter-spacing: 0.04em;
+  padding: 2px 10px;
 }
 
 .circ-chart-wrap { position: relative; }
@@ -1705,16 +1740,15 @@ onMounted(async () => {
   width: 100%;
   height: 72px;
   display: block;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .circ-axis {
   display: flex;
   justify-content: space-between;
-  padding: 0 0;
-  font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 3px;
   padding: 0 2px;
 }
@@ -1723,40 +1757,40 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.4);
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .circ-legend-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
-.circ-legend-dot--blue   { background: rgb(59, 130, 246); }
-.circ-legend-dot--yellow { background: rgb(255, 215, 0); }
-.circ-legend-dot--red    { background: rgb(239, 68, 68); }
+.circ-legend-dot--focus    { background: rgba(255, 255, 255, 0.5); }
+.circ-legend-dot--exercise { background: rgb(34, 197, 94); }
+.circ-legend-dot--curve    { background: rgb(239, 68, 68); }
 
 .circ-log-section {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .circ-log-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .circ-log-label {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
   flex-shrink: 0;
   width: 82px;
 }
@@ -1764,14 +1798,14 @@ onMounted(async () => {
 .circ-type-btn {
   flex: 1;
   padding: 6px 0;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .circ-type-btn--active {
@@ -1781,15 +1815,15 @@ onMounted(async () => {
 }
 
 .circ-light-btn {
-  padding: 5px 14px;
-  border-radius: 7px;
+  padding: 6px 14px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .circ-light-btn--on {
@@ -1800,21 +1834,21 @@ onMounted(async () => {
 
 .circ-energy-row {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   flex: 1;
 }
 
 .circ-energy-btn {
   flex: 1;
-  padding: 5px 0;
-  border-radius: 6px;
+  padding: 6px 0;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 0.78rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .circ-energy-btn--active {
@@ -1824,9 +1858,9 @@ onMounted(async () => {
 }
 
 .circ-log-complete {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
   text-align: center;
-  padding: 4px 0;
+  padding: 6px 0;
 }
 </style>

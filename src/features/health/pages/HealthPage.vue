@@ -282,9 +282,9 @@ const readinessLabelClass = computed(() => {
 
 const batteryBarColor = computed(() => {
   const s = readinessScore.value;
-  if (s === null) return 'rgba(255,255,255,0.2)';
+  if (s === null) return 'rgba(255,255,255,0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgb(234,179,8)';
+  if (s >= 45) return 'rgba(255,255,255,0.85)';
   return 'rgb(239,68,68)';
 });
 
@@ -475,7 +475,7 @@ const handleConnect = async () => {
 </script>
 
 <style scoped>
-.health-content { --padding-top: 16px; --padding-bottom: 32px; }
+.health-content { --padding-top: 16px; --padding-bottom: 24px; }
 
 .health-shell {
   padding: 16px;
@@ -510,7 +510,7 @@ const handleConnect = async () => {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .metric-label {
@@ -543,58 +543,56 @@ const handleConnect = async () => {
 
 .readiness-score-denom {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
 }
 
 .hero-right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
-  padding-top: 4px;
+  gap: 10px;
+  padding-top: 6px;
 }
 
 .readiness-label {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
 }
 
 .label--green  { color: rgb(34, 197, 94); }
-.label--yellow { color: rgb(255, 215, 0); }
+.label--yellow { color: rgba(255, 255, 255, 0.85); }
 .label--red    { color: rgb(239, 68, 68); }
-.label--muted  { color: rgba(255, 255, 255, 0.4); }
+.label--muted  { color: rgba(255, 255, 255, 0.5); }
 
 .ready-badges { display: flex; gap: 6px; }
 
 .ready-badge {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 3px 8px;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
   border-radius: 999px;
 }
 
 .badge--green { background: rgba(34,197,94,0.15); color: rgb(34,197,94); }
-.badge--muted { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.3); }
+.badge--muted { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); }
 
 .readiness-bar-track {
   height: 3px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  border-radius: 999px;
   margin-bottom: 14px;
   overflow: hidden;
 }
 
 .readiness-bar-fill {
   height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease;
+  border-radius: 999px;
 }
 
-.drain-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.drain-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
 .drain-val { color: rgb(239, 68, 68); }
 .drain-val--positive { color: rgb(34, 197, 94); }
@@ -604,14 +602,17 @@ const handleConnect = async () => {
 /* ── Sleep card ── */
 .sleep-top {
   display: flex;
+  flex-direction: column;
   gap: 14px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .sleep-score-block {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  gap: 10px;
   align-items: center;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   padding: 14px 16px;
@@ -626,28 +627,28 @@ const handleConnect = async () => {
 }
 
 .score--green  { color: rgb(34, 197, 94); }
-.score--yellow { color: rgb(255, 215, 0); }
+.score--yellow { color: rgba(255, 255, 255, 0.85); }
 .score--red    { color: rgb(239, 68, 68); }
-.score--muted  { color: rgba(255, 255, 255, 0.35); }
+.score--muted  { color: rgba(255, 255, 255, 0.25); }
 
 .sleep-score-sub {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.4);
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 6px;
 }
 
 .sleep-metrics { flex: 1; }
 
 .sleep-insight {
   margin: 12px 0 0;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.5;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
   border-left: 2px solid rgba(239, 68, 68, 0.5);
 }
 
@@ -658,14 +659,14 @@ const handleConnect = async () => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .event-row { display: flex; align-items: center; gap: 10px; }
 
 .event-time {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   width: 38px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -674,45 +675,45 @@ const handleConnect = async () => {
 .event-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .dot--workout  { background: rgb(239, 68, 68); }
-.dot--school   { background: rgb(59, 130, 246); }
+.dot--school   { background: rgba(255, 255, 255, 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
-.dot--sleep    { background: rgb(99, 102, 241); }
-.dot--reminder { background: rgb(234, 179, 8); }
-.dot--general  { background: rgba(255, 255, 255, 0.4); }
+.dot--sleep    { background: rgba(255, 255, 255, 0.5); }
+.dot--reminder { background: rgba(255, 255, 255, 0.35); }
+.dot--general  { background: rgba(255, 255, 255, 0.25); }
 
 .event-title {
   flex: 1;
-  font-size: 0.88rem;
-  color: #fff;
-  font-weight: 500;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .event-tag {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .tag--workout  { background: rgba(239,68,68,0.15);   color: rgb(239,68,68); }
-.tag--school   { background: rgba(59,130,246,0.15);  color: rgb(59,130,246); }
+.tag--school   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);   color: rgb(34,197,94); }
-.tag--sleep    { background: rgba(99,102,241,0.15);  color: rgb(99,102,241); }
-.tag--reminder { background: rgba(234,179,8,0.15);   color: rgb(234,179,8); }
-.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+.tag--sleep    { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.tag--reminder { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
 
 /* ── Readiness chart ── */
-.rh-chart { display: grid; gap: 8px; }
+.rh-chart { display: grid; gap: 10px; }
 .rh-svg { width: 100%; height: auto; overflow: visible; }
 
 .rh-line {
@@ -728,7 +729,6 @@ const handleConnect = async () => {
 .rh-dot {
   fill: rgb(239, 68, 68);
   cursor: pointer;
-  transition: r 0.15s, filter 0.15s;
 }
 
 .rh-dot--selected { r: 2; filter: brightness(1.3); }
@@ -749,11 +749,11 @@ const handleConnect = async () => {
 .rh-axis {
   display: flex;
   justify-content: space-between;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.empty-hint { margin: 0; font-size: 0.82rem; color: rgba(255, 255, 255, 0.35); }
+.empty-hint { margin: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.5); }
 
 /* ── Activities ── */
 .activity-list { display: grid; gap: 10px; }
@@ -762,7 +762,7 @@ const handleConnect = async () => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px;
+  padding: 18px;
   border-radius: 12px;
   background: var(--ion-color-primary);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -785,15 +785,15 @@ const handleConnect = async () => {
 
 .activity-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .activity-name { font-size: 0.95rem; color: #fff; font-weight: 600; }
-.activity-date { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+.activity-date { font-size: 0.72rem; color: rgba(255, 255, 255, 0.5); }
 
 .activity-metrics {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  margin-top: 4px;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.75);
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* ── Sync card ── */
@@ -801,7 +801,7 @@ const handleConnect = async () => {
 
 .sync-status {
   margin: 0 0 14px;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -815,21 +815,17 @@ const handleConnect = async () => {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.03em;
-  transition: opacity 0.15s ease;
+  transition: background-color 150ms ease;
 }
 
-.sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.sync-btn:not(:disabled):active { opacity: 0.85; }
+.sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sync-btn:not(:disabled):active { background: rgb(220, 38, 38); }
 
 /* ── Responsive ── */
-@media (max-width: 400px) {
-  .drain-grid { grid-template-columns: repeat(2, 1fr); }
-  .sleep-top { flex-direction: column; }
-  .sleep-score-block { flex-direction: row; gap: 10px; align-items: center; width: 100%; }
-}
-
 @media (min-width: 600px) {
+  .drain-grid { grid-template-columns: repeat(4, 1fr); }
   .activity-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sleep-top { flex-direction: row; align-items: flex-start; }
+  .sleep-score-block { flex-direction: column; gap: 0; }
 }
 </style>

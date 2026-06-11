@@ -1624,6 +1624,30 @@ export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRe
   return (result.values ?? []) as SleepSessionRecord[];
 }
 
+// Sleep sessions strictly before `date` (most recent first). Used to seed rolling
+// baselines at sync time so the first nights inside the sync window are scored
+// against prior persisted history instead of getting null/half-credit baselines.
+export async function getSleepSessionsBefore(date: string, limit: number): Promise<SleepSessionRecord[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM sleep_session WHERE date < ? ORDER BY date DESC LIMIT ?;`,
+    [date, limit]
+  );
+  return (result.values ?? []) as SleepSessionRecord[];
+}
+
+// Numeric values for a metric type strictly before `date` (most recent first).
+export async function getHealthMetricValuesBefore(type: string, date: string, limit: number): Promise<number[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT value FROM health_metric WHERE type = ? AND date < ? ORDER BY date DESC LIMIT ?;`,
+    [type, date, limit]
+  );
+  return ((result.values ?? []) as { value: number }[])
+    .map((r) => Number(r.value))
+    .filter((v) => Number.isFinite(v));
+}
+
 export async function addHabit(name: string, frequency: string, target: number, time?: string) {
   if (!db) return;
   try {
@@ -1716,9 +1740,14 @@ export async function addCalendarEvent(
 ) {
   if (!db) return;
   try {
+    // Allowlist event types: each has a defined battery drain rate in calculateBattery.
+    // An unknown type would silently fall through to the default 4/hr drain.
+    const safeType = ['general', 'workout', 'recovery', 'school', 'sleep', 'reminder'].includes(type)
+      ? type
+      : 'general';
     const result = await db.run(
       `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none', endDate ?? null]
+      [title, date, safeType, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none', endDate ?? null]
     );
     return result;
   } catch (error) {
@@ -2020,49 +2049,12 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     return { success: false, message: 'No valid SQL statements found in file.' };
   }
 
-  const deleteOrder = [
-    'workout_exercise_sets',
-    'workout_exercise',
-    'workout_template_exercise',
-    'workout',
-    'workout_template',
-    'exercise',
-    'muscle_group',
-    'equipment',
-    'health_metric',
-    'readiness_score',
-    'habit_log',
-    'habit',
-    'goal',
-    'calendar_event',
-    'finance_subscription',
-    'finance_investment',
-    'finance_account',
-    'net_worth_snapshot',
-    'circadian_log'
-  ];
-
-  const insertOrder = [
-    'muscle_group',
-    'equipment',
-    'workout_template',
-    'exercise',
-    'workout',
-    'workout_template_exercise',
-    'workout_exercise',
-    'workout_exercise_sets',
-    'health_metric',
-    'readiness_score',
-    'habit',
-    'habit_log',
-    'goal',
-    'calendar_event',
-    'finance_account',
-    'finance_investment',
-    'finance_subscription',
-    'net_worth_snapshot',
-    'circadian_log'
-  ];
+  // Mirror the export lists exactly so import order can never drift from what gets
+  // exported. Previously these omitted exercise_pr, sleep_session and body_log, so
+  // their DELETE/INSERT statements were parsed but never executed on restore —
+  // silently dropping PR, sleep-history and body-weight data.
+  const deleteOrder = EXPORT_DELETE_TABLES;
+  const insertOrder = EXPORT_INSERT_TABLES;
 
   const deleteStatementsByTable = new Map<string, string>();
   const insertStatementsByTable = new Map<string, string[]>();
