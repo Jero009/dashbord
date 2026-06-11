@@ -233,7 +233,7 @@ import {
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { getDriveBackupEnabled, setDriveBackupEnabled, getLastBackupDate, runBackupNow } from '@/shared/utils/driveBackup'
-import { bulkInsertBodyLog, exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
+import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -317,7 +317,7 @@ const handleDriveBackupNow = async () => {
 }
 
 // --- Goals ---
-const goToGoals = () => router.push('/health/goals')
+const goToGoals = () => router.push('/health/planner')
 
 // --- Gym: weekly workout goal ---
 const WEEKLY_GOAL_STORAGE_KEY = 'homeWeeklyGoal'

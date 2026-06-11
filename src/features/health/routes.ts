@@ -12,19 +12,22 @@ export const healthRoutes: Array<RouteRecordRaw> = [
     component: () => import('./pages/SleepPage.vue')
   },
   {
+    path: '/health/planner',
+    name: 'HealthPlanner',
+    component: () => import('./pages/HealthPlannerPage.vue')
+  },
+  // Legacy routes — calendar, habits, and goals are merged into the planner.
+  {
     path: '/health/calendar',
-    name: 'HealthCalendar',
-    component: () => import('./pages/HealthCalendarPage.vue')
+    redirect: '/health/planner'
   },
   {
     path: '/health/habits',
-    name: 'HealthHabits',
-    component: () => import('./pages/HealthHabitsPage.vue')
+    redirect: '/health/planner'
   },
   {
     path: '/health/goals',
-    name: 'HealthGoals',
-    component: () => import('./pages/HealthGoalsPage.vue')
+    redirect: '/health/planner'
   },
   {
     path: '/health/body',

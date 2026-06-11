@@ -58,9 +58,18 @@ Pages call exported functions directly from `src/shared/db/app_db.ts` (e.g., `up
 - Readiness score is derived from sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, and steps
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`) is a 100-pt model: duration vs user target (25), efficiency (20), deep% at ≥18% target (12.5), REM% at ≥22% target (12.5), bedtime timing variance vs 14-night rolling mean (15), respiratory rate vs 14-night personal baseline (15). Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own result.
 
+### Planner (Goals + Habits + Calendar merged)
+
+`HealthPlannerPage.vue` (`/health/planner`) is the single merged page for calendar, habits, and goals — the old `/health/calendar`, `/health/habits`, `/health/goals` routes redirect to it. Sections: month grid (dots: red=event, white=habit done, yellow=goal due), selected-day detail (events + scheduled habits + goal deadlines), habit board (7-day week strip with toggles, expandable per-habit stats: current streak, best streak, 30-day completion rate, 28-day mini grid, edit form), 10-week consistency heatmap, and goals with progress bars.
+
+- `habit.days_of_week` — comma-separated JS weekday digits (Sunday=0), NULL/empty = every day. `getHabitsWithStatus(date)` only returns habits scheduled on that date's weekday.
+- `habit.goal_id` — habit-goal link: `toggleHabitCompletion` moves the linked goal's `current_value` by ±1 on real state changes (all callers, including HomePage, get this behavior). `deleteGoal` clears `goal_id` on linked habits.
+- Streak math lives in `src/shared/utils/habitStats.ts` (`currentStreak`, `bestStreak`, `completionRate`, `isScheduledOn`) — unscheduled days never break a streak; an incomplete *today* doesn't either. Unit tests in `tests/unit/habitStats.spec.ts`.
+- `goal.status`: `active` | `completed`. `getGoalDueDatesForMonth` feeds the yellow calendar dots.
+
 ### Calendar Event Types, Recurrence & Battery Impact
 
-`HealthCalendarPage.vue` supports event types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. Each type has a CSS tag color class (`item-tag--<type>`). `calculateBattery()` in `healthConnect.ts` applies `drainPerHour` per event: school=+5/hr, sleep=−5/hr (others defined separately).
+`HealthPlannerPage.vue` supports event types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. Each type has a CSS tag color class (`item-tag--<type>`). `calculateBattery()` in `healthConnect.ts` applies `drainPerHour` per event: school=+5/hr, sleep=−5/hr (others defined separately).
 
 Calendar events support a `recurrence` column: `none` | `daily` | `weekly`. `getCalendarEventsForDate` uses `strftime('%w', date)` matching for weekly recurrence. `getCalendarEventDatesForMonth` expands recurring events into month dot indicators. Any new event type must have a validated recurrence value (checked against allowlist in `addCalendarEvent`).
 

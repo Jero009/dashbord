@@ -150,7 +150,7 @@
 import {
   IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController,
 } from '@ionic/vue';
-import { computed, ref, type Ref } from 'vue';
+import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {

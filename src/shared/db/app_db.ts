@@ -717,11 +717,17 @@ export async function initDB() {
     `);
 
     const habitColumns = await db.query(`PRAGMA table_info("habit");`);
-    const hasHabitTimeColumn = (habitColumns.values || []).some(
-      (col: any) => String(col.name) === 'time'
+    const habitColNames = new Set(
+      (habitColumns.values || []).map((col: any) => String(col.name))
     );
-    if (!hasHabitTimeColumn) {
+    if (!habitColNames.has('time')) {
       await db.execute(`ALTER TABLE habit ADD COLUMN time TEXT;`);
+    }
+    if (!habitColNames.has('days_of_week')) {
+      await db.execute(`ALTER TABLE habit ADD COLUMN days_of_week TEXT;`);
+    }
+    if (!habitColNames.has('goal_id')) {
+      await db.execute(`ALTER TABLE habit ADD COLUMN goal_id INTEGER;`);
     }
 
     const calColumns = await db.query(`PRAGMA table_info("calendar_event");`);
@@ -1606,12 +1612,19 @@ export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRe
   return (result.values ?? []) as SleepSessionRecord[];
 }
 
-export async function addHabit(name: string, frequency: string, target: number, time?: string) {
+export async function addHabit(
+  name: string,
+  frequency: string,
+  target: number,
+  time?: string,
+  daysOfWeek?: string,
+  goalId?: number
+) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO habit (name, frequency, target, time) VALUES (?, ?, ?, ?);`,
-      [name, frequency, target, time ?? null]
+      `INSERT INTO habit (name, frequency, target, time, days_of_week, goal_id) VALUES (?, ?, ?, ?, ?, ?);`,
+      [name, frequency, target, time ?? null, daysOfWeek ?? null, goalId ?? null]
     );
     return result;
   } catch (error) {
@@ -1620,6 +1633,28 @@ export async function addHabit(name: string, frequency: string, target: number, 
   }
 }
 
+export async function updateHabit(
+  id: number,
+  name: string,
+  time?: string,
+  daysOfWeek?: string,
+  goalId?: number
+) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `UPDATE habit SET name = ?, time = ?, days_of_week = ?, goal_id = ? WHERE id = ?;`,
+      [name, time ?? null, daysOfWeek ?? null, goalId ?? null, id]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error updating habit:', error);
+    throw error;
+  }
+}
+
+// Habits scheduled on specific weekdays (days_of_week = comma-separated 0-6,
+// Sunday = 0) are only returned for matching dates; NULL/empty = every day.
 export async function getHabitsWithStatus(date: string) {
   if (!db) return [];
   const result = await db.query(
@@ -1627,21 +1662,45 @@ export async function getHabitsWithStatus(date: string) {
      FROM habit h
      LEFT JOIN habit_log hl
        ON hl.habit_id = h.id AND hl.date = ?
+     WHERE h.days_of_week IS NULL
+        OR h.days_of_week = ''
+        OR instr(',' || h.days_of_week || ',', ',' || strftime('%w', ?) || ',') > 0
      ORDER BY h.created_at DESC;`,
-    [date]
+    [date, date]
   );
+  return result.values || [];
+}
+
+export async function getAllHabits() {
+  if (!db) return [];
+  const result = await db.query(`SELECT * FROM habit ORDER BY created_at DESC;`);
   return result.values || [];
 }
 
 export async function toggleHabitCompletion(habitId: number, date: string, completed: boolean) {
   if (!db) return;
   try {
+    const prev = await db.query(
+      `SELECT completed FROM habit_log WHERE habit_id = ? AND date = ?;`,
+      [habitId, date]
+    );
+    const prevDone = Number(prev.values?.[0]?.completed ?? 0) === 1;
+
     const result = await db.run(
       `INSERT INTO habit_log (habit_id, date, completed)
        VALUES (?, ?, ?)
        ON CONFLICT(habit_id, date) DO UPDATE SET completed = excluded.completed;`,
       [habitId, date, completed ? 1 : 0]
     );
+
+    // Habit-goal link: a real state change moves the linked goal's progress.
+    if (prevDone !== completed) {
+      const habitRow = await db.query(`SELECT goal_id FROM habit WHERE id = ?;`, [habitId]);
+      const goalId = habitRow.values?.[0]?.goal_id;
+      if (goalId !== null && goalId !== undefined) {
+        await incrementGoalProgressBy(Number(goalId), completed ? 1 : -1);
+      }
+    }
     return result;
   } catch (error) {
     console.error('Error updating habit log:', error);
@@ -1683,6 +1742,37 @@ export async function updateGoalProgress(goalId: number, currentValue: number, s
     console.error('Error updating goal progress:', error);
     throw error;
   }
+}
+
+// Used by habit-goal linking: each completed habit log nudges the linked goal.
+export async function incrementGoalProgressBy(goalId: number, delta: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `UPDATE goal SET current_value = MAX(0, COALESCE(current_value, 0) + ?) WHERE id = ?;`,
+      [delta, goalId]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error incrementing goal progress:', error);
+    throw error;
+  }
+}
+
+export async function deleteGoal(id: number) {
+  if (!db) return;
+  await db.run(`UPDATE habit SET goal_id = NULL WHERE goal_id = ?;`, [id]);
+  await db.run(`DELETE FROM goal WHERE id = ?;`, [id]);
+}
+
+export async function getGoalDueDatesForMonth(yearMonth: string) {
+  if (!db) return [] as string[];
+  const result = await db.query(
+    `SELECT DISTINCT due_date AS date FROM goal
+     WHERE due_date LIKE ? AND status = 'active';`,
+    [`${yearMonth}-%`]
+  );
+  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
 }
 
 export async function addCalendarEvent(
@@ -1751,7 +1841,6 @@ export async function getCalendarEventDatesForMonth(yearMonth: string) {
     `SELECT date, recurrence FROM calendar_event WHERE recurrence != 'none' AND recurrence IS NOT NULL AND date <= ?;`,
     [monthEnd]
   );
-  const monthStart = `${yearMonth}-01`;
   for (const row of (recurResult.values ?? []) as { date: string; recurrence: string }[]) {
     const startDow = new Date(row.date + 'T12:00:00').getDay();
     for (let d = 1; d <= daysInMonth; d++) {
@@ -1827,6 +1916,18 @@ export async function getRecentHabitLogs(habitId: number, days: number) {
     [habitId, `-${days} days`]
   );
   return (result.values ?? []) as { date: string; completed: number }[];
+}
+
+// Single query powering streaks, week strip, and consistency heatmap.
+export async function getHabitLogsForRange(startDate: string, endDate: string) {
+  if (!db) return [] as { habit_id: number; date: string; completed: number }[];
+  const result = await db.query(
+    `SELECT habit_id, date, completed FROM habit_log
+     WHERE date >= ? AND date <= ?
+     ORDER BY date ASC;`,
+    [startDate, endDate]
+  );
+  return (result.values ?? []) as { habit_id: number; date: string; completed: number }[];
 }
 
 // finance functions

@@ -7,14 +7,8 @@
       <ion-segment-button value="sleep">
         <ion-label>Sleep</ion-label>
       </ion-segment-button>
-      <ion-segment-button value="habits">
-        <ion-label>Habits</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="calendar">
-        <ion-label>Calendar</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="goals">
-        <ion-label>Goals</ion-label>
+      <ion-segment-button value="planner">
+        <ion-label>Planner</ion-label>
       </ion-segment-button>
       <ion-segment-button value="body">
         <ion-label>Body</ion-label>
@@ -33,9 +27,7 @@ const route = useRoute();
 
 const activeSegment = computed(() => {
   if (route.path.includes('/sleep')) return 'sleep';
-  if (route.path.includes('/goals')) return 'goals';
-  if (route.path.includes('/habits')) return 'habits';
-  if (route.path.includes('/calendar')) return 'calendar';
+  if (route.path.includes('/planner')) return 'planner';
   if (route.path.includes('/body')) return 'body';
   return 'overview';
 });
@@ -47,9 +39,7 @@ const handleSegmentChange = (event: CustomEvent) => {
   const target: Record<string, string> = {
     overview: '/health',
     sleep: '/health/sleep',
-    goals: '/health/goals',
-    habits: '/health/habits',
-    calendar: '/health/calendar',
+    planner: '/health/planner',
     body: '/health/body',
   };
 
