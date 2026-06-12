@@ -127,6 +127,7 @@ import { useRoute } from 'vue-router';
 import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
 import { getExerciseStats, getExerciseHistory } from '@/shared/db/app_db';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
+import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import type { ExercisePR } from '@/features/gym/types/models';
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler);
@@ -200,29 +201,15 @@ const updateChart = () => {
       labels,
       datasets: [
         {
+          ...chartLineDataset,
           label: 'Weight (kg)',
           data: weightData,
-          borderColor: 'rgb(215, 26, 33)',
-          backgroundColor: 'rgba(215, 26, 33,0.13)',
-          fill: true,
-          tension: 0.3,
-          pointBackgroundColor: 'rgb(215, 26, 33)',
-          pointBorderColor: 'transparent',
-          pointRadius: 3,
-          pointHoverRadius: 5,
           yAxisID: 'y',
         },
         {
+          ...chartDimDataset,
           label: 'Volume (×100)',
           data: volumeData,
-          borderColor: 'rgb(215, 26, 33)',
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.3,
-          pointBackgroundColor: 'rgb(215, 26, 33)',
-          pointBorderColor: 'transparent',
-          pointRadius: 3,
-          pointHoverRadius: 5,
           yAxisID: 'y1',
         }
       ]
@@ -230,40 +217,35 @@ const updateChart = () => {
     options: {
       responsive: true,
       animation: false,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           labels: {
-            color: 'rgba(255,255,255,0.6)',
+            color: 'rgba(255,255,255,0.5)',
             font: { size: 11 },
             boxWidth: 12,
             padding: 16,
           }
         },
-        tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          titleColor: 'rgba(255,255,255,0.5)',
-          bodyColor: '#fff',
-          padding: 10,
-        }
+        tooltip: chartTooltip,
       },
       scales: {
         y: {
           type: 'linear',
           position: 'left',
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, callback: (v) => `${v} kg` },
+          grid: chartGrid,
         },
         y1: {
           type: 'linear',
           position: 'right',
-          ticks: { color: 'rgba(215, 26, 33,0.6)', font: { size: 10 } },
+          ticks: chartTicks,
           grid: { display: false },
         },
         x: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 6 },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, maxTicksLimit: 6 },
+          grid: chartGrid,
         }
       }
     }

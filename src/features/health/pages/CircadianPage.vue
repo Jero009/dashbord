@@ -773,7 +773,7 @@ const saveLog = async () => {
   justify-content: space-between;
   padding: 6px 0 0;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .curve-empty {

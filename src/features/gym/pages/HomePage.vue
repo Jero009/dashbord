@@ -126,6 +126,7 @@ import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
+import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 
 const activeWorkout = ref(false);
@@ -341,17 +342,9 @@ const renderChart = () => {
       labels: chartData.value.map(d => d.date),
       datasets: [
         {
+          ...chartLineDataset,
           label: 'Total KG',
           data: chartData.value.map(d => d.kg),
-          borderColor: 'rgb(215, 26, 33)',
-          backgroundColor: 'rgba(215, 26, 33,0.15)',
-          borderWidth: 2,
-          tension: 0.3,
-          fill: true,
-          pointRadius: 3,
-          pointBackgroundColor: 'rgb(215, 26, 33)',
-          pointBorderColor: 'transparent',
-          pointHoverRadius: 5,
         }
       ]
     },
@@ -362,22 +355,19 @@ const renderChart = () => {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          titleColor: 'rgba(255,255,255,0.5)',
-          bodyColor: '#fff',
-          padding: 10,
+          ...chartTooltip,
           callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(0)} kg` }
         }
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 6 },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, maxTicksLimit: 6 },
+          grid: chartGrid,
         },
         y: {
           min: 0,
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, callback: (v) => `${v} kg` },
+          grid: chartGrid,
         },
       }
     }

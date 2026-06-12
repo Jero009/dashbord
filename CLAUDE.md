@@ -141,18 +141,18 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - Import types with `import type { ... }`; use `@/` path alias for all imports
 - Scoped styles in feature pages to prevent leakage
 - `no-console` / `no-debugger` warnings in dev, errors in prod
-- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. Style: `rgb(215, 26, 33)` line (Nothing red; CSS vars don't resolve in Chart.js configs), `rgba(255,255,255,0.4)` ticks, `rgba(255,255,255,0.1)` grid, `animation: false`.
+- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. **All chart styling comes from `src/shared/utils/chartStyle.ts`** — spread `chartLineDataset` (red primary series), `chartDimDataset` (dim dashed secondary: forecasts, goal lines), `chartTooltip`, `chartTicks`, `chartGrid` into configs instead of literals. CSS vars don't resolve in canvas, which is why the module holds raw rgb values. `animation: false`, `maintainAspectRatio: false` (give the canvas wrapper a fixed height). SVG charts match: red `rgb(215, 26, 33)` line, `rgba(215, 26, 33, 0.15)` area, `rgba(255,255,255,0.4)` axis labels, dim white dashed now/forecast lines.
 - **Build + sync order**: `npm run build` THEN `npx cap sync` before APK rebuild.
 - **No raw unicode checkmarks/crosses** — use `ion-icon` instead of `✓`, `×`, `✕`.
 - **No emojis** anywhere in the UI.
 - **Progressive overload**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% increase, rounded to nearest 2.5 kg, display-only.
 - **Weekly digest**: `getWeeklyDigest()` exists in `app_db.ts` but UI was removed (broken). Do not re-add without verifying.
 - **Haptics**: `src/shared/utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Wire into all interactive elements. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after successful save, Select = picker/option select.
-- **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment.
+- **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment AND on the `.section-toolbar` (a grey toolbar background reads as a full-width bar behind the pill).
 
 ## Design System — Nothing OS aesthetic
 
-**ALWAYS follow these rules.** Do not invent new patterns — extend existing ones. The system is a Nothing-OS-inspired language: near-monochrome surfaces, ONE red accent used as a signal (not decoration), dot-matrix display type for numerics only, hairline borders, mechanical motion. All tokens live in `src/theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex**, except in Chart.js configs where CSS vars don't resolve.
+**ALWAYS follow these rules.** Do not invent new patterns — extend existing ones. The system is a Nothing-OS-inspired language: near-monochrome surfaces, ONE red accent used as a signal (not decoration), dot-matrix display type for numerics only, borderless cards (surfaces separate by background contrast), mechanical motion. All tokens live in `src/theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex**, except in Chart.js configs where CSS vars don't resolve.
 
 ### Colors
 - Page background: `var(--nt-bg)` (`#0A0A0A`, near-black). Cards: `var(--nt-surface)` (`#1A1A1A` — grey, not black) via `var(--ion-color-primary)`. Elevated/pressed: `var(--nt-surface-2)` (`#242424`).
@@ -160,7 +160,7 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - **No yellow in UI chrome.** Live/active states are red (Glyph logic: red LED = recording). Gold `#FFD700` (`var(--nt-data-goal)`) survives ONLY as a data-encoding color: calendar goal dots, planner goal tags, BodyPage goal line, hypnogram Awake band.
 - Success green `rgb(34, 197, 94)` (`var(--nt-data-positive)`) — data semantics only (scores, positive deltas), never buttons/chrome.
 - Labels: `var(--nt-text-dim)` (`rgba(255,255,255,0.5)`), values: `rgba(255,255,255,0.85)`–`#fff`
-- Borders: `var(--nt-border)` (`rgba(255,255,255,0.08)`) standard, `var(--nt-border-strong)` (`0.12`) hover/active
+- Borders: **cards and tiles are borderless** — never add hairline borders to surface containers. `var(--nt-border)` (`rgba(255,255,255,0.08)`) / `var(--nt-border-strong)` (`0.12`) survive only on inputs, outline buttons, and chips. Colored borders (red live/destructive, gold goal-due, green positive) remain as signals.
 - Monochrome glow, never colored neon: active emphasis uses `.nt-glow-active` (white `box-shadow` bloom, `var(--nt-glow)`).
 
 ### Typography
@@ -175,9 +175,9 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - Fonts are self-hosted SIL OFL 1.1 via `@fontsource/*` imports in `main.ts` + local `Doto` TTF. Never ship Nothing's proprietary NDot/NType fonts.
 
 ### Cards & Tiles
-- Card: `background: var(--ion-color-primary)`, `border: 1px solid var(--nt-border)` (hairline applied globally in `variables.css` for common card classes), `border-radius: var(--nt-radius-md)` (16px), `padding: 18px`, no box-shadow
-- Metric tile: `background: rgba(255,255,255,0.05)`, `border-radius: 10px`, `padding: 12px 14px`
-- Selected/live card: red hairline (`border-color: var(--ion-color-accent-red)` or rgba thereof)
+- Card: `background: var(--ion-color-primary)`, **no border**, `border-radius: var(--nt-radius-md)` (16px), `padding: 18px`, no box-shadow. Hover/pressed surface: `var(--nt-surface-2)`.
+- Metric tile: `background: rgba(255,255,255,0.05)`, `border-radius: 10px`, `padding: 12px 14px`, no border
+- Selected/live card: red hairline (`border-color: var(--ion-color-accent-red)` or rgba thereof) — when a card needs a state border, give the base `border: 1px solid transparent` so layout doesn't shift
 - Gap between cards: `16px`, between tiles: `10–12px`
 - Status chips: use `.nt-chip` (pill, hairline, uppercase micro-label) + `.nt-chip__dot` (red dot = live/alert)
 - Optional dot-grid substrate behind hero sections: `.nt-dotgrid`

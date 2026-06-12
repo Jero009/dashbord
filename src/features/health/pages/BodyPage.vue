@@ -119,6 +119,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
+import { chartLineDataset, chartDimDataset, chartColors, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
 import { hapticHeavy, hapticMedium, hapticSuccess } from '@/shared/utils/haptics'
@@ -165,26 +166,17 @@ const buildChart = () => {
       labels,
       datasets: [
         {
+          ...chartLineDataset,
           label: 'Weight',
           data,
-          borderColor: 'var(--ion-color-accent-red)',
-          backgroundColor: 'rgba(215, 26, 33,0.15)',
-          borderWidth: 2,
           pointRadius: filtered.length > 60 ? 0 : 3,
-          pointBackgroundColor: 'var(--ion-color-accent-red)',
-          tension: 0.3,
-          fill: true,
         },
         ...(goalData ? [{
+          ...chartDimDataset,
           label: 'Goal',
           data: goalData,
-          borderColor: 'rgba(255,215,0,0.6)',
-          backgroundColor: 'transparent',
-          borderWidth: 1.5,
-          borderDash: [6, 4],
-          pointRadius: 0,
+          borderColor: chartColors.goal,
           tension: 0,
-          fill: false,
         }] : []),
       ]
     },
@@ -195,21 +187,18 @@ const buildChart = () => {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          titleColor: 'rgba(255,255,255,0.5)',
-          bodyColor: '#fff',
-          padding: 10,
+          ...chartTooltip,
           callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)} kg` }
         }
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 8 },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, maxTicksLimit: 8 },
+          grid: chartGrid,
         },
         y: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, callback: (v) => `${v} kg` },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, callback: (v) => `${v} kg` },
+          grid: chartGrid,
         }
       }
     }

@@ -532,8 +532,6 @@ const handleConnect = async () => {
 .metric-value { font-size: 0.95rem; font-weight: 600; color: #fff; }
 
 /* ── Battery hero ── */
-.readiness-card { border: 1px solid rgba(255, 255, 255, 0.08); }
-
 .readiness-hero {
   display: flex;
   align-items: flex-start;
@@ -733,7 +731,7 @@ const handleConnect = async () => {
   stroke-linejoin: round;
 }
 
-.rh-area { fill: rgba(215, 26, 33, 0.12); stroke: none; }
+.rh-area { fill: rgba(215, 26, 33, 0.15); stroke: none; }
 
 .rh-dot {
   fill: rgb(215, 26, 33);
@@ -759,7 +757,7 @@ const handleConnect = async () => {
   display: flex;
   justify-content: space-between;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .empty-hint { margin: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.5); }
@@ -774,7 +772,6 @@ const handleConnect = async () => {
   padding: 18px;
   border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .activity-icon {
@@ -806,8 +803,6 @@ const handleConnect = async () => {
 }
 
 /* ── Sync card ── */
-.sync-card { border: 1px solid rgba(255, 255, 255, 0.08); }
-
 .sync-status {
   margin: 0 0 14px;
   font-size: 0.9rem;

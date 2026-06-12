@@ -143,18 +143,17 @@
   margin: 18px auto;
   border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: none;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease;
   position: relative;
 }
 
 .exercise-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--nt-surface-2);
 }
 
 .exercise-card:active {
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--nt-surface-2);
 }
 
 .exercise-sliding-item {
@@ -209,7 +208,7 @@
   --inner-border-width: 0;
   --inner-padding-end: 0;
   --padding-start: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;

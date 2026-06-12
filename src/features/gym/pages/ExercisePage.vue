@@ -159,7 +159,6 @@
   --padding-start: 14px;
   --padding-end: 10px;
   --min-height: 76px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   cursor: pointer;
   transition: background-color 0.2s;

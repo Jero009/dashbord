@@ -132,7 +132,7 @@
                 height="10"
                 fill="rgba(34,197,94,0.12)" />
               <!-- Alertness area -->
-              <polygon :points="circAreaPoints" fill="rgba(215, 26, 33,0.12)" />
+              <polygon :points="circAreaPoints" fill="rgba(215, 26, 33, 0.15)" />
               <!-- Alertness line -->
               <polyline :points="circLinePoints" fill="none" stroke="rgb(215, 26, 33)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
               <!-- Now line -->
@@ -396,6 +396,7 @@ import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/model
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess, hapticSelect } from '@/shared/utils/haptics';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
+import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 const router = useRouter();
@@ -423,13 +424,9 @@ const buildSparkline = (points: number[]) => {
     data: {
       labels: points.map(() => ''),
       datasets: [{
+        ...chartLineDataset,
         data: points,
-        borderColor: 'var(--ion-color-accent-red)',
-        backgroundColor: 'rgba(215, 26, 33,0.08)',
-        borderWidth: 2,
         pointRadius: 0,
-        tension: 0.3,
-        fill: true,
       }]
     },
     options: {
@@ -833,24 +830,14 @@ const buildBatteryChart = () => {
       labels,
       datasets: [
         {
+          ...chartLineDataset,
           data: pastData,
-          borderColor: 'var(--ion-color-accent-red)',
-          backgroundColor: 'rgba(215, 26, 33,0.1)',
-          borderWidth: 2,
           pointRadius: 0,
-          tension: 0.35,
-          fill: true,
           spanGaps: false,
         },
         {
+          ...chartDimDataset,
           data: futureData,
-          borderColor: 'rgba(255,255,255,0.25)',
-          backgroundColor: 'transparent',
-          borderWidth: 1.5,
-          borderDash: [5, 4],
-          pointRadius: 0,
-          tension: 0.35,
-          fill: false,
           spanGaps: false,
         },
       ]
@@ -862,22 +849,20 @@ const buildBatteryChart = () => {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          titleColor: 'rgba(255,255,255,0.5)',
-          bodyColor: '#fff',
+          ...chartTooltip,
           callbacks: { label: (c) => ` ${c.parsed.y} pts` }
         }
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, maxTicksLimit: 6 },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, maxTicksLimit: 6 },
+          grid: chartGrid,
         },
         y: {
           min: 0,
           max: 100,
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, stepSize: 25 },
-          grid: { color: 'rgba(255,255,255,0.1)' },
+          ticks: { ...chartTicks, stepSize: 25 },
+          grid: chartGrid,
         }
       }
     }
@@ -1113,7 +1098,6 @@ onMounted(async () => {
   padding: 18px;
   border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .workout-hero__topline {
@@ -1437,7 +1421,7 @@ onMounted(async () => {
   padding: 12px 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
@@ -1821,7 +1805,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
   margin-top: 3px;
   padding: 0 2px;
 }

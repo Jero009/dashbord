@@ -287,14 +287,9 @@ html, body, ion-app ion-content {
   background: var(--nt-bg) !important;
 }
 
-/* Hairline outline on card surfaces — Nothing "visible structure".
-   Scoped page styles outrank this, so intentional borders
-   (e.g. live red active-card) still apply. */
-.card, .finance-card, .summary-card, .sleep-card, .weekly-card,
-.graph-card, .exercise-card, .workout-hero-card, .day-view-card,
-.weight-card, .workout-tile, .active-card {
-  border: 1px solid var(--nt-border);
-}
+/* Card surfaces are borderless — separation comes from surface
+   contrast, not hairlines. Red borders remain reserved as
+   live/destructive signals in scoped page styles. */
 
 /* =========================================================
    Nothing utility classes — use these in new components
