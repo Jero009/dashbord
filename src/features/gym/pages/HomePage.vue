@@ -343,13 +343,13 @@ const renderChart = () => {
         {
           label: 'Total KG',
           data: chartData.value.map(d => d.kg),
-          borderColor: 'rgb(239,68,68)',
-          backgroundColor: 'rgba(239,68,68,0.15)',
+          borderColor: 'rgb(215, 26, 33)',
+          backgroundColor: 'rgba(215, 26, 33,0.15)',
           borderWidth: 2,
           tension: 0.3,
           fill: true,
           pointRadius: 3,
-          pointBackgroundColor: 'rgb(239,68,68)',
+          pointBackgroundColor: 'rgb(215, 26, 33)',
           pointBorderColor: 'transparent',
           pointHoverRadius: 5,
         }
@@ -489,7 +489,7 @@ ion-content.home-content {
 
 .weekly-card {
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -564,7 +564,7 @@ ion-content.home-content {
 .summary-card,
 .graph-card,
 .workout-tile {
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
 }
 
@@ -579,18 +579,18 @@ ion-content.home-content {
 
 .active-card {
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255, 215, 0, 0.3);
+  border: 1px solid rgba(215, 26, 33, 0.3);
   position: relative;
   transition: border-color 150ms ease;
   cursor: pointer;
 }
 
 .active-card:hover {
-  border-color: rgba(255, 215, 0, 0.5);
+  border-color: rgba(215, 26, 33, 0.5);
 }
 
 .active-card:active {
-  border-color: var(--ion-color-accent-yellow);
+  border-color: var(--ion-color-accent-red);
 }
 
 .card-topline,
@@ -646,14 +646,14 @@ ion-content.home-content {
 }
 
 .active-card__timer strong {
-  color: var(--ion-color-accent-yellow);
+  color: var(--ion-color-accent-red);
   font-weight: 700;
   font-family: 'Doto', sans-serif;
 }
 
 .active-card__timer--rest {
-  background: rgba(255, 215, 0, 0.1);
-  border: 1px solid rgba(255, 215, 0, 0.3);
+  background: rgba(215, 26, 33, 0.1);
+  border: 1px solid rgba(215, 26, 33, 0.3);
 }
 
 

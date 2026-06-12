@@ -556,7 +556,7 @@ onIonViewWillEnter(async () => {
 
 .sleep-card {
   margin: 0;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   color: #fff;
   padding: 18px;
@@ -698,7 +698,7 @@ onIonViewWillEnter(async () => {
 .sleep-ring__track { stroke: rgba(255, 255, 255, 0.08); }
 
 .sleep-ring__progress {
-  stroke: rgb(239, 68, 68);
+  stroke: rgb(215, 26, 33);
   stroke-linecap: round;
   stroke-dasharray: 289;
   stroke-dashoffset: calc(289 - (289 * var(--score)));
@@ -839,16 +839,16 @@ onIonViewWillEnter(async () => {
 
 .chart-line {
   fill: none;
-  stroke: rgb(239, 68, 68);
+  stroke: rgb(215, 26, 33);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.chart-area { fill: rgba(239, 68, 68, 0.12); }
+.chart-area { fill: rgba(215, 26, 33, 0.12); }
 
 .chart-dot {
-  fill: rgb(239, 68, 68);
+  fill: rgb(215, 26, 33);
   cursor: pointer;
 }
 
@@ -860,8 +860,8 @@ onIonViewWillEnter(async () => {
 .chart-tooltip {
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(215, 26, 33, 0.12);
+  border: 1px solid rgba(215, 26, 33, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -870,12 +870,12 @@ onIonViewWillEnter(async () => {
 
 .chart-tooltip strong {
   font-size: 1.1rem;
-  color: rgb(239, 68, 68);
+  color: rgb(215, 26, 33);
 }
 
 .chart-tooltip small {
   font-size: 0.75rem;
-  color: rgba(239, 68, 68, 0.7);
+  color: rgba(215, 26, 33, 0.7);
 }
 
 .score-history__labels {

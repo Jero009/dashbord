@@ -168,7 +168,7 @@ const buildChart = () => {
           label: 'Weight',
           data,
           borderColor: 'var(--ion-color-accent-red)',
-          backgroundColor: 'rgba(239,68,68,0.15)',
+          backgroundColor: 'rgba(215, 26, 33,0.15)',
           borderWidth: 2,
           pointRadius: filtered.length > 60 ? 0 : 3,
           pointBackgroundColor: 'var(--ion-color-accent-red)',
@@ -378,7 +378,7 @@ onIonViewWillEnter(loadEntries)
 
 <style scoped>
 .body-content {
-  --background: #000;
+  --background: var(--nt-bg);
 }
 
 .body-shell {
@@ -393,7 +393,7 @@ onIonViewWillEnter(loadEntries)
 
 .card {
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 18px;
 }
 
@@ -446,7 +446,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .form-input:focus {
-  border-color: rgb(239, 68, 68);
+  border-color: rgb(215, 26, 33);
 }
 
 .form-input::placeholder {
@@ -511,7 +511,7 @@ onIonViewWillEnter(loadEntries)
 .save-btn {
   width: 100%;
   padding: 12px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -522,7 +522,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .save-btn:hover {
-  background: rgb(220, 38, 38);
+  background: rgb(178, 19, 25);
 }
 
 /* Trend row */

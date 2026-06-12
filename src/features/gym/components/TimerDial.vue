@@ -261,7 +261,7 @@ defineExpose({
   font-size: 2rem;
   font-family: 'Doto', sans-serif;
   font-weight: bold;
-  color: var(--ion-color-accent-yellow);
+  color: var(--ion-color-accent-red);
 }
 
 .dial-wrapper {
@@ -294,7 +294,7 @@ defineExpose({
 
 .dial-track {
   fill: none;
-  stroke: var(--ion-color-accent-yellow);
+  stroke: var(--ion-color-accent-red);
   stroke-width: 6;
   stroke-linecap: round;
   transform-origin: 150px 150px;
@@ -320,7 +320,7 @@ defineExpose({
 }
 
 .pointer {
-  fill: var(--ion-color-accent-yellow);
+  fill: var(--ion-color-accent-red);
   stroke: rgba(255, 255, 255, 0.2);
   stroke-width: 2;
   cursor: grab;
@@ -344,7 +344,7 @@ defineExpose({
   gap: 8px;
   background: rgba(255, 255, 255, 0.06);
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -363,7 +363,7 @@ defineExpose({
 
 .time-input:focus {
   outline: none;
-  border-color: var(--ion-color-accent-yellow);
+  border-color: var(--ion-color-accent-red);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -400,8 +400,8 @@ defineExpose({
 }
 
 .preset-btn.active {
-  background: var(--ion-color-accent-yellow);
-  border-color: var(--ion-color-accent-yellow);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
   color: var(--ion-color-dark);
   font-weight: 700;
 }
@@ -424,7 +424,7 @@ defineExpose({
 }
 
 .btn-confirm {
-  --background: var(--ion-color-accent-yellow);
+  --background: var(--ion-color-accent-red);
   --color: var(--ion-color-dark);
 }
 

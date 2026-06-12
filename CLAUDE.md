@@ -141,7 +141,7 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - Import types with `import type { ... }`; use `@/` path alias for all imports
 - Scoped styles in feature pages to prevent leakage
 - `no-console` / `no-debugger` warnings in dev, errors in prod
-- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. Style: `rgb(239,68,68)` line, `rgba(255,255,255,0.4)` ticks, `rgba(255,255,255,0.1)` grid, `animation: false`.
+- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. Style: `rgb(215, 26, 33)` line (Nothing red; CSS vars don't resolve in Chart.js configs), `rgba(255,255,255,0.4)` ticks, `rgba(255,255,255,0.1)` grid, `animation: false`.
 - **Build + sync order**: `npm run build` THEN `npx cap sync` before APK rebuild.
 - **No raw unicode checkmarks/crosses** — use `ion-icon` instead of `✓`, `×`, `✕`.
 - **No emojis** anywhere in the UI.
@@ -150,33 +150,48 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - **Haptics**: `src/shared/utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Wire into all interactive elements. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after successful save, Select = picker/option select.
 - **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment.
 
-## Design System
+## Design System — Nothing OS aesthetic
 
-**ALWAYS follow these rules.** Do not invent new patterns — extend existing ones.
+**ALWAYS follow these rules.** Do not invent new patterns — extend existing ones. The system is a Nothing-OS-inspired language: near-monochrome surfaces, ONE red accent used as a signal (not decoration), dot-matrix display type for numerics only, hairline borders, mechanical motion. All tokens live in `src/theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex**, except in Chart.js configs where CSS vars don't resolve.
 
 ### Colors
-- Background: `#000` (page), `var(--ion-color-primary)` (cards)
-- Accent red: `rgb(239, 68, 68)` / `var(--ion-color-accent-red)` — primary interactive color
-- Accent yellow: `rgb(255, 215, 0)` — active/live states only
-- Success green: `rgb(34, 197, 94)` — positive states
-- Labels: `rgba(255,255,255,0.5)`, values: `rgba(255,255,255,0.85)`
-- Borders: `rgba(255,255,255,0.08)` standard, `rgba(255,255,255,0.12)` hover
-
-### Cards & Tiles
-- Card: `background: var(--ion-color-primary)`, `border-radius: 12px`, `padding: 18px`, no box-shadow
-- Metric tile: `background: rgba(255,255,255,0.05)`, `border-radius: 10px`, `padding: 12px 14px`
-- Gap between cards: `16px`, between tiles: `10–12px`
+- Page background: `var(--nt-bg)` (`#0A0A0A`, near-black). Cards: `var(--nt-surface)` (`#1A1A1A` — grey, not black) via `var(--ion-color-primary)`. Elevated/pressed: `var(--nt-surface-2)` (`#242424`).
+- **Nothing red** `#D71A21` / `rgb(215, 26, 33)` — `var(--nt-accent)` = `var(--ion-color-accent-red)`. The ONLY accent. Used as a *signal*: live/recording states (rest timer, active workout), destructive actions, active tab, key highlights. Pressed shade: `var(--nt-accent-press)` (`#B21319` / `rgb(178, 19, 25)`).
+- **No yellow in UI chrome.** Live/active states are red (Glyph logic: red LED = recording). Gold `#FFD700` (`var(--nt-data-goal)`) survives ONLY as a data-encoding color: calendar goal dots, planner goal tags, BodyPage goal line, hypnogram Awake band.
+- Success green `rgb(34, 197, 94)` (`var(--nt-data-positive)`) — data semantics only (scores, positive deltas), never buttons/chrome.
+- Labels: `var(--nt-text-dim)` (`rgba(255,255,255,0.5)`), values: `rgba(255,255,255,0.85)`–`#fff`
+- Borders: `var(--nt-border)` (`rgba(255,255,255,0.08)`) standard, `var(--nt-border-strong)` (`0.12`) hover/active
+- Monochrome glow, never colored neon: active emphasis uses `.nt-glow-active` (white `box-shadow` bloom, `var(--nt-glow)`).
 
 ### Typography
-- `.section-kicker`: `0.72rem`, uppercase, `letter-spacing: 0.18em`, `rgba(255,255,255,0.5)`
-- Metric label: `0.75rem`, uppercase, `letter-spacing: 0.1em`, `rgba(255,255,255,0.5)`
-- Metric value: `0.95rem–1rem`, `#fff`, `font-weight: 600`
-- Timer/live value: `Doto` monospace, yellow
+- Body/UI text: `Inter` (`var(--nt-font-body)`, default via `--ion-font-family`)
+- Headings, labels, kickers, buttons, chips: `Space Grotesk` (`var(--nt-font-head)`), usually UPPERCASE with `letter-spacing: var(--nt-tracking-label)` (0.12em)
+- **Dot-matrix face `Doto` (`var(--nt-font-display)`) is seasoning, not body**: big numerics, timers, metric readouts, clock-like displays ONLY. Never body or long text.
+- Tabular/mono numerics: `Space Mono` (`var(--nt-font-mono)`)
+- `.section-kicker`: `0.72rem`, uppercase, `letter-spacing: 0.18em`, `var(--nt-text-dim)` — never accent-colored
+- Metric label: `0.75rem`, uppercase, `letter-spacing: 0.1em+`, `var(--nt-text-dim)`
+- Metric value: `0.95rem–1rem`, `#fff`, `font-weight: 600`; hero metrics in `Doto`
+- Timer/live value: `Doto`, **red** (`var(--ion-color-accent-red)`)
+- Fonts are self-hosted SIL OFL 1.1 via `@fontsource/*` imports in `main.ts` + local `Doto` TTF. Never ship Nothing's proprietary NDot/NType fonts.
+
+### Cards & Tiles
+- Card: `background: var(--ion-color-primary)`, `border: 1px solid var(--nt-border)` (hairline applied globally in `variables.css` for common card classes), `border-radius: var(--nt-radius-md)` (16px), `padding: 18px`, no box-shadow
+- Metric tile: `background: rgba(255,255,255,0.05)`, `border-radius: 10px`, `padding: 12px 14px`
+- Selected/live card: red hairline (`border-color: var(--ion-color-accent-red)` or rgba thereof)
+- Gap between cards: `16px`, between tiles: `10–12px`
+- Status chips: use `.nt-chip` (pill, hairline, uppercase micro-label) + `.nt-chip__dot` (red dot = live/alert)
+- Optional dot-grid substrate behind hero sections: `.nt-dotgrid`
+
+### Spacing / Radius / Motion tokens
+- Spacing on an 8px base: `--nt-space-1..6` (4/8/12/16/24/32)
+- Radius: `--nt-radius-sm` 8px (chips, inputs), `--nt-radius-md` 16px (cards, buttons), `--nt-radius-lg` 24px (sheets, modals), `--nt-radius-pill` 999px (pills, toggles)
+- Motion: micro `var(--nt-dur-micro)` (140ms) + `var(--nt-ease-decel)`; standard `var(--nt-dur-std)` (280ms) + `var(--nt-ease-std)`. Dot/LED animations use `steps()` for a mechanical scanning feel (`.nt-loading-dot`).
 
 ### Inputs / Buttons
-- Input: `background: rgba(255,255,255,0.06)`, `border: 1px solid rgba(255,255,255,0.1)`, `border-radius: 8px`, `color: #fff`
+- Input: `background: rgba(255,255,255,0.06)`, `border: 1px solid rgba(255,255,255,0.1)`, `border-radius: var(--nt-radius-sm)`, `color: #fff`
 - Time/date inputs: `color-scheme: dark`
-- Primary button: `background: rgb(239,68,68)`, `border-radius: 8px`, no border
+- Primary button: `background: rgb(215, 26, 33)`, `border-radius: 8px`, no border. Red is for the page's key/destructive action — secondary actions use hairline-outline transparent buttons (`.button-yellow` is now this secondary style; `.button-white` = high-contrast solid).
+- Pressed state: `opacity: 0.7` or `var(--nt-surface-2)`
 
 ### Responsive
 - Max content width: `760px` centered

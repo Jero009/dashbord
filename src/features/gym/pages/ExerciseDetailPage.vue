@@ -202,11 +202,11 @@ const updateChart = () => {
         {
           label: 'Weight (kg)',
           data: weightData,
-          borderColor: 'rgb(255,215,0)',
-          backgroundColor: 'rgba(255,215,0,0.13)',
+          borderColor: 'rgb(215, 26, 33)',
+          backgroundColor: 'rgba(215, 26, 33,0.13)',
           fill: true,
           tension: 0.3,
-          pointBackgroundColor: 'rgb(255,215,0)',
+          pointBackgroundColor: 'rgb(215, 26, 33)',
           pointBorderColor: 'transparent',
           pointRadius: 3,
           pointHoverRadius: 5,
@@ -215,11 +215,11 @@ const updateChart = () => {
         {
           label: 'Volume (×100)',
           data: volumeData,
-          borderColor: 'rgb(239,68,68)',
+          borderColor: 'rgb(215, 26, 33)',
           backgroundColor: 'transparent',
           fill: false,
           tension: 0.3,
-          pointBackgroundColor: 'rgb(239,68,68)',
+          pointBackgroundColor: 'rgb(215, 26, 33)',
           pointBorderColor: 'transparent',
           pointRadius: 3,
           pointHoverRadius: 5,
@@ -258,7 +258,7 @@ const updateChart = () => {
         y1: {
           type: 'linear',
           position: 'right',
-          ticks: { color: 'rgba(239,68,68,0.6)', font: { size: 10 } },
+          ticks: { color: 'rgba(215, 26, 33,0.6)', font: { size: 10 } },
           grid: { display: false },
         },
         x: {
@@ -331,7 +331,7 @@ onUnmounted(() => {
 .pr-value {
   font-size: 20px;
   font-weight: bold;
-  color: var(--ion-color-accent-yellow);
+  color: var(--ion-color-accent-red);
   font-family: 'Doto', sans-serif;
 }
 
@@ -347,11 +347,11 @@ onUnmounted(() => {
 
 .section-kicker {
   font-size: 12px;
-  color: var(--ion-color-accent-yellow);
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 600;
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.12em;
   font-family: 'Doto', sans-serif;
 }
 

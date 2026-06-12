@@ -553,7 +553,7 @@ const handleImportFile = async (event: Event) => {
 
 <style scoped>
 .settings-content {
-  --background: #000;
+  --background: var(--nt-bg);
 }
 
 .settings-shell {
@@ -568,7 +568,7 @@ const handleImportFile = async (event: Event) => {
 
 .card {
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 18px;
 }
 
@@ -614,7 +614,7 @@ const handleImportFile = async (event: Event) => {
 }
 
 .form-input:focus {
-  border-color: rgb(239, 68, 68);
+  border-color: rgb(215, 26, 33);
 }
 
 .form-input::placeholder {
@@ -624,7 +624,7 @@ const handleImportFile = async (event: Event) => {
 .btn-primary {
   width: 100%;
   padding: 12px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -635,7 +635,7 @@ const handleImportFile = async (event: Event) => {
 }
 
 .btn-primary:hover {
-  background: rgb(220, 38, 38);
+  background: rgb(178, 19, 25);
 }
 
 .btn-primary:disabled {

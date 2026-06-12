@@ -123,7 +123,7 @@
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Doto', sans-serif;
-  color: rgb(255, 215, 0);
+  color: rgb(215, 26, 33);
   pointer-events: none;
 }
 .title {
@@ -131,7 +131,7 @@
 }
 .btn-quickstart {
   --background: var(--ion-color-accent-red);
-  --background-activated: rgb(220, 38, 38);
+  --background-activated: rgb(178, 19, 25);
   --color: var(--ion-color-light);
   --color-activated: var(--ion-color-light);
   border-radius: 8px;
@@ -141,7 +141,7 @@
 .exercise-card{
   width: 100%;
   margin: 18px auto;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: none;
@@ -283,7 +283,7 @@
 
 .add-exercise-btn {
   --background: var(--ion-color-accent-red) !important;
-  --background-activated: rgb(220, 38, 38) !important;
+  --background-activated: rgb(178, 19, 25) !important;
   --color: var(--ion-color-light) !important;
   --color-activated: var(--ion-color-light) !important;
   --border-radius: 8px;
@@ -338,7 +338,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   font-family: 'Doto', sans-serif;
-  color: rgb(255, 215, 0);
+  color: rgb(215, 26, 33);
 }
 
 .rest-timer-controls {
@@ -363,7 +363,7 @@
   top: 0;
   left: 0;
   height: 4px;
-  background: rgb(255, 215, 0);
+  background: rgb(215, 26, 33);
 }
 
 .reorder-buttons {

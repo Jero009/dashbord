@@ -543,7 +543,7 @@ const saveLog = async () => {
 <style scoped>
 /* ── Page shell ─────────────────────────────────────────────────────────────── */
 .circadian-content {
-  --background: #000;
+  --background: var(--nt-bg);
 }
 
 .circadian-shell {
@@ -558,7 +558,7 @@ const saveLog = async () => {
 /* ── Cards ──────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 18px;
 }
 
@@ -588,7 +588,7 @@ const saveLog = async () => {
 }
 
 .card-metric--warn {
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid rgba(215, 26, 33, 0.35);
 }
 
 .metric-sub {
@@ -642,7 +642,7 @@ const saveLog = async () => {
 }
 
 .chronotype-label--late {
-  color: rgb(239, 68, 68);
+  color: rgb(215, 26, 33);
 }
 
 .quality-badge {
@@ -666,14 +666,14 @@ const saveLog = async () => {
 }
 
 .quality-badge--low {
-  border-color: rgba(239, 68, 68, 0.4);
-  color: rgb(239, 68, 68);
+  border-color: rgba(215, 26, 33, 0.4);
+  color: rgb(215, 26, 33);
 }
 
 .warn-flag {
   font-size: 0.72rem;
   font-weight: 400;
-  color: rgb(239, 68, 68);
+  color: rgb(215, 26, 33);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -695,7 +695,7 @@ const saveLog = async () => {
 
 .score-number.score--green { color: rgb(34, 197, 94); }
 .score-number.score--yellow { color: rgba(255, 255, 255, 0.85); }
-.score-number.score--red { color: rgb(239, 68, 68); }
+.score-number.score--red { color: rgb(215, 26, 33); }
 
 .score-bar-track {
   flex: 1;
@@ -712,7 +712,7 @@ const saveLog = async () => {
 
 .score-bar-fill.score--green { background: rgb(34, 197, 94); }
 .score-bar-fill.score--yellow { background: rgba(255, 255, 255, 0.85); }
-.score-bar-fill.score--red { background: rgb(239, 68, 68); }
+.score-bar-fill.score--red { background: rgb(215, 26, 33); }
 
 .component-grid {
   display: grid;
@@ -744,12 +744,12 @@ const saveLog = async () => {
 }
 
 .curve-area {
-  fill: rgba(239, 68, 68, 0.15);
+  fill: rgba(215, 26, 33, 0.15);
 }
 
 .curve-line {
   fill: none;
-  stroke: rgb(239, 68, 68);
+  stroke: rgb(215, 26, 33);
   stroke-width: 0.3;
   vector-effect: non-scaling-stroke;
   stroke-linejoin: round;
@@ -805,7 +805,7 @@ const saveLog = async () => {
   flex-shrink: 0;
 }
 
-.window-dot--red    { background: rgb(239, 68, 68); }
+.window-dot--red    { background: rgb(215, 26, 33); }
 .window-dot--yellow { background: rgba(255, 255, 255, 0.85); }
 .window-dot--green  { background: rgb(34, 197, 94); }
 .window-dot--blue   { background: rgba(255, 255, 255, 0.35); }
@@ -839,7 +839,7 @@ const saveLog = async () => {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   flex-shrink: 0;
   margin-top: 6px;
 }
@@ -964,8 +964,8 @@ const saveLog = async () => {
 }
 
 .type-btn--active {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
+  border-color: rgb(215, 26, 33);
   color: #fff;
   font-weight: 600;
 }
@@ -1000,8 +1000,8 @@ const saveLog = async () => {
 }
 
 .energy-box--active {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
+  border-color: rgb(215, 26, 33);
   color: #fff;
   font-weight: 600;
 }
@@ -1020,7 +1020,7 @@ const saveLog = async () => {
 }
 
 .form-input:focus {
-  border-color: rgb(239, 68, 68);
+  border-color: rgb(215, 26, 33);
 }
 
 .light-toggle {
@@ -1045,7 +1045,7 @@ const saveLog = async () => {
 .save-btn {
   width: 100%;
   padding: 12px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -1056,7 +1056,7 @@ const saveLog = async () => {
 }
 
 .save-btn:hover {
-  background: rgb(220, 38, 38);
+  background: rgb(178, 19, 25);
 }
 
 /* ── Loading ────────────────────────────────────────────────────────────────── */
@@ -1070,7 +1070,7 @@ const saveLog = async () => {
 }
 
 .loading-spinner {
-  color: rgb(239, 68, 68);
+  color: rgb(215, 26, 33);
 }
 
 .loading-text {

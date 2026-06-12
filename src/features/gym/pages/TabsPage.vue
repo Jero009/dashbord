@@ -70,6 +70,6 @@ ion-tab-button {
 }
 
 ion-tab-button.tab-selected {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(215, 26, 33, 0.1);
 }
 </style>

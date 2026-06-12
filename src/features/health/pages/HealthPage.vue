@@ -286,7 +286,7 @@ const batteryBarColor = computed(() => {
   if (s === null) return 'rgba(255,255,255,0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
   if (s >= 45) return 'rgba(255,255,255,0.85)';
-  return 'rgb(239,68,68)';
+  return 'rgb(215, 26, 33)';
 });
 
 const readinessBarWidth = computed(() => {
@@ -496,7 +496,7 @@ const handleConnect = async () => {
 
 .card {
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 18px;
 }
 
@@ -571,7 +571,7 @@ const handleConnect = async () => {
 
 .label--green  { color: rgb(34, 197, 94); }
 .label--yellow { color: rgba(255, 255, 255, 0.85); }
-.label--red    { color: rgb(239, 68, 68); }
+.label--red    { color: rgb(215, 26, 33); }
 .label--muted  { color: rgba(255, 255, 255, 0.5); }
 
 .ready-badges { display: flex; gap: 6px; }
@@ -603,7 +603,7 @@ const handleConnect = async () => {
 
 .drain-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
-.drain-val { color: rgb(239, 68, 68); }
+.drain-val { color: rgb(215, 26, 33); }
 .drain-val--positive { color: rgb(34, 197, 94); }
 
 .readiness-mini-grid { grid-template-columns: repeat(3, 1fr); }
@@ -637,7 +637,7 @@ const handleConnect = async () => {
 
 .score--green  { color: rgb(34, 197, 94); }
 .score--yellow { color: rgba(255, 255, 255, 0.85); }
-.score--red    { color: rgb(239, 68, 68); }
+.score--red    { color: rgb(215, 26, 33); }
 .score--muted  { color: rgba(255, 255, 255, 0.25); }
 
 .sleep-score-sub {
@@ -658,7 +658,7 @@ const handleConnect = async () => {
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
-  border-left: 2px solid rgba(239, 68, 68, 0.5);
+  border-left: 2px solid rgba(215, 26, 33, 0.5);
 }
 
 /* ── Today's schedule ── */
@@ -688,7 +688,7 @@ const handleConnect = async () => {
   flex-shrink: 0;
 }
 
-.dot--workout  { background: rgb(239, 68, 68); }
+.dot--workout  { background: rgb(215, 26, 33); }
 .dot--school   { background: rgba(255, 255, 255, 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
 .dot--sleep    { background: rgba(255, 255, 255, 0.5); }
@@ -714,7 +714,7 @@ const handleConnect = async () => {
   flex-shrink: 0;
 }
 
-.tag--workout  { background: rgba(239,68,68,0.15);   color: rgb(239,68,68); }
+.tag--workout  { background: rgba(215, 26, 33,0.15);   color: rgb(215, 26, 33); }
 .tag--school   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);   color: rgb(34,197,94); }
 .tag--sleep    { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
@@ -727,16 +727,16 @@ const handleConnect = async () => {
 
 .rh-line {
   fill: none;
-  stroke: rgb(239, 68, 68);
+  stroke: rgb(215, 26, 33);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.rh-area { fill: rgba(239, 68, 68, 0.12); stroke: none; }
+.rh-area { fill: rgba(215, 26, 33, 0.12); stroke: none; }
 
 .rh-dot {
-  fill: rgb(239, 68, 68);
+  fill: rgb(215, 26, 33);
   cursor: pointer;
 }
 
@@ -748,12 +748,12 @@ const handleConnect = async () => {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(215, 26, 33, 0.12);
+  border: 1px solid rgba(215, 26, 33, 0.4);
 }
 
-.rh-tooltip strong { font-size: 1.1rem; color: rgb(239, 68, 68); }
-.rh-tooltip small  { font-size: 0.75rem; color: rgba(239, 68, 68, 0.7); }
+.rh-tooltip strong { font-size: 1.1rem; color: rgb(215, 26, 33); }
+.rh-tooltip small  { font-size: 0.75rem; color: rgba(215, 26, 33, 0.7); }
 
 .rh-axis {
   display: flex;
@@ -772,7 +772,7 @@ const handleConnect = async () => {
   align-items: flex-start;
   gap: 12px;
   padding: 18px;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -783,8 +783,8 @@ const handleConnect = async () => {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(239, 68, 68, 0.12);
-  color: rgb(239, 68, 68);
+  background: rgba(215, 26, 33, 0.12);
+  color: rgb(215, 26, 33);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -817,7 +817,7 @@ const handleConnect = async () => {
 .sync-btn {
   width: 100%;
   padding: 12px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -828,7 +828,7 @@ const handleConnect = async () => {
 }
 
 .sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.sync-btn:not(:disabled):active { background: rgb(220, 38, 38); }
+.sync-btn:not(:disabled):active { background: rgb(178, 19, 25); }
 
 /* ── Responsive ── */
 @media (min-width: 600px) {

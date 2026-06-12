@@ -1,40 +1,109 @@
+/* =========================================================
+   NOTHING-STYLE DESIGN TOKENS
+   Dark-primary system inspired by Nothing OS:
+   near-monochrome surfaces, one red accent (signal, not
+   decoration), dot-matrix display type, hairline borders.
+   ========================================================= */
 :root {
-  /* Colors */
-  --ion-color-primary: #131313;       /* main card/item background (floating effect) */
-  --ion-color-primary-rgb: 19,19,19;
-  --ion-color-secondary: #ffffff;     /* background light */
-  --ion-color-secondary-rgb: 255,255,255;
-  --ion-color-tertiary: #f5f5f5; 
-  --ion-color-dark: #000000;          /* true black background */
-       
-  --ion-color-medium: #1b1b1b;        /* slightly lighter grey */
-  --ion-color-light: #ffffff;         /* true white for high contrast */
+  /* ---- Nothing brand tokens ---- */
+  --nt-accent: #D71A21;              /* Nothing red — the single accent */
+  --nt-accent-rgb: 215, 26, 33;
+  --nt-accent-press: #B21319;
+  --nt-black: #000000;
+  --nt-white: #FFFFFF;
 
-    /* Signature accent colors */
-  --ion-color-danger: #ef4444;
-  --ion-color-danger-rgb: 239,68,68;
-  --ion-color-accent-red: #ef4444;
-  --ion-color-accent-yellow: #FFD700; /* vibrant gold pop */
+  /* ---- Surfaces (dark default) ---- */
+  --nt-bg: #0A0A0A;                  /* app background, near-black */
+  --nt-surface: #1A1A1A;             /* cards: grey, not black */
+  --nt-surface-2: #242424;           /* elevated / pressed */
+  --nt-border: rgba(255, 255, 255, 0.08);
+  --nt-border-strong: rgba(255, 255, 255, 0.12);
+  --nt-text: #FFFFFF;
+  --nt-text-dim: rgba(255, 255, 255, 0.5);
+  --nt-glow: rgba(255, 255, 255, 0.18); /* Glyph-style white bloom */
+
+  /* ---- Data-semantic colors (data encoding only, never chrome) ---- */
+  --nt-data-positive: rgb(34, 197, 94);
+  --nt-data-goal: #FFD700;
+
+  /* ---- Typography ---- */
+  --nt-font-display: 'Doto', 'Space Grotesk', monospace; /* dot-matrix face */
+  --nt-font-head: 'Space Grotesk', system-ui, sans-serif;
+  --nt-font-body: 'Inter', system-ui, sans-serif;
+  --nt-font-mono: 'Space Mono', ui-monospace, monospace;
+  --nt-tracking-label: 0.12em;
+  --nt-tracking-kicker: 0.18em;
+
+  /* ---- Spacing (8px base) ---- */
+  --nt-space-1: 4px;
+  --nt-space-2: 8px;
+  --nt-space-3: 12px;
+  --nt-space-4: 16px;
+  --nt-space-5: 24px;
+  --nt-space-6: 32px;
+
+  /* ---- Radius ---- */
+  --nt-radius-sm: 8px;
+  --nt-radius-md: 16px;
+  --nt-radius-lg: 24px;
+  --nt-radius-pill: 999px;
+
+  /* ---- Motion ---- */
+  --nt-ease-decel: cubic-bezier(0.2, 0, 0, 1);
+  --nt-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --nt-dur-micro: 140ms;
+  --nt-dur-std: 280ms;
+
+  /* =======================================================
+     Ionic mapping — legacy names kept so existing pages
+     pick up the Nothing skin without per-page rewrites.
+     ======================================================= */
+  --ion-color-primary: var(--nt-surface);   /* card/item background */
+  --ion-color-primary-rgb: 26, 26, 26;
+  --ion-color-secondary: #ffffff;
+  --ion-color-secondary-rgb: 255, 255, 255;
+  --ion-color-tertiary: #f5f5f5;
+  --ion-color-dark: var(--nt-bg);           /* page background */
+
+  --ion-color-medium: var(--nt-surface-2);
+  --ion-color-light: var(--nt-white);
+
+  /* Signature accent — Nothing red */
+  --ion-color-danger: var(--nt-accent);
+  --ion-color-danger-rgb: 215, 26, 33;
+  --ion-color-accent-red: var(--nt-accent);
+  /* Legacy token: now data-encoding gold only (calendar goal dots,
+     hypnogram awake). Never use for live/active UI — that is red. */
+  --ion-color-accent-yellow: var(--nt-data-goal);
 
   /* Toolbar & background */
-  --ion-toolbar-background: var(--ion-color-primary);
-  --ion-content-background: var(--ion-color-dark);
-  --ion-tabs-bar-background: var(--ion-color-primary);
+  --ion-toolbar-background: var(--nt-bg);
+  --ion-content-background: var(--nt-bg);
+  --ion-tabs-bar-background: var(--nt-bg);
   --ion-title-color: var(--ion-color-light);
 
   /* Cards & items */
-  --ion-card-background: var(--ion-color-primary);
+  --ion-card-background: var(--nt-surface);
   --ion-card-color: var(--ion-color-light);
-  --ion-item-background: var(--ion-color-primary);
+  --ion-item-background: var(--nt-surface);
+
   /* Font */
-  --ion-font-family: 'Inter', sans-serif;
+  --ion-font-family: var(--nt-font-body);
   --ion-font-size: 16px;
 
   /* Borders & spacing */
-  --ion-border-radius: 10px;
+  --ion-border-radius: var(--nt-radius-md);
   --ion-padding: 16px;
   --ion-margin: 16px;
-  --ion-background-color: var(--ion-color-dark);
+  --ion-background-color: var(--nt-bg);
+}
+
+/* ---- Dot-matrix display face (OFL) ---- */
+@font-face {
+  font-family: 'Doto';
+  src: url('@/components/assets/fonts/Doto_Rounded-Black.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }
 
 ion-header::after {
@@ -43,14 +112,15 @@ ion-header::after {
 
 ion-alert.app-confirm-alert,
 ion-alert.history-delete-alert {
-  --background: var(--ion-color-primary);
+  --background: var(--nt-surface);
   --color: #f9fafb;
-  --border-radius: 14px;
+  --border-radius: var(--nt-radius-md);
 }
 
 ion-alert.app-confirm-alert .alert-title,
 ion-alert.history-delete-alert .alert-title {
   color: #ffffff;
+  font-family: var(--nt-font-head);
 }
 
 ion-alert.app-confirm-alert .alert-message,
@@ -65,25 +135,26 @@ ion-alert.history-delete-alert .alert-button-role-cancel {
 
 ion-alert.app-confirm-alert .alert-button-role-destructive,
 ion-alert.history-delete-alert .alert-button-role-destructive {
-  color:var(--ion-color-accent-red);
+  color: var(--ion-color-accent-red);
   font-weight: 700;
 }
 
 ion-alert.rename-exercise-alert {
-  --background: #0f0f0f;
+  --background: var(--nt-surface);
   --color: #f9fafb;
   --backdrop-opacity: 0.45;
-  --border-radius: 10px;
+  --border-radius: var(--nt-radius-md);
 }
 
 ion-alert.rename-exercise-alert .alert-title {
   color: #ffffff;
+  font-family: var(--nt-font-head);
 }
 
 ion-alert.rename-exercise-alert .alert-input {
   color: #ffffff;
-  background: #1b1b1b;
-  border-radius: 10px;
+  background: var(--nt-surface-2);
+  border-radius: var(--nt-radius-sm);
 }
 
 ion-alert.rename-exercise-alert .alert-button {
@@ -91,20 +162,18 @@ ion-alert.rename-exercise-alert .alert-button {
 }
 
 ion-modal.exercise-modal {
-  --background: #0b0b0b;
+  --background: var(--nt-surface);
   --color: #f9fafb;
-  --border-radius: 18px 18px 0 0;
+  --border-radius: var(--nt-radius-lg) var(--nt-radius-lg) 0 0;
   --height: 72%;
   --width: 100%;
   --backdrop-opacity: 0.5;
 }
 
-
-
 ion-tab-bar {
   --color-selected: var(--ion-color-accent-red);  /* active tab text & icon */
-  --color: var(--ion-color-medium);              /* inactive tab text & icon */
-  --background: var(--ion-color-dark);         /* tab bar background */
+  --color: var(--nt-text-dim);                    /* inactive tab text & icon */
+  --background: var(--nt-bg);                     /* tab bar background */
 }
 
 ion-toolbar {
@@ -114,62 +183,66 @@ ion-toolbar {
 ion-title,
 ion-title.title {
   color: var(--ion-color-light);
+  font-family: var(--nt-font-head);
+  letter-spacing: var(--nt-tracking-label);
+  text-transform: uppercase;
+  font-size: 1rem;
 }
 
 ion-page {
-  --background: var(--ion-color-dark); /* page background */
+  --background: var(--nt-bg);
 }
 
 ion-checkbox {
-  --size: 24px;                        /* checkbox size */
-  --border-color: var(--ion-color-accent-red); /* border when unchecked */
-  --background: #ffffff;               /* background when unchecked */
+  --size: 24px;
+  --border-color: var(--ion-color-accent-red);
+  --background: transparent;
 
   --border-color-checked: var(--ion-color-accent-red);
-  --checkbox-background-checked: var(--ion-color-accent-red); /* background when checked */
-  --checkmark-color: var(--ion-color-secondary);     /* tick color */
-}
-@font-face {
-  font-family: 'Doto';
-  src: url('@/components/assets/fonts/Doto_Rounded-Black.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-ion-card-subtitle, ion-label,ion-item {
-  font-family: 'Doto', sans-serif;
-  color: var(--ion-color-light);
-}
-ion-card-title {
-  color: var(--ion-color-light);
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-.button-red {
-  --background: var(--ion-color-accent-red)!important;
-  --color: #000000 !important; 
-  --color: var(--ion-color-light);
-  --border-radius: 3px !important;
-  font-family: Doto;
-}
-.button-white {
-  --background: var(--ion-color-light)!important;
-  --color: #000000 !important; 
-  --color: var(--ion-color-dark);
-  --border-radius: 3px !important;
-  font-family: Doto;
-}
-.button-yellow {
-  --background: var(--ion-color-accent-yellow)!important;
-  --color: #000000 !important; 
-  --color: var(--ion-color-dark);
-  --border-radius: 3px !important;
-  font-family: Doto;
+  --checkbox-background-checked: var(--ion-color-accent-red);
+  --checkmark-color: #ffffff;
 }
 
-.set{
+ion-card-subtitle, ion-label, ion-item {
+  font-family: var(--nt-font-body);
+  color: var(--ion-color-light);
+}
+
+ion-card-title {
+  color: var(--ion-color-light);
+  font-family: var(--nt-font-head);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.button-red {
+  --background: var(--ion-color-accent-red) !important;
+  --color: #ffffff !important;
+  --border-radius: var(--nt-radius-pill) !important;
+  font-family: var(--nt-font-head);
+}
+
+.button-white {
+  --background: var(--ion-color-light) !important;
+  --color: #000000 !important;
+  --border-radius: var(--nt-radius-pill) !important;
+  font-family: var(--nt-font-head);
+}
+
+.button-yellow {
+  --background: transparent !important;
+  --color: var(--ion-color-light) !important;
+  --border-color: var(--nt-border-strong);
+  --border-style: solid;
+  --border-width: 1px;
+  --border-radius: var(--nt-radius-pill) !important;
+  font-family: var(--nt-font-head);
+}
+
+.set {
   width: 100%;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: var(--nt-radius-sm);
   margin-bottom: 5px;
   background-color: var(--ion-color-medium);
   display: flex;
@@ -177,21 +250,20 @@ ion-card-title {
   align-items: center;
 }
 
-
 ion-select.app-select {
-  --background: var(--ion-color-primary);
+  --background: var(--nt-surface);
   --color: var(--ion-color-light);
-  --border-radius: 10px;
+  --border-radius: var(--nt-radius-sm);
   --padding-start: 14px;
   --padding-end: 14px;
   --placeholder-opacity: 0.72;
   min-height: 48px;
-  font-family: Doto;
+  font-family: var(--nt-font-head);
   color: #ffffff;
 }
 
 ion-action-sheet.app-action-sheet {
-  --background: var(--ion-color-primary);
+  --background: var(--nt-surface);
   --color: var(--ion-color-light);
   --button-background: transparent;
   --button-background-hover-opacity: 1;
@@ -199,19 +271,95 @@ ion-action-sheet.app-action-sheet {
   --button-padding-start: 16px;
   --button-padding-end: 16px;
   --button-text-align: start;
-  font-family: Doto;
+  font-family: var(--nt-font-head);
 }
 
 ion-action-sheet.app-action-sheet::part(content) {
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--nt-radius-lg) var(--nt-radius-lg) 0 0;
 }
+
 ion-list {
   --background: var(--ion-color-medium);
   --color: var(--ion-color-light);
 }
 
 html, body, ion-app ion-content {
-  background: black !important;
+  background: var(--nt-bg) !important;
+}
+
+/* Hairline outline on card surfaces — Nothing "visible structure".
+   Scoped page styles outrank this, so intentional borders
+   (e.g. live red active-card) still apply. */
+.card, .finance-card, .summary-card, .sleep-card, .weekly-card,
+.graph-card, .exercise-card, .workout-hero-card, .day-view-card,
+.weight-card, .workout-tile, .active-card {
+  border: 1px solid var(--nt-border);
+}
+
+/* =========================================================
+   Nothing utility classes — use these in new components
+   ========================================================= */
+.nt-label {
+  font-family: var(--nt-font-head);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: var(--nt-tracking-label);
+  text-transform: uppercase;
+  color: var(--nt-text-dim);
+}
+
+.nt-metric {
+  font-family: var(--nt-font-display);
+  line-height: 1;
+  color: var(--nt-text);
+}
+
+.nt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--nt-border);
+  border-radius: var(--nt-radius-pill);
+  padding: 4px 10px;
+  font-family: var(--nt-font-head);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--nt-tracking-label);
+  text-transform: uppercase;
+  color: var(--nt-text-dim);
+}
+
+.nt-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nt-accent);
+}
+
+/* Glyph-style white glow on active elements (never colored neon) */
+.nt-glow-active {
+  box-shadow: 0 0 0 1px var(--nt-border-strong), 0 0 24px var(--nt-glow);
+}
+
+/* Dot-matrix background substrate */
+.nt-dotgrid {
+  background-image: radial-gradient(var(--nt-border-strong) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* Dot progress / scanning pulse — stepped for a mechanical LED feel */
+@keyframes nt-dot-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.nt-loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nt-text);
+  animation: nt-dot-pulse 1s steps(4, end) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -221,5 +369,3 @@ html, body, ion-app ion-content {
     animation-iteration-count: 1 !important;
   }
 }
-
-

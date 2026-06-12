@@ -1,5 +1,5 @@
 .planner-content {
-  --background: #000;
+  --background: var(--nt-bg);
 }
 
 .planner-shell {
@@ -281,7 +281,7 @@
 }
 
 .ghost-btn--danger {
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: rgba(215, 26, 33, 0.4);
   color: var(--ion-color-accent-red);
 }
 
@@ -337,7 +337,7 @@
   margin-top: 2px;
 }
 
-.item-tag--workout  { background: rgba(239, 68, 68, 0.2);   color: var(--ion-color-accent-red); }
+.item-tag--workout  { background: rgba(215, 26, 33, 0.2);   color: var(--ion-color-accent-red); }
 .item-tag--recovery { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
 .item-tag--school   { background: rgba(96, 165, 250, 0.18); color: rgb(96, 165, 250); }
 .item-tag--sleep    { background: rgba(167, 139, 250, 0.18); color: rgb(167, 139, 250); }
@@ -557,7 +557,7 @@
   display: grid;
   gap: 0.6rem;
   padding: 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: rgba(255, 255, 255, 0.04);
   margin-bottom: 0.35rem;
 }

@@ -102,7 +102,7 @@ onIonViewWillEnter(async () => {
 
 .summary-card {
   margin: 0;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   padding: 18px;
 }

@@ -149,7 +149,7 @@ onIonViewWillEnter(async () => {
 
 .finance-card {
   margin: 0;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   padding: 18px;
   display: grid;
@@ -210,12 +210,12 @@ onIonViewWillEnter(async () => {
 
 .styled-input:focus-within,
 .styled-select:focus-within {
-  border-color: rgb(239, 68, 68);
+  border-color: rgb(215, 26, 33);
 }
 
 .add-btn {
   --background: var(--ion-color-accent-red);
-  --background-activated: rgb(220, 38, 38);
+  --background-activated: rgb(178, 19, 25);
   --border-radius: 8px;
   --box-shadow: none;
   font-weight: 600;

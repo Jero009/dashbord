@@ -132,9 +132,9 @@
                 height="10"
                 fill="rgba(34,197,94,0.12)" />
               <!-- Alertness area -->
-              <polygon :points="circAreaPoints" fill="rgba(239,68,68,0.12)" />
+              <polygon :points="circAreaPoints" fill="rgba(215, 26, 33,0.12)" />
               <!-- Alertness line -->
-              <polyline :points="circLinePoints" fill="none" stroke="rgb(239,68,68)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline :points="circLinePoints" fill="none" stroke="rgb(215, 26, 33)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
               <!-- Now line -->
               <line :x1="circNowX" :x2="circNowX" y1="0" y2="10"
                 stroke="rgba(255,255,255,0.5)" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
@@ -425,7 +425,7 @@ const buildSparkline = (points: number[]) => {
       datasets: [{
         data: points,
         borderColor: 'var(--ion-color-accent-red)',
-        backgroundColor: 'rgba(239,68,68,0.08)',
+        backgroundColor: 'rgba(215, 26, 33,0.08)',
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.3,
@@ -835,7 +835,7 @@ const buildBatteryChart = () => {
         {
           data: pastData,
           borderColor: 'var(--ion-color-accent-red)',
-          backgroundColor: 'rgba(239,68,68,0.1)',
+          backgroundColor: 'rgba(215, 26, 33,0.1)',
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.35,
@@ -1104,14 +1104,14 @@ onMounted(async () => {
 .active-card {
   margin: 0;
   padding: 18px;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
 }
 
 .workout-hero-card {
   margin: 0;
   padding: 18px;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   border: 1px solid rgba(255,255,255,0.08);
 }
@@ -1142,7 +1142,7 @@ onMounted(async () => {
 .workout-hero__start {
   width: 100%;
   padding: 12px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -1153,12 +1153,12 @@ onMounted(async () => {
 }
 
 .workout-hero__start:hover {
-  background: rgb(220, 38, 38);
+  background: rgb(178, 19, 25);
 }
 
 .active-card {
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255, 215, 0, 0.35);
+  border: 1px solid rgba(215, 26, 33, 0.35);
   cursor: pointer;
   transition: border-color 150ms ease;
 }
@@ -1333,13 +1333,13 @@ onMounted(async () => {
   display: block;
   font-size: 1.4rem;
   font-weight: 700;
-  color: rgb(255, 215, 0);
+  color: rgb(215, 26, 33);
   font-family: 'Doto', monospace;
 }
 
 .active-card__timer--rest {
-  background: rgba(255, 215, 0, 0.08);
-  border: 1px solid rgba(255, 215, 0, 0.25);
+  background: rgba(215, 26, 33, 0.08);
+  border: 1px solid rgba(215, 26, 33, 0.25);
 }
 
 .readiness-ring {
@@ -1400,7 +1400,7 @@ onMounted(async () => {
 
 /* Day view */
 .day-view-card {
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   padding: 18px;
   overflow: hidden;
@@ -1443,8 +1443,8 @@ onMounted(async () => {
 }
 
 .habit-block--done {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(215, 26, 33, 0.1);
+  border-color: rgba(215, 26, 33, 0.3);
 }
 
 .habit-block__check {
@@ -1506,11 +1506,11 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.allday-pill--workout   { background: rgba(239, 68, 68, 0.15);  color: rgb(239, 68, 68); }
+.allday-pill--workout   { background: rgba(215, 26, 33, 0.15);  color: rgb(215, 26, 33); }
 .allday-pill--recovery  { background: rgba(34, 197, 94, 0.15);  color: rgb(34, 197, 94); }
 .allday-pill--reminder  { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
-.allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.85); }
-.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: rgb(239, 68, 68); }
+.allday-pill--habit     { background: rgba(215, 26, 33, 0.1);   color: rgba(255,255,255,0.85); }
+.allday-pill--habit-done { background: rgba(215, 26, 33, 0.25); color: rgb(215, 26, 33); }
 
 .allday-check {
   cursor: pointer;
@@ -1600,7 +1600,7 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.ev-block--workout  { background: rgba(239, 68, 68, 0.25); }
+.ev-block--workout  { background: rgba(215, 26, 33, 0.25); }
 .ev-block--recovery { background: rgba(34, 197, 94, 0.15); }
 .ev-block--reminder { background: rgba(255, 255, 255, 0.08); }
 .ev-block--sleep    { background: rgba(255, 255, 255, 0.05); }
@@ -1635,15 +1635,15 @@ onMounted(async () => {
   gap: 6px;
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.85);
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(215, 26, 33, 0.15);
+  border: 1px solid rgba(215, 26, 33, 0.3);
   cursor: pointer;
   overflow: hidden;
   white-space: nowrap;
 }
 
 .habit-pill--done {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(215, 26, 33, 0.3);
   color: #fff;
 }
 
@@ -1665,7 +1665,7 @@ onMounted(async () => {
 .ev-start-btn {
   margin-top: 3px;
   padding: 2px 10px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -1680,7 +1680,7 @@ onMounted(async () => {
 .weight-card {
   margin: 0;
   padding: 18px;
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
   display: flex;
   align-items: center;
@@ -1730,12 +1730,12 @@ onMounted(async () => {
 }
 
 .weight-input:focus {
-  border-color: rgb(239, 68, 68);
+  border-color: rgb(215, 26, 33);
 }
 
 .log-btn {
   padding: 6px 12px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -1747,7 +1747,7 @@ onMounted(async () => {
 }
 
 .log-btn:hover {
-  background: rgb(220, 38, 38);
+  background: rgb(178, 19, 25);
 }
 
 .weight-card__spark {
@@ -1790,8 +1790,8 @@ onMounted(async () => {
 .circ-now-pill {
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgb(239, 68, 68);
-  background: rgba(239, 68, 68, 0.1);
+  color: rgb(215, 26, 33);
+  background: rgba(215, 26, 33, 0.1);
   border-radius: 999px;
   padding: 2px 10px;
 }
@@ -1844,7 +1844,7 @@ onMounted(async () => {
 
 .circ-legend-dot--focus    { background: rgba(255, 255, 255, 0.5); }
 .circ-legend-dot--exercise { background: rgb(34, 197, 94); }
-.circ-legend-dot--curve    { background: rgb(239, 68, 68); }
+.circ-legend-dot--curve    { background: rgb(215, 26, 33); }
 
 .circ-log-section {
   margin-top: 12px;
@@ -1895,7 +1895,7 @@ onMounted(async () => {
   padding: 12px 0;
   border: none;
   border-radius: 8px;
-  background: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
   color: #fff;
   font-size: 0.9rem;
   font-weight: 600;
@@ -1929,8 +1929,8 @@ onMounted(async () => {
 }
 
 .circ-type-btn--active {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
+  border-color: rgb(215, 26, 33);
   color: #fff;
 }
 
@@ -1972,8 +1972,8 @@ onMounted(async () => {
 }
 
 .circ-energy-btn--active {
-  background: rgb(239, 68, 68);
-  border-color: rgb(239, 68, 68);
+  background: rgb(215, 26, 33);
+  border-color: rgb(215, 26, 33);
   color: #fff;
 }
 

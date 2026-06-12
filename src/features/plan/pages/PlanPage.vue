@@ -149,7 +149,7 @@ onIonViewWillEnter(async () => {
 /* ── Card base ── */
 .card {
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 18px;
 }
 
@@ -188,7 +188,7 @@ onIonViewWillEnter(async () => {
 
 .snapshot-value--event {
   font-size: 1.1rem;
-  color: rgb(239, 68, 68);
+  color: rgb(215, 26, 33);
 }
 
 .snapshot-value--muted { color: rgba(255, 255, 255, 0.25); }
@@ -236,7 +236,7 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.dot--workout  { background: rgb(239, 68, 68); }
+.dot--workout  { background: rgb(215, 26, 33); }
 .dot--school   { background: rgba(255, 255, 255, 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
 .dot--sleep    { background: rgba(255, 255, 255, 0.5); }
@@ -262,7 +262,7 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.tag--workout  { background: rgba(239,68,68,0.15);  color: rgb(239,68,68); }
+.tag--workout  { background: rgba(215, 26, 33,0.15);  color: rgb(215, 26, 33); }
 .tag--school   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);  color: rgb(34,197,94); }
 .tag--sleep    { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
@@ -281,7 +281,7 @@ onIonViewWillEnter(async () => {
   align-items: center;
   gap: 14px;
   background: var(--ion-color-primary);
-  border-radius: 12px;
+  border-radius: var(--nt-radius-md);
   padding: 16px 18px;
   border: none;
   cursor: pointer;
@@ -294,7 +294,7 @@ onIonViewWillEnter(async () => {
 
 .nav-tile__icon {
   font-size: 20px;
-  color: rgb(239, 68, 68);
+  color: rgb(215, 26, 33);
   flex-shrink: 0;
 }
 

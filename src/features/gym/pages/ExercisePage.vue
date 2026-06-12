@@ -166,7 +166,7 @@
 }
 
 .exercise-item:active {
-  background-color: rgba(255, 215, 0, 0.1);
+  background-color: rgba(215, 26, 33, 0.1);
 }
 
 .exercise-item__content {
@@ -209,8 +209,8 @@
 }
 
 .pr-badge {
-  background: rgba(255, 215, 0, 0.2);
-  color: var(--ion-color-accent-yellow);
+  background: rgba(215, 26, 33, 0.2);
+  color: var(--ion-color-accent-red);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
