@@ -454,7 +454,6 @@ const digest = ref<DigestResult | null>(null);
 const todayDateLabel = computed(() =>
   new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
 );
-const todayHabitsDone = computed(() => todayHabits.value.filter((h) => h.completed === 1).length);
 
 // Timeline
 const HOUR_PX = 56;
