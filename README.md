@@ -8,7 +8,6 @@ A health and fitness tracking app built with Ionic + Vue 3, targeting Android vi
 - **Health** — readiness score, sleep scoring, Health Connect sync (steps, HR, sleep, respiratory rate), body log with photos, 14-day trend charts
 - **Calendar** — event scheduling with types (workout, recovery, sleep, school, reminder, general), daily/weekly recurrence, and battery score modelling
 - **Finance** — account tracking, investments, and subscription management
-- **Google Drive backup** — daily automated DB export
 
 ## Tech Stack
 
@@ -114,15 +113,6 @@ The readiness score is a 100-point composite model:
 | Respiratory rate vs 14-night baseline | 15 |
 
 Rolling baselines require ≥3 prior nights and update after scoring so the current night doesn't influence its own score.
-
-## Google Drive Backup
-
-Triggered on app start and from Settings. Requires external Google Cloud setup:
-
-1. Enable the Drive API in Google Cloud Console
-2. Create an OAuth 2.0 client ID (Android)
-3. Add the app's SHA-1 fingerprint to the OAuth client
-4. The code in `src/shared/utils/driveBackup.ts` has no effect until this is done
 
 ## License
 

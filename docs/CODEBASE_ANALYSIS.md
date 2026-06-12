@@ -24,7 +24,6 @@ There is **no backend API**. The "backend" is:
 |---|---|
 | Persistence | Local SQLite via `@capacitor-community/sqlite` (database name: `workout_db`) |
 | Health data | Android **Health Connect** via `@capgo/capacitor-health` |
-| Cloud backup | Google Drive REST API v3 via `@codetrix-studio/capacitor-google-auth` |
 | Reminders | `@capacitor/local-notifications` |
 | Photos/files | `@capacitor/filesystem`, `@capacitor/camera`, `@capawesome/capacitor-file-picker` |
 | Settings | `localStorage` (transient state in `sessionStorage`) |
@@ -48,7 +47,7 @@ index.html → src/main.ts
   └─ app.mount('#app')
 
 src/App.vue (root component)
-  ├─ mounts <HealthConnectAutoSync/>  (renderless, see §6.4)
+  ├─ mounts <HealthConnectAutoSync/>  (renderless, see §6.3)
   ├─ <ion-router-outlet> with custom 220ms/180ms fade transition
   └─ onMounted (native only): re-initDB + schedule all enabled notification
      reminders (weight, habit w/ today's incomplete names, sleep, calendar, subscription)
@@ -285,7 +284,6 @@ Simplest module; **add + list only, no edit/delete UI yet**.
 - **Gym**: weekly workout goal action-sheet (1–12) → `localStorage.homeWeeklyGoal`.
 - **Notifications**: toggles + times for weight/habit/sleep reminders, calendar lead minutes (0/15/30/60), subscription lead days (1/3/7). Enabling requests permission (`requestNotificationPermission`) and immediately (re)schedules via `notifications.ts`.
 - **DB backup**: export (`exportDatabaseToSQL` → web: blob download; native: write to `Directory.Documents` + native Share sheet) and import (web file input / native FilePicker with SQL mime types, confirm alert, `importDatabaseFromSQL` — see the import bug in §3.2).
-- **Google Drive backup**: enable toggle (`drive_backup_enabled`), "Back up now" → `runBackupNow()`, last-backup date display.
 
 ---
 
@@ -307,22 +305,14 @@ the user changes settings.
 • `notif_sleep_enabled/_time` (22:30) • `notif_calendar_enabled` / `notif_calendar_mins` (15)
 • `notif_sub_enabled` / `notif_sub_days` (3). Booleans stored as `'1'`/`'0'`.
 
-### 6.3 `driveBackup.ts`
-Native-only. `runBackupNow()`: `exportDatabaseToSQL` → `GoogleAuth.signIn()` access token →
-search Drive for `dashbord-backup.sql` → multipart create (POST) or update (PATCH).
-`runDailyBackupIfNeeded()`: skips unless enabled, native, and not already backed up today
-(`drive_last_backup_date`); **silently swallows errors** (manual retry in Settings).
-Requires external Google Cloud setup (Drive API, OAuth client ID, SHA-1 fingerprint) —
-without it the code is inert.
-
-### 6.4 `HealthConnectAutoSync.vue` (renderless, mounted in App.vue)
+### 6.3 `HealthConnectAutoSync.vue` (renderless, mounted in App.vue)
 Sync orchestrator: sync on mount → retry once after **6 s** (HC cold-start race) →
 every 30 min interval → on app foreground (`App.addListener('appStateChange')` native /
 `visibilitychange` web). Guards: `syncing` mutex + 10-minute minimum gap (`minSyncGapMs`).
 Only syncs if `canAutoSyncHealthConnectMetrics()` (no permission prompts from autosync).
 Also fires `runDailyBackupIfNeeded()` on mount. Cleans everything up in `onUnmounted`.
 
-### 6.5 `timeFormat.ts`
+### 6.4 `timeFormat.ts`
 `toTimestamp` (epoch numbers, ISO, space-separated datetimes; **appends `Z` when no
 timezone present** — DB CURRENT_TIMESTAMP values are UTC), `normalizeDateInput`,
 `formatDuration(start, end)` → `"Xh Ym Zs"`, `formatTime(sec)` → `HH:MM:SS`,
@@ -342,7 +332,6 @@ timezone present** — DB CURRENT_TIMESTAMP values are UTC), `normalizeDateInput
 - `homeWeeklyGoal` — weekly workout target (default 4)
 - `selectedExerciseForTemplate` — transient JSON bridge ExercisePicker → Template Builder/Editor (cleared on read)
 - `body_history_imported_v1` — one-time import guard
-- `drive_backup_enabled`, `drive_last_backup_date`
 
 ---
 
@@ -393,7 +382,6 @@ timezone present** — DB CURRENT_TIMESTAMP values are UTC), `normalizeDateInput
 - Readiness displayed anywhere = stored/computed baseline **minus** `applyReadinessDrain`. Don't display raw stored scores.
 - The dashboard battery timeline calls `calculateBattery` once per hour slot (≈18×) with no memoization — keep it cheap.
 - Rest timer lives in `sessionStorage` and is read by three different pages; change the shape in all of them or not at all.
-- `exportDatabaseToSQL` filename is `fitness-app-backup-*.sql`; the Drive copy is always named `dashbord-backup.sql` (single rolling file, PATCHed in place).
 - Subscriptions "per month" tile doesn't normalize yearly/weekly cadences.
 - `net_worth_snapshot` and `getWorkoutsByTemplate` have no UI callers yet (groundwork).
 - `src/components/ExploreContainer.vue` is leftover Ionic scaffolding — unused.
