@@ -74,15 +74,13 @@ import { ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import { addFinanceAccount, getFinanceAccounts } from '@/shared/db/app_db';
+import { formatCurrency } from '@/shared/utils/currency';
 
 const accountName = ref('');
 const accountType = ref('cash');
 const accountInstitution = ref('');
 const accountBalance = ref('');
 const accounts = ref<Array<Record<string, any>>>([]);
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 
 const loadAccounts = async () => {
   accounts.value = await getFinanceAccounts();

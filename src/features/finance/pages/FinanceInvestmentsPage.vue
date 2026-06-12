@@ -74,15 +74,13 @@ import { ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import { addFinanceInvestment, getFinanceInvestments } from '@/shared/db/app_db';
+import { formatCurrency } from '@/shared/utils/currency';
 
 const investmentName = ref('');
 const investmentType = ref('stock');
 const investmentQuantity = ref('');
 const investmentValue = ref('');
 const investments = ref<Array<Record<string, any>>>([]);
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 
 const loadInvestments = async () => {
   investments.value = await getFinanceInvestments();

@@ -5,6 +5,9 @@
         <ion-segment-button value="overview">
           <ion-label>Overview</ion-label>
         </ion-segment-button>
+        <ion-segment-button value="budget">
+          <ion-label>Budget</ion-label>
+        </ion-segment-button>
         <ion-segment-button value="accounts">
           <ion-label>Accounts</ion-label>
         </ion-segment-button>
@@ -29,6 +32,7 @@ const router = useRouter();
 const route = useRoute();
 
 const activeSegment = computed(() => {
+  if (route.path.includes('/budget')) return 'budget';
   if (route.path.includes('/accounts')) return 'accounts';
   if (route.path.includes('/investments')) return 'investments';
   if (route.path.includes('/subscriptions')) return 'subscriptions';
@@ -42,6 +46,7 @@ const handleSegmentChange = (event: CustomEvent) => {
 
   const target = {
     overview: '/finance',
+    budget: '/finance/budget',
     accounts: '/finance/accounts',
     investments: '/finance/investments',
     subscriptions: '/finance/subscriptions',

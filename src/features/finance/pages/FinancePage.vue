@@ -29,6 +29,14 @@
               <span>Holdings</span>
               <strong>{{ investments.length }}</strong>
             </div>
+            <div class="card-metric">
+              <span>Spent this month</span>
+              <strong>{{ monthSpentDisplay }}</strong>
+            </div>
+            <div class="card-metric">
+              <span>Budget left</span>
+              <strong :class="{ 'metric-over': budgetLeft < 0 }">{{ budgetLeftDisplay }}</strong>
+            </div>
           </div>
         </ion-card>
       </div>
@@ -47,14 +55,20 @@ import {
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
-import { getFinanceAccounts, getFinanceInvestments, getFinanceSubscriptions } from '@/shared/db/app_db';
+import {
+  getFinanceAccounts,
+  getFinanceInvestments,
+  getFinanceSubscriptions,
+  getFinanceTransactionsForMonth,
+  getFinanceBudgets,
+} from '@/shared/db/app_db';
+import { formatCurrency } from '@/shared/utils/currency';
 
 const accounts = ref<Array<Record<string, any>>>([]);
 const investments = ref<Array<Record<string, any>>>([]);
 const subscriptions = ref<Array<Record<string, any>>>([]);
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+const monthTransactions = ref<Array<Record<string, any>>>([]);
+const budgets = ref<Array<Record<string, any>>>([]);
 
 const accountsTotal = computed(() =>
   accounts.value.reduce((sum, account) => sum + (Number(account.balance) || 0), 0)
@@ -70,15 +84,33 @@ const subscriptionsTotal = computed(() =>
 
 const netWorth = computed(() => accountsTotal.value + investmentsTotal.value);
 
+const monthSpent = computed(() =>
+  monthTransactions.value
+    .filter((t) => t.type !== 'income')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+);
+
+const budgetTotal = computed(() =>
+  budgets.value.reduce((sum, b) => sum + (Number(b.monthly_limit) || 0), 0)
+);
+
+const budgetLeft = computed(() => budgetTotal.value - monthSpent.value);
+
 const accountsTotalDisplay = computed(() => formatCurrency(accountsTotal.value));
 const investmentsTotalDisplay = computed(() => formatCurrency(investmentsTotal.value));
 const subscriptionsTotalDisplay = computed(() => formatCurrency(subscriptionsTotal.value));
 const netWorthDisplay = computed(() => formatCurrency(netWorth.value));
+const monthSpentDisplay = computed(() => formatCurrency(monthSpent.value));
+const budgetLeftDisplay = computed(() => formatCurrency(budgetLeft.value));
 
 const loadFinance = async () => {
   accounts.value = await getFinanceAccounts();
   investments.value = await getFinanceInvestments();
   subscriptions.value = await getFinanceSubscriptions();
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  monthTransactions.value = await getFinanceTransactionsForMonth(monthKey);
+  budgets.value = await getFinanceBudgets();
 };
 
 onIonViewWillEnter(async () => {
@@ -165,6 +197,10 @@ onIonViewWillEnter(async () => {
   font-size: 0.95rem;
   font-weight: 600;
   color: #fff;
+}
+
+.metric-over {
+  color: var(--ion-color-accent-red);
 }
 
 @media (min-width: 600px) {

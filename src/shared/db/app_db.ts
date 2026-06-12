@@ -25,6 +25,8 @@ const EXPORT_DELETE_TABLES = [
   'body_log',
   'finance_subscription',
   'finance_investment',
+  'finance_transaction',
+  'finance_budget',
   'finance_account',
   'net_worth_snapshot',
   'circadian_log'
@@ -51,6 +53,8 @@ const EXPORT_INSERT_TABLES = [
   'finance_account',
   'finance_investment',
   'finance_subscription',
+  'finance_budget',
+  'finance_transaction',
   'net_worth_snapshot',
   'circadian_log'
 ];
@@ -328,6 +332,22 @@ async function doInitDB() {
     cadence TEXT DEFAULT 'monthly',
     next_due_date TEXT,
     status TEXT DEFAULT 'active'
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_transaction (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    name TEXT NOT NULL,
+    category TEXT DEFAULT 'other',
+    amount REAL DEFAULT 0,
+    type TEXT DEFAULT 'expense',
+    notes TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS finance_budget (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL UNIQUE,
+    monthly_limit REAL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS net_worth_snapshot (
@@ -2024,6 +2044,83 @@ export async function getFinanceSubscriptions() {
     `SELECT * FROM finance_subscription ORDER BY status DESC, next_due_date ASC;`
   );
   return result.values || [];
+}
+
+export async function addFinanceTransaction(
+  date: string,
+  name: string,
+  category: string,
+  amount: number,
+  type: 'expense' | 'income',
+  notes?: string
+) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_transaction (date, name, category, amount, type, notes)
+       VALUES (?, ?, ?, ?, ?, ?);`,
+      [date, name, category, amount, type, notes ?? null]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error adding finance transaction:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceTransactionsForMonth(monthKey: string) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_transaction
+     WHERE strftime('%Y-%m', date) = ?
+     ORDER BY date DESC, id DESC;`,
+    [monthKey]
+  );
+  return result.values || [];
+}
+
+export async function deleteFinanceTransaction(id: number) {
+  if (!db) return;
+  try {
+    await db.run(`DELETE FROM finance_transaction WHERE id = ?;`, [id]);
+  } catch (error) {
+    console.error('Error deleting finance transaction:', error);
+    throw error;
+  }
+}
+
+export async function upsertFinanceBudget(category: string, monthlyLimit: number) {
+  if (!db) return;
+  try {
+    const result = await db.run(
+      `INSERT INTO finance_budget (category, monthly_limit)
+       VALUES (?, ?)
+       ON CONFLICT(category) DO UPDATE SET monthly_limit = excluded.monthly_limit;`,
+      [category, monthlyLimit]
+    );
+    return result;
+  } catch (error) {
+    console.error('Error upserting finance budget:', error);
+    throw error;
+  }
+}
+
+export async function getFinanceBudgets() {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_budget ORDER BY monthly_limit DESC, category ASC;`
+  );
+  return result.values || [];
+}
+
+export async function deleteFinanceBudget(id: number) {
+  if (!db) return;
+  try {
+    await db.run(`DELETE FROM finance_budget WHERE id = ?;`, [id]);
+  } catch (error) {
+    console.error('Error deleting finance budget:', error);
+    throw error;
+  }
 }
 
 export async function exportDatabaseToSQL() {

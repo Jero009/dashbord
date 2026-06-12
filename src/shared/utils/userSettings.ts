@@ -30,6 +30,30 @@ export function setGoalWeightKg(kg: number): void {
   localStorage.setItem(GOAL_WEIGHT_KEY, String(kg))
 }
 
+const CURRENCY_KEY = 'setting_currency'
+
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'CHF'
+
+export function getCurrency(): CurrencyCode {
+  const v = localStorage.getItem(CURRENCY_KEY)
+  return v === 'EUR' || v === 'GBP' || v === 'CHF' ? v : 'USD'
+}
+
+export function setCurrency(code: CurrencyCode): void {
+  localStorage.setItem(CURRENCY_KEY, code)
+}
+
+const LAST_HC_SYNC_KEY = 'setting_last_hc_sync_at'
+
+export function getLastHcSyncAt(): number | null {
+  const v = Number(localStorage.getItem(LAST_HC_SYNC_KEY))
+  return Number.isFinite(v) && v > 0 ? v : null
+}
+
+export function setLastHcSyncAt(epochMs: number): void {
+  localStorage.setItem(LAST_HC_SYNC_KEY, String(epochMs))
+}
+
 // Notification settings — all backed by localStorage
 export function getNotifWeightEnabled(): boolean { return localStorage.getItem('notif_weight_enabled') === '1' }
 export function setNotifWeightEnabled(v: boolean): void { localStorage.setItem('notif_weight_enabled', v ? '1' : '0') }

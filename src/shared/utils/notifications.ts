@@ -1,5 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { Capacitor } from '@capacitor/core'
+import { formatCurrency } from '@/shared/utils/currency'
 
 // Notification ID ranges — must be stable integers
 const ID_WEIGHT        = 1
@@ -168,13 +169,38 @@ export async function scheduleSubscriptionReminders(
       id: ID_SUB_BASE + sub.id,
       title: `${sub.name} renews soon`,
       body: daysBefore === 0
-        ? `${sub.name} renews today — $${sub.amount}`
-        : `Renews in ${daysBefore} day${daysBefore !== 1 ? 's' : ''} — $${sub.amount}`,
+        ? `${sub.name} renews today — ${formatCurrency(sub.amount)}`
+        : `Renews in ${daysBefore} day${daysBefore !== 1 ? 's' : ''} — ${formatCurrency(sub.amount)}`,
       schedule: { at: fireAt },
       smallIcon: 'ic_stat_icon_config_sample',
     })
   }
   if (toSchedule.length) await LocalNotifications.schedule({ notifications: toSchedule })
+}
+
+export async function cancelWeightReminder(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_WEIGHT }] })
+}
+
+export async function cancelHabitReminder(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_HABIT }] })
+}
+
+export async function cancelSleepReminder(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_SLEEP }] })
+}
+
+export async function cancelCalendarReminders(eventIds: number[]): Promise<void> {
+  if (!Capacitor.isNativePlatform() || !eventIds.length) return
+  await LocalNotifications.cancel({ notifications: eventIds.map((id) => ({ id: ID_CAL_BASE + id })) })
+}
+
+export async function cancelSubscriptionReminders(subIds: number[]): Promise<void> {
+  if (!Capacitor.isNativePlatform() || !subIds.length) return
+  await LocalNotifications.cancel({ notifications: subIds.map((id) => ({ id: ID_SUB_BASE + id })) })
 }
 
 export async function cancelAllNotifications(): Promise<void> {

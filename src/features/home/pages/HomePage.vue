@@ -1760,7 +1760,12 @@ onMounted(async () => {
 }
 
 /* ── Circadian card ─────────────────────────────────────────────── */
-.circ-card { padding: 18px; }
+.circ-card {
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--nt-radius-md);
+  background: var(--ion-color-primary);
+}
 
 .circ-header {
   display: flex;
