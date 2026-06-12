@@ -964,6 +964,25 @@ export async function getExercises() {
 }
 
 
+export async function getExerciseById(id: number) {
+  if (!db) return null;
+
+  const result = await db.query(`
+    SELECT
+      e.id,
+      e.name,
+      mg.name AS muscle_group,
+      eq.name AS equipment,
+      e.rest_seconds
+    FROM exercise e
+    LEFT JOIN muscle_group mg ON e.id_muscle_group = mg.id
+    LEFT JOIN equipment eq ON e.id_equipment = eq.id
+    WHERE e.id = ?
+  `, [id]);
+  return result.values?.[0] || null;
+}
+
+
 export async function deleteTemplate(id: number) {
   if (!db) return;
 
@@ -1143,17 +1162,16 @@ export async function getWorkoutById(id: number) {
   return result.values?.[0] || null;
 }
 
-export async function endWorkout(id: number) {
-  if (!db) return;
+// Ends the workout and returns any PRs that were set or improved during it.
+export async function endWorkout(id: number): Promise<AchievedPR[]> {
+  if (!db) return [];
   const time_end = new Date().toISOString();
-  const result = await db.run(
+  await db.run(
     'UPDATE workout SET time_end = ? WHERE id = ?',
     [time_end, id]
   )
   await saveWorkoutTotalKg(id);
-  await updateExercisePRs(id);
-
-  return result;
+  return await updateExercisePRs(id);
 }
 
 export async function cancelWorkout(id: number) {
@@ -1208,6 +1226,7 @@ export async function getWorkoutHistoryExercises(workoutId: number) {
   const result = await db.query(`
       SELECT
         we.id,
+        we.exercise_id,
         e.name,
         SUM(CASE WHEN wes.completed = 1 THEN 1 ELSE 0 END) as set_count,
         MAX(wes.reps) as reps
@@ -2323,9 +2342,21 @@ function calculateOneRepMax(weight: number, reps: number): number {
   return Math.round((weight * (1 + reps / 30)) * 10) / 10;
 }
 
-// Update or create PR for an exercise after workout completion
-export async function updateExercisePRs(workoutId: number) {
-  if (!db) return;
+export interface AchievedPR {
+  exercise_id: number;
+  exercise_name: string;
+  pr_weight: number;
+  pr_reps: number;
+  one_rep_max: number;
+  is_new: boolean;
+}
+
+// Update or create PR for an exercise after workout completion.
+// Returns the PRs that were newly set or improved in this workout.
+export async function updateExercisePRs(workoutId: number): Promise<AchievedPR[]> {
+  if (!db) return [];
+
+  const achieved: AchievedPR[] = [];
 
   try {
     // Get all exercises from this workout with their completed sets
@@ -2346,7 +2377,7 @@ export async function updateExercisePRs(workoutId: number) {
       GROUP BY we.exercise_id
     `, [workoutId]);
 
-    if (!result.values) return;
+    if (!result.values) return achieved;
 
     for (const row of result.values) {
       const exerciseId = row.exercise_id;
@@ -2366,23 +2397,41 @@ export async function updateExercisePRs(workoutId: number) {
         if (weight > existing.pr_weight || 
             (weight === existing.pr_weight && reps > existing.pr_reps)) {
           await db.run(
-            `UPDATE exercise_pr SET pr_weight = ?, pr_reps = ?, one_rep_max = ?, 
+            `UPDATE exercise_pr SET pr_weight = ?, pr_reps = ?, one_rep_max = ?,
              date_achieved = CURRENT_TIMESTAMP, workout_id = ? WHERE exercise_id = ?`,
             [weight, reps, oneRepMax, workoutId, exerciseId]
           );
+          achieved.push({
+            exercise_id: exerciseId,
+            exercise_name: row.exercise_name,
+            pr_weight: weight,
+            pr_reps: reps,
+            one_rep_max: oneRepMax,
+            is_new: false,
+          });
         }
       } else {
         // Insert new PR
         await db.run(
-          `INSERT INTO exercise_pr (exercise_id, pr_weight, pr_reps, one_rep_max, workout_id) 
+          `INSERT INTO exercise_pr (exercise_id, pr_weight, pr_reps, one_rep_max, workout_id)
            VALUES (?, ?, ?, ?, ?)`,
           [exerciseId, weight, reps, oneRepMax, workoutId]
         );
+        achieved.push({
+          exercise_id: exerciseId,
+          exercise_name: row.exercise_name,
+          pr_weight: weight,
+          pr_reps: reps,
+          one_rep_max: oneRepMax,
+          is_new: true,
+        });
       }
     }
   } catch (error) {
     console.error('Error updating PRs:', error);
   }
+
+  return achieved;
 }
 
 // Get current PR for an exercise
@@ -2439,6 +2488,54 @@ export async function getAllExercisePRs() {
     JOIN exercise e ON e.id = ep.exercise_id
     ORDER BY ep.date_achieved DESC
   `);
+
+  return result.values || [];
+}
+
+// PRs achieved within the last N days (for the gym home "Recent PRs" card)
+export async function getRecentPRs(days = 30) {
+  if (!db) return [];
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const result = await db.query(`
+    SELECT
+      ep.*,
+      e.name as exercise_name
+    FROM exercise_pr ep
+    JOIN exercise e ON e.id = ep.exercise_id
+    WHERE DATE(ep.date_achieved) >= DATE(?)
+    ORDER BY ep.date_achieved DESC
+  `, [cutoff.toISOString()]);
+
+  return result.values || [];
+}
+
+// Per-workout session summaries for one exercise (recent sessions list)
+export async function getExerciseSessions(exerciseId: number, limit = 8) {
+  if (!db) return [];
+
+  const result = await db.query(`
+    SELECT
+      w.id as workout_id,
+      w.time_start as date,
+      COUNT(*) as set_count,
+      MAX(wes.weight) as top_weight,
+      (SELECT wes2.reps FROM workout_exercise_sets wes2
+       JOIN workout_exercise we2 ON we2.id = wes2.workout_exercise_id
+       WHERE we2.workout_id = w.id AND we2.exercise_id = ?
+         AND wes2.completed = 1 AND wes2.weight = MAX(wes.weight)
+       LIMIT 1) as top_reps,
+      SUM(wes.weight * wes.reps) as volume
+    FROM workout_exercise_sets wes
+    JOIN workout_exercise we ON we.id = wes.workout_exercise_id
+    JOIN workout w ON w.id = we.workout_id
+    WHERE we.exercise_id = ? AND wes.completed = 1 AND w.time_end IS NOT NULL
+    GROUP BY w.id
+    ORDER BY w.time_start DESC
+    LIMIT ?
+  `, [exerciseId, exerciseId, limit]);
 
   return result.values || [];
 }

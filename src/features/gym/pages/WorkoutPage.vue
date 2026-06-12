@@ -41,6 +41,13 @@
                     </ion-button>
                   </div>
                   <ion-card-title>{{ ex.name }}</ion-card-title>
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    class="stats-btn"
+                    @click="openExerciseStats(ex)">
+                    <ion-icon :icon="statsChartOutline"></ion-icon>
+                  </ion-button>
                   <p v-if="overloadHint(ex)" class="overload-hint">{{ overloadHint(ex) }}</p>
                 </div>
                     <div class="rest-settings" @click="editRestTime(ex)">
@@ -389,12 +396,38 @@
   pointer-events: none;
 }
 
+.stats-btn {
+  --padding-start: 4px;
+  --padding-end: 4px;
+  margin: 0;
+  height: 28px;
+}
+
+.stats-btn ion-icon {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+ion-toast.pr-toast {
+  --background: var(--nt-surface-2);
+  --color: #fff;
+  --border-radius: var(--nt-radius-md);
+  font-family: var(--nt-font-head);
+}
+
+ion-toast.pr-toast::part(header) {
+  color: var(--ion-color-accent-red);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+}
+
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController, toastController } from '@ionic/vue';
 import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
-import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline } from 'ionicons/icons';
+import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
@@ -524,13 +557,27 @@ const saveWorkout = async () => {
         role: 'destructive',
         handler: async () => {
           hapticSuccess();
-          await endWorkout(workoutId);
+          const achievedPRs = await endWorkout(workoutId);
           if (interval) clearInterval(interval);
           interval = null;
           if (restInterval) clearInterval(restInterval);
           restInterval = null;
           sessionStorage.removeItem('restTimer');
           router.push('/tabs/Home');
+
+          if (achievedPRs && achievedPRs.length > 0) {
+            const summary = achievedPRs
+              .map((pr) => `${pr.exercise_name} ${pr.pr_weight} kg x ${pr.pr_reps}`)
+              .join(' / ');
+            const toast = await toastController.create({
+              header: achievedPRs.length === 1 ? 'New personal record' : `${achievedPRs.length} new personal records`,
+              message: summary,
+              duration: 4500,
+              position: 'top',
+              cssClass: 'pr-toast',
+            });
+            await toast.present();
+          }
         }
       }
     ]
@@ -610,6 +657,12 @@ const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
   });
 
   await alert.present();
+};
+
+// Open the exercise detail page (PRs, strength + volume charts)
+const openExerciseStats = (exercise: any) => {
+  hapticLight();
+  router.push(`/exercise/${exercise.exercise_id}`);
 };
 
 // Add new exercise to workout

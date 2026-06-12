@@ -29,10 +29,11 @@
                 </ion-card-header>
                 <ion-card-content>
                   <ion-list >
-                      <ion-item class="exercise-row" v-for="ex in w.exercises" :key="ex.id">
+                      <ion-item class="exercise-row" v-for="ex in w.exercises" :key="ex.id" button :detail="false" @click="openExercise(ex.exercise_id)">
                         <div class="exercise-copy">
                           <div class="exercise-copy__name">{{ ex.name }}</div>
                           <div class="exercise-copy__stats">{{ ex.set_count }} sets &nbsp; {{ ex.reps }} reps</div>
+                          <ion-icon class="exercise-copy__icon" :icon="statsChartOutline"></ion-icon>
                         </div>
                       </ion-item>
                   </ion-list>
@@ -142,6 +143,12 @@ ion-content.home-content {
   color: rgba(255, 255, 255, 0.84);
 }
 
+.exercise-copy__icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
 @media (min-width: 700px) {
   .home-shell {
     max-width: 760px;
@@ -156,11 +163,22 @@ ion-content.home-content {
 </style>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonCard,IonCardHeader,IonCardContent,IonCardSubtitle,IonCardTitle,IonList,IonItem,
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonCard,IonCardHeader,IonCardContent,IonCardSubtitle,IonCardTitle,IonList,IonItem,IonIcon,
 IonRefresher, IonRefresherContent, RefresherCustomEvent, onIonViewWillEnter, IonButton, alertController } from '@ionic/vue';
+import { statsChartOutline } from 'ionicons/icons';
 import { getWorkouts,getWorkoutHistoryExercises, cancelWorkout } from '@/shared/db/app_db'
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { hapticLight } from '@/shared/utils/haptics';
 import type { WorkoutHistory, WorkoutHistoryExercise } from '@/features/gym/types/models';
+
+const router = useRouter();
+
+const openExercise = (exerciseId: number) => {
+  if (!exerciseId) return;
+  hapticLight();
+  router.push(`/exercise/${exerciseId}`);
+};
 
 
 
