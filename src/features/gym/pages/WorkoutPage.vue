@@ -123,46 +123,43 @@
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Doto', sans-serif;
-  pointer-events: none; 
+  color: rgb(255, 215, 0);
+  pointer-events: none;
 }
 .title {
   margin-left: 10px;
 }
 .btn-quickstart {
   --background: var(--ion-color-accent-red);
-  --background-activated: var(--ion-color-accent-yellow);
+  --background-activated: rgb(220, 38, 38);
   --color: var(--ion-color-light);
-  --color-activated: var(--ion-color-dark);
-  border-radius: 3px;
+  --color-activated: var(--ion-color-light);
+  border-radius: 8px;
   padding: 0 16px;
 }
 /* exercise cards */
 .exercise-card{
   width: 100%;
-  margin: 20px auto;
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-  transition: transform 0.12s ease, background 0.12s ease;
+  margin: 18px auto;
+  border-radius: 12px;
+  background: var(--ion-color-primary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
   position: relative;
 }
 
 .exercise-card:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.14);
-  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .exercise-card:active {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.16);
-  transform: translateY(0);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .exercise-sliding-item {
-  margin: 0 8px;
+  margin: 0 10px;
   background-color: transparent;
-  transition: transform 0.2s ease;
 }
 
 .exercise-slide-host {
@@ -176,52 +173,50 @@
   justify-content: space-between;
   align-items: center;
   color:var(--ion-color-light);
-  gap: 8px;
+  gap: 10px;
 }
 .overload-hint {
   margin: 2px 0 0;
   font-size: 0.72rem;
-  color: rgba(255, 215, 0, 0.7);
-  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .rest-settings {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: var(--ion-color-light);
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .rest-settings:active {
-  transform: scale(0.98);
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 .set{
   width: 100%;
   padding: 14px;
-  border-radius: 3px;
-  margin-bottom: 5px;
+  border-radius: 10px;
+  margin-bottom: 6px;
   --background: transparent;
   --inner-border-width: 0;
   --inner-padding-end: 0;
   --padding-start: 0;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .set-sliding {
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   --background: transparent;
   background: transparent;
 }
@@ -230,12 +225,12 @@
   height: 54px;
   --padding-start: 0;
   --padding-end: 0;
-  --background: rgba(255, 255, 255, 0.03);
-  --border-color: rgba(255, 255, 255, 0.12);
+  --background: rgba(255, 255, 255, 0.06);
+  --border-color: rgba(255, 255, 255, 0.1);
   --border-radius: 8px;
   text-align: center;
-  --placeholder-color: rgba(255, 255, 255, 0.9);
-  --placeholder-opacity: 0.8;
+  --placeholder-color: rgba(255, 255, 255, 0.35);
+  --placeholder-opacity: 1;
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--ion-color-light);
@@ -243,7 +238,7 @@
 .input-container {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .metric-field {
@@ -257,10 +252,11 @@
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
   pointer-events: none;
 }
 
@@ -271,39 +267,38 @@
   --border-color-checked: var(--ion-color-accent-red);
   --checkbox-background: transparent;
   --checkbox-background-checked: var(--ion-color-accent-red);
-  --border-radius: 6px;
+  --border-radius: 8px;
 }
 
 .cancel-container {
   padding: 16px;
-  margin-top: 20px;
-  margin-bottom: 20px;
+  margin-top: 18px;
+  margin-bottom: 18px;
 }
 
 .add-exercise-container {
-  color: var(--ion-color-accent-yellow);
   padding: 16px;
-  padding-top: 8px;
+  padding-top: 10px;
 }
 
 .add-exercise-btn {
-  --background: var(--ion-color-accent-yellow) !important;
-  --background-activated: var(--ion-color-accent-red) !important;
-  --color: var(--ion-color-dark) !important;
+  --background: var(--ion-color-accent-red) !important;
+  --background-activated: rgb(220, 38, 38) !important;
+  --color: var(--ion-color-light) !important;
   --color-activated: var(--ion-color-light) !important;
-  --border-radius: 3px;
-  font-weight: 700;
+  --border-radius: 8px;
+  font-weight: 600;
 }
 
 .add-set-btn {
   background: var(--ion-color-primary);
   margin-top: 10px;
-  --border-radius: 3px;
-  color: var(--ion-color-accent-yellow);
+  --border-radius: 8px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .add-set-icon {
-  color: var(--ion-color-accent-yellow);
+  color: var(--ion-color-accent-red);
 }
 
 /* Rest Timer Overlay */
@@ -312,13 +307,12 @@
   top: calc(env(safe-area-inset-top, 0px) + 56px);
   left: 0;
   right: 0;
-  background: linear-gradient(180deg, rgba(24, 24, 24, 0.98), rgba(14, 14, 14, 0.98));
+  background: var(--ion-color-primary);
   color: white;
   padding: 16px 18px 14px;
   z-index: 9999;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -334,26 +328,29 @@
 }
 
 .rest-label {
-  font-size: 0.8rem;
-  opacity: 0.7;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .rest-time {
   font-size: 1.8rem;
-  font-weight: bold;
+  font-weight: 700;
   font-family: 'Doto', sans-serif;
+  color: rgb(255, 215, 0);
 }
 
 .rest-timer-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .skip-btn {
   --border-radius: 8px;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .rest-timer-controls ion-button {
@@ -366,8 +363,7 @@
   top: 0;
   left: 0;
   height: 4px;
-  background: var(--ion-color-primary);
-  transition: width 1s linear;
+  background: rgb(255, 215, 0);
 }
 
 .reorder-buttons {
@@ -380,17 +376,17 @@
 .reorder-btn {
   --padding-start: 2px;
   --padding-end: 2px;
-  min-width: 24px;
+  min-width: 40px;
   height: 24px;
 }
 
 .reorder-btn ion-icon {
-  font-size: 1.1rem;
+  font-size: 20px;
   color: var(--ion-color-accent-red);
 }
 
 .reorder-btn:disabled {
-  opacity: 0.2;
+  opacity: 0.4;
   pointer-events: none;
 }
 
@@ -403,6 +399,7 @@ import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDo
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
+import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds } from '@/shared/db/app_db';
 
@@ -478,6 +475,7 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
   const checked = (event as any)?.detail?.checked;
   const isChecked = typeof checked === 'boolean' ? checked : !!set.completed;
   set.completed = isChecked;
+  hapticMedium();
 
   if (isChecked) {
     startRestTimer(Number(exercise.rest_seconds) || 60);
@@ -515,6 +513,7 @@ const editRestTime = async (exercise: any) => {
 };
 
 const saveWorkout = async () => {
+  hapticHeavy();
   const alert = await alertController.create({
     header: 'End Workout?',
     message: 'This will save the workout and return you to the home screen.',
@@ -525,6 +524,7 @@ const saveWorkout = async () => {
         text: 'End Workout',
         role: 'destructive',
         handler: async () => {
+          hapticSuccess();
           await endWorkout(workoutId);
           if (interval) clearInterval(interval);
           interval = null;
@@ -623,6 +623,7 @@ const addNewExercise = async () => {
 
 // Add new set to existing exercise
 const addNewSet = async (exercise: any) => {
+  hapticLight();
   const nextSetNum = await getNextSetNumber(exercise.id);
   const previousSets = await getLatestCompletedSetsForExercise(exercise.exercise_id, workoutId);
   
@@ -791,6 +792,7 @@ const restoreTimerState = () => {
 };
 
 const startRestTimer = (seconds: number) => {
+  hapticLight();
   // Stop any existing timer before starting a new one
   stopRestTimer();
 

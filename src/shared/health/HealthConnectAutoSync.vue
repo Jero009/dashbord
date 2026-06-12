@@ -50,7 +50,7 @@ onMounted(async () => {
 
   // Health Connect may not be ready immediately on cold start — retry after a
   // short delay so a skipped startup sync recovers without waiting 30 minutes.
-  retryTimeoutId = setTimeout(() => void syncIfNeeded(), 6_000);
+  retryTimeoutId = setTimeout(() => { syncIfNeeded().catch(e => console.error('[HC retry]', e)); }, 6_000);
 
   intervalId = setInterval(() => {
     void syncIfNeeded();

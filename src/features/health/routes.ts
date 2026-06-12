@@ -33,5 +33,10 @@ export const healthRoutes: Array<RouteRecordRaw> = [
     path: '/health/body',
     name: 'HealthBody',
     component: () => import('./pages/BodyPage.vue')
+  },
+  {
+    path: '/health/circadian',
+    name: 'HealthCircadian',
+    component: () => import('./pages/CircadianPage.vue')
   }
 ];

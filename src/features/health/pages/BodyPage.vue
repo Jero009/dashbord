@@ -82,7 +82,7 @@
                   <span class="entry-weight">{{ entry.weight_kg }} kg</span>
                   <span v-if="entry.notes" class="entry-notes">{{ entry.notes }}</span>
                 </div>
-                <button class="delete-btn" @click="removeEntry(entry)">×</button>
+                <button class="delete-btn" @click="removeEntry(entry)"><ion-icon :icon="close" /></button>
               </div>
               <img
                 v-if="photoUrls[entry.id]"
@@ -110,7 +110,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue'
+import { IonPage, IonHeader, IonContent, IonIcon, onIonViewWillEnter, toastController } from '@ionic/vue'
+import { close } from 'ionicons/icons'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler)
 import { Directory, Filesystem } from '@capacitor/filesystem'
@@ -120,6 +121,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
+import { hapticHeavy, hapticMedium, hapticSuccess } from '@/shared/utils/haptics'
 import { dismissWeightReminder } from '@/shared/utils/notifications'
 import type { BodyLogEntry } from '@/shared/db/app_db'
 import { getGoalWeightKg } from '@/shared/utils/userSettings'
@@ -304,6 +306,7 @@ const pickPhoto = async () => {
 }
 
 const saveEntry = async () => {
+  hapticMedium();
   const weight = parseFloat(form.value.weight)
   if (!weight || weight <= 0) {
     const t = await toastController.create({ message: 'Enter a valid weight.', duration: 1800, color: 'warning' })
@@ -348,6 +351,7 @@ const saveEntry = async () => {
 
     await loadEntries()
 
+    hapticSuccess();
     const t = await toastController.create({ message: 'Saved!', duration: 1500, color: 'success' })
     await t.present()
   } catch (err) {
@@ -357,6 +361,7 @@ const saveEntry = async () => {
 }
 
 const removeEntry = async (entry: BodyLogEntry) => {
+  hapticHeavy();
   if (entry.photo_path) {
     try {
       await Filesystem.deleteFile({ path: entry.photo_path, directory: Directory.Data })
@@ -417,7 +422,7 @@ onIonViewWillEnter(loadEntries)
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .field-label {
@@ -431,16 +436,21 @@ onIonViewWillEnter(loadEntries)
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   color: #fff;
   font-size: 0.9rem;
   outline: none;
   width: 100%;
   box-sizing: border-box;
+  transition: border-color 150ms ease;
+}
+
+.form-input:focus {
+  border-color: rgb(239, 68, 68);
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .form-input--date {
@@ -456,15 +466,20 @@ onIonViewWillEnter(loadEntries)
 .photo-source-btn {
   flex: 1;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   cursor: pointer;
   text-align: center;
+  transition: border-color 150ms ease;
+}
+
+.photo-source-btn:hover {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .photo-btn__label {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -484,25 +499,30 @@ onIonViewWillEnter(loadEntries)
   position: absolute;
   top: 6px;
   right: 6px;
-  padding: 4px 10px;
+  padding: 6px 10px;
   background: rgba(0, 0, 0, 0.6);
   border: none;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.78rem;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.72rem;
   cursor: pointer;
 }
 
 .save-btn {
   width: 100%;
-  padding: 11px;
-  background: var(--ion-color-accent-red);
+  padding: 12px;
+  background: rgb(239, 68, 68);
   border: none;
   border-radius: 8px;
   color: #fff;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.save-btn:hover {
+  background: rgb(220, 38, 38);
 }
 
 /* Trend row */
@@ -511,16 +531,16 @@ onIonViewWillEnter(loadEntries)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
 }
 
 .trend-label {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .trend-value {
@@ -552,7 +572,7 @@ onIonViewWillEnter(loadEntries)
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .entry-info {
@@ -564,7 +584,7 @@ onIonViewWillEnter(loadEntries)
 .entry-date {
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -575,8 +595,8 @@ onIonViewWillEnter(loadEntries)
 }
 
 .entry-notes {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .entry-photo {
@@ -590,28 +610,35 @@ onIonViewWillEnter(loadEntries)
 .delete-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.25);
   line-height: 1;
   cursor: pointer;
-  padding: 0 2px;
+  min-width: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
+.delete-btn ion-icon {
+  font-size: 20px;
+}
+
 .delete-btn:hover {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Empty state */
 .empty-card {
   text-align: center;
-  padding: 32px 18px;
+  padding: 24px 18px;
 }
 
 .empty-text {
   margin: 0;
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Chart card */
@@ -632,17 +659,18 @@ onIonViewWillEnter(loadEntries)
 
 .chart-range-btns {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .range-btn {
-  padding: 3px 9px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.72rem;
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .range-btn--active {
@@ -654,9 +682,9 @@ onIonViewWillEnter(loadEntries)
 .chart-wrap {
   height: 180px;
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  padding: 8px 4px 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 10px 6px 6px;
 }
 
 /* Full-screen photo viewer */
@@ -675,6 +703,6 @@ onIonViewWillEnter(loadEntries)
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 </style>

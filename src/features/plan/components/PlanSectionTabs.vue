@@ -2,17 +2,17 @@
   <ion-toolbar class="section-toolbar">
     <div class="seg-pill">
       <ion-segment :value="activeSegment" @ionChange="handleSegmentChange" scrollable>
-        <ion-segment-button value="overview">
+        <ion-segment-button value="plan">
           <ion-label>Overview</ion-label>
         </ion-segment-button>
-        <ion-segment-button value="accounts">
-          <ion-label>Accounts</ion-label>
+        <ion-segment-button value="goals">
+          <ion-label>Goals</ion-label>
         </ion-segment-button>
-        <ion-segment-button value="investments">
-          <ion-label>Investments</ion-label>
+        <ion-segment-button value="habits">
+          <ion-label>Habits</ion-label>
         </ion-segment-button>
-        <ion-segment-button value="subscriptions">
-          <ion-label>Subscriptions</ion-label>
+        <ion-segment-button value="calendar">
+          <ion-label>Calendar</ion-label>
         </ion-segment-button>
       </ion-segment>
     </div>
@@ -29,27 +29,24 @@ const router = useRouter();
 const route = useRoute();
 
 const activeSegment = computed(() => {
-  if (route.path.includes('/accounts')) return 'accounts';
-  if (route.path.includes('/investments')) return 'investments';
-  if (route.path.includes('/subscriptions')) return 'subscriptions';
-  return 'overview';
+  if (route.path === '/plan/goals')    return 'goals';
+  if (route.path === '/plan/habits')   return 'habits';
+  if (route.path === '/plan/calendar') return 'calendar';
+  return 'plan';
 });
 
 const handleSegmentChange = (event: CustomEvent) => {
   const value = (event.detail as { value?: string }).value;
   if (!value) return;
   hapticLight();
-
-  const target = {
-    overview: '/finance',
-    accounts: '/finance/accounts',
-    investments: '/finance/investments',
-    subscriptions: '/finance/subscriptions',
-  }[value];
-
-  if (target && target !== route.path) {
-    router.push(target);
-  }
+  const target: Record<string, string> = {
+    plan:     '/plan',
+    goals:    '/plan/goals',
+    habits:   '/plan/habits',
+    calendar: '/plan/calendar',
+  };
+  const dest = target[value];
+  if (dest && dest !== route.path) router.push(dest);
 };
 </script>
 
@@ -58,7 +55,7 @@ const handleSegmentChange = (event: CustomEvent) => {
   --background: var(--ion-color-primary);
   --border-width: 0;
   --box-shadow: none;
-  --padding-top: 0px;
+  --padding-top: 0;
   padding: 2px 10px 6px;
   margin-top: -2px;
 }

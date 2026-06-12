@@ -192,14 +192,16 @@
         <div class="card">
           <p class="section-kicker">Google Drive backup</p>
           <div class="notif-row">
-            <div class="notif-info">
-              <span class="notif-label">Auto-backup daily</span>
-              <span class="notif-desc">Uploads a SQL export to your Google Drive once per day</span>
+            <div class="notif-row__label">
+              <span class="notif-title">Auto-backup daily</span>
+              <span class="notif-sub">Uploads a SQL export to your Google Drive once per day</span>
             </div>
-            <label class="toggle">
-              <input type="checkbox" :checked="driveEnabled" @change="toggleDriveBackup" />
-              <span class="toggle-track"></span>
-            </label>
+            <div class="notif-row__controls">
+              <label class="notif-toggle">
+                <input type="checkbox" :checked="driveEnabled" @change="toggleDriveBackup" />
+                <span class="notif-toggle__track"></span>
+              </label>
+            </div>
           </div>
           <p v-if="lastBackupDate" class="hint-text">Last backup: {{ lastBackupDate }}</p>
           <button class="btn-primary" style="margin-top:10px" :disabled="driveBackingUp" @click="handleDriveBackupNow">
@@ -561,7 +563,7 @@ const handleImportFile = async (event: Event) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 40px;
+  padding-bottom: 24px;
 }
 
 .card {
@@ -588,7 +590,7 @@ const handleImportFile = async (event: Event) => {
 .field-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .field-label {
@@ -602,51 +604,66 @@ const handleImportFile = async (event: Event) => {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   color: #fff;
   font-size: 0.9rem;
   outline: none;
   width: 100%;
   box-sizing: border-box;
+  transition: border-color 150ms ease;
+}
+
+.form-input:focus {
+  border-color: rgb(239, 68, 68);
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .btn-primary {
   width: 100%;
-  padding: 11px;
-  background: var(--ion-color-accent-red);
+  padding: 12px;
+  background: rgb(239, 68, 68);
   border: none;
   border-radius: 8px;
   color: #fff;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.btn-primary:hover {
+  background: rgb(220, 38, 38);
 }
 
 .btn-primary:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: default;
 }
 
 .btn-secondary {
   width: 100%;
-  padding: 11px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .hint-text {
   margin: 10px 0 0;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .field-row {
@@ -663,7 +680,7 @@ const handleImportFile = async (event: Event) => {
   color: #fff;
   min-width: 140px;
   --color: #fff;
-  --placeholder-color: rgba(255, 255, 255, 0.4);
+  --placeholder-color: rgba(255, 255, 255, 0.35);
 }
 
 .db-actions {
@@ -674,15 +691,20 @@ const handleImportFile = async (event: Event) => {
 
 .notif-perm-btn {
   width: 100%;
-  padding: 11px;
+  padding: 12px;
   margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.notif-perm-btn:hover {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .notif-row {
@@ -691,7 +713,7 @@ const handleImportFile = async (event: Event) => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .notif-row:last-child {
@@ -706,14 +728,14 @@ const handleImportFile = async (event: Event) => {
 }
 
 .notif-title {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.85);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .notif-sub {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .notif-row__controls {
@@ -725,8 +747,8 @@ const handleImportFile = async (event: Event) => {
 
 .notif-time {
   width: 90px;
-  padding: 5px 8px;
-  font-size: 0.82rem;
+  padding: 6px 10px;
+  font-size: 0.9rem;
   color-scheme: dark;
 }
 
@@ -739,8 +761,8 @@ const handleImportFile = async (event: Event) => {
 }
 
 .notif-select {
-  padding: 5px 8px;
-  font-size: 0.82rem;
+  padding: 6px 10px;
+  font-size: 0.9rem;
   max-width: 120px;
 }
 
@@ -763,9 +785,9 @@ const handleImportFile = async (event: Event) => {
 .notif-toggle__track {
   position: absolute;
   inset: 0;
-  border-radius: 24px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
-  transition: background 0.2s;
+  transition: background-color 150ms ease;
 }
 
 .notif-toggle__track::after {
@@ -773,11 +795,11 @@ const handleImportFile = async (event: Event) => {
   position: absolute;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.5);
   top: 3px;
   left: 3px;
-  transition: transform 0.2s, background 0.2s;
+  transition: background-color 150ms ease;
 }
 
 .notif-toggle input:checked + .notif-toggle__track {

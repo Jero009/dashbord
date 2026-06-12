@@ -164,12 +164,12 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .card-count {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .form-fields {
@@ -183,9 +183,9 @@ onIonViewWillEnter(async () => {
 }
 
 .field-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -204,17 +204,23 @@ onIonViewWillEnter(async () => {
   min-height: 44px;
 }
 
+.styled-input:focus-within,
+.styled-select:focus-within {
+  border-color: rgb(239, 68, 68);
+}
+
 .add-btn {
   --background: var(--ion-color-accent-red);
-  --background-activated: rgb(220, 50, 50);
+  --background-activated: rgb(220, 38, 38);
   --border-radius: 8px;
   --box-shadow: none;
+  font-weight: 600;
   margin: 0;
 }
 
 .account-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .account-item {
@@ -229,7 +235,7 @@ onIonViewWillEnter(async () => {
 
 .account-item__info {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .account-item__name {
@@ -246,14 +252,14 @@ onIonViewWillEnter(async () => {
 
 .account-item__balance {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
   white-space: nowrap;
 }
 
 .empty-state {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.9rem;
 }
 </style>

@@ -126,7 +126,7 @@ import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
-
+import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 
 const activeWorkout = ref(false);
 const activeRestTimer = ref({
@@ -144,6 +144,7 @@ const startWorkout = async (templateId: number) => {
   if (activeWorkout.value) {
     return;
   }
+  hapticHeavy();
 
   const workoutId = await startWorkoutFromTemplate(templateId);
 
@@ -156,6 +157,7 @@ const startWorkout = async (templateId: number) => {
 };
 // active workout id
 const backToWorkout = async () => {
+  hapticLight();
   const workout = await getActiveWorkout();
 
   if (workout) {
@@ -488,7 +490,7 @@ ion-content.home-content {
 .weekly-card {
   background: var(--ion-color-primary);
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -506,24 +508,24 @@ ion-content.home-content {
 }
 
 .weekly-count {
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255,255,255,0.85);
 }
 
 .weekly-dots {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .weekly-dot {
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
   background: transparent;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .weekly-dot--filled {
@@ -534,15 +536,14 @@ ion-content.home-content {
 .weekly-progress-bar {
   height: 3px;
   background: rgba(255,255,255,0.08);
-  border-radius: 2px;
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .weekly-progress-bar__fill {
   height: 100%;
   background: var(--ion-color-accent-red);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  border-radius: 999px;
 }
 
 .section-heading {
@@ -563,7 +564,7 @@ ion-content.home-content {
 .summary-card,
 .graph-card,
 .workout-tile {
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--ion-color-primary);
 }
 
@@ -577,10 +578,10 @@ ion-content.home-content {
 
 
 .active-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-  border: 2px solid rgba(255, 215, 0, 0.3);
+  background: var(--ion-color-primary);
+  border: 1px solid rgba(255, 215, 0, 0.3);
   position: relative;
-  transition: all 0.2s ease;
+  transition: border-color 150ms ease;
   cursor: pointer;
 }
 
@@ -590,7 +591,6 @@ ion-content.home-content {
 
 .active-card:active {
   border-color: var(--ion-color-accent-yellow);
-  transform: scale(0.98);
 }
 
 .card-topline,
@@ -631,21 +631,23 @@ ion-content.home-content {
 .active-card__timer span,
 .workout-tile__copy span {
   display: block;
-  margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 0.8rem;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .card-metric strong,
 .active-card__timer strong {
   display: block;
   font-size: 1rem;
+  font-weight: 600;
 }
 
 .active-card__timer strong {
   color: var(--ion-color-accent-yellow);
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
   font-family: 'Doto', sans-serif;
 }
 
@@ -679,7 +681,7 @@ ion-content.home-content {
 }
 
 .workout-tile-disabled {
-  opacity: 0.52;
+  opacity: 0.4;
   pointer-events: none;
 }
 
@@ -693,20 +695,22 @@ ion-content.home-content {
 }
 
 .workout-tile__icon ion-icon {
-  font-size: 1.6rem;
+  font-size: 24px;
   color: var(--ion-color-light);
 }
 
 .workout-tile__copy strong {
   display: block;
   font-size: 1rem;
+  font-weight: 600;
   line-height: 1.2;
 }
 
 .workout-tile__copy small {
   display: block;
-  margin-top: 8px;
-  color: rgba(255, 255, 255, 0.44);
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .graph-card {
@@ -721,9 +725,9 @@ ion-content.home-content {
 .chart-frame {
   margin-top: 16px;
   height: 240px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  padding: 8px 4px 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 10px 6px 6px;
 }
 
 .chart-frame canvas {
@@ -731,11 +735,11 @@ ion-content.home-content {
   height: 100% !important;
 }
 
-@media (min-width: 700px) {
+@media (min-width: 760px) {
   .home-shell {
     max-width: 760px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 24px;
   }
 
   .summary-card,

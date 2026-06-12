@@ -13,9 +13,9 @@
           <div class="card-topline">
             <p class="section-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
-              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1">&#8249;</button>
+              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
-              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0">&#8250;</button>
+              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
             </div>
           </div>
 
@@ -71,17 +71,25 @@
         <!-- Stage timeline -->
         <ion-card class="sleep-card">
           <p class="section-kicker">Stage timeline</p>
-          <div v-if="sleepStageLanes.length" class="stage-lanes">
-            <div v-for="lane in sleepStageLanes" :key="lane.stage" class="stage-lane">
-              <div class="stage-lane__label">{{ stageLabel(lane.stage) }}</div>
-              <div class="stage-lane__bar">
-                <div
-                  v-for="segment in lane.segments"
-                  :key="`${segment.stage}-${segment.startDate}`"
-                  class="stage-lane__segment"
-                  :class="stageClass(segment.stage)"
-                  :style="stageStyle(segment)"
+          <div v-if="hypnogramBlocks.length" class="hypnogram-wrap">
+            <div class="hypnogram-inner">
+              <svg viewBox="0 0 100 63" class="hypnogram-svg" preserveAspectRatio="none">
+                <rect
+                  v-for="(block, i) in hypnogramBlocks" :key="i"
+                  :x="block.x" :y="block.y" :width="block.w" :height="block.h"
+                  :fill="block.fill"
                 />
+                <line
+                  v-for="(conn, i) in hypnogramConnectors" :key="`c${i}`"
+                  :x1="conn.x" :y1="conn.y1" :x2="conn.x" :y2="conn.y2"
+                  stroke="rgba(255,255,255,0.5)" stroke-width="0.4"
+                />
+              </svg>
+              <div class="hypnogram-labels">
+                <span>Aw</span>
+                <span>RE</span>
+                <span>Li</span>
+                <span>De</span>
               </div>
             </div>
             <div class="axis-row">
@@ -170,11 +178,11 @@
                 :cx="point.x"
                 :cy="point.y"
                 r="1"
-                @click="selectedScorePoint = { date: point.date, score: point.score ?? 0 }"
+                @click="selectedScorePoint = { date: point.date, score: point.score }"
               />
             </svg>
             <div v-if="selectedScorePoint" class="chart-tooltip">
-              <strong>{{ selectedScorePoint.score }}</strong>
+              <strong>{{ selectedScorePoint.score ?? '—' }}</strong>
               <small>{{ new Date(`${selectedScorePoint.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
             </div>
             <div class="score-history__labels">
@@ -196,10 +204,12 @@ import {
   IonCard,
   IonContent,
   IonHeader,
+  IonIcon,
   IonPage,
   toastController,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
@@ -212,7 +222,7 @@ const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
 const selectedHeartRatePoint = ref<{ time: string; value: number; offset: number } | null>(null);
-const selectedScorePoint = ref<{ date: string; score: number } | null>(null);
+const selectedScorePoint = ref<{ date: string; score: number | null } | null>(null);
 const sessionDates = ref<string[]>([]);
 const selectedDate = ref<string | null>(null);
 
@@ -379,6 +389,7 @@ const score = computed(() => summary.value?.score ?? null);
 const sleepScoreRatio = computed(() => (score.value === null ? 0 : Math.min(1, score.value / 100)));
 const sleepScoreDisplay = computed(() => (score.value === null ? '—' : `${score.value}`));
 const sleepSubtitle = computed(() => {
+  if (score.value === null && summary.value !== null) return 'Sleep score unavailable';
   if (score.value === null) return 'No sleep session yet';
   if (score.value >= 80) return 'Excellent recovery';
   if (score.value >= 60) return 'Good enough';
@@ -395,25 +406,6 @@ const timeInBedDisplay = computed(() =>
 const sleepEfficiencyPercent = computed(() =>
   summary.value ? `${Math.round(summary.value.efficiency * 100)}%` : '—'
 );
-const sleepStageTimeline = computed(() => summary.value?.timeline ?? []);
-const sleepStageLanes = computed(() => {
-  const stages = sleepStageTimeline.value;
-  const order = ['deep', 'rem', 'light', 'asleep', 'awake', 'inBed'];
-  const grouped = new Map<string, SleepStageTimeline[]>();
-
-  for (const stage of stages) {
-    const bucket = grouped.get(stage.stage) ?? [];
-    bucket.push(stage);
-    grouped.set(stage.stage, bucket);
-  }
-
-  return order
-    .filter((stage) => grouped.has(stage))
-    .map((stage) => ({
-      stage,
-      segments: grouped.get(stage) ?? [],
-    }));
-});
 const heartRatePoints = computed(() => {
   const points = summary.value?.heartRateTimeline ?? [];
   if (!points.length) return [];
@@ -429,19 +421,14 @@ const heartRatePoints = computed(() => {
   }));
 });
 const heartRateLinePoints = computed(() => heartRatePoints.value.map((point) => `${point.offset.toFixed(2)},${point.y.toFixed(2)}`).join(' '));
-const sleepScoreHistory = computed(() =>
-  [...sleepHistory.value]
-    .reverse()
-    .map((row, index, rows) => {
-      const x = rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100;
-      const score = row.score ?? 0;
-      return {
-        ...row,
-        x,
-        y: 44 - (Math.min(100, Math.max(0, score)) / 100) * 36,
-      };
-    })
-);
+const sleepScoreHistory = computed(() => {
+  const rows = [...sleepHistory.value].reverse().filter((r) => r.score !== null);
+  return rows.map((row, index) => {
+    const x = rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100;
+    const score = row.score as number;
+    return { ...row, x, y: 44 - (Math.min(100, Math.max(0, score)) / 100) * 36 };
+  });
+});
 const scoreHistoryLinePoints = computed(() =>
   sleepScoreHistory.value.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
 );
@@ -507,11 +494,45 @@ const stageLabel = (stage: string) =>
     inBed: 'In bed',
   }[stage] ?? stage);
 
-const stageClass = (stage: string) => `is-${stage.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+// Hypnogram — fixed vertical bands top→bottom: Awake, REM, Light, Deep
+const STAGE_BANDS: Record<string, { y: number; h: number; fill: string }> = {
+  awake:              { y: 2,  h: 11, fill: 'rgba(255,215,0,0.88)' },
+  inBed:              { y: 2,  h: 11, fill: 'rgba(148,163,184,0.30)' },
+  out_of_bed:         { y: 2,  h: 11, fill: 'rgba(148,163,184,0.30)' },
+  unknown:            { y: 2,  h: 11, fill: 'rgba(148,163,184,0.20)' },
+  rem:                { y: 17, h: 12, fill: 'rgba(34,211,238,0.82)' },
+  light:              { y: 33, h: 12, fill: 'rgba(96,149,240,0.78)' },
+  asleep:             { y: 33, h: 12, fill: 'rgba(96,149,240,0.55)' },
+  sleeping:           { y: 33, h: 12, fill: 'rgba(96,149,240,0.55)' },
+  deep:               { y: 49, h: 12, fill: 'rgba(37,78,195,0.92)' },
+};
 
-const stageStyle = (stage: SleepStageTimeline) => ({
-  left: `${stage.offset}%`,
-  width: `${Math.max(stage.width, 2)}%`,
+const hypnogramBlocks = computed(() => {
+  const segs = [...(summary.value?.timeline ?? [])]
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  return segs.map(s => {
+    const key = s.stage?.toLowerCase() ?? '';
+    const band = STAGE_BANDS[key] ?? STAGE_BANDS.inBed;
+    return { x: s.offset, y: band.y, w: Math.max(s.width, 0.3), h: band.h, fill: band.fill };
+  });
+});
+
+const hypnogramConnectors = computed(() => {
+  const blocks = hypnogramBlocks.value;
+  const result: { x: number; y1: number; y2: number }[] = [];
+  for (let i = 1; i < blocks.length; i++) {
+    const prev = blocks[i - 1];
+    const curr = blocks[i];
+    const prevBottom = prev.y + prev.h;
+    if (Math.abs(prev.y - curr.y) > 0.5) {
+      // connector at end of previous block, spanning from prev band edge to curr band edge
+      const x = prev.x + prev.w;
+      const y1 = Math.min(prevBottom, curr.y + curr.h);
+      const y2 = Math.max(curr.y, prev.y);
+      result.push({ x, y1, y2 });
+    }
+  }
+  return result;
 });
 
 onIonViewWillEnter(async () => {
@@ -546,7 +567,7 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Card topline */
@@ -579,7 +600,7 @@ onIonViewWillEnter(async () => {
 .card-metric span {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.5);
@@ -602,47 +623,49 @@ onIonViewWillEnter(async () => {
   width: 100%;
   padding: 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.88rem;
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: border-color 150ms ease;
 }
 .sync-btn:disabled { opacity: 0.4; }
-.sync-btn:not(:disabled):active { background: rgba(255,255,255,0.1); }
+.sync-btn:not(:disabled):active { border-color: rgba(255, 255, 255, 0.12); }
 
 /* Date nav */
 .date-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .date-nav__label {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
   min-width: 110px;
   text-align: center;
 }
 
 .date-nav__btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   line-height: 1;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.date-nav__btn:disabled { opacity: 0.25; }
+.date-nav__btn ion-icon { font-size: 20px; }
+
+.date-nav__btn:disabled { opacity: 0.4; }
 
 /* Two-col layout */
 .two-col {
@@ -675,7 +698,7 @@ onIonViewWillEnter(async () => {
 .sleep-ring__track { stroke: rgba(255, 255, 255, 0.08); }
 
 .sleep-ring__progress {
-  stroke: var(--ion-color-danger);
+  stroke: rgb(239, 68, 68);
   stroke-linecap: round;
   stroke-dasharray: 289;
   stroke-dashoffset: calc(289 - (289 * var(--score)));
@@ -688,7 +711,7 @@ onIonViewWillEnter(async () => {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 6px;
   text-align: center;
 }
 
@@ -701,55 +724,53 @@ onIonViewWillEnter(async () => {
 
 .sleep-ring__content span {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
 }
 
-/* Stage timeline */
-.stage-lanes { display: grid; gap: 8px; }
+/* Hypnogram */
+.hypnogram-wrap { display: grid; gap: 6px; }
 
-.stage-lane {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
+.hypnogram-inner {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
 }
 
-.stage-lane__label {
-  font-size: 0.68rem;
+.hypnogram-svg {
+  flex: 1;
+  height: 90px;
+  display: block;
+}
+
+.hypnogram-labels {
+  position: relative;
+  width: 22px;
+  height: 90px;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
 }
 
-.stage-lane__bar {
-  position: relative;
-  height: 20px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.stage-lane__segment {
+.hypnogram-labels span {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  border-radius: 8px;
+  right: 0;
+  transform: translateY(-50%);
 }
 
-.stage-lane__segment.is-awake  { background: rgba(239, 68, 68, 0.8); }
-.stage-lane__segment.is-rem    { background: rgba(168, 85, 247, 0.8); }
-.stage-lane__segment.is-deep   { background: rgba(59, 130, 246, 0.85); }
-.stage-lane__segment.is-light  { background: rgba(34, 197, 94, 0.75); }
-.stage-lane__segment.is-asleep { background: rgba(249, 115, 22, 0.8); }
-.stage-lane__segment.is-in-bed { background: rgba(148, 163, 184, 0.5); }
+/* band midpoints as % of viewBox height (63): 7.5, 23, 39, 55 */
+.hypnogram-labels span:nth-child(1) { top: 11.9%; }
+.hypnogram-labels span:nth-child(2) { top: 36.5%; }
+.hypnogram-labels span:nth-child(3) { top: 61.9%; }
+.hypnogram-labels span:nth-child(4) { top: 87.3%; }
 
 .axis-row {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.08em;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Two-column sections */
@@ -767,30 +788,31 @@ onIonViewWillEnter(async () => {
 .stage-dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
-.stage-dot--awake  { background: rgba(239, 68, 68, 0.8); }
-.stage-dot--rem    { background: rgba(168, 85, 247, 0.8); }
-.stage-dot--deep   { background: rgba(59, 130, 246, 0.85); }
-.stage-dot--light  { background: rgba(34, 197, 94, 0.75); }
-.stage-dot--asleep { background: rgba(249, 115, 22, 0.8); }
+.stage-dot--awake  { background: rgba(255, 215, 0, 0.88); }
+.stage-dot--rem    { background: rgba(34, 211, 238, 0.82); }
+.stage-dot--light  { background: rgba(96, 149, 240, 0.78); }
+.stage-dot--deep   { background: rgba(37, 78, 195, 0.92); }
+.stage-dot--asleep { background: rgba(96, 149, 240, 0.55); }
 
 .stage-row span {
   flex: 1;
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .stage-row strong {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: #fff;
 }
 
 .stage-row small {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   min-width: 32px;
   text-align: right;
 }
@@ -806,7 +828,7 @@ onIonViewWillEnter(async () => {
 .heart-rate-chart,
 .score-history {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chart-svg {
@@ -817,7 +839,7 @@ onIonViewWillEnter(async () => {
 
 .chart-line {
   fill: none;
-  stroke: var(--ion-color-danger);
+  stroke: rgb(239, 68, 68);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -826,9 +848,8 @@ onIonViewWillEnter(async () => {
 .chart-area { fill: rgba(239, 68, 68, 0.12); }
 
 .chart-dot {
-  fill: var(--ion-color-danger);
+  fill: rgb(239, 68, 68);
   cursor: pointer;
-  transition: r 0.15s, filter 0.15s;
 }
 
 .chart-dot:hover,
@@ -849,7 +870,7 @@ onIonViewWillEnter(async () => {
 
 .chart-tooltip strong {
   font-size: 1.1rem;
-  color: var(--ion-color-danger);
+  color: rgb(239, 68, 68);
 }
 
 .chart-tooltip small {
@@ -865,14 +886,14 @@ onIonViewWillEnter(async () => {
 .score-history__labels span {
   position: absolute;
   transform: translateX(-50%);
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .empty-state {
   margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 @media (min-width: 600px) {

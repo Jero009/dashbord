@@ -1,0 +1,104 @@
+diff --git a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
+index 79d2eb7..99ff97b 100644
+--- a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
++++ b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
+@@ -62,36 +62,43 @@ class HealthPlugin : Plugin() {
+         }
+ 
+         pluginScope.launch {
+-            val client = getClientOrReject(call) ?: return@launch
+-            val permissions = manager.permissionsFor(readTypes, writeTypes, includeWorkouts)
++            try {
++                val client = getClientOrReject(call) ?: return@launch
++                val permissions = manager.permissionsFor(readTypes, writeTypes, includeWorkouts)
+ 
+-            if (permissions.isEmpty()) {
+-                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-                call.resolve(status)
+-                return@launch
+-            }
++                if (permissions.isEmpty()) {
++                    val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                    call.resolve(status)
++                    return@launch
++                }
+ 
+-            val granted = client.permissionController.getGrantedPermissions()
+-            if (granted.containsAll(permissions)) {
+-                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-                call.resolve(status)
+-                return@launch
+-            }
++                val granted = client.permissionController.getGrantedPermissions()
++                if (granted.containsAll(permissions)) {
++                    val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                    call.resolve(status)
++                    return@launch
++                }
+ 
+-            // Store types for callback
+-            pendingReadTypes = readTypes
+-            pendingWriteTypes = writeTypes
+-            pendingIncludeWorkouts = includeWorkouts
++                // Store types for callback
++                pendingReadTypes = readTypes
++                pendingWriteTypes = writeTypes
++                pendingIncludeWorkouts = includeWorkouts
+ 
+-            // Create intent using the Health Connect permission contract
+-            val intent = permissionContract.createIntent(context, permissions)
++                // Create intent using the Health Connect permission contract
++                val intent = permissionContract.createIntent(context, permissions)
+ 
+-            try {
+-                startActivityForResult(call, intent, "handlePermissionResult")
++                try {
++                    startActivityForResult(call, intent, "handlePermissionResult")
++                } catch (e: Exception) {
++                    pendingReadTypes = emptyList()
++                    pendingWriteTypes = emptyList()
++                    call.reject("Failed to launch Health Connect permission request.", null, e)
++                }
+             } catch (e: Exception) {
+                 pendingReadTypes = emptyList()
+                 pendingWriteTypes = emptyList()
+-                call.reject("Failed to launch Health Connect permission request.", null, e)
++                pendingIncludeWorkouts = false
++                call.reject(e.message ?: "Failed to request authorization.", null, e)
+             }
+         }
+     }
+@@ -110,9 +117,13 @@ class HealthPlugin : Plugin() {
+         pendingIncludeWorkouts = false
+ 
+         pluginScope.launch {
+-            val client = getClientOrReject(call) ?: return@launch
+-            val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-            call.resolve(status)
++            try {
++                val client = getClientOrReject(call) ?: return@launch
++                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                call.resolve(status)
++            } catch (e: Exception) {
++                call.reject(e.message ?: "Failed to resolve permission result.", null, e)
++            }
+         }
+     }
+ 
+@@ -133,9 +144,13 @@ class HealthPlugin : Plugin() {
+         }
+ 
+         pluginScope.launch {
+-            val client = getClientOrReject(call) ?: return@launch
+-            val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-            call.resolve(status)
++            try {
++                val client = getClientOrReject(call) ?: return@launch
++                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                call.resolve(status)
++            } catch (e: Exception) {
++                call.reject(e.message ?: "Failed to check authorization.", null, e)
++            }
+         }
+     }
+ 

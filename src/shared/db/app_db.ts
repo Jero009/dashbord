@@ -26,7 +26,8 @@ const EXPORT_DELETE_TABLES = [
   'finance_subscription',
   'finance_investment',
   'finance_account',
-  'net_worth_snapshot'
+  'net_worth_snapshot',
+  'circadian_log'
 ];
 
 const EXPORT_INSERT_TABLES = [
@@ -50,7 +51,8 @@ const EXPORT_INSERT_TABLES = [
   'finance_account',
   'finance_investment',
   'finance_subscription',
-  'net_worth_snapshot'
+  'net_worth_snapshot',
+  'circadian_log'
 ];
 
 function toSqlLiteral(value: unknown) {
@@ -285,6 +287,19 @@ async function doInitDB() {
     title TEXT NOT NULL,
     date TEXT NOT NULL,
     type TEXT DEFAULT 'general',
+    notes TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS circadian_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL UNIQUE,
+    day_type TEXT NOT NULL DEFAULT 'work',
+    energy_wake INTEGER,
+    energy_noon INTEGER,
+    energy_evening INTEGER,
+    meal_first TEXT,
+    meal_last TEXT,
+    morning_light INTEGER NOT NULL DEFAULT 0,
     notes TEXT
   );
 
@@ -757,6 +772,9 @@ async function doInitDB() {
     }
     if (!calColNames.has('recurrence')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN recurrence TEXT DEFAULT 'none';`);
+    }
+    if (!calColNames.has('end_date')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN end_date TEXT;`);
     }
 
     // One-time dedup: remove duplicate health_metric rows accumulated by the
@@ -1501,7 +1519,7 @@ export interface SleepSessionRecord {
   time_asleep_hours: number;
   time_in_bed_hours: number;
   efficiency: number;        // 0–1
-  score: number;             // 0–100
+  score: number | null;      // 0–100, null when insufficient sleep data
   sleep_hr: number | null;
   respiratory_rate: number | null;
   stage_deep_min: number;
@@ -1537,7 +1555,7 @@ export async function upsertSleepSession(record: Omit<SleepSessionRecord, 'sourc
       [
         record.date, record.bedtime, record.waketime,
         record.time_asleep_hours, record.time_in_bed_hours,
-        record.efficiency, record.score,
+        record.efficiency, record.score ?? null,
         record.sleep_hr ?? null, record.respiratory_rate ?? null,
         record.stage_deep_min ?? 0, record.stage_light_min ?? 0,
         record.stage_rem_min ?? 0, record.stage_awake_min ?? 0,
@@ -1562,6 +1580,42 @@ export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRe
   if (!db) return [];
   const result = await db.query(`SELECT * FROM sleep_session ORDER BY date DESC LIMIT ?;`, [limit]);
   return (result.values ?? []) as SleepSessionRecord[];
+}
+
+// Sleep sessions strictly before `date` (most recent first). Used to seed rolling
+// baselines at sync time so the first nights inside the sync window are scored
+// against prior persisted history instead of getting null/half-credit baselines.
+export async function getSleepSessionsBefore(date: string, limit: number): Promise<SleepSessionRecord[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM sleep_session WHERE date < ? ORDER BY date DESC LIMIT ?;`,
+    [date, limit]
+  );
+  return (result.values ?? []) as SleepSessionRecord[];
+}
+
+// Numeric values for a metric type strictly before `date` (most recent first).
+export async function getHealthMetricValuesBefore(type: string, date: string, limit: number): Promise<number[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT value FROM health_metric WHERE type = ? AND date < ? ORDER BY date DESC LIMIT ?;`,
+    [type, date, limit]
+  );
+  return ((result.values ?? []) as { value: number }[])
+    .map((r) => Number(r.value))
+    .filter((v) => Number.isFinite(v));
+}
+
+export async function getRecentHealthMetrics(type: string, limit: number = 30) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE type = ?
+     ORDER BY date DESC, id DESC
+     LIMIT ?;`,
+    [type, limit]
+  );
+  return result.values || [];
 }
 
 export async function addHabit(
@@ -1603,6 +1657,17 @@ export async function updateHabit(
     console.error('Error updating habit:', error);
     throw error;
   }
+}
+
+export async function getRecentHabitLogs(habitId: number, days: number) {
+  if (!db) return [] as { date: string; completed: number }[];
+  const result = await db.query(
+    `SELECT date, completed FROM habit_log
+     WHERE habit_id = ? AND date >= date('now', ?)
+     ORDER BY date DESC;`,
+    [habitId, `-${days} days`]
+  );
+  return (result.values ?? []) as { date: string; completed: number }[];
 }
 
 // Habits scheduled on specific weekdays (days_of_week = comma-separated 0-6,
@@ -1735,13 +1800,19 @@ export async function addCalendarEvent(
   timeStart?: string,
   timeEnd?: string,
   workoutTemplateId?: number,
-  recurrence?: string
+  recurrence?: string,
+  endDate?: string
 ) {
   if (!db) return;
   try {
+    // Allowlist event types: each has a defined battery drain rate in calculateBattery.
+    // An unknown type would silently fall through to the default 4/hr drain.
+    const safeType = ['general', 'workout', 'recovery', 'school', 'sleep', 'reminder'].includes(type)
+      ? type
+      : 'general';
     const result = await db.run(
-      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-      [title, date, type, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none']
+      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [title, date, safeType, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none', endDate ?? null]
     );
     return result;
   } catch (error) {
@@ -1754,11 +1825,12 @@ export async function getCalendarEventsForDate(date: string) {
   if (!db) return [];
   const result = await db.query(
     `SELECT * FROM calendar_event
-     WHERE date = ?
+     WHERE (end_date IS NULL OR end_date >= ?)
+       AND (date = ?
         OR (recurrence = 'daily' AND date < ?)
-        OR (recurrence = 'weekly' AND date < ? AND strftime('%w', date) = strftime('%w', ?))
+        OR (recurrence = 'weekly' AND date < ? AND strftime('%w', date) = strftime('%w', ?)))
      ORDER BY time_start ASC, id DESC;`,
-    [date, date, date, date]
+    [date, date, date, date, date]
   );
   return result.values || [];
 }
@@ -1766,6 +1838,11 @@ export async function getCalendarEventsForDate(date: string) {
 export async function deleteCalendarEvent(id: number) {
   if (!db) return;
   await db.run(`DELETE FROM calendar_event WHERE id = ?;`, [id]);
+}
+
+export async function stopCalendarEventAt(id: number, lastDate: string) {
+  if (!db) return;
+  await db.run(`UPDATE calendar_event SET end_date = ? WHERE id = ?;`, [lastDate, id]);
 }
 
 export async function deleteHabit(id: number) {
@@ -1788,16 +1865,19 @@ export async function getCalendarEventDatesForMonth(yearMonth: string) {
     ((exactResult.values ?? []) as { date: string }[]).map((r) => r.date)
   );
 
-  // Recurring events that started on or before month end
+  const monthStart = `${yearMonth}-01`;
+
+  // Recurring events that started on or before month end and haven't ended before month start
   const recurResult = await db.query(
-    `SELECT date, recurrence FROM calendar_event WHERE recurrence != 'none' AND recurrence IS NOT NULL AND date <= ?;`,
-    [monthEnd]
+    `SELECT date, recurrence, end_date FROM calendar_event WHERE recurrence != 'none' AND recurrence IS NOT NULL AND date <= ? AND (end_date IS NULL OR end_date >= ?);`,
+    [monthEnd, monthStart]
   );
-  for (const row of (recurResult.values ?? []) as { date: string; recurrence: string }[]) {
+  for (const row of (recurResult.values ?? []) as { date: string; recurrence: string; end_date: string | null }[]) {
     const startDow = new Date(row.date + 'T12:00:00').getDay();
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${yearMonth}-${String(d).padStart(2, '0')}`;
       if (dateStr < row.date) continue; // before this event's start
+      if (row.end_date && dateStr > row.end_date) continue; // after end date
       if (row.recurrence === 'daily') {
         dates.add(dateStr);
       } else if (row.recurrence === 'weekly') {
@@ -2011,8 +2091,10 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     return { success: false, message: 'No valid SQL statements found in file.' };
   }
 
-  // Keep import ordering in lockstep with export so no table's backup data
-  // is silently dropped on restore.
+  // Mirror the export lists exactly so import order can never drift from what gets
+  // exported. Previously these omitted exercise_pr, sleep_session and body_log, so
+  // their DELETE/INSERT statements were parsed but never executed on restore —
+  // silently dropping PR, sleep-history and body-weight data.
   const deleteOrder = EXPORT_DELETE_TABLES;
   const insertOrder = EXPORT_INSERT_TABLES;
 
@@ -2284,4 +2366,61 @@ export async function getExerciseStats(exerciseId: number) {
     pr,
     history
   };
+}
+
+// ── Circadian log ────────────────────────────────────────────────────────────
+
+export interface CircadianLogEntry {
+  id?: number;
+  date: string;
+  day_type: string;        // 'work' | 'free'
+  energy_wake: number | null;
+  energy_noon: number | null;
+  energy_evening: number | null;
+  meal_first: string | null;  // HH:MM
+  meal_last: string | null;   // HH:MM
+  morning_light: number;      // 0 | 1
+  notes: string | null;
+}
+
+export async function upsertCircadianLog(entry: Omit<CircadianLogEntry, 'id'>) {
+  if (!db) return;
+  await db.run(
+    `INSERT INTO circadian_log
+       (date, day_type, energy_wake, energy_noon, energy_evening,
+        meal_first, meal_last, morning_light, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET
+       day_type       = excluded.day_type,
+       energy_wake    = excluded.energy_wake,
+       energy_noon    = excluded.energy_noon,
+       energy_evening = excluded.energy_evening,
+       meal_first     = excluded.meal_first,
+       meal_last      = excluded.meal_last,
+       morning_light  = excluded.morning_light,
+       notes          = excluded.notes;`,
+    [
+      entry.date, entry.day_type,
+      entry.energy_wake ?? null, entry.energy_noon ?? null, entry.energy_evening ?? null,
+      entry.meal_first ?? null, entry.meal_last ?? null,
+      entry.morning_light, entry.notes ?? null,
+    ]
+  );
+}
+
+export async function getCircadianLog(date: string): Promise<CircadianLogEntry | null> {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM circadian_log WHERE date = ?;`, [date]
+  );
+  return ((result.values ?? []) as CircadianLogEntry[])[0] ?? null;
+}
+
+export async function getRecentCircadianLogs(days = 30): Promise<CircadianLogEntry[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM circadian_log WHERE date >= date('now', ?) ORDER BY date DESC;`,
+    [`-${days} days`]
+  );
+  return (result.values ?? []) as CircadianLogEntry[];
 }

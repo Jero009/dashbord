@@ -30,6 +30,18 @@
             <p class="section-kicker">Battery</p>
             <span class="card-date">{{ todayDateLabel }}</span>
           </div>
+
+          <div class="scores-row">
+            <div class="score-tile">
+              <span class="score-tile__label">Battery</span>
+              <strong class="score-tile__val" :style="{ color: batteryColor }">{{ batteryScore !== null ? batteryScore : '—' }}</strong>
+            </div>
+            <div class="score-tile">
+              <span class="score-tile__label">Sleep score</span>
+              <strong class="score-tile__val" :style="{ color: sleepScoreColor }">{{ sleepScoreVal !== null ? sleepScoreVal : '—' }}</strong>
+            </div>
+          </div>
+
           <div class="summary-card__body">
 
             <div class="battery-ring">
@@ -71,7 +83,7 @@
                   <strong>{{ stepsDisplay }}</strong>
                 </div>
                 <div class="card-metric">
-                  <span>Morning</span>
+                  <span>Readiness</span>
                   <strong>{{ baseline ?? '—' }}</strong>
                 </div>
               </div>
@@ -84,6 +96,135 @@
             <canvas ref="batteryChartRef"></canvas>
           </div>
         </ion-card>
+
+        <!-- Circadian alertness card -->
+        <ion-card v-if="circCurve.length" class="circ-card">
+          <div class="circ-header">
+            <p class="section-kicker">Circadian · alertness</p>
+            <span class="circ-now-pill" v-if="circNowLabel">{{ circNowLabel }}</span>
+          </div>
+
+          <!-- Insufficient data: don't present a fallback curve as if it were real -->
+          <div v-if="circInsufficient" class="circ-insufficient">
+            <span>Log 3+ nights of sleep to map your alertness curve.</span>
+          </div>
+
+          <!-- Colored alertness chart -->
+          <div v-else class="circ-chart-wrap">
+            <svg viewBox="0 0 24 10" class="circ-svg" preserveAspectRatio="none">
+              <!-- Zone bands (cognitive / exercise / rest) -->
+              <rect v-if="circWindows?.cognitiveStart != null"
+                :x="circWindows.cognitiveStart"
+                y="0"
+                :width="((circWindows.cognitiveEnd - circWindows.cognitiveStart + 24) % 24)"
+                height="10"
+                fill="rgba(255,255,255,0.08)" />
+              <rect v-if="circWindows?.exerciseMorning"
+                :x="circWindows.exerciseMorning.start"
+                y="0"
+                :width="circWindows.exerciseMorning.end - circWindows.exerciseMorning.start"
+                height="10"
+                fill="rgba(34,197,94,0.12)" />
+              <rect v-if="circWindows?.exerciseAfternoon"
+                :x="circWindows.exerciseAfternoon.start"
+                y="0"
+                :width="circWindows.exerciseAfternoon.end - circWindows.exerciseAfternoon.start"
+                height="10"
+                fill="rgba(34,197,94,0.12)" />
+              <!-- Alertness area -->
+              <polygon :points="circAreaPoints" fill="rgba(239,68,68,0.12)" />
+              <!-- Alertness line -->
+              <polyline :points="circLinePoints" fill="none" stroke="rgb(239,68,68)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
+              <!-- Now line -->
+              <line :x1="circNowX" :x2="circNowX" y1="0" y2="10"
+                stroke="rgba(255,255,255,0.5)" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
+            </svg>
+            <div class="circ-axis">
+              <span>0</span><span>6</span><span>12</span><span>18</span>
+            </div>
+          </div>
+
+          <!-- Zone legend -->
+          <div v-if="!circInsufficient" class="circ-legend">
+            <span class="circ-legend-dot circ-legend-dot--focus"></span><span>Focus</span>
+            <span class="circ-legend-dot circ-legend-dot--exercise"></span><span>Exercise</span>
+            <span class="circ-legend-dot circ-legend-dot--curve"></span><span>Curve</span>
+          </div>
+
+          <!-- Quick-log trigger → opens a focused bottom sheet for the current slot -->
+          <button v-if="timeSlot !== 'night'" class="circ-log-trigger" @click="openCircSheet">
+            <span class="circ-log-trigger-label">{{ circSlotPrompt }}</span>
+            <ion-icon :icon="chevronUpOutline" />
+          </button>
+          <div v-else class="circ-log-complete">
+            <span>Day logged · rest well</span>
+          </div>
+        </ion-card>
+
+        <!-- Circadian quick-log bottom sheet -->
+        <ion-modal :is-open="circSheetOpen" :breakpoints="[0, 0.5]" :initial-breakpoint="0.5"
+          class="circ-sheet" @didDismiss="circSheetOpen = false">
+          <div class="circ-sheet-body">
+            <p class="section-kicker">{{ circSlotTitle }}</p>
+
+            <!-- Day type: morning, or any time it isn't set yet -->
+            <div v-if="timeSlot === 'morning' || circDayType === 'work'" class="circ-log-row">
+              <span class="circ-log-label">Today</span>
+              <button class="circ-type-btn" :class="{ 'circ-type-btn--active': circDayType === 'work' }"
+                @click="circDayType = 'work'; logCircadianField('day_type', 'work')">Work</button>
+              <button class="circ-type-btn" :class="{ 'circ-type-btn--active': circDayType === 'free' }"
+                @click="circDayType = 'free'; logCircadianField('day_type', 'free')">Free day</button>
+            </div>
+
+            <!-- Morning: morning light + wake energy -->
+            <template v-if="timeSlot === 'morning'">
+              <div class="circ-log-row">
+                <span class="circ-log-label">Morning light</span>
+                <button class="circ-light-btn" :class="{ 'circ-light-btn--on': circMorningLight }"
+                  @click="circMorningLight = !circMorningLight; logCircadianField('morning_light', circMorningLight ? 1 : 0)">
+                  {{ circMorningLight ? 'Got it' : 'Not yet' }}
+                </button>
+              </div>
+              <div class="circ-log-row">
+                <span class="circ-log-label">Wake energy</span>
+                <div class="circ-energy-row">
+                  <button v-for="v in [2,4,6,8,10]" :key="v"
+                    class="circ-energy-btn"
+                    :class="{ 'circ-energy-btn--active': circEnergyWake === v }"
+                    @click="circEnergyWake = v; logCircadianField('energy_wake', v)">{{ v }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Noon: noon energy -->
+            <template v-if="timeSlot === 'noon'">
+              <div class="circ-log-row">
+                <span class="circ-log-label">Noon energy</span>
+                <div class="circ-energy-row">
+                  <button v-for="v in [2,4,6,8,10]" :key="v"
+                    class="circ-energy-btn"
+                    :class="{ 'circ-energy-btn--active': circEnergyNoon === v }"
+                    @click="circEnergyNoon = v; logCircadianField('energy_noon', v)">{{ v }}</button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Evening: evening energy -->
+            <template v-if="timeSlot === 'evening'">
+              <div class="circ-log-row">
+                <span class="circ-log-label">Evening energy</span>
+                <div class="circ-energy-row">
+                  <button v-for="v in [2,4,6,8,10]" :key="v"
+                    class="circ-energy-btn"
+                    :class="{ 'circ-energy-btn--active': circEnergyEvening === v }"
+                    @click="circEnergyEvening = v; logCircadianField('energy_evening', v)">{{ v }}</button>
+                </div>
+              </div>
+            </template>
+
+            <button class="circ-sheet-done" @click="circSheetOpen = false">Done</button>
+          </div>
+        </ion-modal>
 
         <!-- Last workout card (big) -->
         <ion-card v-if="!activeWorkout && latestWorkout" class="workout-hero-card">
@@ -139,33 +280,6 @@
           </div>
         </ion-card>
 
-        <!-- Weekly digest -->
-        <ion-card v-if="digest" class="digest-card">
-          <div class="card-topline">
-            <p class="section-kicker">This week</p>
-            <span class="digest-trend" v-if="digest.readinessTrend !== null" :class="digest.readinessTrend >= 0 ? 'trend--up' : 'trend--down'">
-              {{ digest.readinessTrend >= 0 ? '+' : '' }}{{ digest.readinessTrend }} readiness
-            </span>
-          </div>
-          <div class="digest-grid">
-            <div class="digest-tile">
-              <span class="digest-label">Sleep avg</span>
-              <span class="digest-value">{{ digest.avgSleep !== null ? digest.avgSleep.toFixed(1) + ' h' : '—' }}</span>
-            </div>
-            <div class="digest-tile">
-              <span class="digest-label">Steps avg</span>
-              <span class="digest-value">{{ digest.avgSteps !== null ? Math.round(digest.avgSteps).toLocaleString() : '—' }}</span>
-            </div>
-            <div class="digest-tile">
-              <span class="digest-label">Readiness</span>
-              <span class="digest-value">{{ digest.avgReadiness !== null ? Math.round(digest.avgReadiness) : '—' }}</span>
-            </div>
-            <div class="digest-tile">
-              <span class="digest-label">Workouts</span>
-              <span class="digest-value">{{ digest.workoutCount }}</span>
-            </div>
-          </div>
-        </ion-card>
 
         <!-- Day timeline -->
         <section class="day-view-card">
@@ -184,7 +298,7 @@
               @click="toggleTodayHabit(h)"
             >
               <div class="habit-block__check">
-                <span v-if="h.completed === 1">✓</span>
+                <ion-icon v-if="h.completed === 1" :icon="checkmark" />
               </div>
               <span class="habit-block__name">{{ h.name }}</span>
               <span v-if="h.time" class="habit-block__time">{{ h.time }}</span>
@@ -195,7 +309,7 @@
           <div v-if="allDayItems.length" class="allday-strip">
             <div v-for="item in allDayItems" :key="item.key" class="allday-pill" :class="item.cls">
               <span v-if="item.isHabit" class="allday-check" :class="{ 'allday-check--done': item.done }" @click="item.toggle && item.toggle()">
-                {{ item.done ? '✓' : '○' }}
+                <ion-icon :icon="item.done ? checkmark : ellipseOutline" />
               </span>
               {{ item.label }}
               <button
@@ -252,7 +366,7 @@
                 :style="{ top: h.top + 'px' }"
                 @click="toggleTodayHabit(h)"
               >
-                <span class="habit-pill__check">{{ h.completed === 1 ? '✓' : '○' }}</span>
+                <span class="habit-pill__check"><ion-icon :icon="h.completed === 1 ? checkmark : ellipseOutline" /></span>
                 {{ h.name }}, {{ h.time }}
               </div>
 
@@ -267,15 +381,20 @@
 </template>
 
 <script setup lang="ts">
-import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonCard, IonContent, IonHeader, IonIcon, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { checkmark, ellipseOutline, chevronUpOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getWeeklyDigest } from '@/shared/db/app_db';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
+import { computeCircadianProfile, computeAlertnessCurve, computeCircadianWindows, type CircadianProfile, type AlertnessPoint, type CircadianWindows, type DayType } from '@/shared/health/circadian';
+import { getRecentCircadianLogs, getCircadianLog, upsertCircadianLog, getRecentSleepSessions } from '@/shared/db/app_db';
+import { scheduleCircadianNudges } from '@/shared/utils/notifications';
 import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
+import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess, hapticSelect } from '@/shared/utils/haptics';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
@@ -341,16 +460,19 @@ const loadTodayWeight = async () => {
 };
 
 const logQuickWeight = async () => {
+  hapticMedium();
   const val = parseFloat(quickWeightInput.value);
   if (!val || val <= 0) return;
   await insertBodyLog({ date: todayStr, weight_kg: val });
   quickWeightInput.value = '';
   await loadTodayWeight();
+  hapticSuccess();
   const t = await toastController.create({ message: 'Logged', duration: 1500, color: 'success' });
   await t.present();
 };
 
 const sleepHours = ref<number | null>(null);
+const sleepScoreVal = ref<number | null>(null);
 const steps = ref<number | null>(null);
 const restingHr = ref<number | null>(null);
 const readinessBaselineScore = ref<number | null>(null);
@@ -424,11 +546,13 @@ const loadActiveWorkout = async () => {
 };
 
 const backToWorkout = async () => {
+  hapticLight();
   const w = await getActiveWorkout();
   if (w) router.push(`/workout/${w.id}`);
 };
 
 const repeatLastWorkout = async () => {
+  hapticMedium();
   const templateId = latestWorkout.value?.id_workout_template
   if (!templateId) return
   const workoutId = await startWorkoutFromTemplate(templateId)
@@ -436,6 +560,7 @@ const repeatLastWorkout = async () => {
 }
 
 const startEventWorkout = async (templateId: number) => {
+  hapticHeavy();
   const workoutId = await startWorkoutFromTemplate(templateId);
   if (workoutId) router.push(`/workout/${workoutId}`);
 };
@@ -450,8 +575,6 @@ const todayWorkouts = ref<{ id: number; name: string | null; time_start: string;
 const todayActivities = ref<ActivitySummary[]>([]);
 const timelineEl = ref<HTMLElement | null>(null);
 
-type DigestResult = Awaited<ReturnType<typeof getWeeklyDigest>>;
-const digest = ref<DigestResult | null>(null);
 
 const todayDateLabel = computed(() =>
   new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -559,6 +682,9 @@ const baseline = computed(() => {
     sleepHeartRate: null,
     respiratoryRate: null,
     steps: steps.value,
+    rhrBaseline: null,
+    sleepHrBaseline: null,
+    respiratoryRateBaseline: null,
   });
 });
 
@@ -578,11 +704,19 @@ const batteryRatio = computed(() => batteryScore.value === null ? 0 : batterySco
 const batteryDashOffset = computed(() => 289 - 289 * batteryRatio.value);
 const batteryColor = computed(() => {
   const s = batteryScore.value;
-  if (s === null) return 'rgba(255,255,255,0.2)';
+  if (s === null) return 'rgba(255,255,255,0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgb(234,179,8)';
+  if (s >= 45) return 'rgba(255,255,255,0.85)';
   return 'var(--ion-color-accent-red)';
 });
+const sleepScoreColor = computed(() => {
+  const s = sleepScoreVal.value;
+  if (s === null) return '#fff';
+  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 45) return 'rgba(255,255,255,0.85)';
+  return 'var(--ion-color-accent-red)';
+});
+
 const drainParts = computed(() => {
   const d = battery.value?.drains;
   if (!d) return [];
@@ -626,6 +760,7 @@ const loadSummary = async () => {
   sleepHours.value = latestSleep ? Number(latestSleep.value) : null;
   const sleepEfficiency = latestSleepEfficiency ? Number(latestSleepEfficiency.value) / 100 : null;
   const sleepScore = latestSleepScore ? Number(latestSleepScore.value) : null;
+  sleepScoreVal.value = sleepScore;
   const sleepHeartRate = latestSleepHeartRate ? Number(latestSleepHeartRate.value) : null;
   const respiratoryRate = latestRespiratoryRate ? Number(latestRespiratoryRate.value) : null;
   steps.value = latestSteps ? Number(latestSteps.value) : null;
@@ -643,14 +778,23 @@ const loadSummary = async () => {
       sleepHeartRate,
       respiratoryRate,
       steps: steps.value,
+      rhrBaseline: null,
+      sleepHrBaseline: null,
+      respiratoryRateBaseline: null,
     });
   }
 };
 
 
 const toggleTodayHabit = async (h: Record<string, any>) => {
+  const completing = h.completed !== 1;
+  if (completing) {
+    hapticSuccess();
+  } else {
+    hapticLight();
+  }
   const today = localDateISO();
-  await toggleHabitCompletion(h.id, today, h.completed !== 1);
+  await toggleHabitCompletion(h.id, today, completing);
   todayHabits.value = await getHabitsWithStatus(today);
 };
 
@@ -700,7 +844,7 @@ const buildBatteryChart = () => {
         },
         {
           data: futureData,
-          borderColor: 'rgba(255,255,255,0.2)',
+          borderColor: 'rgba(255,255,255,0.25)',
           backgroundColor: 'transparent',
           borderWidth: 1.5,
           borderDash: [5, 4],
@@ -726,17 +870,183 @@ const buildBatteryChart = () => {
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, maxTicksLimit: 6 },
-          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, maxTicksLimit: 6 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         },
         y: {
           min: 0,
           max: 100,
-          ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, stepSize: 25 },
-          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 }, stepSize: 25 },
+          grid: { color: 'rgba(255,255,255,0.1)' },
         }
       }
     }
+  });
+};
+
+// ── Circadian ────────────────────────────────────────────────────────────────
+
+const circProfile     = ref<CircadianProfile | null>(null);
+const circCurve       = ref<AlertnessPoint[]>([]);
+const circWindows     = ref<CircadianWindows | null>(null);
+const circDayType     = ref<'work' | 'free'>('work');
+const circEnergyWake  = ref<number | null>(null);
+const circEnergyNoon  = ref<number | null>(null);
+const circEnergyEvening = ref<number | null>(null);
+const circMorningLight  = ref(false);
+const circWakeHour    = ref(7);
+const circSheetOpen   = ref(false);
+
+const circInsufficient = computed(() => (circProfile.value?.dataQuality ?? 'insufficient') === 'insufficient');
+
+// Time-of-day slot anchored to the user's wake time (not wall clock), so the right
+// question surfaces for early/late chronotypes. Hours since wake: 0–5 morning,
+// 5–10 noon, 10–16 evening, otherwise night/pre-wake.
+const timeSlot = computed((): 'morning' | 'noon' | 'evening' | 'night' => {
+  const now = new Date(nowTick.value);
+  const h = now.getHours() + now.getMinutes() / 60;
+  let sinceWake = h - circWakeHour.value;
+  if (sinceWake < 0) sinceWake += 24;
+  if (sinceWake < 5)  return 'morning';
+  if (sinceWake < 10) return 'noon';
+  if (sinceWake < 16) return 'evening';
+  return 'night';
+});
+
+const circSlotTitle = computed(() => (
+  timeSlot.value === 'morning' ? 'Morning check-in'
+  : timeSlot.value === 'noon'  ? 'Midday energy'
+  : timeSlot.value === 'evening' ? 'Evening wind-down'
+  : 'Today'
+));
+
+const circSlotPrompt = computed(() => {
+  if (timeSlot.value === 'morning') return circEnergyWake.value == null ? 'Log morning light & energy' : 'Morning logged · edit';
+  if (timeSlot.value === 'noon')    return circEnergyNoon.value == null ? 'Log your midday energy' : 'Midday logged · edit';
+  if (timeSlot.value === 'evening') return circEnergyEvening.value == null ? 'Log your evening energy' : 'Evening logged · edit';
+  return 'Log today';
+});
+
+const openCircSheet = () => { hapticLight(); circSheetOpen.value = true; };
+
+function circFmtHour(h: number): string {
+  const n = ((h % 24) + 24) % 24;
+  return `${String(Math.floor(n)).padStart(2,'0')}:${String(Math.round((n % 1) * 60)).padStart(2,'0')}`;
+}
+
+function circInWindow(h: number, start: number, end: number): boolean {
+  if (end >= start) return h >= start && h <= end;
+  return h >= start || h <= end;
+}
+
+const circNowX = computed(() => {
+  const now = new Date(nowTick.value);
+  return now.getHours() + now.getMinutes() / 60;
+});
+
+const circLinePoints = computed(() =>
+  circCurve.value.map(p => `${p.hour},${(1 - p.alertness) * 9 + 0.5}`).join(' ')
+);
+
+const circAreaPoints = computed(() => {
+  if (!circCurve.value.length) return '';
+  const line = circLinePoints.value;
+  return `0,10 ${line} 23,10`;
+});
+
+const circNowLabel = computed(() => {
+  const w = circWindows.value;
+  if (!w) return '';
+  const h = circNowX.value;
+  if (circInWindow(h, w.cognitiveStart, w.cognitiveEnd)) return 'Focus time';
+  if (w.exerciseMorning && circInWindow(h, w.exerciseMorning.start, w.exerciseMorning.end)) return 'Good for exercise';
+  if (w.exerciseAfternoon && circInWindow(h, w.exerciseAfternoon.start, w.exerciseAfternoon.end)) return 'Good for exercise';
+  const sleepOnset = circProfile.value?.avgSleepOnset ?? 23;
+  if (circInWindow(h, sleepOnset - 1, sleepOnset + 1)) return 'Wind down';
+  if (h > w.lastMealBy || h < 6) return 'Rest period';
+  return 'Light tasks';
+});
+
+const loadCircadian = async () => {
+  try {
+    const sessions = await getRecentSleepSessions(14);
+    const logs     = await getRecentCircadianLogs(14);
+
+    const dayTypes = new Map<string, DayType>(logs.map(l => [l.date, l.day_type as DayType]));
+    const sleepRecs = sessions.map(s => ({
+      date: s.date, bedtime: s.bedtime, waketime: s.waketime,
+      timeAsleepHours: s.time_asleep_hours, efficiency: s.efficiency,
+    }));
+
+    const profile = computeCircadianProfile(sleepRecs, dayTypes);
+    circProfile.value = profile;
+
+    const avgWake = sleepRecs.length
+      ? sleepRecs.slice(0, 7).reduce((acc, r) => {
+          const d = new Date(r.waketime); return acc + d.getHours() + d.getMinutes() / 60;
+        }, 0) / Math.min(sleepRecs.length, 7)
+      : 7.0;
+
+    circWakeHour.value = avgWake;
+    circCurve.value   = computeAlertnessCurve(profile, avgWake);
+    circWindows.value = computeCircadianWindows(profile, avgWake);
+
+    // Restore today's log state
+    const todayLog = logs.find(l => l.date === todayStr);
+    if (todayLog) {
+      circDayType.value       = todayLog.day_type as 'work' | 'free';
+      circEnergyWake.value    = todayLog.energy_wake    ?? null;
+      circEnergyNoon.value    = todayLog.energy_noon    ?? null;
+      circEnergyEvening.value = todayLog.energy_evening ?? null;
+      circMorningLight.value  = todayLog.morning_light  === 1;
+    }
+
+    // Wake-relative nudges; skip any slot already logged today. Only meaningful once
+    // there's enough data to anchor a personalized schedule.
+    if (circWindows.value && !circInsufficient.value) {
+      const w = circWindows.value;
+      const cogLabel = `${circFmtHour(w.cognitiveStart)}–${circFmtHour(w.cognitiveEnd)}`;
+      const eveningHour = (w.bedtimeTarget - 2 + 24) % 24;
+      scheduleCircadianNudges({
+        morning: todayLog?.energy_wake == null ? {
+          time: circFmtHour(avgWake + 0.5),
+          title: 'Morning check-in',
+          body: `Focus window today: ${cogLabel}. Get outdoor light now and log your wake energy.`,
+        } : null,
+        noon: todayLog?.energy_noon == null ? {
+          time: circFmtHour(avgWake + 5),
+          title: 'Midday energy log',
+          body: 'How is your energy? Log it to calibrate your circadian profile.',
+        } : null,
+        evening: todayLog?.energy_evening == null ? {
+          time: circFmtHour(eveningHour),
+          title: 'Evening wind-down',
+          body: 'Log your evening energy and start winding down for a consistent bedtime.',
+        } : null,
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error('[HomePage] circadian load failed:', e);
+  }
+};
+
+const logCircadianField = async (field: string, value: unknown) => {
+  hapticSelect();
+  // Merge onto the freshly-read persisted row and change only the tapped field.
+  // Rebuilding from refs could clobber values set on another surface (e.g. day_type
+  // chosen on CircadianPage) with a stale ref.
+  const existing = await getCircadianLog(todayStr);
+  await upsertCircadianLog({
+    date:           todayStr,
+    day_type:       existing?.day_type     ?? circDayType.value,
+    energy_wake:    existing?.energy_wake   ?? null,
+    energy_noon:    existing?.energy_noon   ?? null,
+    energy_evening: existing?.energy_evening ?? null,
+    meal_first:     existing?.meal_first    ?? null,
+    meal_last:      existing?.meal_last     ?? null,
+    morning_light:  existing?.morning_light ?? 0,
+    notes:          existing?.notes         ?? null,
+    [field]: value,
   });
 };
 
@@ -746,11 +1056,11 @@ const loadAll = async () => {
     loadSummary(),
     loadActiveWorkout(),
     loadTodayWeight(),
+    loadCircadian(),
     getCalendarEventsForDate(todayStr).then((evs) => { todayEvents.value = evs; }),
     getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
-    getWeeklyDigest().then((d) => { digest.value = d; }),
   ]);
   await new Promise(r => setTimeout(r, 60));
   buildBatteryChart();
@@ -800,10 +1110,10 @@ onMounted(async () => {
 
 .workout-hero-card {
   margin: 0;
-  padding: 20px 18px 18px;
+  padding: 18px;
   border-radius: 12px;
   background: var(--ion-color-primary);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .workout-hero__topline {
@@ -819,8 +1129,8 @@ onMounted(async () => {
 
 .workout-hero__name {
   margin: 0 0 16px;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: #fff;
   line-height: 1.2;
 }
@@ -832,24 +1142,26 @@ onMounted(async () => {
 .workout-hero__start {
   width: 100%;
   padding: 12px;
-  background: var(--ion-color-accent-red);
+  background: rgb(239, 68, 68);
   border: none;
   border-radius: 8px;
   color: #fff;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.02em;
+  transition: background-color 150ms ease;
+}
+
+.workout-hero__start:hover {
+  background: rgb(220, 38, 38);
 }
 
 .active-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  border: 2px solid rgba(255, 215, 0, 0.35);
+  background: var(--ion-color-primary);
+  border: 1px solid rgba(255, 215, 0, 0.35);
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 150ms ease;
 }
-
-.active-card:active { transform: scale(0.98); }
 
 .card-topline {
   display: flex;
@@ -868,7 +1180,38 @@ onMounted(async () => {
 
 .card-date {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 3-score row */
+.scores-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.score-tile {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-tile__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.score-tile__val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
 }
 
 /* Battery / Readiness layout */
@@ -893,17 +1236,17 @@ onMounted(async () => {
 
 .ready-chips {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ready-chip {
   flex: 1;
-  padding: 8px 10px;
+  padding: 10px;
   border-radius: 10px;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-align: center;
-  transition: background 0.2s;
+  transition: background-color 150ms ease;
 }
 
 .ready-chip--on {
@@ -913,23 +1256,22 @@ onMounted(async () => {
 }
 
 .ready-chip--off {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .drain-line {
   margin: 0;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .battery-timeline {
   height: 90px;
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Metric tiles */
@@ -961,6 +1303,7 @@ onMounted(async () => {
 .card-metric strong {
   display: block;
   font-size: 0.95rem;
+  font-weight: 600;
   color: #fff;
 }
 
@@ -992,7 +1335,6 @@ onMounted(async () => {
   font-weight: 700;
   color: rgb(255, 215, 0);
   font-family: 'Doto', monospace;
-  letter-spacing: 0.05em;
 }
 
 .active-card__timer--rest {
@@ -1031,7 +1373,6 @@ onMounted(async () => {
   stroke: var(--ion-color-accent-red);
   stroke-linecap: round;
   stroke-dasharray: 289;
-  transition: stroke-dashoffset 300ms linear;
 }
 
 .readiness-ring__content {
@@ -1041,19 +1382,20 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 6px;
   text-align: center;
   color: #fff;
 }
 
 .readiness-ring__content strong {
   font-size: 3rem;
+  font-weight: 700;
   line-height: 1;
   color: #fff;
 }
 
 .readiness-ring__content span {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Day view */
@@ -1084,20 +1426,20 @@ onMounted(async () => {
   gap: 10px;
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .habit-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.4rem;
+  gap: 6px;
   padding: 12px 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .habit-block--done {
@@ -1108,15 +1450,18 @@ onMounted(async () => {
 .habit-block__check {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
   color: #fff;
   flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.habit-block__check ion-icon {
+  font-size: 20px;
 }
 
 .habit-block--done .habit-block__check {
@@ -1125,7 +1470,7 @@ onMounted(async () => {
 }
 
 .habit-block__name {
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.85);
   line-height: 1.2;
 }
@@ -1136,39 +1481,53 @@ onMounted(async () => {
 }
 
 .habit-block__time {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* All-day strip */
 .allday-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .allday-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 6px;
   padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
   background: rgba(255, 255, 255, 0.08);
 }
 
-.allday-pill--workout   { background: rgba(239, 68, 68, 0.2);   color: var(--ion-color-accent-red); }
-.allday-pill--recovery  { background: rgba(52, 211, 153, 0.15); color: rgb(52, 211, 153); }
-.allday-pill--reminder  { background: rgba(251, 191, 36, 0.15); color: rgb(251, 191, 36); }
-.allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.7); }
-.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: var(--ion-color-accent-red); }
+.allday-pill--workout   { background: rgba(239, 68, 68, 0.15);  color: rgb(239, 68, 68); }
+.allday-pill--recovery  { background: rgba(34, 197, 94, 0.15);  color: rgb(34, 197, 94); }
+.allday-pill--reminder  { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.allday-pill--habit     { background: rgba(239, 68, 68, 0.1);   color: rgba(255,255,255,0.85); }
+.allday-pill--habit-done { background: rgba(239, 68, 68, 0.25); color: rgb(239, 68, 68); }
 
-.allday-check { cursor: pointer; font-size: 0.75rem; }
+.allday-check {
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.allday-check ion-icon { font-size: 20px; }
+
+/* extend tap target without changing visual size */
+.allday-check::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
 .allday-check--done { color: var(--ion-color-accent-red); }
 
 /* Scrollable timeline */
@@ -1195,10 +1554,10 @@ onMounted(async () => {
 .hour-label {
   width: 40px;
   flex-shrink: 0;
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.28);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.25);
   text-align: right;
-  padding-right: 8px;
+  padding-right: 10px;
   margin-top: -0.45em;
   line-height: 1;
 }
@@ -1206,7 +1565,7 @@ onMounted(async () => {
 .hour-line {
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Now line */
@@ -1224,7 +1583,7 @@ onMounted(async () => {
 .now-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--ion-color-accent-red);
   margin-left: -3px;
   flex-shrink: 0;
@@ -1235,20 +1594,20 @@ onMounted(async () => {
   position: absolute;
   left: 48px;
   right: 4px;
-  border-radius: 8px;
-  padding: 5px 8px;
+  border-radius: 10px;
+  padding: 6px 10px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ev-block--workout  { background: rgba(239, 68, 68, 0.25); }
-.ev-block--recovery { background: rgba(52, 211, 153, 0.18); }
-.ev-block--reminder { background: rgba(251, 191, 36, 0.18); }
-.ev-block--sleep    { background: rgba(255, 255, 255, 0.06); }
+.ev-block--recovery { background: rgba(34, 197, 94, 0.15); }
+.ev-block--reminder { background: rgba(255, 255, 255, 0.08); }
+.ev-block--sleep    { background: rgba(255, 255, 255, 0.05); }
 
 .ev-title {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -1258,8 +1617,8 @@ onMounted(async () => {
 
 .ev-time {
   display: block;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 1px;
 }
 
@@ -1268,14 +1627,14 @@ onMounted(async () => {
   position: absolute;
   left: 48px;
   right: 4px;
-  height: 22px;
-  border-radius: 20px;
+  height: 24px;
+  border-radius: 999px;
   padding: 0 10px;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
   cursor: pointer;
@@ -1289,34 +1648,38 @@ onMounted(async () => {
 }
 
 .habit-pill__check {
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
   color: var(--ion-color-accent-red);
   flex-shrink: 0;
 }
 
+.habit-pill__check ion-icon { font-size: 20px; }
+
 .day-view__empty {
   margin: 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .ev-start-btn {
   margin-top: 3px;
-  padding: 2px 8px;
-  background: var(--ion-color-accent-red);
+  padding: 2px 10px;
+  background: rgb(239, 68, 68);
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
   display: block;
+  transition: background-color 150ms ease;
 }
 
 
 .weight-card {
   margin: 0;
-  padding: 14px 18px;
+  padding: 18px;
   border-radius: 12px;
   background: var(--ion-color-primary);
   display: flex;
@@ -1344,37 +1707,47 @@ onMounted(async () => {
 
 .weight-goal-line {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .weight-quick-log {
   display: flex;
   gap: 6px;
   align-items: center;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .weight-input {
   width: 70px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   outline: none;
+  transition: border-color 150ms ease;
+}
+
+.weight-input:focus {
+  border-color: rgb(239, 68, 68);
 }
 
 .log-btn {
   padding: 6px 12px;
-  background: var(--ion-color-accent-red);
+  background: rgb(239, 68, 68);
   border: none;
   border-radius: 8px;
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+
+.log-btn:hover {
+  background: rgb(220, 38, 38);
 }
 
 .weight-card__spark {
@@ -1401,52 +1774,213 @@ onMounted(async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* ── Weekly digest ──────────────────────────────────────── */
-.digest-card {
-  margin: 0;
-  border-radius: 12px;
-  background: var(--ion-color-primary);
-  box-shadow: none;
-}
 
-.digest-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
+/* ── Circadian card ─────────────────────────────────────────────── */
+.circ-card { padding: 18px; }
 
-.digest-tile {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 12px 14px;
+.circ-header {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
-.digest-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.circ-header .section-kicker { margin: 0; }
+
+.circ-now-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgb(239, 68, 68);
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.circ-chart-wrap { position: relative; }
+
+.circ-insufficient {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.5);
-  white-space: nowrap;
 }
 
-.digest-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
+.circ-svg {
+  width: 100%;
+  height: 72px;
+  display: block;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.digest-trend {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+.circ-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 3px;
+  padding: 0 2px;
+}
+
+.circ-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.circ-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
-.trend--up   { color: rgb(34, 197, 94); }
-.trend--down { color: rgb(239, 68, 68); }
+.circ-legend-dot--focus    { background: rgba(255, 255, 255, 0.5); }
+.circ-legend-dot--exercise { background: rgb(34, 197, 94); }
+.circ-legend-dot--curve    { background: rgb(239, 68, 68); }
+
+.circ-log-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.circ-log-trigger {
+  margin-top: 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.circ-log-trigger ion-icon {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.circ-sheet::part(content) {
+  border-radius: 18px 18px 0 0;
+}
+
+.circ-sheet-body {
+  background: var(--ion-color-primary);
+  height: 100%;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.circ-sheet-done {
+  margin-top: auto;
+  padding: 12px 0;
+  border: none;
+  border-radius: 8px;
+  background: rgb(239, 68, 68);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.circ-log-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.circ-log-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+  width: 82px;
+}
+
+.circ-type-btn {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.circ-type-btn--active {
+  background: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+  color: #fff;
+}
+
+.circ-light-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.circ-light-btn--on {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgb(34, 197, 94);
+  color: rgb(34, 197, 94);
+}
+
+.circ-energy-row {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.circ-energy-btn {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.circ-energy-btn--active {
+  background: rgb(239, 68, 68);
+  border-color: rgb(239, 68, 68);
+  color: #fff;
+}
+
+.circ-log-complete {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 6px 0;
+}
 </style>

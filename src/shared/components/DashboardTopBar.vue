@@ -1,6 +1,7 @@
 <template>
   <ion-toolbar class="dashboard-toolbar">
-    <ion-segment :value="activeTab" @ionChange="handleSegmentChange">
+    <div class="seg-pill">
+      <ion-segment :value="activeTab" @ionChange="handleSegmentChange" scrollable>
       <ion-segment-button value="home">
         <ion-label>Home</ion-label>
       </ion-segment-button>
@@ -10,10 +11,14 @@
       <ion-segment-button value="health">
         <ion-label>Health</ion-label>
       </ion-segment-button>
+      <ion-segment-button value="plan">
+        <ion-label>Plan</ion-label>
+      </ion-segment-button>
       <ion-segment-button value="gym">
         <ion-label>Gym</ion-label>
       </ion-segment-button>
-    </ion-segment>
+      </ion-segment>
+    </div>
     <div slot="end" class="toolbar-end">
       <button class="settings-btn" :class="{ 'settings-btn--active': isSettings }" @click="goToSettings">
         <ion-icon :icon="settingsOutline" />
@@ -24,6 +29,7 @@
 
 <script setup lang="ts">
 import { IonToolbar, IonSegment, IonSegmentButton, IonLabel, IonIcon } from '@ionic/vue';
+import { hapticLight } from '@/shared/utils/haptics';
 import { settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -32,11 +38,10 @@ const router = useRouter();
 const route = useRoute();
 
 const activeTab = computed(() => {
+  if (route.path.startsWith('/plan'))    return 'plan';
   if (route.path.startsWith('/finance')) return 'finance';
-  if (route.path.startsWith('/health')) return 'health';
-  if (route.path.startsWith('/tabs') || route.path.startsWith('/workout') || route.path.startsWith('/exercise')) {
-    return 'gym';
-  }
+  if (route.path.startsWith('/health'))  return 'health';
+  if (route.path.startsWith('/tabs') || route.path.startsWith('/workout') || route.path.startsWith('/exercise')) return 'gym';
   return 'home';
 });
 
@@ -45,12 +50,14 @@ const isSettings = computed(() => route.path === '/settings');
 const handleSegmentChange = (event: CustomEvent) => {
   const value = (event.detail as { value?: string }).value;
   if (!value) return;
+  hapticLight();
 
   const target = {
     home: '/home',
     finance: '/finance',
     health: '/health',
     gym: '/tabs/Home',
+    plan: '/plan',
   }[value];
 
   if (target && target !== route.path) {
@@ -59,6 +66,7 @@ const handleSegmentChange = (event: CustomEvent) => {
 };
 
 const goToSettings = () => {
+  hapticLight();
   if (route.path !== '/settings') {
     router.push('/settings');
   }
@@ -67,24 +75,30 @@ const goToSettings = () => {
 
 <style scoped>
 .dashboard-toolbar {
-  --background: var(--ion-color-primary);
+  --background: transparent;
+  --border-width: 0;
   --padding-top: calc(env(safe-area-inset-top, 0px) + 2px);
-  padding: 4px 8px 6px;
+  padding: 6px 10px;
+}
+
+.seg-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 6px;
+  overflow: hidden;
 }
 
 ion-segment {
   width: 100%;
-  --background: rgba(255, 255, 255, 0.04);
-  border-radius: 999px;
-  padding: 4px;
+  --background: transparent;
 }
 
 ion-segment-button {
   --background: transparent;
   --background-checked: transparent;
-  --color: rgba(255, 255, 255, 0.7);
-  --color-checked: var(--ion-color-danger);
-  --indicator-color: var(--ion-color-danger);
+  --color: rgba(255, 255, 255, 0.5);
+  --color-checked: var(--ion-color-accent-red);
+  --indicator-color: var(--ion-color-accent-red);
   min-height: 34px;
   border-radius: 999px;
   font-weight: 600;
@@ -93,20 +107,21 @@ ion-segment-button {
 .toolbar-end {
   display: flex;
   align-items: center;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
 .settings-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 22px;
-  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  transition: background-color 150ms ease;
 }
 
 .settings-btn--active {
@@ -114,6 +129,6 @@ ion-segment-button {
 }
 
 .settings-btn ion-icon {
-  font-size: 22px;
+  font-size: 24px;
 }
 </style>

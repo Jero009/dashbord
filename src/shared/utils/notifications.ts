@@ -2,11 +2,14 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 import { Capacitor } from '@capacitor/core'
 
 // Notification ID ranges — must be stable integers
-const ID_WEIGHT   = 1
-const ID_HABIT    = 2
-const ID_SLEEP    = 3
-const ID_CAL_BASE = 4000   // 4000 + event id
-const ID_SUB_BASE = 5000   // 5000 + sub id
+const ID_WEIGHT        = 1
+const ID_HABIT         = 2
+const ID_SLEEP         = 3
+const ID_CIRC_MORNING  = 8
+const ID_CIRC_NOON     = 9
+const ID_CIRC_EVENING  = 10
+const ID_CAL_BASE      = 4000   // 4000 + event id
+const ID_SUB_BASE      = 5000   // 5000 + sub id
 
 function nextOccurrence(hhmm: string): Date {
   const [h, m] = hhmm.split(':').map(Number)
@@ -71,6 +74,50 @@ export async function scheduleSleepReminder(time: string): Promise<void> {
       smallIcon: 'ic_stat_icon_config_sample',
     }]
   })
+}
+
+export interface CircadianNudgeSlot {
+  time: string   // 'HH:MM'
+  title: string
+  body: string
+}
+
+// Schedule wake-relative circadian nudges. Each slot is optional — pass null to skip
+// it (e.g. when that slot is already logged today). Times are personalized by the
+// caller from wake time, not hardcoded. Returns false if notifications aren't
+// permitted (so callers can surface that instead of failing silently).
+export async function scheduleCircadianNudges(slots: {
+  morning?: CircadianNudgeSlot | null
+  noon?: CircadianNudgeSlot | null
+  evening?: CircadianNudgeSlot | null
+}): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false
+
+  // Always clear all three first so a now-skipped slot doesn't keep firing.
+  await LocalNotifications.cancel({
+    notifications: [{ id: ID_CIRC_MORNING }, { id: ID_CIRC_NOON }, { id: ID_CIRC_EVENING }],
+  })
+
+  // Don't schedule into a void — checkPermissions avoids silent no-ops on Android 13+.
+  const granted = (await LocalNotifications.checkPermissions()).display === 'granted'
+  if (!granted) return false
+
+  const byId: Record<'morning' | 'noon' | 'evening', number> = {
+    morning: ID_CIRC_MORNING, noon: ID_CIRC_NOON, evening: ID_CIRC_EVENING,
+  }
+  const toSchedule = (['morning', 'noon', 'evening'] as const)
+    .map((key) => ({ key, slot: slots[key] }))
+    .filter((x): x is { key: 'morning' | 'noon' | 'evening'; slot: CircadianNudgeSlot } => !!x.slot)
+    .map(({ key, slot }) => ({
+      id: byId[key],
+      title: slot.title,
+      body: slot.body,
+      schedule: { at: nextOccurrence(slot.time), repeats: true, every: 'day' as const },
+      smallIcon: 'ic_stat_icon_config_sample',
+    }))
+
+  if (toSchedule.length) await LocalNotifications.schedule({ notifications: toSchedule })
+  return true
 }
 
 export async function scheduleCalendarReminders(
