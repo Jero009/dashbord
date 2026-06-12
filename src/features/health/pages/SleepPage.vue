@@ -218,14 +218,26 @@ const selectedDate = ref<string | null>(null);
 
 function clampVal(val: number, min: number, max: number) { return Math.min(max, Math.max(min, val)); }
 
+// A corrupted timeline blob shouldn't take down the whole page.
+function parseJsonArray<T>(raw: string | null): T[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function sessionToSummary(record: SleepSessionRecord): SleepSummary {
   const bedMs = new Date(record.bedtime).getTime();
   const wakeMs = new Date(record.waketime).getTime();
   const span = Math.max(1, wakeMs - bedMs);
   const spanMin = span / 60000;
 
-  const rawStages: Array<{ s: string; start: string; end: string; dur: number }> =
-    record.stage_timeline_json ? JSON.parse(record.stage_timeline_json) : [];
+  const rawStages = parseJsonArray<{ s: string; start: string; end: string; dur: number }>(
+    record.stage_timeline_json
+  );
   const timeline: SleepStageTimeline[] = rawStages
     .map((rs) => {
       const startMs = new Date(rs.start).getTime();
@@ -235,8 +247,7 @@ function sessionToSummary(record: SleepSessionRecord): SleepSummary {
     })
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-  const rawHr: Array<{ t: string; v: number; o: number }> =
-    record.hr_timeline_json ? JSON.parse(record.hr_timeline_json) : [];
+  const rawHr = parseJsonArray<{ t: string; v: number; o: number }>(record.hr_timeline_json);
   const heartRateTimeline: SleepHeartRatePoint[] = rawHr
     .filter((p) => Number.isFinite(p.v))
     .map((p) => ({ time: p.t, value: p.v, offset: p.o }));

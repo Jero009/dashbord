@@ -152,6 +152,7 @@ import {
 } from '@ionic/vue';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import { localDateISO } from '@/shared/utils/timeFormat';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {
   getLatestHealthMetric,
@@ -280,7 +281,7 @@ const loadMetrics = async () => {
 };
 
 const loadReadiness = async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   let stored = await getReadinessScore(today);
   if (!stored) stored = await getLatestReadinessScore();
 

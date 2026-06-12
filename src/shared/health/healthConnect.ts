@@ -3,16 +3,6 @@ import { Health, type AuthorizationStatus, type HealthSample, type Workout as HC
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession } from '@/shared/db/app_db';
 import { getSleepGoalHours, getStepGoal } from '@/shared/utils/userSettings';
 
-export type HealthMetricType =
-  | 'steps'
-  | 'sleep_duration'
-  | 'sleep_time_in_bed'
-  | 'sleep_efficiency'
-  | 'sleep_score'
-  | 'sleep_heart_rate'
-  | 'respiratory_rate'
-  | 'resting_heart_rate';
-
 type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'workouts';
 
 const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate', 'workouts'];
@@ -354,37 +344,6 @@ export async function canAutoSyncHealthConnectMetrics() {
   });
 
   return HEALTH_CONNECT_READ_TYPES.every((type) => auth.readAuthorized.includes(type));
-}
-
-export async function readHealthMetrics(_type: HealthMetricType, _startDate: string, _endDate: string) {
-  if (!isHealthConnectAvailable()) {
-    throw new Error('Health Connect is only available on Android builds.');
-  }
-
-  const availability = await ensureAvailability();
-  if (!availability.available) {
-    throw new Error(availability.reason ?? 'Health Connect is unavailable on this device.');
-  }
-
-  const dataType: HealthConnectDataType =
-    _type === 'steps'
-      ? 'steps'
-      : _type === 'resting_heart_rate'
-        ? 'restingHeartRate'
-        : _type === 'sleep_heart_rate'
-          ? 'heartRate'
-          : _type === 'respiratory_rate'
-            ? 'respiratoryRate'
-            : 'sleep';
-  const result = await Health.readSamples({
-    dataType,
-    startDate: _startDate,
-    endDate: _endDate,
-    limit: 1000,
-    ascending: true,
-  });
-
-  return result.samples;
 }
 
 export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummaryResult> {

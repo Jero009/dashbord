@@ -61,19 +61,20 @@ function toSqlLiteral(value: unknown) {
 }
 
 function parseSqlStatements(sqlContent: string) {
-  // Strip single-line SQL comments from backup files.
-  const withoutComments = sqlContent
-    .split('\n')
-    .map((line) => line.replace(/--.*$/, ''))
-    .join('\n');
-
   const statements: string[] = [];
   let current = '';
   let insideString = false;
 
-  for (let i = 0; i < withoutComments.length; i++) {
-    const char = withoutComments[i];
-    const next = withoutComments[i + 1] ?? '';
+  for (let i = 0; i < sqlContent.length; i++) {
+    const char = sqlContent[i];
+    const next = sqlContent[i + 1] ?? '';
+
+    // Skip single-line SQL comments, but only outside string literals so
+    // values containing "--" survive the round-trip.
+    if (!insideString && char === '-' && next === '-') {
+      while (i < sqlContent.length && sqlContent[i] !== '\n') i++;
+      continue;
+    }
 
     current += char;
 
@@ -105,21 +106,34 @@ function parseSqlStatements(sqlContent: string) {
   });
 }
 
+let initPromise: Promise<SQLiteDBConnection | null> | null = null;
+
 export async function initDB() {
   if (Capacitor.getPlatform() === 'web') {
-    console.log('⚠️ SQLite not available on web');
+    console.warn('SQLite not available on web');
     return null;
   }
 
   if (db) return db;
 
+  // Concurrent callers (App.vue, auto-sync) share one connection attempt
+  // instead of each opening their own.
+  if (initPromise) return initPromise;
+  initPromise = doInitDB();
+  try {
+    return await initPromise;
+  } finally {
+    initPromise = null;
+  }
+}
+
+async function doInitDB() {
   try {
     // @ts-expect-error - SQLite connection type mismatch
     db = await sqlite.createConnection('workout_db', false, 'no-encryption', 1);
 
     await db.open();
 
-    // ✅ enable foreign keys
     await db.execute(`PRAGMA foreign_keys = ON;`);
 
     await db.execute(`
@@ -738,11 +752,10 @@ export async function initDB() {
     if (!calColNames.has('time_end')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_end TEXT;`);
     }
-    const calColNamesArr = (calColumns.values ?? []).map((c: any) => c.name);
-    if (!calColNamesArr.includes('workout_template_id')) {
+    if (!calColNames.has('workout_template_id')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN workout_template_id INTEGER;`);
     }
-    if (!calColNamesArr.includes('recurrence')) {
+    if (!calColNames.has('recurrence')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN recurrence TEXT DEFAULT 'none';`);
     }
 
@@ -1188,13 +1201,6 @@ export async function saveWorkoutTotalKg(workoutId: number,) {
   return result;
 }
 
-// In your app_db.ts
-export async function hasActiveWorkout() {
-  if (!db) return false;
-  const result = await db.query('SELECT id FROM workout WHERE time_end IS NULL LIMIT 1');
-  return result.values && result.values.length > 0;
-}
-
 export async function getActiveWorkout() {
   if (!db) return null;
   const result = await db.query('SELECT * FROM workout WHERE time_end IS NULL LIMIT 1');
@@ -1211,10 +1217,13 @@ export async function getLatestWorkout() {
 
 export async function getTodayCompletedWorkouts() {
   if (!db) return [] as { id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[];
-  const today = new Date().toISOString().slice(0, 10);
+  // time_end is stored as UTC ISO; compare both sides in the device timezone
+  // so a workout finished late in the evening still counts as "today".
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const result = await db.query(
     `SELECT id, name, time_start, time_end, total_kg FROM workout
-     WHERE time_end IS NOT NULL AND date(time_end) = ?;`,
+     WHERE time_end IS NOT NULL AND date(time_end, 'localtime') = ?;`,
     [today]
   );
   return (result.values ?? []) as { id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[];
@@ -1310,34 +1319,6 @@ export async function getNextSetNumber(workoutExerciseId: number) {
   return maxSet + 1;
 }
 
-export async function getWorkoutsByTemplate() {
-  if (!db) return [];
-
-  const result = await db.query(`
-    SELECT
-      w.id,
-      COALESCE(w.name, wt.name) AS name,
-      w.time_start,
-      w.time_end,
-      w.total_kg
-    FROM workout w
-    LEFT JOIN workout_template wt
-      ON wt.id = w.id_workout_template
-    JOIN (
-      SELECT id_workout_template, MAX(time_start) AS latest_start
-      FROM workout
-      WHERE time_end IS NOT NULL
-      GROUP BY id_workout_template
-    ) latest
-      ON latest.id_workout_template = w.id_workout_template
-      AND latest.latest_start = w.time_start
-    ORDER BY w.time_start DESC
-  `);
-
-  return result.values || [];
-}
-
-
 export async function getWorkoutsByName(id:number) {
   if (!db) return [];
 
@@ -1421,7 +1402,7 @@ export async function getTemplateExercisesByTemplateId(templateId: number) {
 }
 
 // health + dashboard functions
-export async function addHealthMetric(
+async function addHealthMetric(
   date: string,
   type: string,
   value: number,
@@ -1476,29 +1457,6 @@ export async function getLatestHealthMetric(type: string) {
     [type]
   );
   return result.values?.[0] || null;
-}
-
-export async function getRecentHealthMetrics(type: string, limit: number = 30) {
-  if (!db) return [];
-  const result = await db.query(
-    `SELECT * FROM health_metric
-     WHERE type = ?
-     ORDER BY date DESC, id DESC
-     LIMIT ?;`,
-    [type, limit]
-  );
-  return result.values || [];
-}
-
-export async function getHealthMetricsForDate(date: string) {
-  if (!db) return [];
-  const result = await db.query(
-    `SELECT * FROM health_metric
-     WHERE date = ?
-     ORDER BY type ASC;`,
-    [date]
-  );
-  return result.values || [];
 }
 
 export async function upsertReadinessScore(date: string, score: number, inputs: Record<string, unknown> = {}) {
@@ -1592,12 +1550,6 @@ export async function upsertSleepSession(record: Omit<SleepSessionRecord, 'sourc
     console.error('Error upserting sleep session:', error);
     throw error;
   }
-}
-
-export async function getLatestSleepSession(): Promise<SleepSessionRecord | null> {
-  if (!db) return null;
-  const result = await db.query(`SELECT * FROM sleep_session ORDER BY date DESC LIMIT 1;`);
-  return (result.values?.[0] as SleepSessionRecord) ?? null;
 }
 
 export async function getSleepSession(date: string): Promise<SleepSessionRecord | null> {
@@ -1907,17 +1859,6 @@ export async function getHabitCompletedDatesForMonth(yearMonth: string) {
   return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
 }
 
-export async function getRecentHabitLogs(habitId: number, days: number) {
-  if (!db) return [] as { date: string; completed: number }[];
-  const result = await db.query(
-    `SELECT date, completed FROM habit_log
-     WHERE habit_id = ? AND date >= date('now', ?)
-     ORDER BY date DESC;`,
-    [habitId, `-${days} days`]
-  );
-  return (result.values ?? []) as { date: string; completed: number }[];
-}
-
 // Single query powering streaks, week strip, and consistency heatmap.
 export async function getHabitLogsForRange(startDate: string, endDate: string) {
   if (!db) return [] as { habit_id: number; date: string; completed: number }[];
@@ -2005,30 +1946,6 @@ export async function getFinanceSubscriptions() {
   return result.values || [];
 }
 
-export async function addNetWorthSnapshot(date: string, totalAssets: number, totalLiabilities: number) {
-  if (!db) return;
-  try {
-    const result = await db.run(
-      `INSERT INTO net_worth_snapshot (date, total_assets, total_liabilities)
-       VALUES (?, ?, ?)
-       ON CONFLICT(date) DO UPDATE SET total_assets = excluded.total_assets, total_liabilities = excluded.total_liabilities;`,
-      [date, totalAssets, totalLiabilities]
-    );
-    return result;
-  } catch (error) {
-    console.error('Error adding net worth snapshot:', error);
-    throw error;
-  }
-}
-
-export async function getLatestNetWorthSnapshot() {
-  if (!db) return null;
-  const result = await db.query(
-    `SELECT * FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`
-  );
-  return result.values?.[0] || null;
-}
-
 export async function exportDatabaseToSQL() {
   if (!db) return null;
 
@@ -2094,47 +2011,10 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     return { success: false, message: 'No valid SQL statements found in file.' };
   }
 
-  const deleteOrder = [
-    'workout_exercise_sets',
-    'workout_exercise',
-    'workout_template_exercise',
-    'workout',
-    'workout_template',
-    'exercise',
-    'muscle_group',
-    'equipment',
-    'health_metric',
-    'readiness_score',
-    'habit_log',
-    'habit',
-    'goal',
-    'calendar_event',
-    'finance_subscription',
-    'finance_investment',
-    'finance_account',
-    'net_worth_snapshot'
-  ];
-
-  const insertOrder = [
-    'muscle_group',
-    'equipment',
-    'workout_template',
-    'exercise',
-    'workout',
-    'workout_template_exercise',
-    'workout_exercise',
-    'workout_exercise_sets',
-    'health_metric',
-    'readiness_score',
-    'habit',
-    'habit_log',
-    'goal',
-    'calendar_event',
-    'finance_account',
-    'finance_investment',
-    'finance_subscription',
-    'net_worth_snapshot'
-  ];
+  // Keep import ordering in lockstep with export so no table's backup data
+  // is silently dropped on restore.
+  const deleteOrder = EXPORT_DELETE_TABLES;
+  const insertOrder = EXPORT_INSERT_TABLES;
 
   const deleteStatementsByTable = new Map<string, string>();
   const insertStatementsByTable = new Map<string, string[]>();
@@ -2175,14 +2055,24 @@ export async function importDatabaseFromSQL(sqlContent: string) {
     await db.execute('BEGIN TRANSACTION;');
 
     if (isStructuredBackup) {
-      for (const table of deleteOrder) {
+      // Known tables first in dependency order, then any unknown tables so a
+      // backup from a newer schema never loses statements silently.
+      const orderedDeletes = [
+        ...deleteOrder,
+        ...[...deleteStatementsByTable.keys()].filter((t) => !deleteOrder.includes(t)),
+      ];
+      for (const table of orderedDeletes) {
         const deleteStatement = deleteStatementsByTable.get(table);
         if (deleteStatement) {
           await db.execute(deleteStatement);
         }
       }
 
-      for (const table of insertOrder) {
+      const orderedInserts = [
+        ...insertOrder,
+        ...[...insertStatementsByTable.keys()].filter((t) => !insertOrder.includes(t)),
+      ];
+      for (const table of orderedInserts) {
         const tableStatements = insertStatementsByTable.get(table);
         if (!tableStatements) continue;
 
@@ -2244,19 +2134,6 @@ export async function getBodyLogs(): Promise<BodyLogEntry[]> {
 export async function deleteBodyLog(id: number): Promise<void> {
   if (!db) return
   await db.run(`DELETE FROM body_log WHERE id = ?`, [id])
-}
-
-export async function bulkInsertBodyLog(entries: { date: string; weight_kg: number }[]): Promise<number> {
-  if (!db) return 0
-  let inserted = 0
-  for (const e of entries) {
-    const result = await db.run(
-      `INSERT OR IGNORE INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, NULL, NULL)`,
-      [e.date, e.weight_kg]
-    )
-    if ((result?.changes?.changes ?? 0) > 0) inserted++
-  }
-  return inserted
 }
 
 // ============ PR & 1RM TRACKING ============
