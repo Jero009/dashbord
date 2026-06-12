@@ -53,9 +53,16 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 - **`toDateKey` uses local date**: extracts `YYYY-MM-DD` using `getFullYear/getMonth/getDate` (NOT `.toISOString().slice(0,10)`). UTC slice was off-by-one for UTC+ timezones.
 - **Steps sync**: separate query window (7 days, 5000-record limit, `ascending: false`) so today's steps are always in the result set.
 
-### Planner (Goals + Habits + Calendar merged)
+### Planner (separate Calendar / Habits / Goals pages, shared logic)
 
-`HealthPlannerPage.vue` (`/health/planner`) is a merged page for calendar, habits, and goals — the legacy `/health/calendar`, `/health/habits`, `/health/goals` routes redirect to it. The standalone `HealthCalendarPage`/`HealthHabitsPage`/`HealthGoalsPage` are also retained and served under `/plan/*` (see Plan Feature Module). Sections: month grid (dots: red=event, white=habit done, yellow=goal due), selected-day detail (events + scheduled habits + goal deadlines), habit board (7-day week strip with toggles, expandable per-habit stats: current streak, best streak, 30-day completion rate, 28-day mini grid, edit form), 10-week consistency heatmap, and goals with progress bars.
+Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all backed by one composable so they share identical logic:
+- **`src/features/plan/composables/usePlanner.ts`** — single source of truth: all calendar-event, habit (with streak stats) and goal state/actions/loaders. Each page destructures only the slice it renders.
+- **`src/features/plan/planner.css`** — shared styles, scoped per page via `<style scoped src="../../plan/planner.css">`.
+- `HealthCalendarPage` (`/plan/calendar`) — month grid (dots: red=event, white=habit done, yellow=goal due) + selected-day detail (events + scheduled habits + goal deadlines).
+- `HealthHabitsPage` (`/plan/habits`) — habit board (7-day week strip with toggles, expandable per-habit stats: current streak, best streak, 30-day completion rate, 28-day mini grid, edit form) + 10-week consistency heatmap.
+- `HealthGoalsPage` (`/plan/goals`) — goals with progress bars, linked-habit counts, due labels, completed list.
+- `PlanPage` (`/plan`) — "Today" snapshot overview. Tabs: `PlanSectionTabs` (Overview / Goals / Habits / Calendar).
+- Legacy `/health/planner`, `/health/calendar`, `/health/habits`, `/health/goals` redirect to `/plan` and `/plan/{calendar,habits,goals}`. There is no longer a merged `HealthPlannerPage`, and Health's section tabs no longer include "Planner".
 
 - `habit.days_of_week` — comma-separated JS weekday digits (Sunday=0), NULL/empty = every day. `getHabitsWithStatus(date)` only returns habits scheduled on that date's weekday.
 - `habit.goal_id` — habit-goal link: `toggleHabitCompletion` moves the linked goal's `current_value` by ±1 on real state changes (all callers, including HomePage, get this behavior). `deleteGoal` clears `goal_id` on linked habits.
