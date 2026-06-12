@@ -320,7 +320,7 @@ const handleDriveBackupNow = async () => {
 }
 
 // --- Goals ---
-const goToGoals = () => router.push('/health/planner')
+const goToGoals = () => router.push('/plan/goals')
 
 // --- Gym: weekly workout goal ---
 const WEEKLY_GOAL_STORAGE_KEY = 'homeWeeklyGoal'

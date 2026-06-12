@@ -11,23 +11,24 @@ export const healthRoutes: Array<RouteRecordRaw> = [
     name: 'HealthSleep',
     component: () => import('./pages/SleepPage.vue')
   },
+  // Planning lives under the Plan tab as separate Calendar / Habits / Goals
+  // pages (all sharing the same logic via usePlanner). These legacy /health
+  // paths redirect there so old deep links keep working.
   {
     path: '/health/planner',
-    name: 'HealthPlanner',
-    component: () => import('./pages/HealthPlannerPage.vue')
+    redirect: '/plan'
   },
-  // Legacy routes — calendar, habits, and goals are merged into the planner.
   {
     path: '/health/calendar',
-    redirect: '/health/planner'
+    redirect: '/plan/calendar'
   },
   {
     path: '/health/habits',
-    redirect: '/health/planner'
+    redirect: '/plan/habits'
   },
   {
     path: '/health/goals',
-    redirect: '/health/planner'
+    redirect: '/plan/goals'
   },
   {
     path: '/health/body',

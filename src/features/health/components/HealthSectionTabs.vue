@@ -8,9 +8,6 @@
         <ion-segment-button value="sleep">
           <ion-label>Sleep</ion-label>
         </ion-segment-button>
-        <ion-segment-button value="planner">
-          <ion-label>Planner</ion-label>
-        </ion-segment-button>
         <ion-segment-button value="body">
           <ion-label>Body</ion-label>
         </ion-segment-button>
@@ -33,7 +30,6 @@ const route = useRoute();
 
 const activeSegment = computed(() => {
   if (route.path.includes('/sleep'))     return 'sleep';
-  if (route.path.includes('/planner'))   return 'planner';
   if (route.path.includes('/body'))      return 'body';
   if (route.path.includes('/circadian')) return 'circadian';
   return 'overview';
@@ -47,7 +43,6 @@ const handleSegmentChange = (event: CustomEvent) => {
   const target: Record<string, string> = {
     overview:  '/health',
     sleep:     '/health/sleep',
-    planner:   '/health/planner',
     body:      '/health/body',
     circadian: '/health/circadian',
   };
