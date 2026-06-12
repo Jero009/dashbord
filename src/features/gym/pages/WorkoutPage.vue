@@ -865,6 +865,10 @@ onUnmounted(() => {
     clearInterval(restInterval);
     restInterval = null;
   }
+  if (audioContext) {
+    void audioContext.close().catch(() => undefined);
+    audioContext = null;
+  }
 });
 
 </script>

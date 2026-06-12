@@ -273,7 +273,7 @@ import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getWeeklyDigest } from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
-import { formatDuration, formatWorkoutDate, normalizeDateInput } from '@/shared/utils/timeFormat';
+import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
@@ -332,7 +332,7 @@ const loadTodayWeight = async () => {
   todayWeight.value = todayEntry ? todayEntry.weight_kg : null;
 
   // last 7 days with data, chronological
-  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const cutoff = localDateISO(new Date(Date.now() - 7 * 86400000));
   const week = [...logs].filter(e => e.date >= cutoff).reverse();
   if (week.length >= 2) {
     await new Promise(r => setTimeout(r, 50)); // let canvas render
@@ -441,7 +441,9 @@ const startEventWorkout = async (templateId: number) => {
 };
 
 // Today
-const todayStr = new Date().toISOString().slice(0, 10);
+// Refreshed on each load so a view kept alive across midnight doesn't keep
+// serving yesterday's data.
+let todayStr = localDateISO();
 const todayEvents = ref<Record<string, any>[]>([]);
 const todayHabits = ref<Record<string, any>[]>([]);
 const todayWorkouts = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
@@ -616,7 +618,7 @@ const loadSummary = async () => {
       getLatestHealthMetric('resting_heart_rate'),
     ]);
   const [todayReadiness, latestSession] = await Promise.all([
-    getReadinessScore(new Date().toISOString().slice(0, 10)),
+    getReadinessScore(localDateISO()),
     getLatestWorkout(),
   ]);
   const latestReadiness = todayReadiness ?? (await getLatestReadinessScore());
@@ -647,7 +649,7 @@ const loadSummary = async () => {
 
 
 const toggleTodayHabit = async (h: Record<string, any>) => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   await toggleHabitCompletion(h.id, today, h.completed !== 1);
   todayHabits.value = await getHabitsWithStatus(today);
 };
@@ -739,6 +741,7 @@ const buildBatteryChart = () => {
 };
 
 const loadAll = async () => {
+  todayStr = localDateISO();
   await Promise.all([
     loadSummary(),
     loadActiveWorkout(),
@@ -759,6 +762,8 @@ onUnmounted(() => {
   if (readinessTimer) { clearInterval(readinessTimer); readinessTimer = null; }
   clearWorkoutTimer();
   clearRestTimer();
+  if (sparkChart) { sparkChart.destroy(); sparkChart = null; }
+  if (batteryChartInstance) { batteryChartInstance.destroy(); batteryChartInstance = null; }
 });
 
 onMounted(async () => {

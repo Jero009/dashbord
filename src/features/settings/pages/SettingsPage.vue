@@ -217,6 +217,7 @@ import { ref, watch, onMounted } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, toastController, alertController } from '@ionic/vue'
 import { useRouter } from 'vue-router'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
+import { localDateISO } from '@/shared/utils/timeFormat'
 import {
   getSleepGoalHours, setSleepGoalHours, getStepGoal, setStepGoal, getGoalWeightKg, setGoalWeightKg,
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
@@ -365,7 +366,7 @@ const saveNotifHabit = async () => {
   setNotifHabitEnabled(notifHabitEnabled.value)
   setNotifHabitTime(notifHabitTime.value)
   if (notifHabitEnabled.value) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDateISO()
     const habits = await getHabitsWithStatus(today)
     const incomplete = habits.filter((h: any) => h.completed !== 1).map((h: any) => h.name as string)
     await scheduleHabitReminder(notifHabitTime.value, incomplete)
@@ -382,7 +383,7 @@ const saveNotifCalendar = async () => {
   setNotifCalendarEnabled(notifCalendarEnabled.value)
   setNotifCalendarMinsBefore(notifCalendarMins.value)
   if (notifCalendarEnabled.value) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDateISO()
     const events = await getCalendarEventsForDate(today)
     await scheduleCalendarReminders(events, notifCalendarMins.value)
   }

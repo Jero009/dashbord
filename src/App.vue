@@ -23,11 +23,12 @@ import {
   getNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore,
 } from '@/shared/utils/userSettings'
 import { initDB, getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
+import { localDateISO } from '@/shared/utils/timeFormat'
 
 onMounted(async () => {
   if (!Capacitor.isNativePlatform()) return
   await initDB()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateISO()
 
   if (getNotifWeightEnabled()) await scheduleWeightReminder(getNotifWeightTime())
 

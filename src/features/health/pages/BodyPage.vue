@@ -117,6 +117,7 @@ import { Directory, Filesystem } from '@capacitor/filesystem'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
+import { localDateISO } from '@/shared/utils/timeFormat'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
 import { dismissWeightReminder } from '@/shared/utils/notifications'
@@ -139,7 +140,7 @@ const buildChart = () => {
   const sorted = [...entries.value].reverse()
   const cutoff = chartRange.value === 0
     ? null
-    : new Date(Date.now() - chartRange.value * 86400000).toISOString().slice(0, 10)
+    : localDateISO(new Date(Date.now() - chartRange.value * 86400000))
   const filtered = cutoff ? sorted.filter(e => e.date >= cutoff) : sorted
 
   if (filtered.length < 2) {
@@ -220,7 +221,7 @@ onUnmounted(() => {
 })
 
 const form = ref({
-  date: new Date().toISOString().slice(0, 10),
+  date: localDateISO(),
   weight: '',
   notes: '',
   photoBase64: '',
@@ -337,13 +338,13 @@ const saveEntry = async () => {
       notes: form.value.notes.trim() || undefined,
       photo_path: photoPath,
     })
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDateISO()
     if (form.value.date === today) dismissWeightReminder()
 
     form.value.weight = ''
     form.value.notes = ''
     clearPhoto()
-    form.value.date = new Date().toISOString().slice(0, 10)
+    form.value.date = localDateISO()
 
     await loadEntries()
 

@@ -34,6 +34,16 @@ export const normalizeDateInput = (value: unknown): string | null => {
   return hasTimezone ? normalized : `${normalized}Z`;
 };
 
+// Local-timezone calendar date (YYYY-MM-DD). Use this instead of
+// `toISOString().slice(0, 10)`, which returns the UTC date and points at the
+// wrong day for part of the evening/morning in any non-UTC timezone.
+export const localDateISO = (date: Date = new Date()): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 export const formatDuration = (start: string | undefined, end: string | undefined) => {
   if (!start || !end) return '0h 0m 0s';
 

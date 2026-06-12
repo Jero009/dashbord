@@ -368,6 +368,7 @@
 import { IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { ref, computed, reactive, watch } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import { localDateISO } from '@/shared/utils/timeFormat';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {
   addCalendarEvent,
@@ -408,7 +409,7 @@ const HEAT_COLORS = [
   'rgb(239,68,68)',
 ];
 
-const todayStr = new Date().toISOString().slice(0, 10);
+const todayStr = localDateISO();
 const now = new Date();
 const viewYear = ref(now.getFullYear());
 const viewMonth = ref(now.getMonth());

@@ -125,7 +125,7 @@ import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
-import { formatDuration, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
+import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
 
 
 const activeWorkout = ref(false);
@@ -428,7 +428,7 @@ const loadWeeklyData = async () => {
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - dayOfWeek)
   weekStart.setHours(0, 0, 0, 0)
-  const weekStartStr = weekStart.toISOString().slice(0, 10)
+  const weekStartStr = localDateISO(weekStart)
 
   const all = await getWorkouts()
   weeklyCompletedWorkouts.value = all.filter((w: any) =>
