@@ -7,7 +7,6 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { onMounted, onUnmounted } from 'vue';
 import { canAutoSyncHealthConnectMetrics, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
-import { runDailyBackupIfNeeded } from '@/shared/utils/driveBackup';
 
 const syncIntervalMs = 30 * 60 * 1000;
 const minSyncGapMs = 10 * 60 * 1000;
@@ -46,7 +45,6 @@ const syncIfNeeded = async () => {
 
 onMounted(async () => {
   await syncIfNeeded();
-  void runDailyBackupIfNeeded();
 
   // Health Connect may not be ready immediately on cold start — retry after a
   // short delay so a skipped startup sync recovers without waiting 30 minutes.

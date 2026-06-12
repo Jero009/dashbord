@@ -194,23 +194,7 @@
         <!-- BACKUP -->
         <div class="card">
           <p class="section-kicker">Backup</p>
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Auto-backup daily</span>
-              <span class="notif-sub">Uploads a SQL export to your Google Drive once per day</span>
-            </div>
-            <div class="notif-row__controls">
-              <label class="notif-toggle">
-                <input type="checkbox" :checked="driveEnabled" @change="toggleDriveBackup" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
-          <p v-if="lastBackupDate" class="hint-text backup-hint">Last backup: {{ lastBackupDate }}</p>
           <div class="db-actions">
-            <button class="btn-primary" :disabled="driveBackingUp" @click="handleDriveBackupNow">
-              {{ driveBackingUp ? 'Backing up...' : 'Back up to Drive now' }}
-            </button>
             <button class="btn-secondary" @click="handleExport">Export backup file</button>
             <button class="btn-secondary" @click="triggerImport">Import backup file</button>
           </div>
@@ -248,7 +232,6 @@ import {
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
-import { getDriveBackupEnabled, setDriveBackupEnabled, getLastBackupDate, runBackupNow } from '@/shared/utils/driveBackup'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
@@ -314,36 +297,6 @@ const syncNow = async () => {
 const currencyOptions: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'CHF']
 const currency = ref<CurrencyCode>(getCurrency())
 watch(currency, (code) => setCurrency(code))
-
-// --- Google Drive backup ---
-const driveEnabled   = ref(getDriveBackupEnabled())
-const driveBackingUp = ref(false)
-const lastBackupDate = ref(getLastBackupDate())
-
-const toggleDriveBackup = (e: Event) => {
-  hapticLight()
-  const enabled = (e.target as HTMLInputElement).checked
-  setDriveBackupEnabled(enabled)
-  driveEnabled.value = enabled
-}
-
-const handleDriveBackupNow = async () => {
-  hapticMedium()
-  driveBackingUp.value = true
-  try {
-    await runBackupNow()
-    lastBackupDate.value = getLastBackupDate()
-    hapticSuccess()
-    const t = await toastController.create({ message: 'Backed up to Google Drive.', duration: 2000, color: 'success' })
-    await t.present()
-  } catch (err) {
-    hapticError()
-    const t = await toastController.create({ message: err instanceof Error ? err.message : 'Backup failed.', duration: 2500, color: 'danger' })
-    await t.present()
-  } finally {
-    driveBackingUp.value = false
-  }
-}
 
 // --- Goals ---
 const goToGoals = () => {
@@ -711,10 +664,6 @@ const handleImportFile = async (event: Event) => {
   margin: 10px 0 0;
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.5);
-}
-
-.backup-hint {
-  margin: 0 0 12px;
 }
 
 .field-row {

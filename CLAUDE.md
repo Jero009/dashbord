@@ -127,11 +127,6 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 
 **HomePage integration**: alertness curve SVG card with zone bands + contextual daily log widget (shows different fields by time of day: morning = day type + morning light + wake energy; noon = noon energy; evening = evening energy). Auto-saves on tap.
 
-### Google Drive Backup
-
-`src/shared/utils/driveBackup.ts` — daily DB export via `@codetrix-studio/capacitor-google-auth`. Triggered on app start and manually from `SettingsPage.vue`. Requires Google Cloud setup (Drive API + OAuth client ID + SHA-1 fingerprint).
-- **Always call `GoogleAuth.initialize()` before `GoogleAuth.signIn()`** in `getAccessToken()`. Skipping it causes a native NullPointerException (bypasses JS try/catch) on devices where Google Play Services auth state was disrupted (e.g., after installing Fitbit).
-
 ### Health Connect Known Issues
 - **READ_EXERCISE SecurityException**: `@capgo/capacitor-health` declares `READ_EXERCISE` and reads `ExerciseSessionRecord` internally. After any HC permission reset, this permission may not be granted, causing a native SecurityException that kills the process. The app does not use exercise data but cannot prevent the plugin read. **Workaround**: user must manually grant Exercise permission in HC settings. A proper fix requires forking the plugin.
 
