@@ -333,6 +333,7 @@ async function doInitDB() {
     cadence TEXT DEFAULT 'monthly',
     next_due_date TEXT,
     account_id INTEGER,
+    direction TEXT DEFAULT 'expense',
     status TEXT DEFAULT 'active'
   );
 
@@ -803,6 +804,9 @@ async function doInitDB() {
     const subColNames = new Set((subColumns.values || []).map((c: any) => String(c.name)));
     if (!subColNames.has('account_id')) {
       await db.execute(`ALTER TABLE finance_subscription ADD COLUMN account_id INTEGER;`);
+    }
+    if (!subColNames.has('direction')) {
+      await db.execute(`ALTER TABLE finance_subscription ADD COLUMN direction TEXT DEFAULT 'expense';`);
     }
 
     const invColumns = await db.query(`PRAGMA table_info("finance_investment");`);
@@ -2082,14 +2086,15 @@ export async function addFinanceSubscription(
   amount: number,
   cadence: string,
   nextDueDate?: string,
-  accountId?: number | null
+  accountId?: number | null,
+  direction: 'expense' | 'income' = 'expense'
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date, account_id)
-       VALUES (?, ?, ?, ?, ?);`,
-      [name, amount, cadence, nextDueDate ?? null, accountId ?? null]
+      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date, account_id, direction)
+       VALUES (?, ?, ?, ?, ?, ?);`,
+      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction]
     );
     return result;
   } catch (error) {

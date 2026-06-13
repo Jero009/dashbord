@@ -8,9 +8,16 @@
       <div class="finance-shell">
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Add subscription</p>
+            <p class="section-kicker">Add recurring</p>
           </div>
           <div class="form-fields">
+            <div class="field-group">
+              <label class="field-label">Type</label>
+              <ion-select v-model="subscriptionDirection" class="styled-select">
+                <ion-select-option value="expense">Payment</ion-select-option>
+                <ion-select-option value="income">Income</ion-select-option>
+              </ion-select>
+            </div>
             <div class="field-group">
               <label class="field-label">Name</label>
               <ion-input v-model="subscriptionName" class="styled-input"></ion-input>
@@ -32,7 +39,7 @@
               <ion-input v-model="subscriptionNextDue" type="date" class="styled-input"></ion-input>
             </div>
             <div class="field-group">
-              <label class="field-label">Paid from</label>
+              <label class="field-label">{{ subscriptionDirection === 'income' ? 'Deposited to' : 'Paid from' }}</label>
               <ion-select v-model="subscriptionAccountId" class="styled-select" placeholder="Select account" :disabled="!accounts.length">
                 <ion-select-option :value="null">No account</ion-select-option>
                 <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
@@ -41,24 +48,26 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveSubscription">Add subscription</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveSubscription">Add recurring</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Subscriptions</p>
+            <p class="section-kicker">Recurring</p>
             <span class="card-count">{{ subscriptions.length }} active</span>
           </div>
           <div v-if="subscriptions.length" class="item-list">
             <div v-for="subscription in subscriptions" :key="subscription.id" class="list-item">
               <div class="list-item__info">
                 <strong class="list-item__name">{{ subscription.name }}</strong>
-                <span class="list-item__meta">{{ subscription.cadence }} · due {{ subscription.next_due_date || 'TBD' }}<template v-if="subscription.account_name"> · from {{ subscription.account_name }}</template></span>
+                <span class="list-item__meta">{{ subscription.cadence }} · due {{ subscription.next_due_date || 'TBD' }}<template v-if="subscription.account_name"> · {{ subscription.direction === 'income' ? 'to' : 'from' }} {{ subscription.account_name }}</template></span>
               </div>
-              <span class="list-item__value">{{ formatCurrency(Number(subscription.amount) || 0) }}</span>
+              <span class="list-item__value" :class="{ 'list-item__value--income': subscription.direction === 'income' }">
+                {{ subscription.direction === 'income' ? '+' : '' }}{{ formatCurrency(Number(subscription.amount) || 0) }}
+              </span>
             </div>
           </div>
-          <p v-else class="empty-state">No subscriptions yet.</p>
+          <p v-else class="empty-state">No recurring items yet.</p>
         </ion-card>
       </div>
     </ion-content>
@@ -89,6 +98,7 @@ const subscriptionAmount = ref('');
 const subscriptionCadence = ref('monthly');
 const subscriptionNextDue = ref('');
 const subscriptionAccountId = ref<number | null>(null);
+const subscriptionDirection = ref<'expense' | 'income'>('expense');
 const subscriptions = ref<Array<Record<string, any>>>([]);
 const accounts = ref<Array<Record<string, any>>>([]);
 
@@ -128,7 +138,8 @@ const saveSubscription = async () => {
       amount,
       subscriptionCadence.value,
       subscriptionNextDue.value || undefined,
-      subscriptionAccountId.value
+      subscriptionAccountId.value,
+      subscriptionDirection.value
     );
   } catch {
     const toast = await toastController.create({
@@ -143,10 +154,11 @@ const saveSubscription = async () => {
   subscriptionAmount.value = '';
   subscriptionNextDue.value = '';
   subscriptionAccountId.value = null;
+  subscriptionDirection.value = 'expense';
   await loadSubscriptions();
 
   const toast = await toastController.create({
-    message: 'Subscription added.',
+    message: 'Recurring item added.',
     duration: 1800,
     color: 'success',
   });
@@ -284,6 +296,10 @@ onIonViewWillEnter(async () => {
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
+}
+
+.list-item__value--income {
+  color: var(--nt-data-positive);
 }
 
 .empty-state {
