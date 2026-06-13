@@ -32,6 +32,15 @@
               <label class="field-label">Current value</label>
               <ion-input v-model="investmentValue" type="number" inputmode="decimal" class="styled-input"></ion-input>
             </div>
+            <div class="field-group">
+              <label class="field-label">Funded from</label>
+              <ion-select v-model="investmentAccountId" class="styled-select" placeholder="Select account" :disabled="!accounts.length">
+                <ion-select-option :value="null">No account</ion-select-option>
+                <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
+                  {{ account.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
           </div>
           <ion-button expand="block" class="add-btn" @click="saveInvestment">Add investment</ion-button>
         </ion-card>
@@ -45,7 +54,7 @@
             <div v-for="investment in investments" :key="investment.id" class="list-item">
               <div class="list-item__info">
                 <strong class="list-item__name">{{ investment.name }}</strong>
-                <span class="list-item__meta">{{ investment.type }} · {{ investment.quantity }} units</span>
+                <span class="list-item__meta">{{ investment.type }} · {{ investment.quantity }} units<template v-if="investment.account_name"> · from {{ investment.account_name }}</template></span>
               </div>
               <span class="list-item__value">{{ formatCurrency(Number(investment.value) || 0) }}</span>
             </div>
@@ -73,17 +82,23 @@ import {
 import { ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
-import { addFinanceInvestment, getFinanceInvestments } from '@/shared/db/app_db';
+import { addFinanceInvestment, getFinanceInvestments, getFinanceAccounts } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
 
 const investmentName = ref('');
 const investmentType = ref('stock');
 const investmentQuantity = ref('');
 const investmentValue = ref('');
+const investmentAccountId = ref<number | null>(null);
 const investments = ref<Array<Record<string, any>>>([]);
+const accounts = ref<Array<Record<string, any>>>([]);
 
 const loadInvestments = async () => {
   investments.value = await getFinanceInvestments();
+};
+
+const loadAccounts = async () => {
+  accounts.value = await getFinanceAccounts();
 };
 
 const saveInvestment = async () => {
@@ -110,7 +125,7 @@ const saveInvestment = async () => {
   }
 
   try {
-    await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value);
+    await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value, investmentAccountId.value);
   } catch {
     const toast = await toastController.create({
       message: 'Could not save investment. Please try again.',
@@ -123,6 +138,7 @@ const saveInvestment = async () => {
   investmentName.value = '';
   investmentQuantity.value = '';
   investmentValue.value = '';
+  investmentAccountId.value = null;
   await loadInvestments();
 
   const toast = await toastController.create({
@@ -134,7 +150,7 @@ const saveInvestment = async () => {
 };
 
 onIonViewWillEnter(async () => {
-  await loadInvestments();
+  await Promise.all([loadAccounts(), loadInvestments()]);
 });
 </script>
 

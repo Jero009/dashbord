@@ -322,6 +322,7 @@ async function doInitDB() {
     type TEXT DEFAULT 'stock',
     quantity REAL DEFAULT 0,
     value REAL DEFAULT 0,
+    account_id INTEGER,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -331,6 +332,8 @@ async function doInitDB() {
     amount REAL DEFAULT 0,
     cadence TEXT DEFAULT 'monthly',
     next_due_date TEXT,
+    account_id INTEGER,
+    direction TEXT DEFAULT 'expense',
     status TEXT DEFAULT 'active'
   );
 
@@ -795,6 +798,21 @@ async function doInitDB() {
     }
     if (!calColNames.has('end_date')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN end_date TEXT;`);
+    }
+
+    const subColumns = await db.query(`PRAGMA table_info("finance_subscription");`);
+    const subColNames = new Set((subColumns.values || []).map((c: any) => String(c.name)));
+    if (!subColNames.has('account_id')) {
+      await db.execute(`ALTER TABLE finance_subscription ADD COLUMN account_id INTEGER;`);
+    }
+    if (!subColNames.has('direction')) {
+      await db.execute(`ALTER TABLE finance_subscription ADD COLUMN direction TEXT DEFAULT 'expense';`);
+    }
+
+    const invColumns = await db.query(`PRAGMA table_info("finance_investment");`);
+    const invColNames = new Set((invColumns.values || []).map((c: any) => String(c.name)));
+    if (!invColNames.has('account_id')) {
+      await db.execute(`ALTER TABLE finance_investment ADD COLUMN account_id INTEGER;`);
     }
 
     // One-time dedup: remove duplicate health_metric rows accumulated by the
@@ -2031,13 +2049,19 @@ export async function getFinanceAccounts() {
   return result.values || [];
 }
 
-export async function addFinanceInvestment(name: string, type: string, quantity: number, value: number) {
+export async function addFinanceInvestment(
+  name: string,
+  type: string,
+  quantity: number,
+  value: number,
+  accountId?: number | null
+) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_investment (name, type, quantity, value)
-       VALUES (?, ?, ?, ?);`,
-      [name, type, quantity, value]
+      `INSERT INTO finance_investment (name, type, quantity, value, account_id)
+       VALUES (?, ?, ?, ?, ?);`,
+      [name, type, quantity, value, accountId ?? null]
     );
     return result;
   } catch (error) {
@@ -2049,7 +2073,10 @@ export async function addFinanceInvestment(name: string, type: string, quantity:
 export async function getFinanceInvestments() {
   if (!db) return [];
   const result = await db.query(
-    `SELECT * FROM finance_investment ORDER BY updated_at DESC;`
+    `SELECT i.*, a.name AS account_name
+     FROM finance_investment i
+     LEFT JOIN finance_account a ON a.id = i.account_id
+     ORDER BY i.updated_at DESC;`
   );
   return result.values || [];
 }
@@ -2058,14 +2085,16 @@ export async function addFinanceSubscription(
   name: string,
   amount: number,
   cadence: string,
-  nextDueDate?: string
+  nextDueDate?: string,
+  accountId?: number | null,
+  direction: 'expense' | 'income' = 'expense'
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date)
-       VALUES (?, ?, ?, ?);`,
-      [name, amount, cadence, nextDueDate ?? null]
+      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date, account_id, direction)
+       VALUES (?, ?, ?, ?, ?, ?);`,
+      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction]
     );
     return result;
   } catch (error) {
@@ -2077,7 +2106,10 @@ export async function addFinanceSubscription(
 export async function getFinanceSubscriptions() {
   if (!db) return [];
   const result = await db.query(
-    `SELECT * FROM finance_subscription ORDER BY status DESC, next_due_date ASC;`
+    `SELECT s.*, a.name AS account_name
+     FROM finance_subscription s
+     LEFT JOIN finance_account a ON a.id = s.account_id
+     ORDER BY s.status DESC, s.next_due_date ASC;`
   );
   return result.values || [];
 }
