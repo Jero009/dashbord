@@ -166,14 +166,15 @@ const handleExerciseClick = async (exercise: exercise) => {
       params: { id: workoutId.toString() }
     });
   } else if (route.query.templateId) {
-    // Template builder context
     localStorage.setItem('selectedExerciseForTemplate', JSON.stringify(exercise));
     router.push({
       name: 'TemplateEditor',
       params: { id: route.query.templateId.toString() }
     });
+  } else if (route.query.from === 'TemplateBuilder') {
+    localStorage.setItem('selectedExerciseForTemplate', JSON.stringify(exercise));
+    router.push({ name: 'TemplateBuilder' });
   } else {
-    // Show exercise details if coming from Exercise tab
     router.push({
       name: 'ExerciseDetail',
       params: { id: exercise.id.toString() }

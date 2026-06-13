@@ -2452,22 +2452,18 @@ export async function getExerciseHistory(exerciseId: number, limitDays: number =
 
   const daysAgo = new Date();
   daysAgo.setDate(daysAgo.getDate() - limitDays);
-  const dateLimit = daysAgo.toISOString();
+  const dateLimit = daysAgo.toISOString().replace('T', ' ').slice(0, 19);
 
   const result = await db.query(`
-    SELECT 
+    SELECT
       DATE(wes.created_at) as date,
       MAX(wes.weight) as weight,
-      (SELECT reps FROM workout_exercise_sets wes2 
-       WHERE wes2.workout_exercise_id = wes.workout_exercise_id 
-       AND wes2.weight = MAX(wes.weight) 
-       AND wes2.completed = 1 
-       LIMIT 1) as reps,
+      MAX(wes.reps) as reps,
       SUM(wes.weight * wes.reps) as volume
     FROM workout_exercise_sets wes
     JOIN workout_exercise we ON we.id = wes.workout_exercise_id
-    WHERE we.exercise_id = ? 
-      AND wes.completed = 1 
+    WHERE we.exercise_id = ?
+      AND wes.completed = 1
       AND wes.created_at >= ?
     GROUP BY DATE(wes.created_at)
     ORDER BY date ASC
@@ -2522,11 +2518,7 @@ export async function getExerciseSessions(exerciseId: number, limit = 8) {
       w.time_start as date,
       COUNT(*) as set_count,
       MAX(wes.weight) as top_weight,
-      (SELECT wes2.reps FROM workout_exercise_sets wes2
-       JOIN workout_exercise we2 ON we2.id = wes2.workout_exercise_id
-       WHERE we2.workout_id = w.id AND we2.exercise_id = ?
-         AND wes2.completed = 1 AND wes2.weight = MAX(wes.weight)
-       LIMIT 1) as top_reps,
+      MAX(wes.reps) as top_reps,
       SUM(wes.weight * wes.reps) as volume
     FROM workout_exercise_sets wes
     JOIN workout_exercise we ON we.id = wes.workout_exercise_id
@@ -2535,7 +2527,7 @@ export async function getExerciseSessions(exerciseId: number, limit = 8) {
     GROUP BY w.id
     ORDER BY w.time_start DESC
     LIMIT ?
-  `, [exerciseId, exerciseId, limit]);
+  `, [exerciseId, limit]);
 
   return result.values || [];
 }

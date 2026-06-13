@@ -223,25 +223,24 @@ const formatPRDate = (dateString: string) => {
 };
 
 const loadExerciseData = async () => {
-  try {
-    const id = exerciseId.value;
-    const [exercise, pr, history, recentSessions] = await Promise.all([
-      getExerciseById(id),
-      getExercisePR(id),
-      getExerciseHistory(id, Number(timeFrame.value)),
-      getExerciseSessions(id, 8),
-    ]);
-    exerciseName.value = exercise?.name || 'Exercise';
-    muscleGroup.value = exercise?.muscle_group || '';
-    equipment.value = exercise?.equipment || '';
-    currentPR.value = pr;
-    historyData.value = history;
-    sessions.value = recentSessions;
-    await nextTick();
-    renderCharts();
-  } catch (error) {
-    console.error('Error loading exercise data:', error);
-  }
+  const id = exerciseId.value;
+  if (!id || Number.isNaN(id)) return;
+
+  const [exercise, pr, history, recentSessions] = await Promise.all([
+    getExerciseById(id).catch(() => null),
+    getExercisePR(id).catch(() => null),
+    getExerciseHistory(id, Number(timeFrame.value)).catch(() => []),
+    getExerciseSessions(id, 8).catch(() => []),
+  ]);
+
+  exerciseName.value = exercise?.name || 'Exercise';
+  muscleGroup.value = exercise?.muscle_group || '';
+  equipment.value = exercise?.equipment || '';
+  currentPR.value = pr;
+  historyData.value = history;
+  sessions.value = recentSessions;
+  await nextTick();
+  renderCharts();
 };
 
 const chartLabels = () =>
@@ -354,7 +353,7 @@ const renderVolumeChart = () => {
 watch(timeFrame, async () => {
   hapticSelect();
   await loadExerciseData();
-});
+}, { flush: 'post' });
 
 onIonViewWillEnter(() => {
   loadExerciseData();

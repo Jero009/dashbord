@@ -112,7 +112,8 @@ const showToast = async (message: string, color: string = 'danger') => {
 // exercise picker 
 const goToExercisePicker = () => {
   router.push({
-    name: 'ExercisePicker'
+    name: 'ExercisePicker',
+    query: { from: 'TemplateBuilder' }
   });
 };
 

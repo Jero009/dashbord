@@ -424,13 +424,14 @@ ion-toast.pr-toast::part(header) {
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
 import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
 import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
+import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds } from '@/shared/db/app_db';
@@ -558,26 +559,33 @@ const saveWorkout = async () => {
         handler: async () => {
           hapticSuccess();
           const achievedPRs = await endWorkout(workoutId);
+          const durationStr = formatTime();
           if (interval) clearInterval(interval);
           interval = null;
           if (restInterval) clearInterval(restInterval);
           restInterval = null;
           sessionStorage.removeItem('restTimer');
-          router.push('/tabs/Home');
 
-          if (achievedPRs && achievedPRs.length > 0) {
-            const summary = achievedPRs
-              .map((pr) => `${pr.exercise_name} ${pr.pr_weight} kg x ${pr.pr_reps}`)
-              .join(' / ');
-            const toast = await toastController.create({
-              header: achievedPRs.length === 1 ? 'New personal record' : `${achievedPRs.length} new personal records`,
-              message: summary,
-              duration: 4500,
-              position: 'top',
-              cssClass: 'pr-toast',
-            });
-            await toast.present();
-          }
+          const completedSets = workoutExercises.value.flatMap(ex =>
+            (ex.sets || []).filter((s: any) => s.completed)
+          );
+          const totalVolume = completedSets.reduce(
+            (sum: number, s: any) => sum + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0
+          );
+
+          const modal = await modalController.create({
+            component: WorkoutSummaryModal,
+            componentProps: {
+              duration: durationStr,
+              totalVolume,
+              exerciseCount: workoutExercises.value.length,
+              setCount: completedSets.length,
+              prs: achievedPRs,
+            },
+          });
+          await modal.present();
+          await modal.onDidDismiss();
+          router.push('/tabs/Home');
         }
       }
     ]
