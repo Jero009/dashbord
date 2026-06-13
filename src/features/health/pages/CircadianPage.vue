@@ -16,7 +16,7 @@
 
         <template v-else>
 
-          <!-- 1. Chronotype card -->
+          <!-- 1. Chronotype + sleep rhythm card -->
           <div class="card">
             <p class="section-kicker">Chronotype</p>
             <div class="chronotype-hero">
@@ -33,9 +33,14 @@
 
             <div class="metric-grid">
               <div class="card-metric">
-                <span class="metric-label">Sleep midpoint</span>
-                <strong class="metric-value">{{ profile?.msfsc != null ? formatHour(profile.msfsc) : '—' }}</strong>
-                <span class="metric-sub">free-day chronotype</span>
+                <span class="metric-label">Avg bedtime</span>
+                <strong class="metric-value">{{ profile?.avgSleepOnset != null ? formatHour(profile.avgSleepOnset) : '—' }}</strong>
+                <span class="metric-sub">7-night average</span>
+              </div>
+              <div class="card-metric">
+                <span class="metric-label">Avg wake</span>
+                <strong class="metric-value">{{ profile?.avgWakeTime != null ? formatHour(profile.avgWakeTime) : '—' }}</strong>
+                <span class="metric-sub">7-night average</span>
               </div>
               <div class="card-metric">
                 <span class="metric-label">Melatonin onset</span>
@@ -47,159 +52,176 @@
                 <strong class="metric-value">{{ profile?.ctminEstimate != null ? formatHour(profile.ctminEstimate) : '—' }}</strong>
                 <span class="metric-sub">deepest sleep marker</span>
               </div>
+              <div class="card-metric">
+                <span class="metric-label">Free-day midpoint</span>
+                <strong class="metric-value">{{ profile?.msfsc != null ? formatHour(profile.msfsc) : '—' }}</strong>
+                <span class="metric-sub">MSFsc chronotype</span>
+              </div>
               <div class="card-metric" :class="{ 'card-metric--warn': (profile?.socialJetlag ?? 0) > 1.5 }">
                 <span class="metric-label">Social jetlag</span>
                 <strong class="metric-value">
                   {{ profile?.socialJetlag != null ? profile.socialJetlag.toFixed(1) + ' h' : '—' }}
-                  <span v-if="(profile?.socialJetlag ?? 0) > 1.5" class="warn-flag">high</span>
+                  <span v-if="(profile?.socialJetlag ?? 0) > 1.5" class="warn-flag">HIGH</span>
                 </strong>
                 <span class="metric-sub">work vs free-day offset</span>
               </div>
             </div>
           </div>
 
-          <!-- 2. Circadian Health Score card -->
+          <!-- 2+3. Alertness curve + timeline — single unified scrollable card -->
+          <div class="card">
+            <div class="curve-header">
+              <p class="section-kicker">Today — scroll to explore</p>
+              <div v-if="alertnessCurve.length" class="curve-now-badge">
+                <span class="curve-now-label">Now</span>
+                <span class="curve-now-value">{{ currentAlertnessLabel }}</span>
+              </div>
+            </div>
+
+            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough sleep data to compute alertness curve</div>
+
+            <div v-else class="unified-scroll-wrap">
+              <!-- Fixed Y-axis (does not scroll) -->
+              <div class="y-axis">
+                <span class="y-label">High</span>
+                <span class="y-label">Mid</span>
+                <span class="y-label">Low</span>
+              </div>
+
+              <!-- Scrollable area -->
+              <div class="timeline-scroll" ref="timelineRef">
+                <div class="timeline-inner">
+
+                  <!-- Hour ruler -->
+                  <div class="timeline-ruler">
+                    <div v-for="h in 25" :key="h-1" class="timeline-hour" :style="{ left: ((h-1) * HOUR_PX) + 'px' }">
+                      {{ String(h-1).padStart(2,'0') }}
+                    </div>
+                  </div>
+
+                  <!-- Alertness curve SVG — same 52px/h scale -->
+                  <div class="curve-svg-row">
+                    <svg
+                      :width="24 * HOUR_PX"
+                      height="100"
+                      class="alertness-svg-scroll"
+                      aria-hidden="true"
+                    >
+                      <!-- Sleep bands -->
+                      <template v-if="windows">
+                        <rect :x="windows.bedtimeTarget * HOUR_PX" y="0" :width="(24 - windows.bedtimeTarget) * HOUR_PX" height="100" class="band-sleep" />
+                        <rect x="0" y="0" :width="avgWakeHour * HOUR_PX" height="100" class="band-sleep" />
+                      </template>
+                      <!-- Window bands -->
+                      <template v-if="windows">
+                        <rect v-if="windows.exerciseMorning" :x="windows.exerciseMorning.start * HOUR_PX" y="0" :width="(windows.exerciseMorning.end - windows.exerciseMorning.start) * HOUR_PX" height="100" class="band-exercise" />
+                        <rect v-if="windows.exerciseAfternoon" :x="windows.exerciseAfternoon.start * HOUR_PX" y="0" :width="(windows.exerciseAfternoon.end - windows.exerciseAfternoon.start) * HOUR_PX" height="100" class="band-exercise" />
+                        <rect :x="windows.cognitiveStart * HOUR_PX" y="0" :width="(windows.cognitiveEnd - windows.cognitiveStart) * HOUR_PX" height="100" class="band-cognitive" />
+                      </template>
+                      <!-- Vertical grid every hour -->
+                      <line v-for="h in 23" :key="h" :x1="h * HOUR_PX" y1="0" :x2="h * HOUR_PX" y2="100" class="grid-line" />
+                      <!-- Midline -->
+                      <line x1="0" y1="50" :x2="24 * HOUR_PX" y2="50" class="mid-line" />
+                      <!-- Curve area + line -->
+                      <polygon :points="areaPointsScroll" class="curve-area" />
+                      <polyline :points="linePointsScroll" class="curve-line" />
+                      <!-- Now line -->
+                      <line :x1="currentHour * HOUR_PX" y1="0" :x2="currentHour * HOUR_PX" y2="100" class="now-line" />
+                      <!-- Now dot -->
+                      <circle v-if="nowPoint" :cx="nowPoint.hour * HOUR_PX" :cy="toYScroll(nowPoint.alertness)" r="4" class="now-dot" />
+                      <!-- Peak -->
+                      <template v-if="peakPoint">
+                        <circle :cx="peakPoint.hour * HOUR_PX" :cy="toYScroll(peakPoint.alertness)" r="3.5" class="peak-dot" />
+                        <text :x="peakPoint.hour * HOUR_PX" :y="toYScroll(peakPoint.alertness) - 7" class="peak-label" text-anchor="middle">{{ formatHour(peakPoint.hour) }}</text>
+                      </template>
+                      <!-- Band labels -->
+                      <template v-if="windows">
+                        <text v-if="windows.exerciseMorning" :x="(windows.exerciseMorning.start + windows.exerciseMorning.end) / 2 * HOUR_PX" y="94" class="band-label" text-anchor="middle">exercise</text>
+                        <text v-if="windows.exerciseAfternoon" :x="(windows.exerciseAfternoon.start + windows.exerciseAfternoon.end) / 2 * HOUR_PX" y="94" class="band-label" text-anchor="middle">exercise</text>
+                        <text :x="(windows.cognitiveStart + windows.cognitiveEnd) / 2 * HOUR_PX" y="94" class="band-label band-label--focus" text-anchor="middle">focus</text>
+                      </template>
+                    </svg>
+                  </div>
+
+                  <!-- Activity blocks row -->
+                  <div class="timeline-bar-row" v-if="windows">
+                    <div class="tl-block tl-block--sleep" :style="{ left: '0px', width: (avgWakeHour * HOUR_PX) + 'px' }"><span class="tl-block-label">Sleep</span></div>
+                    <div v-if="windows.exerciseMorning" class="tl-block tl-block--exercise" :style="{ left: (windows.exerciseMorning.start * HOUR_PX) + 'px', width: ((windows.exerciseMorning.end - windows.exerciseMorning.start) * HOUR_PX) + 'px' }"><span class="tl-block-label">Exercise</span></div>
+                    <div class="tl-block tl-block--focus" :style="{ left: (windows.cognitiveStart * HOUR_PX) + 'px', width: ((windows.cognitiveEnd - windows.cognitiveStart) * HOUR_PX) + 'px' }"><span class="tl-block-label">Focus</span></div>
+                    <div v-if="windows.exerciseAfternoon" class="tl-block tl-block--exercise" :style="{ left: (windows.exerciseAfternoon.start * HOUR_PX) + 'px', width: ((windows.exerciseAfternoon.end - windows.exerciseAfternoon.start) * HOUR_PX) + 'px' }"><span class="tl-block-label">Exercise</span></div>
+                    <div class="tl-block tl-block--sleep" :style="{ left: (windows.bedtimeTarget * HOUR_PX) + 'px', width: ((24 - windows.bedtimeTarget) * HOUR_PX) + 'px' }"><span class="tl-block-label">Sleep</span></div>
+                    <div class="tl-now" :style="{ left: (currentHour * HOUR_PX) + 'px' }"></div>
+                  </div>
+
+                  <!-- Event pins row -->
+                  <div class="timeline-pins-row" v-if="windows">
+                    <div class="tl-pin" :style="{ left: (windows.lastMealBy * HOUR_PX) + 'px' }">
+                      <div class="tl-pin-line"></div>
+                      <span class="tl-pin-label">Last meal<br/>{{ formatHour(windows.lastMealBy) }}</span>
+                    </div>
+                    <div v-if="profile?.dlmoEstimate != null" class="tl-pin tl-pin--dim" :style="{ left: (profile.dlmoEstimate * HOUR_PX) + 'px' }">
+                      <div class="tl-pin-line"></div>
+                      <span class="tl-pin-label">Dim screens<br/>{{ formatHour(profile.dlmoEstimate) }}</span>
+                    </div>
+                    <div class="tl-pin tl-pin--sleep" :style="{ left: (windows.bedtimeTarget * HOUR_PX) + 'px' }">
+                      <div class="tl-pin-line"></div>
+                      <span class="tl-pin-label">Bedtime<br/>{{ formatHour(windows.bedtimeTarget) }}</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div><!-- end timeline-scroll -->
+            </div><!-- end unified-scroll-wrap -->
+
+            <!-- What's happening now -->
+            <div class="now-activity">
+              <span class="now-activity-label">Right now:</span>
+              <span class="now-activity-value">{{ nowActivityLabel }}</span>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend-row">
+              <span class="legend-item"><span class="legend-dot legend-dot--red"></span>Alertness</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--red"></span>Focus</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--white"></span>Exercise</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--sleep"></span>Sleep</span>
+            </div>
+          </div>
+
+          <!-- 4. Circadian Health Score card -->
           <div class="card">
             <p class="section-kicker">Circadian health score</p>
             <div class="score-hero">
-              <span
-                class="score-number"
-                :class="scoreColorClass"
-              >{{ score?.total ?? '—' }}</span>
+              <span class="score-number" :class="scoreColorClass">{{ score?.total ?? '—' }}</span>
               <div class="score-bar-track">
-                <div
-                  class="score-bar-fill"
-                  :class="scoreColorClass"
-                  :style="{ width: (score?.total ?? 0) + '%' }"
-                ></div>
+                <div class="score-bar-fill" :class="scoreColorClass" :style="{ width: (score?.total ?? 0) + '%' }"></div>
               </div>
             </div>
-
-            <div class="component-grid">
-              <div class="card-metric">
+            <div class="score-grid">
+              <div class="score-component">
                 <span class="metric-label">Consistency</span>
-                <strong class="metric-value">{{ score?.consistency ?? '—' }}</strong>
+                <div class="mini-bar-track"><div class="mini-bar-fill" :style="{ width: (score?.consistency ?? 0) + '%' }"></div></div>
+                <strong class="score-val">{{ score?.consistency ?? '—' }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="score-component">
                 <span class="metric-label">Amplitude</span>
-                <strong class="metric-value">{{ score?.amplitude ?? '—' }}</strong>
+                <div class="mini-bar-track"><div class="mini-bar-fill" :style="{ width: (score?.amplitude ?? 0) + '%' }"></div></div>
+                <strong class="score-val">{{ score?.amplitude ?? '—' }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="score-component">
                 <span class="metric-label">Efficiency</span>
-                <strong class="metric-value">{{ score?.efficiency ?? '—' }}</strong>
+                <div class="mini-bar-track"><div class="mini-bar-fill" :style="{ width: (score?.efficiency ?? 0) + '%' }"></div></div>
+                <strong class="score-val">{{ score?.efficiency ?? '—' }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="score-component">
                 <span class="metric-label">Recovery</span>
-                <strong class="metric-value">{{ score?.recovery ?? '—' }}</strong>
+                <div class="mini-bar-track"><div class="mini-bar-fill" :style="{ width: (score?.recovery ?? 0) + '%' }"></div></div>
+                <strong class="score-val">{{ score?.recovery ?? '—' }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="score-component">
                 <span class="metric-label">Light</span>
-                <strong class="metric-value">{{ score?.light ?? '—' }}</strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. Today's alertness curve -->
-          <div class="card">
-            <p class="section-kicker">Alertness today</p>
-            <div class="curve-wrap">
-              <svg
-                v-if="alertnessCurve.length"
-                viewBox="0 0 24 10"
-                preserveAspectRatio="none"
-                class="alertness-svg"
-                aria-hidden="true"
-              >
-                <!-- Recommended sleep band (wraps midnight: two rects) -->
-                <template v-if="windows">
-                  <!-- from bedtime to end of day -->
-                  <rect
-                    :x="windows.bedtimeTarget"
-                    y="0"
-                    :width="24 - windows.bedtimeTarget"
-                    height="10"
-                    class="sleep-band"
-                  />
-                  <!-- from start of day to wake -->
-                  <rect
-                    x="0"
-                    y="0"
-                    :width="avgWakeHour"
-                    height="10"
-                    class="sleep-band"
-                  />
-                  <text
-                    :x="(windows.bedtimeTarget + 24) / 2"
-                    y="5.5"
-                    class="sleep-band-label"
-                    text-anchor="middle"
-                  >sleep</text>
-                </template>
-                <!-- Area fill -->
-                <polygon
-                  :points="`0,10 ${alertnessCurve.map(p => `${p.hour},${(1 - p.alertness) * 9 + 0.5}`).join(' ')} 23,10`"
-                  class="curve-area"
-                />
-                <!-- Line -->
-                <polyline
-                  :points="alertnessCurve.map(p => `${p.hour},${(1 - p.alertness) * 9 + 0.5}`).join(' ')"
-                  class="curve-line"
-                />
-                <!-- Now line -->
-                <line
-                  :x1="currentHour"
-                  y1="0.5"
-                  :x2="currentHour"
-                  y2="9.5"
-                  class="now-line"
-                />
-                <!-- Peak label -->
-                <text
-                  v-if="peakPoint"
-                  :x="peakPoint.hour"
-                  :y="(1 - peakPoint.alertness) * 9 + 0.5 - 0.6"
-                  class="peak-label"
-                  text-anchor="middle"
-                >peak</text>
-              </svg>
-              <div v-else class="curve-empty">No alertness data</div>
-            </div>
-            <div class="axis-labels">
-              <span>0</span>
-              <span>6</span>
-              <span>12</span>
-              <span>18</span>
-            </div>
-          </div>
-
-          <!-- 4. Timing windows card -->
-          <div v-if="windows" class="card">
-            <p class="section-kicker">Timing windows</p>
-            <div class="windows-list">
-              <div class="window-row">
-                <span class="window-dot window-dot--red"></span>
-                <span class="window-label">Cognitive peak</span>
-                <span class="window-time">{{ formatHour(windows.cognitiveStart) }} – {{ formatHour(windows.cognitiveEnd) }}</span>
-              </div>
-              <div v-if="windows.exerciseMorning != null" class="window-row">
-                <span class="window-dot window-dot--yellow"></span>
-                <span class="window-label">Morning exercise</span>
-                <span class="window-time">{{ formatHour(windows.exerciseMorning!.start) }} – {{ formatHour(windows.exerciseMorning!.end) }}</span>
-              </div>
-              <div v-if="windows.exerciseAfternoon != null" class="window-row">
-                <span class="window-dot window-dot--yellow"></span>
-                <span class="window-label">Afternoon exercise</span>
-                <span class="window-time">{{ formatHour(windows.exerciseAfternoon!.start) }} – {{ formatHour(windows.exerciseAfternoon!.end) }}</span>
-              </div>
-              <div class="window-row">
-                <span class="window-dot window-dot--green"></span>
-                <span class="window-label">Last meal by</span>
-                <span class="window-time">{{ formatHour(windows.lastMealBy) }}</span>
-              </div>
-              <div class="window-row">
-                <span class="window-dot window-dot--blue"></span>
-                <span class="window-label">Bedtime target</span>
-                <span class="window-time">{{ formatHour(windows.bedtimeTarget) }}</span>
+                <div class="mini-bar-track"><div class="mini-bar-fill" :style="{ width: (score?.light ?? 0) + '%' }"></div></div>
+                <strong class="score-val">{{ score?.light ?? '—' }}</strong>
               </div>
             </div>
           </div>
@@ -213,6 +235,9 @@
                 <span class="nudge-text">{{ nudge }}</span>
               </div>
             </div>
+            <div v-if="recs.socialJetlagWarning" class="jetlag-warning">
+              <span class="jetlag-text">{{ recs.socialJetlagWarning }}</span>
+            </div>
           </div>
 
           <!-- 6. Today's log card -->
@@ -224,7 +249,6 @@
               </button>
             </div>
 
-            <!-- Existing log summary when form is hidden -->
             <div v-if="todayLog && !showLogForm" class="log-summary">
               <div class="metric-grid">
                 <div class="card-metric">
@@ -260,69 +284,36 @@
               <span class="empty-text">No entry for today.</span>
             </div>
 
-            <!-- Log form -->
             <div v-if="showLogForm" class="log-form">
-
-              <!-- Day type -->
               <div class="form-section">
                 <span class="form-label">Day type</span>
                 <div class="type-btns">
-                  <button
-                    class="type-btn"
-                    :class="{ 'type-btn--active': formDayType === 'work' }"
-                    @click="selectDayType('work')"
-                  >Work</button>
-                  <button
-                    class="type-btn"
-                    :class="{ 'type-btn--active': formDayType === 'free' }"
-                    @click="selectDayType('free')"
-                  >Free day</button>
+                  <button class="type-btn" :class="{ 'type-btn--active': formDayType === 'work' }" @click="selectDayType('work')">Work</button>
+                  <button class="type-btn" :class="{ 'type-btn--active': formDayType === 'free' }" @click="selectDayType('free')">Free day</button>
                 </div>
               </div>
 
-              <!-- Energy at wake -->
               <div class="form-section">
                 <span class="form-label">Energy at wake</span>
                 <div class="energy-selector">
-                  <button
-                    v-for="n in 11"
-                    :key="n - 1"
-                    class="energy-box"
-                    :class="{ 'energy-box--active': formEnergyWake === n - 1 }"
-                    @click="selectEnergy('wake', n - 1)"
-                  >{{ n - 1 }}</button>
+                  <button v-for="n in 11" :key="n - 1" class="energy-box" :class="{ 'energy-box--active': formEnergyWake === n - 1 }" @click="selectEnergy('wake', n - 1)">{{ n - 1 }}</button>
                 </div>
               </div>
 
-              <!-- Energy at noon -->
               <div class="form-section">
                 <span class="form-label">Energy at noon</span>
                 <div class="energy-selector">
-                  <button
-                    v-for="n in 11"
-                    :key="n - 1"
-                    class="energy-box"
-                    :class="{ 'energy-box--active': formEnergyNoon === n - 1 }"
-                    @click="selectEnergy('noon', n - 1)"
-                  >{{ n - 1 }}</button>
+                  <button v-for="n in 11" :key="n - 1" class="energy-box" :class="{ 'energy-box--active': formEnergyNoon === n - 1 }" @click="selectEnergy('noon', n - 1)">{{ n - 1 }}</button>
                 </div>
               </div>
 
-              <!-- Energy at evening -->
               <div class="form-section">
                 <span class="form-label">Energy at evening</span>
                 <div class="energy-selector">
-                  <button
-                    v-for="n in 11"
-                    :key="n - 1"
-                    class="energy-box"
-                    :class="{ 'energy-box--active': formEnergyEvening === n - 1 }"
-                    @click="selectEnergy('evening', n - 1)"
-                  >{{ n - 1 }}</button>
+                  <button v-for="n in 11" :key="n - 1" class="energy-box" :class="{ 'energy-box--active': formEnergyEvening === n - 1 }" @click="selectEnergy('evening', n - 1)">{{ n - 1 }}</button>
                 </div>
               </div>
 
-              <!-- Meal times -->
               <div class="form-section form-row">
                 <div class="form-field">
                   <span class="form-label">First meal</span>
@@ -334,17 +325,13 @@
                 </div>
               </div>
 
-              <!-- Morning light -->
               <div class="form-section">
                 <span class="form-label">Got outdoor light before 9 AM</span>
-                <button
-                  class="light-toggle"
-                  :class="{ 'light-toggle--yes': formMorningLight }"
-                  @click="formMorningLight = !formMorningLight"
-                >{{ formMorningLight ? 'Yes' : 'No' }}</button>
+                <button class="light-toggle" :class="{ 'light-toggle--yes': formMorningLight }" @click="formMorningLight = !formMorningLight">
+                  {{ formMorningLight ? 'Yes' : 'No' }}
+                </button>
               </div>
 
-              <!-- Save -->
               <button class="save-btn" @click="saveLog">Save</button>
             </div>
           </div>
@@ -356,7 +343,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { IonPage, IonHeader, IonContent, IonSpinner, onIonViewWillEnter, toastController } from '@ionic/vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
@@ -397,8 +384,10 @@ const recs = ref<CircadianRecommendations | null>(null);
 const todayLog = ref<CircadianLogEntry | null>(null);
 const loading = ref(true);
 const avgWakeHour = ref(7.0);
+const timelineRef = ref<HTMLElement | null>(null);
 
-// Daily log form state
+const HOUR_PX = 52; // pixels per hour in the timeline
+
 const formDayType = ref<'work' | 'free'>('work');
 const formEnergyWake = ref<number | null>(null);
 const formEnergyNoon = ref<number | null>(null);
@@ -410,13 +399,31 @@ const showLogForm = ref(false);
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
-const currentHour = computed(() => new Date().getHours());
+const currentHour = computed(() => {
+  const now = new Date();
+  return now.getHours() + now.getMinutes() / 60;
+});
+
+// SVG Y for the scrollable curve (fixed-pixel: height=100, usable 6–88)
+const toYScroll = (alertness: number) => (1 - alertness) * 82 + 6;
 
 const peakPoint = computed<AlertnessPoint | null>(() => {
   if (!alertnessCurve.value.length) return null;
-  return alertnessCurve.value.reduce((best, p) =>
-    p.alertness > best.alertness ? p : best
-  );
+  return alertnessCurve.value.reduce((best, p) => p.alertness > best.alertness ? p : best);
+});
+
+const nowPoint = computed<AlertnessPoint | null>(() => {
+  if (!alertnessCurve.value.length) return null;
+  const h = Math.round(currentHour.value);
+  return alertnessCurve.value.find(p => p.hour === Math.min(h, 23)) ?? null;
+});
+
+const currentAlertnessLabel = computed(() => {
+  const a = nowPoint.value?.alertness ?? 0;
+  if (a >= 0.75) return 'High';
+  if (a >= 0.5) return 'Moderate';
+  if (a >= 0.25) return 'Low';
+  return 'Very low';
 });
 
 const scoreColorClass = computed(() => {
@@ -424,6 +431,32 @@ const scoreColorClass = computed(() => {
   if (t >= 70) return 'score--green';
   if (t >= 45) return 'score--yellow';
   return 'score--red';
+});
+
+// Scrollable SVG uses fixed pixel coords: x = hour * HOUR_PX
+const linePointsScroll = computed(() =>
+  alertnessCurve.value.map(p => `${p.hour * HOUR_PX},${toYScroll(p.alertness)}`).join(' ')
+);
+
+const areaPointsScroll = computed(() => {
+  if (!alertnessCurve.value.length) return '';
+  const pts = alertnessCurve.value.map(p => `${p.hour * HOUR_PX},${toYScroll(p.alertness)}`).join(' ');
+  const first = alertnessCurve.value[0];
+  const last = alertnessCurve.value[alertnessCurve.value.length - 1];
+  return `${first.hour * HOUR_PX},100 ${pts} ${last.hour * HOUR_PX},100`;
+});
+
+const nowActivityLabel = computed(() => {
+  const h = currentHour.value;
+  const w = windows.value;
+  if (!w) return '—';
+  if (h < avgWakeHour.value) return 'Sleep';
+  if (w.exerciseMorning && h >= w.exerciseMorning.start && h < w.exerciseMorning.end) return 'Morning exercise window';
+  if (h >= w.cognitiveStart && h < w.cognitiveEnd) return 'Cognitive peak — deep work time';
+  if (w.exerciseAfternoon && h >= w.exerciseAfternoon.start && h < w.exerciseAfternoon.end) return 'Afternoon exercise window';
+  if (h >= w.lastMealBy - 0.1 && h < w.bedtimeTarget) return 'Wind down — no more eating';
+  if (h >= w.bedtimeTarget) return 'Bedtime';
+  return 'Rest / low-intensity time';
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -435,66 +468,76 @@ const formatHour = (h: number): string => {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 };
 
+const isNow = (start: number, end: number): boolean => {
+  const h = currentHour.value;
+  return h >= start && h < end;
+};
+
 // ── Data loading ──────────────────────────────────────────────────────────────
 
 const loadData = async () => {
   loading.value = true;
   const today = new Date().toISOString().slice(0, 10);
   try {
+    const sessions = await getRecentSleepSessions(30);
+    const sleepRecords: SleepRecord[] = sessions.map(s => ({
+      date: s.date,
+      bedtime: s.bedtime,
+      waketime: s.waketime,
+      timeAsleepHours: s.time_asleep_hours,
+      efficiency: s.efficiency,
+    }));
 
-  const sessions = await getRecentSleepSessions(30);
-  const sleepRecords: SleepRecord[] = sessions.map(s => ({
-    date: s.date,
-    bedtime: s.bedtime,
-    waketime: s.waketime,
-    timeAsleepHours: s.time_asleep_hours,
-    efficiency: s.efficiency,
-  }));
+    const logs = await getRecentCircadianLogs(30);
+    const dayTypes = new Map<string, DayType>(
+      logs.map(l => [l.date, l.day_type as DayType])
+    );
 
-  const logs = await getRecentCircadianLogs(30);
-  const dayTypes = new Map<string, DayType>(
-    logs.map(l => [l.date, l.day_type as DayType])
-  );
+    const rhrMetric = await getLatestHealthMetric('resting_heart_rate');
+    const rhrHistory = await getRecentHealthMetrics('resting_heart_rate', 14);
+    const rhrBaseline = rhrHistory.length
+      ? rhrHistory.reduce((s, m) => s + Number(m.value), 0) / rhrHistory.length
+      : null;
+    const rhrToday = rhrMetric ? Number(rhrMetric.value) : null;
 
-  const rhrMetric = await getLatestHealthMetric('resting_heart_rate');
-  const rhrHistory = await getRecentHealthMetrics('resting_heart_rate', 14);
-  const rhrBaseline = rhrHistory.length
-    ? rhrHistory.reduce((s, m) => s + Number(m.value), 0) / rhrHistory.length
-    : null;
-  const rhrToday = rhrMetric ? Number(rhrMetric.value) : null;
+    const lightFraction = logs.length ? logs.filter(l => l.morning_light === 1).length / logs.length : null;
+    const computedProfile = computeCircadianProfile(sleepRecords, dayTypes);
+    profile.value = computedProfile;
+    score.value = computeCircadianScore(sleepRecords, rhrToday, rhrBaseline, lightFraction);
 
-  const lightFraction = logs.length ? logs.filter(l => l.morning_light === 1).length / logs.length : null;
-  const computedProfile = computeCircadianProfile(sleepRecords, dayTypes);
-  profile.value = computedProfile;
-  score.value = computeCircadianScore(sleepRecords, rhrToday, rhrBaseline, lightFraction);
+    avgWakeHour.value = sleepRecords.length
+      ? sleepRecords.slice(0, 7).reduce((s, r) => {
+          const d = new Date(r.waketime);
+          return s + d.getHours() + d.getMinutes() / 60;
+        }, 0) / Math.min(sleepRecords.length, 7)
+      : 7.0;
 
-  avgWakeHour.value = sleepRecords.length
-    ? sleepRecords.slice(0, 7).reduce((s, r) => {
-        const d = new Date(r.waketime);
-        return s + d.getHours() + d.getMinutes() / 60;
-      }, 0) / Math.min(sleepRecords.length, 7)
-    : 7.0;
+    alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour.value);
+    const w = computeCircadianWindows(computedProfile, avgWakeHour.value);
+    windows.value = w;
+    recs.value = computeCircadianRecommendations(
+      computedProfile, w, computedProfile.socialJetlag, [],
+      logs.map(l => ({ energy_wake: l.energy_wake, energy_noon: l.energy_noon, energy_evening: l.energy_evening }))
+    );
 
-  alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour.value);
-  const w = computeCircadianWindows(computedProfile, avgWakeHour.value);
-  windows.value = w;
-  recs.value = computeCircadianRecommendations(
-    computedProfile, w, computedProfile.socialJetlag, [],
-    logs.map(l => ({ energy_wake: l.energy_wake, energy_noon: l.energy_noon, energy_evening: l.energy_evening }))
-  );
+    // Scroll timeline to 2h before current time so "now" is visible
+    await nextTick();
+    if (timelineRef.value) {
+      const targetScroll = Math.max(0, (currentHour.value - 2) * HOUR_PX);
+      timelineRef.value.scrollLeft = targetScroll;
+    }
 
-  const log = await getCircadianLog(today);
-  todayLog.value = log;
-  if (log) {
-    formDayType.value = log.day_type as 'work' | 'free';
-    formEnergyWake.value = log.energy_wake;
-    formEnergyNoon.value = log.energy_noon;
-    formEnergyEvening.value = log.energy_evening;
-    formMealFirst.value = log.meal_first ?? '';
-    formMealLast.value = log.meal_last ?? '';
-    formMorningLight.value = log.morning_light === 1;
-  }
-
+    const log = await getCircadianLog(today);
+    todayLog.value = log;
+    if (log) {
+      formDayType.value = log.day_type as 'work' | 'free';
+      formEnergyWake.value = log.energy_wake;
+      formEnergyNoon.value = log.energy_noon;
+      formEnergyEvening.value = log.energy_evening;
+      formMealFirst.value = log.meal_first ?? '';
+      formMealLast.value = log.meal_last ?? '';
+      formMorningLight.value = log.morning_light === 1;
+    }
   } catch (e) {
     console.error('[CircadianPage] loadData failed:', e);
   } finally {
@@ -633,17 +676,9 @@ const saveLog = async () => {
   color: rgba(255, 255, 255, 0.85);
 }
 
-.chronotype-label--early {
-  color: rgb(34, 197, 94);
-}
-
-.chronotype-label--intermediate {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.chronotype-label--late {
-  color: rgb(215, 26, 33);
-}
+.chronotype-label--early      { color: rgb(34, 197, 94); }
+.chronotype-label--intermediate { color: rgba(255, 255, 255, 0.85); }
+.chronotype-label--late       { color: rgb(215, 26, 33); }
 
 .quality-badge {
   font-size: 0.72rem;
@@ -655,20 +690,9 @@ const saveLog = async () => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.quality-badge--high {
-  border-color: rgba(34, 197, 94, 0.4);
-  color: rgb(34, 197, 94);
-}
-
-.quality-badge--medium {
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.quality-badge--low {
-  border-color: rgba(215, 26, 33, 0.4);
-  color: rgb(215, 26, 33);
-}
+.quality-badge--high   { border-color: rgba(34, 197, 94, 0.4); color: rgb(34, 197, 94); }
+.quality-badge--medium { border-color: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.85); }
+.quality-badge--low    { border-color: rgba(215, 26, 33, 0.4); color: rgb(215, 26, 33); }
 
 .warn-flag {
   font-size: 0.72rem;
@@ -678,24 +702,393 @@ const saveLog = async () => {
   letter-spacing: 0.1em;
 }
 
+/* ── Alertness curve ────────────────────────────────────────────────────────── */
+.curve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.curve-header .section-kicker {
+  margin-bottom: 0;
+}
+
+.curve-now-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.curve-now-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.curve-now-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgb(215, 26, 33);
+}
+
+/* ── Unified alertness + timeline ────────────────────────────────────────────── */
+.curve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.curve-header .section-kicker { margin-bottom: 0; }
+
+.curve-now-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.curve-now-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.curve-now-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgb(215, 26, 33);
+}
+
+.unified-scroll-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* Y-axis stays fixed on the left */
+.y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* height = SVG 100px, don't include ruler or bars */
+  height: 100px;
+  width: 30px;
+  flex-shrink: 0;
+  padding-right: 4px;
+}
+
+.y-label {
+  font-size: 0.58rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: right;
+  line-height: 1;
+}
+
+/* Scrollable area fills the rest */
+.timeline-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+}
+.timeline-scroll::-webkit-scrollbar { display: none; }
+
+.timeline-inner {
+  width: 1248px; /* 52 * 24 */
+  position: relative;
+}
+
+/* Hour ruler */
+.timeline-ruler {
+  position: relative;
+  height: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.timeline-hour {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--nt-font-mono);
+}
+
+/* Alertness curve SVG row */
+.curve-svg-row {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.alertness-svg-scroll {
+  display: block;
+}
+
+/* SVG elements */
+.band-sleep    { fill: rgba(255, 255, 255, 0.04); }
+.band-exercise { fill: rgba(255, 255, 255, 0.07); }
+.band-cognitive { fill: rgba(215, 26, 33, 0.12); }
+
+.grid-line {
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 1;
+}
+
+.mid-line {
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.curve-area  { fill: rgba(215, 26, 33, 0.15); }
+
+.curve-line {
+  fill: none;
+  stroke: rgb(215, 26, 33);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.now-line {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.now-dot  { fill: #fff; }
+
+.peak-dot {
+  fill: rgb(215, 26, 33);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.peak-label {
+  fill: rgba(255, 255, 255, 0.7);
+  font-size: 8px;
+  font-family: sans-serif;
+}
+
+.band-label {
+  fill: rgba(255, 255, 255, 0.4);
+  font-size: 7px;
+  font-family: sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.band-label--focus { fill: rgba(215, 26, 33, 0.7); }
+
+.curve-empty {
+  padding: 32px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legend-dot--red { background: rgb(215, 26, 33); }
+
+.legend-swatch {
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-swatch--red   { background: rgba(215, 26, 33, 0.3); }
+.legend-swatch--white { background: rgba(255, 255, 255, 0.12); }
+.legend-swatch--sleep { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255,255,255,0.1); }
+
+/* ── Horizontal scrollable timeline ─────────────────────────────────────────── */
+.timeline-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  margin: 12px -18px 0;
+  padding: 0 18px;
+  scrollbar-width: none;
+}
+.timeline-scroll::-webkit-scrollbar { display: none; }
+
+.timeline-inner {
+  width: 1248px; /* 52px * 24h */
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.timeline-ruler {
+  position: relative;
+  height: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.timeline-hour {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--nt-font-mono);
+}
+
+.timeline-bar-row {
+  position: relative;
+  height: 52px;
+  margin: 6px 0;
+}
+
+.tl-block {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  overflow: hidden;
+  min-width: 4px;
+}
+
+.tl-block--sleep   { background: rgba(255, 255, 255, 0.05); }
+.tl-block--exercise {
+  background: rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+}
+.tl-block--focus {
+  background: rgba(215, 26, 33, 0.2);
+  border: 1px solid rgba(215, 26, 33, 0.3);
+  border-radius: 8px;
+}
+
+.tl-block-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.tl-block--focus .tl-block-label { color: rgb(215, 26, 33); }
+
+.tl-now {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 2px;
+  background: #fff;
+  border-radius: 999px;
+  z-index: 2;
+}
+
+.timeline-pins-row {
+  position: relative;
+  height: 60px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.tl-pin {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.tl-pin-line {
+  width: 1px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tl-pin--dim .tl-pin-line   { background: rgba(255, 255, 255, 0.15); }
+.tl-pin--sleep .tl-pin-line { background: rgba(255, 255, 255, 0.2); }
+
+.tl-pin-label {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.tl-pin--dim .tl-pin-label   { color: rgba(255, 255, 255, 0.35); }
+.tl-pin--sleep .tl-pin-label { color: rgba(255, 255, 255, 0.4); }
+
+.now-activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.now-activity-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
+.now-activity-value {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* ── Score ──────────────────────────────────────────────────────────────────── */
 .score-hero {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .score-number {
-  font-size: 2.6rem;
+  font-family: var(--nt-font-display);
+  font-size: 2.8rem;
   font-weight: 700;
   line-height: 1;
-  min-width: 64px;
+  min-width: 72px;
 }
 
-.score-number.score--green { color: rgb(34, 197, 94); }
+.score-number.score--green  { color: rgb(34, 197, 94); }
 .score-number.score--yellow { color: rgba(255, 255, 255, 0.85); }
-.score-number.score--red { color: rgb(215, 26, 33); }
+.score-number.score--red    { color: rgb(215, 26, 33); }
 
 .score-bar-track {
   flex: 1;
@@ -708,118 +1101,45 @@ const saveLog = async () => {
 .score-bar-fill {
   height: 100%;
   border-radius: 999px;
+  transition: width 400ms ease;
 }
 
-.score-bar-fill.score--green { background: rgb(34, 197, 94); }
+.score-bar-fill.score--green  { background: rgb(34, 197, 94); }
 .score-bar-fill.score--yellow { background: rgba(255, 255, 255, 0.85); }
-.score-bar-fill.score--red { background: rgb(215, 26, 33); }
+.score-bar-fill.score--red    { background: rgb(215, 26, 33); }
 
-.component-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-/* ── Alertness curve SVG ────────────────────────────────────────────────────── */
-.curve-wrap {
-  width: 100%;
-  overflow: hidden;
-  border-radius: 10px;
-}
-
-.alertness-svg {
-  width: 100%;
-  height: 80px;
-  display: block;
-}
-
-.sleep-band {
-  fill: rgba(255, 255, 255, 0.05);
-}
-
-.sleep-band-label {
-  fill: rgba(255, 255, 255, 0.25);
-  font-size: 0.8px;
-  font-family: sans-serif;
-}
-
-.curve-area {
-  fill: rgba(215, 26, 33, 0.15);
-}
-
-.curve-line {
-  fill: none;
-  stroke: rgb(215, 26, 33);
-  stroke-width: 0.3;
-  vector-effect: non-scaling-stroke;
-  stroke-linejoin: round;
-}
-
-.now-line {
-  stroke: rgba(255, 255, 255, 0.25);
-  stroke-width: 0.25;
-  stroke-dasharray: 0.5 0.4;
-  vector-effect: non-scaling-stroke;
-}
-
-.peak-label {
-  fill: rgba(255, 255, 255, 0.5);
-  font-size: 0.9px;
-  font-family: sans-serif;
-}
-
-.axis-labels {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0 0;
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.curve-empty {
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-/* ── Timing windows ─────────────────────────────────────────────────────────── */
-.windows-list {
+.score-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.window-row {
-  display: flex;
+.score-component {
+  display: grid;
+  grid-template-columns: 100px 1fr 32px;
   align-items: center;
   gap: 10px;
 }
 
-.window-dot {
-  width: 8px;
-  height: 8px;
+.mini-bar-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.window-dot--red    { background: rgb(215, 26, 33); }
-.window-dot--yellow { background: rgba(255, 255, 255, 0.85); }
-.window-dot--green  { background: rgb(34, 197, 94); }
-.window-dot--blue   { background: rgba(255, 255, 255, 0.35); }
-
-.window-label {
-  flex: 1;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+.mini-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width 400ms ease;
 }
 
-.window-time {
-  font-size: 0.9rem;
+.score-val {
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: right;
 }
 
 /* ── Recommendations ────────────────────────────────────────────────────────── */
@@ -850,6 +1170,20 @@ const saveLog = async () => {
   line-height: 1.5;
 }
 
+.jetlag-warning {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(215, 26, 33, 0.1);
+  border: 1px solid rgba(215, 26, 33, 0.25);
+}
+
+.jetlag-text {
+  font-size: 0.85rem;
+  color: rgba(215, 26, 33, 0.9);
+  line-height: 1.5;
+}
+
 /* ── Log card ───────────────────────────────────────────────────────────────── */
 .log-card-header {
   display: flex;
@@ -858,9 +1192,7 @@ const saveLog = async () => {
   margin-bottom: 6px;
 }
 
-.log-card-header .section-kicker {
-  margin: 0;
-}
+.log-card-header .section-kicker { margin: 0; }
 
 .toggle-btn {
   font-size: 0.9rem;
@@ -871,10 +1203,6 @@ const saveLog = async () => {
   padding: 6px 12px;
   cursor: pointer;
   transition: border-color 150ms ease;
-}
-
-.toggle-btn:hover {
-  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .log-summary {
@@ -904,10 +1232,7 @@ const saveLog = async () => {
 .text-green  { color: rgb(34, 197, 94); }
 .text-subtle { color: rgba(255, 255, 255, 0.5); }
 
-.empty-log {
-  margin-top: 10px;
-}
-
+.empty-log { margin-top: 10px; }
 .empty-text {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.5);
@@ -972,7 +1297,7 @@ const saveLog = async () => {
 
 .energy-selector {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -992,7 +1317,6 @@ const saveLog = async () => {
   transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-/* extend tap target to 40x40 without changing visual size */
 .energy-box::after {
   content: '';
   position: absolute;
@@ -1021,6 +1345,7 @@ const saveLog = async () => {
 
 .form-input:focus {
   border-color: rgb(215, 26, 33);
+  outline: none;
 }
 
 .light-toggle {
@@ -1055,13 +1380,13 @@ const saveLog = async () => {
   transition: background-color 150ms ease;
 }
 
-.save-btn:hover {
+.save-btn:active {
   background: rgb(178, 19, 25);
 }
 
 /* ── Loading ────────────────────────────────────────────────────────────────── */
 .loading-state {
-  padding: 24px 0;
+  padding: 48px 0;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -1069,9 +1394,7 @@ const saveLog = async () => {
   gap: 10px;
 }
 
-.loading-spinner {
-  color: rgb(215, 26, 33);
-}
+.loading-spinner { color: rgb(215, 26, 33); }
 
 .loading-text {
   font-size: 0.9rem;
