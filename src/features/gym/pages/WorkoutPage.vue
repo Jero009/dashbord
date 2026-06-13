@@ -434,7 +434,7 @@ import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 
-import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds } from '@/shared/db/app_db';
+import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight } from '@/shared/db/app_db';
 
 const router = useRouter();
 // id from route
@@ -451,6 +451,7 @@ const loadWorkout = async () => {
   startTime.value = normalizeDateInput(workout?.time_start);
 
   const data = await getWorkoutExercises(workoutId);
+  const bodyWeight = await getLatestBodyWeight();
 
   const [setsArray, previousSetsArray] = await Promise.all([
     Promise.all(data.map((ex: any) => getWorkoutSets(ex.id))),
@@ -458,15 +459,22 @@ const loadWorkout = async () => {
   ]);
 
   for (let i = 0; i < data.length; i++) {
+    const isBodyweight = data[i].equipment === 'bodyweight';
+    const bw = isBodyweight && bodyWeight ? bodyWeight : 0;
     const previousSetByNumber = new Map<number, any>(
       previousSetsArray[i].map((row: any) => [Number(row.set_number), row])
     );
-    data[i].sets = setsArray[i].map((s: any) => ({
-      ...s,
-      completed: !!s.completed,
-      previous_weight: Number(previousSetByNumber.get(Number(s.set_number))?.weight) || 0,
-      previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0,
-    }));
+    data[i].sets = setsArray[i].map((s: any) => {
+      const storedWeight = Number(s.weight) || 0;
+      const prevWeight = Number(previousSetByNumber.get(Number(s.set_number))?.weight) || 0;
+      return {
+        ...s,
+        completed: !!s.completed,
+        weight: storedWeight > 0 ? storedWeight : bw,
+        previous_weight: prevWeight > 0 ? prevWeight : bw,
+        previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0,
+      };
+    });
   }
 
   workoutExercises.value = data;

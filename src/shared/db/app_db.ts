@@ -1055,18 +1055,28 @@ export async function getWorkoutExercises(workoutId: number) {
   if (!db) return [];
 
   const result = await db.query(`
-    SELECT 
+    SELECT
       we.id,
       we.exercise_id,
       e.name,
-      e.rest_seconds
+      e.rest_seconds,
+      eq.name AS equipment
     FROM workout_exercise we
     JOIN exercise e ON e.id = we.exercise_id
+    LEFT JOIN equipment eq ON eq.id = e.id_equipment
     WHERE we.workout_id = ?
     ORDER BY we.order_index
   `, [workoutId]);
 
   return result.values || [];
+}
+
+export async function getLatestBodyWeight(): Promise<number | null> {
+  if (!db) return null;
+  const result = await db.query(
+    'SELECT weight_kg FROM body_log ORDER BY date DESC LIMIT 1'
+  );
+  return result.values?.[0]?.weight_kg ?? null;
 }
 
 export async function getLatestCompletedSetsForExercise(exerciseId: number, excludeWorkoutId?: number) {
