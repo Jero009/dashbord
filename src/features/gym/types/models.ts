@@ -72,6 +72,7 @@ export interface LatestCompletedSet {
 
 export interface WorkoutHistoryExercise {
   id: number;
+  exercise_id: number;
   name: string;
   set_count: number;
   reps: number;
@@ -104,12 +105,21 @@ export interface ExerciseStats {
   exercise_id: number;
   exercise_name: string;
   pr: ExercisePR | null;
-  history: WorkoutExerciseSet[];
+  history: ExerciseHistoryPoint[];
 }
 
 export interface ExerciseHistoryPoint {
   date: string;
   weight: number;
   reps: number;
+  volume: number;
+}
+
+export interface ExerciseSession {
+  workout_id: number;
+  date: string;
+  set_count: number;
+  top_weight: number;
+  top_reps: number;
   volume: number;
 }

@@ -99,6 +99,25 @@
           </div>
         </section>
 
+        <ion-card v-if="recentPRs.length" class="pr-card">
+          <div class="card-topline">
+            <p class="section-kicker">Recent PRs</p>
+            <span class="pr-card__window">30 days</span>
+          </div>
+          <div class="pr-list">
+            <button
+              v-for="pr in recentPRs"
+              :key="pr.id"
+              class="pr-row"
+              @click="openExercise(pr.exercise_id)"
+            >
+              <span class="pr-row__name">{{ pr.exercise_name }}</span>
+              <span class="pr-row__stat">{{ pr.pr_weight }} kg <small>x {{ pr.pr_reps }}</small></span>
+              <span class="pr-row__date">{{ formatWorkoutDate(pr.date_achieved) }}</span>
+            </button>
+          </div>
+        </ion-card>
+
         <ion-card class="graph-card">
           <div class="graph-card__header">
             <ion-select placeholder="Select template" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" v-model="selectedTemplateId" class="app-select">
@@ -119,7 +138,7 @@
 <script setup lang="ts">
 import { IonPage, IonHeader, IonContent, IonCard, onIonViewWillEnter, IonIcon, IonSelect, IonSelectOption } from '@ionic/vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
-import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWorkout, getWorkoutsByName, getWorkouts } from '@/shared/db/app_db';
+import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWorkout, getWorkoutsByName, getWorkouts, getRecentPRs } from '@/shared/db/app_db';
 import { ref, onMounted, onUnmounted,computed,watch } from 'vue';
 import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
@@ -182,13 +201,26 @@ const loadTemplates = async () => {
     selectedTemplateId.value = data[0].id;
   }
 };
-//latest workout 
+//latest workout
 
 const latestWorkout = ref<Workout | null>(null);
 
 const loadLatestWorkout = async () => {
   const workout = await getLatestWorkout();
   latestWorkout.value = workout || null;
+};
+
+// PRs achieved in the last 30 days, linked to the exercise detail page
+const recentPRs = ref<any[]>([]);
+
+const loadRecentPRs = async () => {
+  const prs = await getRecentPRs(30);
+  recentPRs.value = prs.slice(0, 5);
+};
+
+const openExercise = (exerciseId: number) => {
+  hapticLight();
+  router.push(`/exercise/${exerciseId}`);
 };
 
 
@@ -433,6 +465,7 @@ onMounted(async () => {
   await loadTemplates();
   await loadLatestWorkout();
   await loadWeeklyData();
+  await loadRecentPRs();
   renderChart();
 });
 
@@ -441,6 +474,7 @@ onIonViewWillEnter(async () => {
   await loadTemplates();
   await loadLatestWorkout();
   await loadWeeklyData();
+  await loadRecentPRs();
   renderChart();
 });
 
@@ -706,6 +740,78 @@ ion-content.home-content {
 .graph-card {
   margin: 0;
   padding: 18px;
+}
+
+.pr-card {
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--nt-radius-md);
+  background: var(--ion-color-primary);
+  display: grid;
+  gap: 12px;
+}
+
+.pr-card .section-kicker {
+  margin: 0;
+}
+
+.pr-card__window {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pr-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pr-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--nt-dur-micro) var(--nt-ease-decel);
+}
+
+.pr-row:active {
+  background: var(--nt-surface-2);
+}
+
+.pr-row__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-row__stat {
+  font-family: 'Doto', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ion-color-accent-red);
+  white-space: nowrap;
+}
+
+.pr-row__stat small {
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--nt-font-mono);
+  font-weight: 400;
+}
+
+.pr-row__date {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
 }
 
 .graph-card__header ion-select {
