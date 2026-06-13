@@ -257,9 +257,9 @@ onIonViewWillEnter(async () => {
       const ex = JSON.parse(selectedExerciseStr);
 
       // ✅ prevent duplicates (use id_exercise!)
-      const exists = exercises.value.some(e => e.id_exercise === ex.id);
+      const exists = exercises.value.some(e => e.id_exercise === ex?.id);
 
-      if (!exists) {
+      if (ex && ex.id != null && !exists) {
         exercises.value.push({
           id: 0, // 🔥 IMPORTANT (new row, not in DB yet)
           id_exercise: ex.id,

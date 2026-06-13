@@ -108,7 +108,17 @@ const saveAccount = async () => {
     return;
   }
 
-  await addFinanceAccount(accountName.value.trim(), accountType.value, accountInstitution.value.trim() || null, balance);
+  try {
+    await addFinanceAccount(accountName.value.trim(), accountType.value, accountInstitution.value.trim() || null, balance);
+  } catch {
+    const toast = await toastController.create({
+      message: 'Could not save account. Please try again.',
+      duration: 2000,
+      color: 'warning',
+    });
+    await toast.present();
+    return;
+  }
   accountName.value = '';
   accountInstitution.value = '';
   accountBalance.value = '';

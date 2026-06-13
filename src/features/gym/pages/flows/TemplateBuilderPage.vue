@@ -91,10 +91,10 @@
 </style>
 <script setup lang="ts">
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter, toastController } from '@ionic/vue';
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Draggable from 'vuedraggable';
-import { createTemplate, getExercises, addExerciseToTemplate } from '@/shared/db/app_db';
+import { createTemplate, addExerciseToTemplate } from '@/shared/db/app_db';
 
 const router = useRouter();
 
@@ -187,8 +187,8 @@ const confirm = async () => {
     await addExerciseToTemplate(
       templateId,
       ex.id,
-      ex.set_number,
-      ex.rep_number,
+      Number(ex.set_number),
+      Number(ex.rep_number),
       i // order index
     );
   }
@@ -205,9 +205,7 @@ const confirm = async () => {
 
 
 
-// exercises 
-const exercises = ref<exercise[]>([])
-
+// exercises
 const selectedExercises = ref<SelectedExercise[]>([]);
 
 const removeSelectedExercise = (index: number) => {
@@ -221,27 +219,6 @@ type SelectedExercise = {
   set_number: number;
 }
 
-type exercise = {
-  id: number;
-  name: string;
-  muscle_group: string;
-  equipment: string;
-}
-
-
-const LoadExercises = async () =>{
-  const data = await getExercises();
-  exercises.value = data;
-  
-};
-
-
-
-
-
-onMounted(() => {
-    LoadExercises()
-});
 
 onIonViewWillEnter(() => {
   // Check for selected exercise from ExercisePicker
@@ -249,8 +226,8 @@ onIonViewWillEnter(() => {
   if (selectedExerciseStr) {
     try {
       const ex = JSON.parse(selectedExerciseStr);
-      // Prevent duplicates
-      if (!selectedExercises.value.some(e => e.id === ex.id)) {
+      // Prevent duplicates (and ignore malformed payloads with no id)
+      if (ex && ex.id != null && !selectedExercises.value.some(e => e.id === ex.id)) {
         selectedExercises.value.push({
           id: ex.id,
           name: ex.name,

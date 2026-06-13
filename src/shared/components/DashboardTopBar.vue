@@ -61,14 +61,16 @@ const handleSegmentChange = (event: CustomEvent) => {
   }[value];
 
   if (target && target !== route.path) {
-    router.push(target);
+    // router.push rejects on aborted/redirected navigations — swallow so it never
+    // surfaces as an unhandled rejection.
+    router.push(target).catch(() => {});
   }
 };
 
 const goToSettings = () => {
   hapticLight();
   if (route.path !== '/settings') {
-    router.push('/settings');
+    router.push('/settings').catch(() => {});
   }
 };
 </script>

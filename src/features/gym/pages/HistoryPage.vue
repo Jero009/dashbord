@@ -20,7 +20,7 @@
                 <ion-card-header>
                   <div class="card-header-flex">
                     <div>
-                      <ion-card-title>{{ w.name || 0 }}</ion-card-title>
+                      <ion-card-title>{{ w.name || 'Workout' }}</ion-card-title>
                       <ion-card-subtitle>{{ formatDuration(w.time_start, w.time_end) }}</ion-card-subtitle>
                       <ion-card-subtitle>{{ w.total_kg }} kg</ion-card-subtitle>
                     </div>

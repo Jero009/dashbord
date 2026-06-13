@@ -1827,8 +1827,15 @@ export async function incrementGoalProgressBy(goalId: number, delta: number) {
 
 export async function deleteGoal(id: number) {
   if (!db) return;
-  await db.run(`UPDATE habit SET goal_id = NULL WHERE goal_id = ?;`, [id]);
-  await db.run(`DELETE FROM goal WHERE id = ?;`, [id]);
+  try {
+    await db.execute('BEGIN;');
+    await db.run(`UPDATE habit SET goal_id = NULL WHERE goal_id = ?;`, [id]);
+    await db.run(`DELETE FROM goal WHERE id = ?;`, [id]);
+    await db.execute('COMMIT;');
+  } catch (e) {
+    await db.execute('ROLLBACK;').catch(() => undefined);
+    throw e;
+  }
 }
 
 export async function getGoalDueDatesForMonth(yearMonth: string) {
@@ -2466,7 +2473,7 @@ export async function getExerciseHistory(exerciseId: number, limitDays: number =
 
   const result = await db.query(`
     SELECT
-      DATE(wes.created_at) as date,
+      date(wes.created_at, 'localtime') as date,
       MAX(wes.weight) as weight,
       MAX(wes.reps) as reps,
       SUM(wes.weight * wes.reps) as volume
@@ -2475,7 +2482,7 @@ export async function getExerciseHistory(exerciseId: number, limitDays: number =
     WHERE we.exercise_id = ?
       AND wes.completed = 1
       AND wes.created_at >= ?
-    GROUP BY DATE(wes.created_at)
+    GROUP BY date(wes.created_at, 'localtime')
     ORDER BY date ASC
   `, [exerciseId, dateLimit]);
 
@@ -2581,27 +2588,32 @@ export interface CircadianLogEntry {
 
 export async function upsertCircadianLog(entry: Omit<CircadianLogEntry, 'id'>) {
   if (!db) return;
-  await db.run(
-    `INSERT INTO circadian_log
-       (date, day_type, energy_wake, energy_noon, energy_evening,
-        meal_first, meal_last, morning_light, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(date) DO UPDATE SET
-       day_type       = excluded.day_type,
-       energy_wake    = excluded.energy_wake,
-       energy_noon    = excluded.energy_noon,
-       energy_evening = excluded.energy_evening,
-       meal_first     = excluded.meal_first,
-       meal_last      = excluded.meal_last,
-       morning_light  = excluded.morning_light,
-       notes          = excluded.notes;`,
-    [
-      entry.date, entry.day_type,
-      entry.energy_wake ?? null, entry.energy_noon ?? null, entry.energy_evening ?? null,
-      entry.meal_first ?? null, entry.meal_last ?? null,
-      entry.morning_light, entry.notes ?? null,
-    ]
-  );
+  try {
+    await db.run(
+      `INSERT INTO circadian_log
+         (date, day_type, energy_wake, energy_noon, energy_evening,
+          meal_first, meal_last, morning_light, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET
+         day_type       = excluded.day_type,
+         energy_wake    = excluded.energy_wake,
+         energy_noon    = excluded.energy_noon,
+         energy_evening = excluded.energy_evening,
+         meal_first     = excluded.meal_first,
+         meal_last      = excluded.meal_last,
+         morning_light  = excluded.morning_light,
+         notes          = excluded.notes;`,
+      [
+        entry.date, entry.day_type,
+        entry.energy_wake ?? null, entry.energy_noon ?? null, entry.energy_evening ?? null,
+        entry.meal_first ?? null, entry.meal_last ?? null,
+        entry.morning_light ? 1 : 0, entry.notes ?? null,
+      ]
+    );
+  } catch (error) {
+    console.error('Error upserting circadian log:', error);
+    throw error;
+  }
 }
 
 export async function getCircadianLog(date: string): Promise<CircadianLogEntry | null> {

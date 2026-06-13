@@ -62,7 +62,7 @@
           <div class="detail-card__header">
             <h3>Events</h3>
             <button class="icon-btn" @click="showAddEvent ? (resetEventForm(), showAddEvent = false) : (showAddEvent = true)">
-              {{ showAddEvent ? '✕' : '+' }}
+              <ion-icon :icon="showAddEvent ? closeOutline : addOutline" />
             </button>
           </div>
 
@@ -115,7 +115,7 @@
                 </span>
                 <span v-if="ev.notes" class="item-note">{{ ev.notes }}</span>
               </div>
-              <button class="delete-btn" @click="removeEvent(ev.id)">×</button>
+              <button class="delete-btn" aria-label="Delete event" @click="removeEvent(ev.id)"><ion-icon :icon="closeOutline" /></button>
             </li>
           </ul>
           <p v-else class="empty-hint">No events on this day</p>
@@ -133,7 +133,7 @@
           <ul v-if="dayHabits.length" class="item-list">
             <li v-for="h in dayHabits" :key="h.id" class="habit-row" @click="toggleHabit(h, selectedDate)">
               <div class="habit-check" :class="{ 'habit-check--done': h.completed === 1 }">
-                <span v-if="h.completed === 1">✓</span>
+                <ion-icon v-if="h.completed === 1" :icon="checkmarkOutline" />
               </div>
               <div class="habit-row__info">
                 <span class="habit-name">{{ h.name }}</span>
@@ -156,7 +156,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonIcon } from '@ionic/vue';
+import { addOutline, closeOutline, checkmarkOutline } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
 import { usePlanner } from '@/features/plan/composables/usePlanner';

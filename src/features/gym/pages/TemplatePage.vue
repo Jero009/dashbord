@@ -181,7 +181,7 @@ import type { RefresherCustomEvent } from '@ionic/vue';
 import { add } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { getTemplates, getTemplateExercises, deleteTemplate, getExercises } from '@/shared/db/app_db';
+import { getTemplates, getTemplateExercises, deleteTemplate } from '@/shared/db/app_db';
 
 const router = useRouter();
 
@@ -232,24 +232,6 @@ type TemplateExercise = {
 
 
 
-// exercises 
-const exercises = ref<exercise[]>([])
-
-type exercise = {
-  id: number;
-  name: string;
-  muscle_group: string;
-  equipment: string;
-}
-
-
-const LoadExercises = async () =>{
-  const data = await getExercises();
-  exercises.value = data;
-  
-};
-
-
 // delete template and template exercise
 const deleteTemp = async (id: number) => {
   const template = templates.value.find(t => t.id === id);
@@ -283,20 +265,16 @@ const deleteTemp = async (id: number) => {
 //refresh 
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
-  await LoadExercises();
   await loadTemplates();
   event.target.complete();
 };
 
 
 onMounted(() => {
-    LoadExercises()
     loadTemplates();
 });
 
 onIonViewWillEnter(() => {
-
-  LoadExercises();
   loadTemplates();
 });
 </script>

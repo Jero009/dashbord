@@ -153,32 +153,40 @@ const LoadExercises = async () => {
 const handleExerciseClick = async (exercise: exercise) => {
   const workoutIdQuery = route.query.workoutId;
 
-  if (workoutIdQuery) {
-    const workoutId = Number(workoutIdQuery);
-    // Adding exercise to an active workout
-    const orderIndex = await getNextWorkoutOrderIndex(workoutId);
-    const defaults = await getLatestCompletedSetDefaultsForExercise(exercise.id, workoutId);
-    await addExerciseToWorkout(workoutId, exercise.id, orderIndex, 3, defaults.reps, defaults.weight);
+  try {
+    if (workoutIdQuery) {
+      const workoutId = Number(workoutIdQuery);
+      if (!Number.isFinite(workoutId) || workoutId <= 0) {
+        console.error('Invalid workoutId in route query:', workoutIdQuery);
+        return;
+      }
+      // Adding exercise to an active workout
+      const orderIndex = await getNextWorkoutOrderIndex(workoutId);
+      const defaults = await getLatestCompletedSetDefaultsForExercise(exercise.id, workoutId);
+      await addExerciseToWorkout(workoutId, exercise.id, orderIndex, 3, defaults.reps, defaults.weight);
 
-    // Navigate back to the workout page
-    router.push({
-      name: 'Workout',
-      params: { id: workoutId.toString() }
-    });
-  } else if (route.query.templateId) {
-    localStorage.setItem('selectedExerciseForTemplate', JSON.stringify(exercise));
-    router.push({
-      name: 'TemplateEditor',
-      params: { id: route.query.templateId.toString() }
-    });
-  } else if (route.query.from === 'TemplateBuilder') {
-    localStorage.setItem('selectedExerciseForTemplate', JSON.stringify(exercise));
-    router.push({ name: 'TemplateBuilder' });
-  } else {
-    router.push({
-      name: 'ExerciseDetail',
-      params: { id: exercise.id.toString() }
-    });
+      // Navigate back to the workout page
+      await router.push({
+        name: 'Workout',
+        params: { id: workoutId.toString() }
+      });
+    } else if (route.query.templateId) {
+      localStorage.setItem('selectedExerciseForTemplate', JSON.stringify(exercise));
+      await router.push({
+        name: 'TemplateEditor',
+        params: { id: route.query.templateId.toString() }
+      });
+    } else if (route.query.from === 'TemplateBuilder') {
+      localStorage.setItem('selectedExerciseForTemplate', JSON.stringify(exercise));
+      await router.push({ name: 'TemplateBuilder' });
+    } else {
+      await router.push({
+        name: 'ExerciseDetail',
+        params: { id: exercise.id.toString() }
+      });
+    }
+  } catch (e) {
+    console.error('Failed to select exercise:', e);
   }
 };
 

@@ -107,12 +107,22 @@ const saveSubscription = async () => {
     return;
   }
 
-  await addFinanceSubscription(
-    subscriptionName.value.trim(),
-    amount,
-    subscriptionCadence.value,
-    subscriptionNextDue.value || undefined
-  );
+  try {
+    await addFinanceSubscription(
+      subscriptionName.value.trim(),
+      amount,
+      subscriptionCadence.value,
+      subscriptionNextDue.value || undefined
+    );
+  } catch {
+    const toast = await toastController.create({
+      message: 'Could not save subscription. Please try again.',
+      duration: 2000,
+      color: 'warning',
+    });
+    await toast.present();
+    return;
+  }
   subscriptionName.value = '';
   subscriptionAmount.value = '';
   subscriptionNextDue.value = '';

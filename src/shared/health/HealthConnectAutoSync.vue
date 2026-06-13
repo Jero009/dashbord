@@ -17,6 +17,7 @@ let intervalId: ReturnType<typeof setInterval> | null = null;
 let retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let visibilityHandler: (() => void) | null = null;
 let appStateListener: { remove: () => Promise<void> } | null = null;
+let unmounted = false;
 
 const syncIfNeeded = async () => {
   if (syncing) return;
@@ -46,6 +47,10 @@ const syncIfNeeded = async () => {
 onMounted(async () => {
   await syncIfNeeded();
 
+  // If the component was torn down during the initial await, onUnmounted already
+  // ran — don't register timers/listeners it can no longer clean up.
+  if (unmounted) return;
+
   // Health Connect may not be ready immediately on cold start — retry after a
   // short delay so a skipped startup sync recovers without waiting 30 minutes.
   retryTimeoutId = setTimeout(() => { syncIfNeeded().catch(e => console.error('[HC retry]', e)); }, 6_000);
@@ -60,6 +65,11 @@ onMounted(async () => {
         void syncIfNeeded();
       }
     });
+    // addListener is async — if we unmounted while awaiting, remove immediately.
+    if (unmounted) {
+      void appStateListener.remove();
+      appStateListener = null;
+    }
   } else if (typeof document !== 'undefined') {
     visibilityHandler = () => {
       if (!document.hidden) {
@@ -71,6 +81,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  unmounted = true;
   if (retryTimeoutId) {
     clearTimeout(retryTimeoutId);
     retryTimeoutId = null;

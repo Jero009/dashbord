@@ -448,7 +448,11 @@ const workoutExercises = ref<WorkoutExercise[]>([]);
 
 const loadWorkout = async () => {
   const workout = await getWorkoutById(workoutId);
-  startTime.value = normalizeDateInput(workout?.time_start);
+  if (!workout) {
+    router.replace('/tabs/Home');
+    return;
+  }
+  startTime.value = normalizeDateInput(workout.time_start);
 
   const data = await getWorkoutExercises(workoutId);
   const bodyWeight = await getLatestBodyWeight();
@@ -737,47 +741,24 @@ const overloadHint = (exercise: any): string => {
   return `Last: ${maxWeight} kg × ${prevReps} — try ${suggested} kg`;
 };
 
-const getWeightPlaceholder = (exercise: any, currentSet: any) => {
-  const previousWorkoutWeight = Number(currentSet?.previous_weight);
-  if (previousWorkoutWeight > 0) {
-    return String(previousWorkoutWeight);
-  }
+const getSetPlaceholder = (exercise: any, currentSet: any, field: 'weight' | 'reps', fallback: string): string => {
+  const prevKey = field === 'weight' ? 'previous_weight' : 'previous_reps';
+  const previousValue = Number(currentSet?.[prevKey]);
+  if (previousValue > 0) return String(previousValue);
 
-  const sets = exercise?.sets || [];
+  const sets: any[] = exercise?.sets || [];
   const currentIndex = sets.findIndex((set: any) => Number(set.id) === Number(currentSet.id));
-
   if (currentIndex > 0) {
     for (let i = currentIndex - 1; i >= 0; i--) {
-      const candidateWeight = Number(sets[i]?.weight);
-      if (candidateWeight > 0) {
-        return String(candidateWeight);
-      }
+      const v = Number(sets[i]?.[field]);
+      if (v > 0) return String(v);
     }
   }
-
-  return 'kg';
+  return fallback;
 };
 
-const getRepsPlaceholder = (exercise: any, currentSet: any) => {
-  const previousWorkoutReps = Number(currentSet?.previous_reps);
-  if (previousWorkoutReps > 0) {
-    return String(previousWorkoutReps);
-  }
-
-  const sets = exercise?.sets || [];
-  const currentIndex = sets.findIndex((set: any) => Number(set.id) === Number(currentSet.id));
-
-  if (currentIndex > 0) {
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      const candidateReps = Number(sets[i]?.reps);
-      if (candidateReps > 0) {
-        return String(candidateReps);
-      }
-    }
-  }
-
-  return 'reps';
-};
+const getWeightPlaceholder = (exercise: any, currentSet: any) => getSetPlaceholder(exercise, currentSet, 'weight', 'kg');
+const getRepsPlaceholder = (exercise: any, currentSet: any) => getSetPlaceholder(exercise, currentSet, 'reps', 'reps');
 
 //timer 
 const startTime = ref<string | null>(null);

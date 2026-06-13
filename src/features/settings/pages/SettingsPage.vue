@@ -247,9 +247,11 @@ const goalWeight = ref<number | string>(getGoalWeightKg() ?? '')
 
 const saveTargets = async () => {
   hapticMedium()
-  setSleepGoalHours(sleepGoal.value)
-  setStepGoal(stepGoal.value)
-  if (goalWeight.value !== '' && Number(goalWeight.value) > 0) {
+  // v-model.number yields '' or NaN when a field is cleared — guard so we never
+  // persist "NaN" to localStorage (which would then parse back as NaN on read).
+  if (Number.isFinite(sleepGoal.value)) setSleepGoalHours(sleepGoal.value)
+  if (Number.isFinite(stepGoal.value)) setStepGoal(stepGoal.value)
+  if (goalWeight.value !== '' && Number.isFinite(Number(goalWeight.value)) && Number(goalWeight.value) > 0) {
     setGoalWeightKg(Number(goalWeight.value))
   }
   hapticSuccess()

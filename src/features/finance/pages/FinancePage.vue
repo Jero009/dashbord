@@ -78,8 +78,15 @@ const investmentsTotal = computed(() =>
   investments.value.reduce((sum, investment) => sum + (Number(investment.value) || 0), 0)
 );
 
+// Normalize each subscription to a monthly cost so the "/ mo" total is accurate
+// regardless of billing cadence (yearly ÷ 12, weekly × 52 ÷ 12).
 const subscriptionsTotal = computed(() =>
-  subscriptions.value.reduce((sum, sub) => sum + (Number(sub.amount) || 0), 0)
+  subscriptions.value.reduce((sum, sub) => {
+    const amount = Number(sub.amount) || 0;
+    if (sub.cadence === 'yearly') return sum + amount / 12;
+    if (sub.cadence === 'weekly') return sum + (amount * 52) / 12;
+    return sum + amount;
+  }, 0)
 );
 
 const netWorth = computed(() => accountsTotal.value + investmentsTotal.value);

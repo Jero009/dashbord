@@ -27,27 +27,34 @@ import { localDateISO } from '@/shared/utils/timeFormat'
 
 onMounted(async () => {
   if (!Capacitor.isNativePlatform()) return
-  await initDB()
-  const today = localDateISO()
+  // Startup notification scheduling must never crash the app — a failure in
+  // initDB or any DB/notification call here should be logged, not propagated as
+  // an unhandled rejection.
+  try {
+    await initDB()
+    const today = localDateISO()
 
-  if (getNotifWeightEnabled()) await scheduleWeightReminder(getNotifWeightTime())
+    if (getNotifWeightEnabled()) await scheduleWeightReminder(getNotifWeightTime())
 
-  if (getNotifHabitEnabled()) {
-    const habits = await getHabitsWithStatus(today)
-    const incomplete = habits.filter((h: any) => h.completed !== 1).map((h: any) => h.name as string)
-    await scheduleHabitReminder(getNotifHabitTime(), incomplete)
-  }
+    if (getNotifHabitEnabled()) {
+      const habits = await getHabitsWithStatus(today)
+      const incomplete = habits.filter((h: any) => h.completed !== 1).map((h: any) => h.name as string)
+      await scheduleHabitReminder(getNotifHabitTime(), incomplete)
+    }
 
-  if (getNotifSleepEnabled()) await scheduleSleepReminder(getNotifSleepTime())
+    if (getNotifSleepEnabled()) await scheduleSleepReminder(getNotifSleepTime())
 
-  if (getNotifCalendarEnabled()) {
-    const events = await getCalendarEventsForDate(today)
-    await scheduleCalendarReminders(events, getNotifCalendarMinsBefore())
-  }
+    if (getNotifCalendarEnabled()) {
+      const events = await getCalendarEventsForDate(today)
+      await scheduleCalendarReminders(events, getNotifCalendarMinsBefore())
+    }
 
-  if (getNotifSubscriptionEnabled()) {
-    const subs = await getFinanceSubscriptions()
-    await scheduleSubscriptionReminders(subs, getNotifSubscriptionDaysBefore())
+    if (getNotifSubscriptionEnabled()) {
+      const subs = await getFinanceSubscriptions()
+      await scheduleSubscriptionReminders(subs, getNotifSubscriptionDaysBefore())
+    }
+  } catch (error) {
+    console.error('Startup notification scheduling failed:', error)
   }
 })
 

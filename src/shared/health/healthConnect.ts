@@ -140,6 +140,7 @@ export function applyReadinessDrain(baseScore: number, currentDate = new Date())
 }
 
 function clamp(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, value));
 }
 
@@ -673,7 +674,9 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
 
   for (const [date, bucket] of sortedSleepEntries) {
     const latestSample = pickPrimarySleepSample(bucket.samples);
-    if (!latestSample) continue;
+    // Skip nights where sleep duration can't be determined (unparseable dates,
+    // no stages) — otherwise we'd persist a bogus 0-hour sleep_duration metric.
+    if (!latestSample || getSleepHours(latestSample) === null) continue;
 
     const hrBucket = heartRateByDate.get(date);
     const sleepHeartRate = average(hrBucket?.values ?? []);

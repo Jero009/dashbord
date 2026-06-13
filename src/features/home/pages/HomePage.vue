@@ -477,6 +477,7 @@ const latestWorkout = ref<Workout | null>(null);
 const latestWorkoutExercises = ref<WorkoutHistoryExercise[]>([]);
 const nowTick = ref(Date.now());
 let readinessTimer: ReturnType<typeof setInterval> | null = null;
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Active workout
 const activeWorkout = ref(false);
@@ -529,6 +530,9 @@ const loadActiveWorkout = async () => {
     workoutStartTime.value = normalizeDateInput(workout.time_start);
     activeWorkout.value = true;
     clearWorkoutTimer();
+    // Clear any existing rest interval before restoring — loadActiveWorkout runs on
+    // every view re-entry, so without this each re-entry leaked another interval.
+    clearRestTimer();
     workoutInterval = setInterval(() => {
       workoutSeconds.value = Math.max(0, Math.floor((Date.now() - new Date(workoutStartTime.value!).getTime()) / 1000));
     }, 1000);
@@ -545,7 +549,7 @@ const loadActiveWorkout = async () => {
 const backToWorkout = async () => {
   hapticLight();
   const w = await getActiveWorkout();
-  if (w) router.push(`/workout/${w.id}`);
+  if (w) router.push(`/workout/${w.id}`).catch(() => {});
 };
 
 const repeatLastWorkout = async () => {
@@ -553,13 +557,13 @@ const repeatLastWorkout = async () => {
   const templateId = latestWorkout.value?.id_workout_template
   if (!templateId) return
   const workoutId = await startWorkoutFromTemplate(templateId)
-  if (workoutId) router.push(`/workout/${workoutId}`)
+  if (workoutId) router.push(`/workout/${workoutId}`).catch(() => {})
 }
 
 const startEventWorkout = async (templateId: number) => {
   hapticHeavy();
   const workoutId = await startWorkoutFromTemplate(templateId);
-  if (workoutId) router.push(`/workout/${workoutId}`);
+  if (workoutId) router.push(`/workout/${workoutId}`).catch(() => {});
 };
 
 // Today
@@ -1055,18 +1059,25 @@ onIonViewWillEnter(loadAll);
 
 onUnmounted(() => {
   if (readinessTimer) { clearInterval(readinessTimer); readinessTimer = null; }
+  if (scrollTimeout) { clearTimeout(scrollTimeout); scrollTimeout = null; }
   clearWorkoutTimer();
   clearRestTimer();
   if (sparkChart) { sparkChart.destroy(); sparkChart = null; }
   if (batteryChartInstance) { batteryChartInstance.destroy(); batteryChartInstance = null; }
 });
 
-onMounted(async () => {
-  await loadAll();
+onMounted(() => {
+  // loadAll() already runs via onIonViewWillEnter (which fires on the first entry
+  // too). Calling it again here raced two concurrent loads on mount — drop it and
+  // just start the clock tick. Defer the one-time scroll-to-now until after the
+  // initial load has populated the timeline element.
   readinessTimer = setInterval(() => { nowTick.value = Date.now(); }, 60_000);
-  if (timelineEl.value && nowY.value >= 0) {
-    timelineEl.value.scrollTop = Math.max(0, nowY.value - 80);
-  }
+  scrollTimeout = setTimeout(() => {
+    scrollTimeout = null;
+    if (timelineEl.value && nowY.value >= 0) {
+      timelineEl.value.scrollTop = Math.max(0, nowY.value - 80);
+    }
+  }, 150);
 });
 </script>
 

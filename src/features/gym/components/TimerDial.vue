@@ -324,7 +324,6 @@ defineExpose({
   stroke: rgba(255, 255, 255, 0.2);
   stroke-width: 2;
   cursor: grab;
-  box-shadow: 0 0 8px rgba(255, 195, 0, 0.3);
   transition: filter 0.1s ease;
 }
 

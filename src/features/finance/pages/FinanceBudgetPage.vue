@@ -324,13 +324,18 @@ const saveTransaction = async () => {
   }
 
   hapticMedium();
-  await addFinanceTransaction(
-    transactionDate.value,
-    transactionName.value.trim(),
-    transactionType.value === 'income' ? 'income' : transactionCategory.value,
-    amount,
-    transactionType.value
-  );
+  try {
+    await addFinanceTransaction(
+      transactionDate.value,
+      transactionName.value.trim(),
+      transactionType.value === 'income' ? 'income' : transactionCategory.value,
+      amount,
+      transactionType.value
+    );
+  } catch {
+    await showToast('Could not save transaction. Please try again.', 'warning');
+    return;
+  }
   transactionName.value = '';
   transactionAmount.value = '';
   await loadBudgetData();
@@ -340,7 +345,12 @@ const saveTransaction = async () => {
 
 const removeTransaction = async (id: number) => {
   hapticHeavy();
-  await deleteFinanceTransaction(Number(id));
+  try {
+    await deleteFinanceTransaction(Number(id));
+  } catch {
+    await showToast('Could not delete transaction. Please try again.', 'warning');
+    return;
+  }
   await loadBudgetData();
 };
 
@@ -352,7 +362,12 @@ const saveBudget = async () => {
   }
 
   hapticMedium();
-  await upsertFinanceBudget(budgetCategory.value, limit);
+  try {
+    await upsertFinanceBudget(budgetCategory.value, limit);
+  } catch {
+    await showToast('Could not save budget. Please try again.', 'warning');
+    return;
+  }
   budgetLimit.value = '';
   await loadBudgetData();
   hapticSuccess();
@@ -361,7 +376,12 @@ const saveBudget = async () => {
 
 const removeBudget = async (id: number) => {
   hapticHeavy();
-  await deleteFinanceBudget(Number(id));
+  try {
+    await deleteFinanceBudget(Number(id));
+  } catch {
+    await showToast('Could not delete budget. Please try again.', 'warning');
+    return;
+  }
   await loadBudgetData();
 };
 

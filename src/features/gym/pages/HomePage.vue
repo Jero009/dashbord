@@ -351,6 +351,7 @@ const selectedTemplateId = ref<number | undefined>(undefined);
 // prepare data
 const chartData = computed(() => {
   return workouts.value
+    .filter(w => !!w.time_start)
     .map(w => ({
       date: new Date(w.time_start.replace(' ', 'T')).toLocaleDateString(),
       kg: w.total_kg || 0

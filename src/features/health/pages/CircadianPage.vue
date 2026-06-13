@@ -468,16 +468,12 @@ const formatHour = (h: number): string => {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 };
 
-const isNow = (start: number, end: number): boolean => {
-  const h = currentHour.value;
-  return h >= start && h < end;
-};
-
 // ── Data loading ──────────────────────────────────────────────────────────────
 
 const loadData = async () => {
   loading.value = true;
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   try {
     const sessions = await getRecentSleepSessions(30);
     const sleepRecords: SleepRecord[] = sessions.map(s => ({
@@ -563,7 +559,8 @@ const selectEnergy = (field: 'wake' | 'noon' | 'evening', value: number) => {
 
 const saveLog = async () => {
   hapticMedium();
-  const today = new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   await upsertCircadianLog({
     date: today,
     day_type: formDayType.value,
@@ -702,38 +699,7 @@ const saveLog = async () => {
   letter-spacing: 0.1em;
 }
 
-/* ── Alertness curve ────────────────────────────────────────────────────────── */
-.curve-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0;
-}
-
-.curve-header .section-kicker {
-  margin-bottom: 0;
-}
-
-.curve-now-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.curve-now-label {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.curve-now-value {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: rgb(215, 26, 33);
-}
-
-/* ── Unified alertness + timeline ────────────────────────────────────────────── */
+/* ── Alertness curve + timeline ─────────────────────────────────────────────── */
 .curve-header {
   display: flex;
   align-items: center;
@@ -929,38 +895,6 @@ const saveLog = async () => {
 .legend-swatch--red   { background: rgba(215, 26, 33, 0.3); }
 .legend-swatch--white { background: rgba(255, 255, 255, 0.12); }
 .legend-swatch--sleep { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255,255,255,0.1); }
-
-/* ── Horizontal scrollable timeline ─────────────────────────────────────────── */
-.timeline-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  margin: 12px -18px 0;
-  padding: 0 18px;
-  scrollbar-width: none;
-}
-.timeline-scroll::-webkit-scrollbar { display: none; }
-
-.timeline-inner {
-  width: 1248px; /* 52px * 24h */
-  position: relative;
-  padding-bottom: 4px;
-}
-
-.timeline-ruler {
-  position: relative;
-  height: 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.timeline-hour {
-  position: absolute;
-  top: 4px;
-  transform: translateX(-50%);
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.35);
-  font-family: var(--nt-font-mono);
-}
 
 .timeline-bar-row {
   position: relative;

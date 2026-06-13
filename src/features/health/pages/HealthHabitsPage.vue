@@ -11,7 +11,7 @@
         <div class="day-head day-head--section">
           <p class="eyebrow">Habit board · last 7 days</p>
           <button class="icon-btn" @click="showAddHabit ? (resetHabitForm(), showAddHabit = false) : (showAddHabit = true)">
-            {{ showAddHabit ? '✕' : '+' }}
+            <ion-icon :icon="showAddHabit ? closeOutline : addOutline" />
           </button>
         </div>
 
@@ -62,7 +62,7 @@
                 :disabled="!isScheduledOn(h, d)"
                 @click="toggleHabit(h, d)"
               >
-                <span v-if="isDone(h.id, d)">✓</span>
+                <ion-icon v-if="isDone(h.id, d)" :icon="checkmarkOutline" />
                 <span v-else-if="!isScheduledOn(h, d)" class="board-cell__dash">–</span>
               </button>
 
@@ -152,7 +152,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonIcon } from '@ionic/vue';
+import { addOutline, closeOutline, checkmarkOutline } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
 import { usePlanner } from '@/features/plan/composables/usePlanner';

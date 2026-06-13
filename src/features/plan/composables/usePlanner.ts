@@ -227,8 +227,11 @@ export function usePlanner() {
     const lastUsed: Record<number, string> = {};
     for (const w of workouts as any[]) {
       if (!w.id_workout_template || !w.time_end) continue;
-      const wHour = new Date(w.time_start).getHours();
-      if (hourMatch !== null && Math.abs(wHour - hourMatch) > 3) continue;
+      const startMs = new Date(w.time_start).getTime();
+      if (hourMatch !== null) {
+        if (!Number.isFinite(startMs)) continue;
+        if (Math.abs(new Date(startMs).getHours() - hourMatch) > 3) continue;
+      }
       const existing = lastUsed[w.id_workout_template];
       if (!existing || w.time_end > existing) {
         lastUsed[w.id_workout_template] = w.time_end;
@@ -444,22 +447,32 @@ export function usePlanner() {
   };
 
   // ---- loaders ----
+  // Monotonic tokens guard against out-of-order responses: rapid month-nav or
+  // day-selection fires these concurrently, and a slow earlier query must not
+  // overwrite the result of a later one.
+  let monthDotsToken = 0;
+  let dayDetailToken = 0;
+
   const loadMonthDots = async () => {
+    const token = ++monthDotsToken;
     const [evDates, habDates, glDates] = await Promise.all([
       getCalendarEventDatesForMonth(yearMonthStr.value),
       getHabitCompletedDatesForMonth(yearMonthStr.value),
       getGoalDueDatesForMonth(yearMonthStr.value),
     ]);
+    if (token !== monthDotsToken) return;
     eventDates.value = new Set(evDates);
     habitDates.value = new Set(habDates);
     goalDates.value = new Set(glDates);
   };
 
   const loadDayDetail = async () => {
+    const token = ++dayDetailToken;
     const [evs, habs] = await Promise.all([
       getCalendarEventsForDate(selectedDate.value),
       getHabitsWithStatus(selectedDate.value),
     ]);
+    if (token !== dayDetailToken) return;
     events.value = evs;
     dayHabits.value = habs;
   };

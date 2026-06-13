@@ -11,7 +11,7 @@
         <div class="day-head day-head--section">
           <p class="eyebrow">Goals</p>
           <button class="icon-btn" @click="showAddGoal ? (resetGoalForm(), showAddGoal = false) : (showAddGoal = true)">
-            {{ showAddGoal ? '✕' : '+' }}
+            <ion-icon :icon="showAddGoal ? closeOutline : addOutline" />
           </button>
         </div>
 
@@ -53,7 +53,7 @@
                 />
                 <button class="ghost-btn" @click="setGoalProgress(g)">Set</button>
                 <button class="ghost-btn ghost-btn--success" @click="completeGoal(g)">Done</button>
-                <button class="delete-btn" @click="removeGoal(g.id)">×</button>
+                <button class="delete-btn" aria-label="Delete goal" @click="removeGoal(g.id)"><ion-icon :icon="closeOutline" /></button>
               </div>
             </div>
           </div>
@@ -72,7 +72,7 @@
                 <strong class="goal-done-name">{{ g.name }}</strong>
                 <span class="item-note">{{ fmtNum(g.current_value) }} / {{ fmtNum(g.target_value) }}</span>
               </div>
-              <button class="delete-btn" @click="removeGoal(g.id)">×</button>
+              <button class="delete-btn" aria-label="Delete goal" @click="removeGoal(g.id)"><ion-icon :icon="closeOutline" /></button>
             </li>
           </ul>
         </div>
@@ -83,7 +83,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonIcon } from '@ionic/vue';
+import { addOutline, closeOutline } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
 import { usePlanner } from '@/features/plan/composables/usePlanner';

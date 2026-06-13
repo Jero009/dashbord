@@ -109,7 +109,17 @@ const saveInvestment = async () => {
     return;
   }
 
-  await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value);
+  try {
+    await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value);
+  } catch {
+    const toast = await toastController.create({
+      message: 'Could not save investment. Please try again.',
+      duration: 2000,
+      color: 'warning',
+    });
+    await toast.present();
+    return;
+  }
   investmentName.value = '';
   investmentQuantity.value = '';
   investmentValue.value = '';
