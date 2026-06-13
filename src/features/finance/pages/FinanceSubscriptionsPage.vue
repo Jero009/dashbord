@@ -31,6 +31,15 @@
               <label class="field-label">Next due date</label>
               <ion-input v-model="subscriptionNextDue" type="date" class="styled-input"></ion-input>
             </div>
+            <div class="field-group">
+              <label class="field-label">Paid from</label>
+              <ion-select v-model="subscriptionAccountId" class="styled-select" placeholder="Select account" :disabled="!accounts.length">
+                <ion-select-option :value="null">No account</ion-select-option>
+                <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
+                  {{ account.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
           </div>
           <ion-button expand="block" class="add-btn" @click="saveSubscription">Add subscription</ion-button>
         </ion-card>
@@ -44,7 +53,7 @@
             <div v-for="subscription in subscriptions" :key="subscription.id" class="list-item">
               <div class="list-item__info">
                 <strong class="list-item__name">{{ subscription.name }}</strong>
-                <span class="list-item__meta">{{ subscription.cadence }} · due {{ subscription.next_due_date || 'TBD' }}</span>
+                <span class="list-item__meta">{{ subscription.cadence }} · due {{ subscription.next_due_date || 'TBD' }}<template v-if="subscription.account_name"> · from {{ subscription.account_name }}</template></span>
               </div>
               <span class="list-item__value">{{ formatCurrency(Number(subscription.amount) || 0) }}</span>
             </div>
@@ -72,17 +81,23 @@ import {
 import { ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
-import { addFinanceSubscription, getFinanceSubscriptions } from '@/shared/db/app_db';
+import { addFinanceSubscription, getFinanceSubscriptions, getFinanceAccounts } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
 
 const subscriptionName = ref('');
 const subscriptionAmount = ref('');
 const subscriptionCadence = ref('monthly');
 const subscriptionNextDue = ref('');
+const subscriptionAccountId = ref<number | null>(null);
 const subscriptions = ref<Array<Record<string, any>>>([]);
+const accounts = ref<Array<Record<string, any>>>([]);
 
 const loadSubscriptions = async () => {
   subscriptions.value = await getFinanceSubscriptions();
+};
+
+const loadAccounts = async () => {
+  accounts.value = await getFinanceAccounts();
 };
 
 const saveSubscription = async () => {
@@ -112,7 +127,8 @@ const saveSubscription = async () => {
       subscriptionName.value.trim(),
       amount,
       subscriptionCadence.value,
-      subscriptionNextDue.value || undefined
+      subscriptionNextDue.value || undefined,
+      subscriptionAccountId.value
     );
   } catch {
     const toast = await toastController.create({
@@ -126,6 +142,7 @@ const saveSubscription = async () => {
   subscriptionName.value = '';
   subscriptionAmount.value = '';
   subscriptionNextDue.value = '';
+  subscriptionAccountId.value = null;
   await loadSubscriptions();
 
   const toast = await toastController.create({
@@ -137,7 +154,7 @@ const saveSubscription = async () => {
 };
 
 onIonViewWillEnter(async () => {
-  await loadSubscriptions();
+  await Promise.all([loadAccounts(), loadSubscriptions()]);
 });
 </script>
 
