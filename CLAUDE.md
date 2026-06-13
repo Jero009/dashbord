@@ -127,6 +127,8 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 
 **HomePage integration**: alertness curve SVG card with zone bands + contextual daily log widget (shows different fields by time of day: morning = day type + morning light + wake energy; noon = noon energy; evening = evening energy). Auto-saves on tap.
 
+**CircadianPage layout (redesigned 2026-06-13)**: Alertness curve + schedule merged into one horizontally-scrollable card. SVG uses `HOUR_PX = 52` (52px/hour, 1248px total). Y-axis labels (High/Mid/Low) pinned left outside the scroll container. Three rows inside the scrollable area: (1) SVG curve with sleep/exercise/focus bands and now-line; (2) activity blocks row (absolutely positioned `tl-block` divs); (3) event pins row (Last meal, Dim screens at DLMO, Bedtime). A single white vertical `now-line` runs through all rows at `currentHour * HOUR_PX`. Auto-scrolls to `(currentHour - 2) * HOUR_PX` on load. Score card uses horizontal mini-bars per component instead of tile grid. Recommendations card shows `socialJetlagWarning` when present.
+
 ### Health Connect Known Issues
 - **READ_EXERCISE SecurityException**: `@capgo/capacitor-health` declares `READ_EXERCISE` and reads `ExerciseSessionRecord` internally. After any HC permission reset, this permission may not be granted, causing a native SecurityException that kills the process. The app does not use exercise data but cannot prevent the plugin read. **Workaround**: user must manually grant Exercise permission in HC settings. A proper fix requires forking the plugin.
 
@@ -141,6 +143,9 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - **No raw unicode checkmarks/crosses** — use `ion-icon` instead of `✓`, `×`, `✕`.
 - **No emojis** anywhere in the UI.
 - **Progressive overload**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% increase, rounded to nearest 2.5 kg, display-only.
+- **Workout summary modal**: `WorkoutSummaryModal.vue` is shown via `modalController` after `saveWorkout()`. Receives `{ duration, totalVolume, exerciseCount, setCount, prs: AchievedPR[] }`. PR badge: `is_new=true` → solid red "NEW"; `is_new=false` → outline red "PR+". `WorkoutPage` calls `await modal.onWillDismiss()` before navigating home so the user sees the card.
+- **Bodyweight pre-fill**: `loadWorkout` in `WorkoutPage.vue` calls `getLatestBodyWeight()` and pre-fills set `weight`/`previous_weight` for exercises whose equipment is `bodyweight`.
+- **ExercisePicker caller routing**: `ExercisePickerPage` uses `route.query.from` to determine return path. `from=TemplateBuilder` → stores selection in `localStorage('selectedExerciseForTemplate')` and pushes back to `TemplateBuilder`. Callers must clear the key after reading. No global store involved.
 - **Weekly digest**: `getWeeklyDigest()` exists in `app_db.ts` but UI was removed (broken). Do not re-add without verifying.
 - **Haptics**: `src/shared/utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Wire into all interactive elements. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after successful save, Select = picker/option select.
 - **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment AND on the `.section-toolbar` (a grey toolbar background reads as a full-width bar behind the pill).
