@@ -3,7 +3,8 @@ const STEP_GOAL_KEY = 'setting_step_goal'
 
 export function getSleepGoalHours(): number {
   const v = localStorage.getItem(SLEEP_GOAL_KEY)
-  return v ? parseFloat(v) : 8.0
+  const n = v ? parseFloat(v) : NaN
+  return Number.isFinite(n) ? n : 8.0
 }
 
 export function setSleepGoalHours(h: number): void {
@@ -12,7 +13,8 @@ export function setSleepGoalHours(h: number): void {
 
 export function getStepGoal(): number {
   const v = localStorage.getItem(STEP_GOAL_KEY)
-  return v ? parseInt(v, 10) : 10000
+  const n = v ? parseInt(v, 10) : NaN
+  return Number.isFinite(n) ? n : 10000
 }
 
 export function setStepGoal(steps: number): void {

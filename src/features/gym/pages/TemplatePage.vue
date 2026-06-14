@@ -21,15 +21,19 @@
             <ion-refresher-content></ion-refresher-content>
           </ion-refresher>
               <div class="template-shell">
-                <ion-card class="card-template" v-for="template in templates" :key="template.id">
+                <ion-card class="card-template" :class="{ 'card-template--archived': template.archived }" v-for="template in templates" :key="template.id">
                     <ion-card-header class="card-header">
                         <div class="card-header__copy">
-                          <ion-card-title class="card-title">{{ template.name }}</ion-card-title>
+                          <ion-card-title class="card-title">
+                            {{ template.name }}
+                            <span v-if="template.archived" class="archived-chip">Archived</span>
+                          </ion-card-title>
                           <ion-card-subtitle class="card-subtitle">{{ template.created_at }}</ion-card-subtitle>
                         </div>
                         <div class="card-header__actions">
                           <ion-button class="button-red" @click="deleteTemp(template.id)">Delete</ion-button>
                           <ion-button class="button-yellow" @click="editTemp(template.id)">Edit</ion-button>
+                          <ion-button class="button-yellow" @click="toggleArchive(template)">{{ template.archived ? 'Unarchive' : 'Archive' }}</ion-button>
                         </div>
                     </ion-card-header>
                     <ion-card-content>
@@ -78,6 +82,25 @@
   background: var(--ion-card-background);
   color: var(--ion-card-color);
   box-shadow: none;
+}
+
+.card-template--archived {
+  opacity: 0.55;
+}
+
+.archived-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--nt-radius-pill, 999px);
+  border: 1px solid var(--nt-border-strong, rgba(255, 255, 255, 0.12));
+  font-family: var(--nt-font-head, inherit);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nt-text-dim, rgba(255, 255, 255, 0.5));
+  vertical-align: middle;
 }
 
 .card-header{
@@ -181,7 +204,8 @@ import type { RefresherCustomEvent } from '@ionic/vue';
 import { add } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { getTemplates, getTemplateExercises, deleteTemplate } from '@/shared/db/app_db';
+import { getTemplates, getTemplateExercises, deleteTemplate, setTemplateArchived } from '@/shared/db/app_db';
+import { hapticLight } from '@/shared/utils/haptics';
 
 const router = useRouter();
 
@@ -203,11 +227,13 @@ type Template = {
   id: number;
   name: string;
   created_at: string;
+  archived?: number;
   exercises?: TemplateExercise[];
 };
 
 const loadTemplates = async () => {
-  const data = await getTemplates();
+  // Include archived here so they can be un-archived from this management screen.
+  const data = await getTemplates(true);
 
   if (!data) {
     templates.value = [];
@@ -262,7 +288,14 @@ const deleteTemp = async (id: number) => {
 
 
 
-//refresh 
+// archive / unarchive — hides the template from the gym homepage + recommendations
+const toggleArchive = async (template: Template) => {
+  await hapticLight();
+  await setTemplateArchived(template.id, !template.archived);
+  await loadTemplates();
+};
+
+//refresh
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
   await loadTemplates();

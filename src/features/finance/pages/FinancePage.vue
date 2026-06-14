@@ -61,6 +61,7 @@ import {
   getFinanceSubscriptions,
   getFinanceTransactionsForMonth,
   getFinanceBudgets,
+  recordNetWorthSnapshot,
 } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
 
@@ -82,6 +83,8 @@ const investmentsTotal = computed(() =>
 // regardless of billing cadence (yearly ÷ 12, weekly × 52 ÷ 12).
 const subscriptionsTotal = computed(() =>
   subscriptions.value.reduce((sum, sub) => {
+    // Recurring income is shown separately; the "/ mo" total is outflow only.
+    if (sub.direction === 'income') return sum;
     const amount = Number(sub.amount) || 0;
     if (sub.cadence === 'yearly') return sum + amount / 12;
     if (sub.cadence === 'weekly') return sum + (amount * 52) / 12;
@@ -118,6 +121,8 @@ const loadFinance = async () => {
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   monthTransactions.value = await getFinanceTransactionsForMonth(monthKey);
   budgets.value = await getFinanceBudgets();
+  // Persist a daily net-worth snapshot so the review digest can track the delta.
+  await recordNetWorthSnapshot();
 };
 
 onIonViewWillEnter(async () => {

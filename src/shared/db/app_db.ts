@@ -1,6 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
+import { goalReached, goalProgressFraction } from '@/shared/utils/goalProgress';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
 let db: SQLiteDBConnection | null = null;
@@ -146,6 +147,7 @@ async function doInitDB() {
   CREATE TABLE IF NOT EXISTS workout_template (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
+    archived INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -285,7 +287,8 @@ async function doInitDB() {
     status TEXT DEFAULT 'active',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     link_type TEXT,
-    link_ref TEXT
+    link_ref TEXT,
+    start_value REAL
   );
 
   CREATE TABLE IF NOT EXISTS calendar_event (
@@ -742,6 +745,19 @@ async function doInitDB() {
       await db.execute(`ALTER TABLE workout ADD COLUMN name TEXT;`);
     }
 
+    // Archive flag for templates (so old defaults can be hidden from the gym
+    // homepage / recommendations without deleting them).
+    const tplColumns = await db.query(`PRAGMA table_info("workout_template");`);
+    const hasArchivedColumn = (tplColumns.values || []).some(
+      (column: any) => String(column.name) === 'archived'
+    );
+    if (!hasArchivedColumn) {
+      await db.execute(`ALTER TABLE workout_template ADD COLUMN archived INTEGER DEFAULT 0;`);
+    }
+
+    // Seed the 4-day PPL split (Push/Pull A heavy, Push/Pull B hypertrophy/volume).
+    await seedPplSplitTemplates();
+
     await db.execute(`
       UPDATE workout
       SET name = (
@@ -839,6 +855,9 @@ async function doInitDB() {
     if (!goalColNames.has('link_ref')) {
       await db.execute(`ALTER TABLE goal ADD COLUMN link_ref TEXT;`);
     }
+    if (!goalColNames.has('start_value')) {
+      await db.execute(`ALTER TABLE goal ADD COLUMN start_value REAL;`);
+    }
 
     // One-time dedup: remove duplicate health_metric rows accumulated by the
     // = NULL bug in replaceHealthMetric — keeps the highest-id row per (date, type, source).
@@ -874,6 +893,97 @@ export async function getEquipment() {
 
 // template functions
 
+
+// Exercises referenced by the PPL split that aren't in the base seed.
+const PPL_NEW_EXERCISES: { name: string; mg: number; eq: number; rest: number }[] = [
+  { name: 'Incline Dumbbell Curl', mg: 5, eq: 2, rest: 75 }, // arms / dumbbell
+  { name: 'Chest Supported Row', mg: 2, eq: 3, rest: 90 },   // back / machine
+  { name: 'Straight Arm Pulldown', mg: 2, eq: 5, rest: 75 }, // back / cables
+];
+
+// 4-day Push/Pull split seeded as default templates. set/rep use the midpoint of
+// the prescribed range (the schema stores a single set + rep number per exercise).
+const PPL_TEMPLATES: { name: string; exercises: { name: string; sets: number; reps: number }[] }[] = [
+  { name: 'PUSH A (HEAVY)', exercises: [
+    { name: 'Bench Press', sets: 4, reps: 5 },
+    { name: 'Overhead Press', sets: 4, reps: 5 },
+    { name: 'Incline Dumbbell Press', sets: 3, reps: 9 },
+    { name: 'Chest Dips', sets: 3, reps: 7 },
+    { name: 'Cable Lateral Raise', sets: 3, reps: 13 },
+    { name: 'Overhead Dumbbell Extension', sets: 3, reps: 11 },
+  ] },
+  { name: 'PULL A (HEAVY)', exercises: [
+    { name: 'Bent Over Row', sets: 4, reps: 7 },
+    { name: 'Pull-Up', sets: 3, reps: 8 },
+    { name: 'Seated Cable Row', sets: 3, reps: 11 },
+    { name: 'Face Pull', sets: 3, reps: 17 },
+    { name: 'Reverse Fly Machine', sets: 3, reps: 13 },
+    { name: 'Incline Dumbbell Curl', sets: 3, reps: 10 },
+  ] },
+  { name: 'PUSH B (HYPERTROPHY)', exercises: [
+    { name: 'Incline Barbell Bench Press', sets: 4, reps: 9 },
+    { name: 'Bench Press Dumbbell', sets: 3, reps: 11 },
+    { name: 'Overhead Press', sets: 3, reps: 9 },
+    { name: 'Cable Crossover', sets: 3, reps: 13 },
+    { name: 'Lateral Raise', sets: 4, reps: 15 },
+    { name: 'Tricep Pushdown', sets: 2, reps: 13 },
+  ] },
+  { name: 'PULL B (VOLUME)', exercises: [
+    { name: 'Lat Pulldown', sets: 4, reps: 11 },
+    { name: 'Chest Supported Row', sets: 3, reps: 11 },
+    { name: 'Straight Arm Pulldown', sets: 3, reps: 13 },
+    { name: 'Lateral Raise', sets: 3, reps: 17 },
+    { name: 'Reverse Fly', sets: 3, reps: 17 },
+    { name: 'EZ Bar Curl', sets: 3, reps: 10 },
+  ] },
+];
+
+// Idempotent: only inserts exercises/templates/rows that don't already exist
+// (matched case-insensitively by name), so it's safe to run on every init.
+async function seedPplSplitTemplates() {
+  if (!db) return;
+
+  for (const ex of PPL_NEW_EXERCISES) {
+    await db.run(
+      `INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+       SELECT ?, ?, ?, ?
+       WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower(?));`,
+      [ex.name, ex.mg, ex.eq, ex.rest, ex.name]
+    );
+  }
+
+  for (const tpl of PPL_TEMPLATES) {
+    await db.run(
+      `INSERT INTO workout_template (name)
+       SELECT ?
+       WHERE NOT EXISTS (SELECT 1 FROM workout_template WHERE lower(name) = lower(?));`,
+      [tpl.name, tpl.name]
+    );
+    const r = await db.query(
+      `SELECT id FROM workout_template WHERE lower(name) = lower(?) LIMIT 1;`,
+      [tpl.name]
+    );
+    const tplId = r.values?.[0]?.id as number | undefined;
+    if (!tplId) continue;
+
+    let order = 1;
+    for (const ex of tpl.exercises) {
+      await db.run(
+        `INSERT INTO workout_template_exercise
+           (id_workout_template, id_exercise, set_number, rep_number, order_index)
+         SELECT ?, e.id, ?, ?, ?
+         FROM exercise e
+         WHERE lower(e.name) = lower(?)
+           AND NOT EXISTS (
+             SELECT 1 FROM workout_template_exercise wte
+             WHERE wte.id_workout_template = ? AND wte.id_exercise = e.id
+           );`,
+        [tplId, ex.sets, ex.reps, order, ex.name, tplId]
+      );
+      order++;
+    }
+  }
+}
 
 export async function createTemplate(name: string) {
   if (!db) return;
@@ -913,11 +1023,21 @@ export async function addExerciseToTemplate(
     throw error;
   }
 }
-export async function getTemplates() {
+// By default excludes archived templates (so they don't show on the gym homepage
+// or get recommended). Pass includeArchived=true for the management screen.
+export async function getTemplates(includeArchived = false) {
   if (!db) return [];
-  const result = await db.query('SELECT * FROM workout_template;');
+  const result = await db.query(
+    includeArchived
+      ? 'SELECT * FROM workout_template ORDER BY archived ASC, id ASC;'
+      : 'SELECT * FROM workout_template WHERE COALESCE(archived, 0) = 0 ORDER BY id ASC;'
+  );
   return result.values || [];
+}
 
+export async function setTemplateArchived(id: number, archived: boolean) {
+  if (!db) return;
+  await db.run(`UPDATE workout_template SET archived = ? WHERE id = ?;`, [archived ? 1 : 0, id]);
 }
 export async function getTemplateExercises(templateId: number) {
   if (!db) return [];
@@ -1146,6 +1266,7 @@ export async function getLatestCompletedSetsForExercise(exerciseId: number, excl
      JOIN workout_exercise we ON we.id = wes.workout_exercise_id
      WHERE we.workout_id = ?
        AND we.exercise_id = ?
+       AND wes.completed = 1
      ORDER BY wes.set_number ASC;`,
     [latestWorkoutId, exerciseId]
   );
@@ -1849,9 +1970,12 @@ export async function addGoal(
 export async function recomputeLinkedGoals() {
   if (!db) return;
   const result = await db.query(
-    `SELECT id, link_type, link_ref FROM goal WHERE status = 'active' AND link_type IS NOT NULL;`
+    `SELECT id, link_type, link_ref, target_value, start_value FROM goal WHERE status = 'active' AND link_type IS NOT NULL;`
   );
-  const goals = (result.values ?? []) as { id: number; link_type: string; link_ref: string | null }[];
+  const goals = (result.values ?? []) as {
+    id: number; link_type: string; link_ref: string | null;
+    target_value: number; start_value: number | null;
+  }[];
 
   for (const goal of goals) {
     let value: number | null = null;
@@ -1868,7 +1992,19 @@ export async function recomputeLinkedGoals() {
     }
 
     if (value != null && Number.isFinite(value)) {
-      await db.run(`UPDATE goal SET current_value = ? WHERE id = ?;`, [value, goal.id]);
+      // Anchor the starting point on the first sync so direction (loss vs gain)
+      // is well-defined; preserve it on later syncs.
+      const startVal = goal.start_value != null ? Number(goal.start_value) : value;
+      const reached = goalReached({
+        target_value: goal.target_value,
+        current_value: value,
+        start_value: startVal,
+        link_type: goal.link_type,
+      });
+      await db.run(
+        `UPDATE goal SET current_value = ?, start_value = ?, status = ? WHERE id = ?;`,
+        [value, startVal, reached ? 'completed' : 'active', goal.id]
+      );
     }
   }
 }
@@ -1884,9 +2020,11 @@ export async function getGoals() {
 export async function updateGoalProgress(goalId: number, currentValue: number, status?: string) {
   if (!db) return;
   try {
+    // Capture the starting value on the first manual progress entry so a
+    // count-down goal (e.g. weight loss) infers its direction correctly.
     const result = await db.run(
-      `UPDATE goal SET current_value = ?, status = COALESCE(?, status) WHERE id = ?;`,
-      [currentValue, status ?? null, goalId]
+      `UPDATE goal SET current_value = ?, start_value = COALESCE(start_value, ?), status = COALESCE(?, status) WHERE id = ?;`,
+      [currentValue, currentValue, status ?? null, goalId]
     );
     return result;
   } catch (error) {
@@ -1896,14 +2034,30 @@ export async function updateGoalProgress(goalId: number, currentValue: number, s
 }
 
 // Used by habit-goal linking: each completed habit log nudges the linked goal.
+// Reads the goal so it can flip to 'completed' once the (direction-aware) target
+// is reached, and back to 'active' if a later un-toggle drops it below target.
 export async function incrementGoalProgressBy(goalId: number, delta: number) {
   if (!db) return;
   try {
-    const result = await db.run(
-      `UPDATE goal SET current_value = MAX(0, COALESCE(current_value, 0) + ?) WHERE id = ?;`,
-      [delta, goalId]
+    const r = await db.query(
+      `SELECT target_value, current_value, start_value, link_type, status FROM goal WHERE id = ?;`,
+      [goalId]
     );
-    return result;
+    const g = r.values?.[0] as
+      | { target_value: number; current_value: number | null; start_value: number | null; link_type: string | null }
+      | undefined;
+    if (!g) return;
+    const next = Math.max(0, (Number(g.current_value) || 0) + delta);
+    const reached = goalReached({
+      target_value: g.target_value,
+      current_value: next,
+      start_value: g.start_value,
+      link_type: g.link_type,
+    });
+    return await db.run(
+      `UPDATE goal SET current_value = ?, status = ? WHERE id = ?;`,
+      [next, reached ? 'completed' : 'active', goalId]
+    );
   } catch (error) {
     console.error('Error incrementing goal progress:', error);
     throw error;
@@ -2111,7 +2265,7 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
     db.query(`SELECT AVG(completed) AS v FROM habit_log WHERE date >= date('now', ?);`, [since]),
     db.query(`SELECT SUM(amount) AS v FROM finance_transaction WHERE type = 'expense' AND date >= date('now', ?);`, [since]),
     db.query(`SELECT SUM(monthly_limit) AS v FROM finance_budget;`),
-    db.query(`SELECT COUNT(*) AS active, AVG(CASE WHEN target_value > 0 THEN MIN(current_value * 1.0 / target_value, 1.0) ELSE 0 END) AS prog FROM goal WHERE status = 'active';`),
+    db.query(`SELECT target_value, current_value, start_value, link_type FROM goal WHERE status = 'active';`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot WHERE date <= date('now', ?) ORDER BY date DESC LIMIT 1;`, [since]),
   ]);
@@ -2127,6 +2281,14 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
   const netThen = num(netThenR);
   const monthlyBudget = num(budgetR);
 
+  const goalRows = (goalsR.values ?? []) as {
+    target_value: number; current_value: number | null;
+    start_value: number | null; link_type: string | null;
+  }[];
+  const avgGoalProgress = goalRows.length
+    ? goalRows.reduce((sum, g) => sum + goalProgressFraction(g), 0) / goalRows.length
+    : null;
+
   return {
     period,
     workoutCount: Number(workoutsR.values?.[0]?.v ?? 0),
@@ -2138,8 +2300,8 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
     netWorthDelta: netNow !== null && netThen !== null ? Math.round((netNow - netThen) * 100) / 100 : null,
     spent: Math.round((num(spentR) ?? 0) * 100) / 100,
     budget: monthlyBudget !== null ? Math.round((monthlyBudget * days / 30) * 100) / 100 : null,
-    activeGoals: Number(goalsR.values?.[0]?.active ?? 0),
-    avgGoalProgress: num(goalsR, 'prog'),
+    activeGoals: goalRows.length,
+    avgGoalProgress,
   };
 }
 
@@ -2337,6 +2499,27 @@ export interface MonthlySpending {
 }
 
 // Income vs expense totals per month over the last N months (oldest first).
+// Snapshot today's net worth (accounts + investments) so the review digest can
+// compute a net-worth delta over time. Idempotent per day (PK = date), so it's
+// safe to call on every finance-page load; positive net is stored as assets,
+// negative as liabilities.
+export async function recordNetWorthSnapshot() {
+  if (!db) return;
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const a = await db.query(`SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account;`);
+  const i = await db.query(`SELECT COALESCE(SUM(value), 0) AS v FROM finance_investment;`);
+  const net = (Number(a.values?.[0]?.v) || 0) + (Number(i.values?.[0]?.v) || 0);
+  const assets = net >= 0 ? net : 0;
+  const liabilities = net < 0 ? -net : 0;
+  await db.run(
+    `INSERT INTO net_worth_snapshot (date, total_assets, total_liabilities)
+     VALUES (?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET total_assets = excluded.total_assets, total_liabilities = excluded.total_liabilities;`,
+    [today, assets, liabilities]
+  );
+}
+
 export async function queryMonthlySpending(months = 6): Promise<MonthlySpending[]> {
   if (!db) return [];
   const result = await db.query(
@@ -2345,10 +2528,10 @@ export async function queryMonthlySpending(months = 6): Promise<MonthlySpending[
        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense,
        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income
      FROM finance_transaction
-     WHERE date >= date('now', ?)
+     WHERE date >= date('now', 'start of month', ?)
      GROUP BY month
      ORDER BY month ASC;`,
-    [`-${months} months`]
+    [`-${months - 1} months`]
   );
   return ((result.values ?? []) as { month: string; expense: number; income: number }[])
     .map((r) => ({ month: r.month, expense: Number(r.expense) || 0, income: Number(r.income) || 0 }));
@@ -2708,7 +2891,14 @@ export async function getExerciseHistory(exerciseId: number, limitDays: number =
     SELECT
       date(wes.created_at, 'localtime') as date,
       MAX(wes.weight) as weight,
-      MAX(wes.reps) as reps,
+      (SELECT wes2.reps
+         FROM workout_exercise_sets wes2
+         JOIN workout_exercise we2 ON we2.id = wes2.workout_exercise_id
+        WHERE we2.exercise_id = we.exercise_id
+          AND wes2.completed = 1
+          AND date(wes2.created_at, 'localtime') = date(wes.created_at, 'localtime')
+        ORDER BY wes2.weight DESC, wes2.reps DESC
+        LIMIT 1) as reps,
       SUM(wes.weight * wes.reps) as volume
     FROM workout_exercise_sets wes
     JOIN workout_exercise we ON we.id = wes.workout_exercise_id

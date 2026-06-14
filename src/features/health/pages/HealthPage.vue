@@ -407,7 +407,7 @@ const rhAreaPoints = computed(() => {
 });
 
 const loadTodayContext = async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   const [workouts, events] = await Promise.all([
     getTodayCompletedWorkouts(),
     getCalendarEventsForDate(today),

@@ -33,6 +33,8 @@ import {
   bestStreak,
   completionRate,
 } from '@/shared/utils/habitStats';
+import { goalProgressFraction, type GoalLike } from '@/shared/utils/goalProgress';
+import { cancelCalendarReminders } from '@/shared/utils/notifications';
 
 const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const HEAT_COLORS = [
@@ -112,11 +114,7 @@ export function usePlanner() {
   const goalsDueSelected = computed(() => activeGoals.value.filter((g) => g.due_date === selectedDate.value));
   const progressDrafts = reactive<Record<number, string>>({});
 
-  const goalProgress = (g: Record<string, any>) => {
-    const target = Number(g.target_value) || 0;
-    if (!target) return 0;
-    return Math.min(1, (Number(g.current_value) || 0) / target);
-  };
+  const goalProgress = (g: Record<string, any>) => goalProgressFraction(g as GoalLike);
 
   const fmtNum = (v: unknown) => {
     const n = Number(v) || 0;
@@ -295,6 +293,8 @@ export function usePlanner() {
 
   const removeEvent = async (id: number) => {
     await deleteCalendarEvent(id);
+    // Cancel any reminder already scheduled for this event so it doesn't fire.
+    await cancelCalendarReminders([id]);
     await Promise.all([loadDayDetail(), loadMonthDots()]);
   };
 

@@ -1,6 +1,7 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { Capacitor } from '@capacitor/core'
 import { formatCurrency } from '@/shared/utils/currency'
+import { localDateISO } from '@/shared/utils/timeFormat'
 
 // Notification ID ranges — must be stable integers
 const ID_WEIGHT        = 1
@@ -14,8 +15,15 @@ const ID_WEEKLY        = 12
 const ID_CAL_BASE      = 4000   // 4000 + event id
 const ID_SUB_BASE      = 5000   // 5000 + sub id
 
+// Parse 'HH:MM', falling back to 09:00 if the stored value is malformed so we
+// never hand setHours(NaN) to the scheduler (which yields an Invalid Date).
+function parseHhmm(hhmm: string): [number, number] {
+  const [h, m] = (hhmm ?? '').split(':').map(Number)
+  return [Number.isFinite(h) ? h : 9, Number.isFinite(m) ? m : 0]
+}
+
 function nextOccurrence(hhmm: string): Date {
-  const [h, m] = hhmm.split(':').map(Number)
+  const [h, m] = parseHhmm(hhmm)
   const now = new Date()
   const next = new Date(now)
   next.setHours(h, m, 0, 0)
@@ -25,7 +33,7 @@ function nextOccurrence(hhmm: string): Date {
 
 // Next time the given weekday (0=Sun..6=Sat) occurs at hh:mm, strictly in the future.
 function nextWeekdayOccurrence(weekday: number, hhmm: string): Date {
-  const [h, m] = hhmm.split(':').map(Number)
+  const [h, m] = parseHhmm(hhmm)
   const now = new Date()
   const next = new Date(now)
   next.setHours(h, m, 0, 0)
@@ -181,7 +189,7 @@ export async function cancelWeeklyDigest(): Promise<void> {
 }
 
 export async function scheduleCalendarReminders(
-  events: { id: number; title: string; date: string; time_start?: string | null }[],
+  events: { id: number; title: string; date: string; time_start?: string | null; recurrence?: string | null }[],
   minsBefore: number
 ): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
@@ -190,10 +198,14 @@ export async function scheduleCalendarReminders(
   const prevIds = events.map(e => ({ id: ID_CAL_BASE + e.id }))
   if (prevIds.length) await LocalNotifications.cancel({ notifications: prevIds })
 
+  const today = localDateISO()
   const toSchedule = []
   for (const ev of events) {
     if (!ev.time_start) continue
-    const fireAt = new Date(`${ev.date}T${ev.time_start}:00`)
+    // Recurring events keep their original start date, but this batch is today's
+    // occurrences — fire them today, not on the (past) start date.
+    const occDate = ev.recurrence && ev.recurrence !== 'none' ? today : ev.date
+    const fireAt = new Date(`${occDate}T${ev.time_start}:00`)
     fireAt.setMinutes(fireAt.getMinutes() - minsBefore)
     if (fireAt <= new Date()) continue
     toSchedule.push({

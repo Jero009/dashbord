@@ -239,10 +239,13 @@ const formatVolume = (volume: number) => {
 };
 
 const loadAll = async () => {
+  // Fetch enough weeks to cover both the heatmap (HEATMAP_WEEKS) and the selected
+  // window, otherwise the "Workouts"/"Per week" tiles undercount on 90/180-day views.
+  const freqWeeks = Math.max(HEATMAP_WEEKS, Math.ceil(windowDays.value / 7));
   const [volume, tonnage, freq] = await Promise.all([
     queryVolumeByMuscleGroup(windowDays.value).catch(() => []),
     queryWeeklyTonnage(8).catch(() => []),
-    queryWorkoutFrequency(HEATMAP_WEEKS).catch(() => []),
+    queryWorkoutFrequency(freqWeeks).catch(() => []),
   ]);
   muscleVolume.value = volume;
   weeklyTonnage.value = tonnage;

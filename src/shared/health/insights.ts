@@ -108,7 +108,9 @@ export function computeTrainingLoad(dailyVolume: DatedValue[]): TrainingLoad {
 
   const acuteTotal = acute.reduce((a, b) => a + b, 0);
   const chronicTotal = chronic.reduce((a, b) => a + b, 0);
-  const chronicWeeklyAvg = chronicTotal / 4;
+  // Divide by the actual span present (in weeks), not a fixed 4, so a partial
+  // history (14–27 days) doesn't understate the chronic baseline and inflate ACWR.
+  const chronicWeeklyAvg = chronicTotal / (chronic.length / 7);
 
   if (chronic.length < 14 || chronicWeeklyAvg <= 0) {
     return { acuteTotal, chronicWeeklyAvg, acwr: 0, status: 'insufficient' };

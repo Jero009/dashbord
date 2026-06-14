@@ -312,8 +312,8 @@ export function computeAlertnessCurve(
     const hoursAwake = normalizeHour(hour - safeWake);
     const hoursSleep = normalizeHour(hour - sleepStart);
 
-    if (hoursAwake <= avgSleep) {
-      // During wake: S builds exponentially
+    if (hoursAwake <= 24 - avgSleep) {
+      // During the waking window (24h − sleep duration): S builds exponentially
       processS = 0.2 + 0.8 * (1 - Math.exp(-hoursAwake / tauWake));
     } else {
       // During sleep: S decays exponentially

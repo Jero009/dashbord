@@ -138,7 +138,9 @@ const loadAll = async () => {
 
   const rhrAsc = [...rhr].sort((a, b) => a.date.localeCompare(b.date)).map((r) => r.value);
   const rhrToday = rhrAsc.length > 0 ? rhrAsc[rhrAsc.length - 1] : null;
-  const rhrBaseline = rhrAsc.length >= 3 ? mean(rhrAsc) : null;
+  // Baseline excludes today so the elevation ratio isn't diluted by its own value.
+  const rhrBaseline = rhrAsc.length >= 4 ? mean(rhrAsc.slice(0, -1))
+    : (rhrAsc.length >= 3 ? mean(rhrAsc) : null);
 
   const readinessAsc = [...readiness].sort((a, b) => a.date.localeCompare(b.date));
   const readinessToday = readinessAsc.length > 0 ? readinessAsc[readinessAsc.length - 1].value : null;
