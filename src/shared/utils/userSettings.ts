@@ -79,3 +79,17 @@ export function getNotifSubscriptionEnabled(): boolean { return localStorage.get
 export function setNotifSubscriptionEnabled(v: boolean): void { localStorage.setItem('notif_sub_enabled', v ? '1' : '0') }
 export function getNotifSubscriptionDaysBefore(): number { return Number(localStorage.getItem('notif_sub_days') ?? '3') }
 export function setNotifSubscriptionDaysBefore(n: number): void { localStorage.setItem('notif_sub_days', String(n)) }
+
+// Morning summary: a single daily digest of today's battery/readiness, habits due, next event.
+export function getNotifMorningEnabled(): boolean { return localStorage.getItem('notif_morning_enabled') === '1' }
+export function setNotifMorningEnabled(v: boolean): void { localStorage.setItem('notif_morning_enabled', v ? '1' : '0') }
+export function getNotifMorningTime(): string { return localStorage.getItem('notif_morning_time') ?? '07:30' }
+export function setNotifMorningTime(t: string): void { localStorage.setItem('notif_morning_time', t) }
+
+// Weekly digest: a once-a-week recap. Weekday is JS getDay() (0=Sun..6=Sat).
+export function getNotifWeeklyEnabled(): boolean { return localStorage.getItem('notif_weekly_enabled') === '1' }
+export function setNotifWeeklyEnabled(v: boolean): void { localStorage.setItem('notif_weekly_enabled', v ? '1' : '0') }
+export function getNotifWeeklyTime(): string { return localStorage.getItem('notif_weekly_time') ?? '18:00' }
+export function setNotifWeeklyTime(t: string): void { localStorage.setItem('notif_weekly_time', t) }
+export function getNotifWeeklyWeekday(): number { return Number(localStorage.getItem('notif_weekly_weekday') ?? '0') }
+export function setNotifWeeklyWeekday(n: number): void { localStorage.setItem('notif_weekly_weekday', String(n)) }

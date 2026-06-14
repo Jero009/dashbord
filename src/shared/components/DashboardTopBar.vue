@@ -17,6 +17,9 @@
       <ion-segment-button value="gym">
         <ion-label>Gym</ion-label>
       </ion-segment-button>
+      <ion-segment-button value="analytics">
+        <ion-label>Analytics</ion-label>
+      </ion-segment-button>
       </ion-segment>
     </div>
     <div slot="end" class="toolbar-end">
@@ -38,6 +41,7 @@ const router = useRouter();
 const route = useRoute();
 
 const activeTab = computed(() => {
+  if (route.path.startsWith('/analytics')) return 'analytics';
   if (route.path.startsWith('/plan'))    return 'plan';
   if (route.path.startsWith('/finance')) return 'finance';
   if (route.path.startsWith('/health'))  return 'health';
@@ -58,6 +62,7 @@ const handleSegmentChange = (event: CustomEvent) => {
     health: '/health',
     gym: '/tabs/Home',
     plan: '/plan',
+    analytics: '/analytics',
   }[value];
 
   if (target && target !== route.path) {

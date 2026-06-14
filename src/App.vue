@@ -13,7 +13,8 @@ import HealthConnectAutoSync from '@/shared/health/HealthConnectAutoSync.vue';
 import { Capacitor } from '@capacitor/core'
 import {
   scheduleWeightReminder, scheduleHabitReminder, scheduleSleepReminder,
-  scheduleCalendarReminders, scheduleSubscriptionReminders
+  scheduleCalendarReminders, scheduleSubscriptionReminders,
+  scheduleMorningSummary, scheduleWeeklyDigest
 } from '@/shared/utils/notifications'
 import {
   getNotifWeightEnabled, getNotifWeightTime,
@@ -21,8 +22,11 @@ import {
   getNotifSleepEnabled, getNotifSleepTime,
   getNotifCalendarEnabled, getNotifCalendarMinsBefore,
   getNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore,
+  getNotifMorningEnabled, getNotifMorningTime,
+  getNotifWeeklyEnabled, getNotifWeeklyTime, getNotifWeeklyWeekday,
 } from '@/shared/utils/userSettings'
 import { initDB, getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
+import { buildMorningBody, buildWeeklyBody } from '@/shared/utils/notificationDigests'
 import { localDateISO } from '@/shared/utils/timeFormat'
 
 onMounted(async () => {
@@ -52,6 +56,16 @@ onMounted(async () => {
     if (getNotifSubscriptionEnabled()) {
       const subs = await getFinanceSubscriptions()
       await scheduleSubscriptionReminders(subs, getNotifSubscriptionDaysBefore())
+    }
+
+    // Recompose + reschedule the digests on every app open so their bodies
+    // reflect the latest data (local notifications fire with the body last set).
+    if (getNotifMorningEnabled()) {
+      await scheduleMorningSummary(getNotifMorningTime(), await buildMorningBody(today))
+    }
+
+    if (getNotifWeeklyEnabled()) {
+      await scheduleWeeklyDigest(getNotifWeeklyWeekday(), getNotifWeeklyTime(), await buildWeeklyBody())
     }
   } catch (error) {
     console.error('Startup notification scheduling failed:', error)

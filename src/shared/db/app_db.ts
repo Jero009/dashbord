@@ -283,7 +283,9 @@ async function doInitDB() {
     current_value REAL DEFAULT 0,
     due_date TEXT,
     status TEXT DEFAULT 'active',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    link_type TEXT,
+    link_ref TEXT
   );
 
   CREATE TABLE IF NOT EXISTS calendar_event (
@@ -364,7 +366,13 @@ async function doInitDB() {
     date TEXT NOT NULL,
     weight_kg REAL NOT NULL,
     notes TEXT,
-    photo_path TEXT
+    photo_path TEXT,
+    waist_cm REAL,
+    chest_cm REAL,
+    hips_cm REAL,
+    arm_cm REAL,
+    thigh_cm REAL,
+    body_fat_pct REAL
   );
   
   INSERT OR IGNORE INTO muscle_group (name) VALUES
@@ -813,6 +821,23 @@ async function doInitDB() {
     const invColNames = new Set((invColumns.values || []).map((c: any) => String(c.name)));
     if (!invColNames.has('account_id')) {
       await db.execute(`ALTER TABLE finance_investment ADD COLUMN account_id INTEGER;`);
+    }
+
+    const bodyColumns = await db.query(`PRAGMA table_info("body_log");`);
+    const bodyColNames = new Set((bodyColumns.values || []).map((c: any) => String(c.name)));
+    for (const col of ['waist_cm', 'chest_cm', 'hips_cm', 'arm_cm', 'thigh_cm', 'body_fat_pct']) {
+      if (!bodyColNames.has(col)) {
+        await db.execute(`ALTER TABLE body_log ADD COLUMN ${col} REAL;`);
+      }
+    }
+
+    const goalColumns = await db.query(`PRAGMA table_info("goal");`);
+    const goalColNames = new Set((goalColumns.values || []).map((c: any) => String(c.name)));
+    if (!goalColNames.has('link_type')) {
+      await db.execute(`ALTER TABLE goal ADD COLUMN link_type TEXT;`);
+    }
+    if (!goalColNames.has('link_ref')) {
+      await db.execute(`ALTER TABLE goal ADD COLUMN link_ref TEXT;`);
     }
 
     // One-time dedup: remove duplicate health_metric rows accumulated by the
@@ -1792,17 +1817,59 @@ export async function toggleHabitCompletion(habitId: number, date: string, compl
   }
 }
 
-export async function addGoal(name: string, targetValue: number, dueDate?: string) {
+// link_type: null = manual goal (habit/manual progress, the original behavior).
+// 'weight'  -> current_value tracks the latest body_log weight (link_ref unused)
+// 'lift_pr' -> tracks exercise_pr.one_rep_max for exercise id in link_ref
+// 'savings' -> tracks finance_account.balance for account id in link_ref
+export async function addGoal(
+  name: string,
+  targetValue: number,
+  dueDate?: string,
+  linkType?: string | null,
+  linkRef?: string | null,
+) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO goal (name, target_value, due_date) VALUES (?, ?, ?);`,
-      [name, targetValue, dueDate ?? null]
+      `INSERT INTO goal (name, target_value, due_date, link_type, link_ref) VALUES (?, ?, ?, ?, ?);`,
+      [name, targetValue, dueDate ?? null, linkType ?? null, linkRef ?? null]
     );
+    // Seed the linked value immediately so the new goal isn't stuck at 0.
+    await recomputeLinkedGoals();
     return result;
   } catch (error) {
     console.error('Error adding goal:', error);
     throw error;
+  }
+}
+
+// Pull live values into goals that are linked to real data (weight / lift PR /
+// account balance). Manual goals (link_type IS NULL) are left untouched so the
+// habit-completion ±1 behavior keeps working. Call on planner/home load.
+export async function recomputeLinkedGoals() {
+  if (!db) return;
+  const result = await db.query(
+    `SELECT id, link_type, link_ref FROM goal WHERE status = 'active' AND link_type IS NOT NULL;`
+  );
+  const goals = (result.values ?? []) as { id: number; link_type: string; link_ref: string | null }[];
+
+  for (const goal of goals) {
+    let value: number | null = null;
+
+    if (goal.link_type === 'weight') {
+      const r = await db.query(`SELECT weight_kg AS v FROM body_log ORDER BY date DESC, id DESC LIMIT 1;`);
+      value = r.values?.[0]?.v != null ? Number(r.values[0].v) : null;
+    } else if (goal.link_type === 'lift_pr' && goal.link_ref) {
+      const r = await db.query(`SELECT one_rep_max AS v FROM exercise_pr WHERE exercise_id = ?;`, [Number(goal.link_ref)]);
+      value = r.values?.[0]?.v != null ? Number(r.values[0].v) : null;
+    } else if (goal.link_type === 'savings' && goal.link_ref) {
+      const r = await db.query(`SELECT balance AS v FROM finance_account WHERE id = ?;`, [Number(goal.link_ref)]);
+      value = r.values?.[0]?.v != null ? Number(r.values[0].v) : null;
+    }
+
+    if (value != null && Number.isFinite(value)) {
+      await db.run(`UPDATE goal SET current_value = ? WHERE id = ?;`, [value, goal.id]);
+    }
   }
 }
 
@@ -2004,6 +2071,78 @@ export async function getWeeklyDigest(): Promise<{
   };
 }
 
+export interface ReviewDigest {
+  period: 'week' | 'month';
+  workoutCount: number;
+  totalVolume: number;
+  avgSleepScore: number | null;
+  avgReadiness: number | null;
+  readinessTrend: number | null;
+  habitRate: number | null;        // 0–1 completion rate over the period
+  netWorthDelta: number | null;
+  spent: number;
+  budget: number | null;           // monthly budget total, prorated to the period
+  activeGoals: number;
+  avgGoalProgress: number | null;  // 0–1 across active goals
+}
+
+// Cross-domain summary for the Review page (and HomePage "This Week" card).
+export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promise<ReviewDigest> {
+  const days = period === 'month' ? 30 : 7;
+  const empty: ReviewDigest = {
+    period, workoutCount: 0, totalVolume: 0, avgSleepScore: null, avgReadiness: null,
+    readinessTrend: null, habitRate: null, netWorthDelta: null, spent: 0, budget: null,
+    activeGoals: 0, avgGoalProgress: null,
+  };
+  if (!db) return empty;
+
+  const since = `-${days} days`;
+  const prevSince = `-${days * 2} days`;
+
+  const [
+    workoutsR, volumeR, sleepR, readinessR, prevReadinessR, habitR,
+    spentR, budgetR, goalsR, netNowR, netThenR,
+  ] = await Promise.all([
+    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start) >= date('now', ?);`, [since]),
+    db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at) >= date('now', ?);`, [since]),
+    db.query(`SELECT AVG(score) AS v FROM sleep_session WHERE score IS NOT NULL AND date >= date('now', ?);`, [since]),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?);`, [since]),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?) AND date < date('now', ?);`, [prevSince, since]),
+    db.query(`SELECT AVG(completed) AS v FROM habit_log WHERE date >= date('now', ?);`, [since]),
+    db.query(`SELECT SUM(amount) AS v FROM finance_transaction WHERE type = 'expense' AND date >= date('now', ?);`, [since]),
+    db.query(`SELECT SUM(monthly_limit) AS v FROM finance_budget;`),
+    db.query(`SELECT COUNT(*) AS active, AVG(CASE WHEN target_value > 0 THEN MIN(current_value * 1.0 / target_value, 1.0) ELSE 0 END) AS prog FROM goal WHERE status = 'active';`),
+    db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`),
+    db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot WHERE date <= date('now', ?) ORDER BY date DESC LIMIT 1;`, [since]),
+  ]);
+
+  const num = (r: any, key = 'v') => {
+    const v = r.values?.[0]?.[key];
+    return v !== null && v !== undefined ? Number(v) : null;
+  };
+
+  const thisReadiness = num(readinessR);
+  const prevReadiness = num(prevReadinessR);
+  const netNow = num(netNowR);
+  const netThen = num(netThenR);
+  const monthlyBudget = num(budgetR);
+
+  return {
+    period,
+    workoutCount: Number(workoutsR.values?.[0]?.v ?? 0),
+    totalVolume: Math.round(num(volumeR) ?? 0),
+    avgSleepScore: sleepR.values?.[0]?.v != null ? Math.round(num(sleepR)!) : null,
+    avgReadiness: thisReadiness !== null ? Math.round(thisReadiness) : null,
+    readinessTrend: thisReadiness !== null && prevReadiness !== null ? Math.round(thisReadiness - prevReadiness) : null,
+    habitRate: num(habitR),
+    netWorthDelta: netNow !== null && netThen !== null ? Math.round((netNow - netThen) * 100) / 100 : null,
+    spent: Math.round((num(spentR) ?? 0) * 100) / 100,
+    budget: monthlyBudget !== null ? Math.round((monthlyBudget * days / 30) * 100) / 100 : null,
+    activeGoals: Number(goalsR.values?.[0]?.active ?? 0),
+    avgGoalProgress: num(goalsR, 'prog'),
+  };
+}
+
 export async function getHabitCompletedDatesForMonth(yearMonth: string) {
   if (!db) return [] as string[];
   const result = await db.query(
@@ -2191,6 +2330,50 @@ export async function deleteFinanceBudget(id: number) {
   }
 }
 
+export interface MonthlySpending {
+  month: string;   // YYYY-MM
+  expense: number;
+  income: number;
+}
+
+// Income vs expense totals per month over the last N months (oldest first).
+export async function queryMonthlySpending(months = 6): Promise<MonthlySpending[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT
+       strftime('%Y-%m', date) AS month,
+       SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense,
+       SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income
+     FROM finance_transaction
+     WHERE date >= date('now', ?)
+     GROUP BY month
+     ORDER BY month ASC;`,
+    [`-${months} months`]
+  );
+  return ((result.values ?? []) as { month: string; expense: number; income: number }[])
+    .map((r) => ({ month: r.month, expense: Number(r.expense) || 0, income: Number(r.income) || 0 }));
+}
+
+export interface CategorySpending {
+  category: string;
+  amount: number;
+}
+
+// Expense totals grouped by category for a single month (largest first).
+export async function queryCategorySpending(monthKey: string): Promise<CategorySpending[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT category, SUM(amount) AS amount
+     FROM finance_transaction
+     WHERE type = 'expense' AND strftime('%Y-%m', date) = ?
+     GROUP BY category
+     ORDER BY amount DESC;`,
+    [monthKey]
+  );
+  return ((result.values ?? []) as { category: string; amount: number }[])
+    .map((r) => ({ category: r.category || 'other', amount: Number(r.amount) || 0 }));
+}
+
 export async function exportDatabaseToSQL() {
   if (!db) return null;
 
@@ -2357,6 +2540,12 @@ export interface BodyLogEntry {
   weight_kg: number
   notes: string | null
   photo_path: string | null
+  waist_cm: number | null
+  chest_cm: number | null
+  hips_cm: number | null
+  arm_cm: number | null
+  thigh_cm: number | null
+  body_fat_pct: number | null
 }
 
 export async function insertBodyLog(entry: {
@@ -2364,11 +2553,23 @@ export async function insertBodyLog(entry: {
   weight_kg: number
   notes?: string
   photo_path?: string
+  waist_cm?: number | null
+  chest_cm?: number | null
+  hips_cm?: number | null
+  arm_cm?: number | null
+  thigh_cm?: number | null
+  body_fat_pct?: number | null
 }): Promise<void> {
   if (!db) return
   await db.run(
-    `INSERT INTO body_log (date, weight_kg, notes, photo_path) VALUES (?, ?, ?, ?)`,
-    [entry.date, entry.weight_kg, entry.notes ?? null, entry.photo_path ?? null]
+    `INSERT INTO body_log
+       (date, weight_kg, notes, photo_path, waist_cm, chest_cm, hips_cm, arm_cm, thigh_cm, body_fat_pct)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      entry.date, entry.weight_kg, entry.notes ?? null, entry.photo_path ?? null,
+      entry.waist_cm ?? null, entry.chest_cm ?? null, entry.hips_cm ?? null,
+      entry.arm_cm ?? null, entry.thigh_cm ?? null, entry.body_fat_pct ?? null,
+    ]
   )
 }
 
@@ -2601,6 +2802,113 @@ export async function getExerciseStats(exerciseId: number) {
     pr,
     history
   };
+}
+
+// ── Gym analytics aggregations ───────────────────────────────────────────────
+
+export interface MuscleVolume {
+  muscle_group: string;
+  volume: number;
+  sets: number;
+}
+
+// Total completed-set volume per muscle group within the last N days.
+export async function queryVolumeByMuscleGroup(days = 30): Promise<MuscleVolume[]> {
+  if (!db) return [];
+
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - days);
+  const dateLimit = daysAgo.toISOString().replace('T', ' ').slice(0, 19);
+
+  const result = await db.query(`
+    SELECT
+      mg.name as muscle_group,
+      SUM(wes.weight * wes.reps) as volume,
+      COUNT(*) as sets
+    FROM workout_exercise_sets wes
+    JOIN workout_exercise we ON we.id = wes.workout_exercise_id
+    JOIN exercise e ON e.id = we.exercise_id
+    JOIN muscle_group mg ON mg.id = e.id_muscle_group
+    WHERE wes.completed = 1 AND wes.created_at >= ?
+    GROUP BY mg.id
+    ORDER BY volume DESC
+  `, [dateLimit]);
+
+  return (result.values ?? []) as MuscleVolume[];
+}
+
+export interface WeeklyTonnage {
+  week: string;
+  volume: number;
+}
+
+// Total completed-set volume grouped by ISO week over the last N weeks.
+export async function queryWeeklyTonnage(weeks = 8): Promise<WeeklyTonnage[]> {
+  if (!db) return [];
+
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - weeks * 7);
+  const dateLimit = daysAgo.toISOString().replace('T', ' ').slice(0, 19);
+
+  const result = await db.query(`
+    SELECT
+      strftime('%Y-%W', wes.created_at, 'localtime') as week,
+      SUM(wes.weight * wes.reps) as volume
+    FROM workout_exercise_sets wes
+    WHERE wes.completed = 1 AND wes.created_at >= ?
+    GROUP BY week
+    ORDER BY week ASC
+  `, [dateLimit]);
+
+  return (result.values ?? []) as WeeklyTonnage[];
+}
+
+export interface WorkoutDayCount {
+  date: string;
+  count: number;
+}
+
+// Completed-workout count per calendar day over the last N weeks (heatmap).
+export async function queryWorkoutFrequency(weeks = 10): Promise<WorkoutDayCount[]> {
+  if (!db) return [];
+
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - weeks * 7);
+  const dateLimit = daysAgo.toISOString().replace('T', ' ').slice(0, 19);
+
+  const result = await db.query(`
+    SELECT
+      date(w.time_start, 'localtime') as date,
+      COUNT(*) as count
+    FROM workout w
+    WHERE w.time_end IS NOT NULL AND w.time_start >= ?
+    GROUP BY date(w.time_start, 'localtime')
+    ORDER BY date ASC
+  `, [dateLimit]);
+
+  return (result.values ?? []) as WorkoutDayCount[];
+}
+
+// Per-day completed-set volume over the last N days (for training-load / ACWR).
+export async function queryDailyVolume(days = 28): Promise<{ date: string; value: number }[]> {
+  if (!db) return [];
+
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - days);
+  const dateLimit = daysAgo.toISOString().replace('T', ' ').slice(0, 19);
+
+  const result = await db.query(`
+    SELECT
+      date(wes.created_at, 'localtime') as date,
+      SUM(wes.weight * wes.reps) as value
+    FROM workout_exercise_sets wes
+    WHERE wes.completed = 1 AND wes.created_at >= ?
+    GROUP BY date(wes.created_at, 'localtime')
+    ORDER BY date ASC
+  `, [dateLimit]);
+
+  return ((result.values ?? []) as { date: string; value: number }[])
+    .map((r) => ({ date: r.date, value: Number(r.value) || 0 }));
 }
 
 // ── Circadian log ────────────────────────────────────────────────────────────

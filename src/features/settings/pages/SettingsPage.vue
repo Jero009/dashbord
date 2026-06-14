@@ -189,6 +189,39 @@
               </label>
             </div>
           </div>
+
+          <!-- Morning summary -->
+          <div class="notif-row">
+            <div class="notif-row__label">
+              <span class="notif-title">Morning summary</span>
+              <span class="notif-sub">Daily readiness + agenda</span>
+            </div>
+            <div class="notif-row__controls">
+              <input v-if="notifMorningEnabled" v-model="notifMorningTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifMorning" />
+              <label class="notif-toggle">
+                <input type="checkbox" v-model="notifMorningEnabled" @change="saveNotifMorning" />
+                <span class="notif-toggle__track"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Weekly digest -->
+          <div class="notif-row">
+            <div class="notif-row__label">
+              <span class="notif-title">Weekly digest</span>
+              <span class="notif-sub">Week-in-review recap</span>
+            </div>
+            <div class="notif-row__controls">
+              <select v-if="notifWeeklyEnabled" v-model.number="notifWeeklyWeekday" class="form-select notif-select" @change="saveNotifWeekly">
+                <option v-for="(d, i) in weekdayNames" :key="i" :value="i">{{ d }}</option>
+              </select>
+              <input v-if="notifWeeklyEnabled" v-model="notifWeeklyTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifWeekly" />
+              <label class="notif-toggle">
+                <input type="checkbox" v-model="notifWeeklyEnabled" @change="saveNotifWeekly" />
+                <span class="notif-toggle__track"></span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- BACKUP -->
@@ -220,15 +253,20 @@ import {
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
   getNotifCalendarEnabled, setNotifCalendarEnabled, getNotifCalendarMinsBefore, setNotifCalendarMinsBefore,
   getNotifSubscriptionEnabled, setNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore, setNotifSubscriptionDaysBefore,
+  getNotifMorningEnabled, setNotifMorningEnabled, getNotifMorningTime, setNotifMorningTime,
+  getNotifWeeklyEnabled, setNotifWeeklyEnabled, getNotifWeeklyTime, setNotifWeeklyTime, getNotifWeeklyWeekday, setNotifWeeklyWeekday,
 } from '@/shared/utils/userSettings'
 import type { CurrencyCode } from '@/shared/utils/userSettings'
 import {
   requestNotificationPermission,
   scheduleWeightReminder, scheduleHabitReminder, scheduleSleepReminder,
   scheduleCalendarReminders, scheduleSubscriptionReminders,
+  scheduleMorningSummary, scheduleWeeklyDigest,
   cancelWeightReminder, cancelHabitReminder, cancelSleepReminder,
   cancelCalendarReminders, cancelSubscriptionReminders,
+  cancelMorningSummary, cancelWeeklyDigest,
 } from '@/shared/utils/notifications'
+import { buildMorningBody, buildWeeklyBody } from '@/shared/utils/notificationDigests'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
@@ -331,6 +369,12 @@ const notifCalendarEnabled = ref(getNotifCalendarEnabled())
 const notifCalendarMins = ref(getNotifCalendarMinsBefore())
 const notifSubscriptionEnabled = ref(getNotifSubscriptionEnabled())
 const notifSubDays = ref(getNotifSubscriptionDaysBefore())
+const notifMorningEnabled = ref(getNotifMorningEnabled())
+const notifMorningTime = ref(getNotifMorningTime())
+const notifWeeklyEnabled = ref(getNotifWeeklyEnabled())
+const notifWeeklyTime = ref(getNotifWeeklyTime())
+const notifWeeklyWeekday = ref(getNotifWeeklyWeekday())
+const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const requestPermission = async () => {
   hapticMedium()
@@ -395,6 +439,29 @@ const saveNotifSubscription = async () => {
     await scheduleSubscriptionReminders(subs, notifSubDays.value)
   } else {
     await cancelSubscriptionReminders(subs.map((s: any) => Number(s.id)))
+  }
+}
+
+const saveNotifMorning = async () => {
+  hapticLight()
+  setNotifMorningEnabled(notifMorningEnabled.value)
+  setNotifMorningTime(notifMorningTime.value)
+  if (notifMorningEnabled.value) {
+    await scheduleMorningSummary(notifMorningTime.value, await buildMorningBody(localDateISO()))
+  } else {
+    await cancelMorningSummary()
+  }
+}
+
+const saveNotifWeekly = async () => {
+  hapticLight()
+  setNotifWeeklyEnabled(notifWeeklyEnabled.value)
+  setNotifWeeklyTime(notifWeeklyTime.value)
+  setNotifWeeklyWeekday(notifWeeklyWeekday.value)
+  if (notifWeeklyEnabled.value) {
+    await scheduleWeeklyDigest(notifWeeklyWeekday.value, notifWeeklyTime.value, await buildWeeklyBody())
+  } else {
+    await cancelWeeklyDigest()
   }
 }
 

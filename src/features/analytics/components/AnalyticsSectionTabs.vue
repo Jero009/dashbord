@@ -5,20 +5,11 @@
         <ion-segment-button value="overview">
           <ion-label>Overview</ion-label>
         </ion-segment-button>
-        <ion-segment-button value="budget">
-          <ion-label>Budget</ion-label>
+        <ion-segment-button value="gym">
+          <ion-label>Gym</ion-label>
         </ion-segment-button>
-        <ion-segment-button value="analytics">
-          <ion-label>Analytics</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="accounts">
-          <ion-label>Accounts</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="investments">
-          <ion-label>Investments</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="subscriptions">
-          <ion-label>Subscriptions</ion-label>
+        <ion-segment-button value="review">
+          <ion-label>Review</ion-label>
         </ion-segment-button>
       </ion-segment>
     </div>
@@ -35,11 +26,8 @@ const router = useRouter();
 const route = useRoute();
 
 const activeSegment = computed(() => {
-  if (route.path.includes('/analytics')) return 'analytics';
-  if (route.path.includes('/budget')) return 'budget';
-  if (route.path.includes('/accounts')) return 'accounts';
-  if (route.path.includes('/investments')) return 'investments';
-  if (route.path.includes('/subscriptions')) return 'subscriptions';
+  if (route.path.includes('/gym'))    return 'gym';
+  if (route.path.includes('/review')) return 'review';
   return 'overview';
 });
 
@@ -48,17 +36,15 @@ const handleSegmentChange = (event: CustomEvent) => {
   if (!value) return;
   hapticLight();
 
-  const target = {
-    overview: '/finance',
-    budget: '/finance/budget',
-    analytics: '/finance/analytics',
-    accounts: '/finance/accounts',
-    investments: '/finance/investments',
-    subscriptions: '/finance/subscriptions',
-  }[value];
+  const target: Record<string, string> = {
+    overview: '/analytics',
+    gym:      '/analytics/gym',
+    review:   '/analytics/review',
+  };
 
-  if (target && target !== route.path) {
-    router.push(target);
+  const dest = target[value];
+  if (dest && dest !== route.path) {
+    router.push(dest);
   }
 };
 </script>

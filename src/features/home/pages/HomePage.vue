@@ -69,6 +69,16 @@
                 </div>
               </div>
 
+              <button
+                v-if="recovery"
+                class="recovery-chip"
+                :class="`recovery-chip--${recovery.level}`"
+                @click="openAnalytics"
+              >
+                <span class="recovery-chip__label">{{ recoveryLabel }}</span>
+                <span class="recovery-chip__reason">{{ recovery.reason }}</span>
+              </button>
+
               <div class="card-metrics">
                 <div class="card-metric">
                   <span>Sleep</span>
@@ -94,6 +104,34 @@
           </div>
           <div v-if="baseline !== null" class="battery-timeline">
             <canvas ref="batteryChartRef"></canvas>
+          </div>
+        </ion-card>
+
+        <ion-card v-if="weekDigest" class="summary-card week-card" button @click="openReview">
+          <div class="card-topline">
+            <p class="section-kicker">This week</p>
+            <ion-icon :icon="chevronUpOutline" class="week-card__chevron" />
+          </div>
+          <div class="week-grid">
+            <div class="week-stat">
+              <span class="week-stat__label">Workouts</span>
+              <strong class="week-stat__val">{{ weekDigest.workoutCount }}</strong>
+            </div>
+            <div class="week-stat">
+              <span class="week-stat__label">Avg sleep</span>
+              <strong class="week-stat__val">{{ weekDigest.avgSleepScore ?? '—' }}</strong>
+            </div>
+            <div class="week-stat">
+              <span class="week-stat__label">Habits</span>
+              <strong class="week-stat__val">{{ weekDigest.habitRate !== null ? Math.round(weekDigest.habitRate * 100) + '%' : '—' }}</strong>
+            </div>
+            <div class="week-stat">
+              <span class="week-stat__label">Net worth</span>
+              <strong class="week-stat__val" :class="{ 'week-stat__val--pos': (weekDigest.netWorthDelta ?? 0) > 0, 'week-stat__val--neg': (weekDigest.netWorthDelta ?? 0) < 0 }">
+                <template v-if="weekDigest.netWorthDelta !== null">{{ weekDigest.netWorthDelta > 0 ? '+' : '' }}{{ formatCurrency(weekDigest.netWorthDelta) }}</template>
+                <template v-else>—</template>
+              </strong>
+            </div>
           </div>
         </ion-card>
 
@@ -389,7 +427,9 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getCalendarEventsForDate, getHabitsWithStatus, toggleHabitCompletion, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { computeCircadianProfile, computeAlertnessCurve, computeCircadianWindows, type CircadianProfile, type AlertnessPoint, type CircadianWindows, type DayType } from '@/shared/health/circadian';
-import { getRecentCircadianLogs, getCircadianLog, upsertCircadianLog, getRecentSleepSessions } from '@/shared/db/app_db';
+import { getRecentCircadianLogs, getCircadianLog, upsertCircadianLog, getRecentSleepSessions, getRecentHealthMetrics, queryReadinessHistory, queryDailyVolume, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
+import { computeTrainingLoad, computeRecoveryRecommendation, mean, type RecoveryRecommendation } from '@/shared/health/insights';
+import { formatCurrency } from '@/shared/utils/currency';
 import { scheduleCircadianNudges } from '@/shared/utils/notifications';
 import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
@@ -787,6 +827,54 @@ const loadSummary = async () => {
 };
 
 
+const recovery = ref<RecoveryRecommendation | null>(null);
+const recoveryLabel = computed(() => {
+  if (!recovery.value) return '';
+  return { train: 'Train hard', maintain: 'Maintain', recover: 'Recover' }[recovery.value.level];
+});
+
+const loadRecovery = async () => {
+  const [rhrRows, readinessRows, volume] = await Promise.all([
+    getRecentHealthMetrics('resting_heart_rate', 28).catch(() => []),
+    queryReadinessHistory(28).catch(() => []),
+    queryDailyVolume(28).catch(() => []),
+  ]);
+
+  const rhrAsc = (rhrRows as { date: string; value: number }[])
+    .map((r) => ({ date: r.date, value: Number(r.value) }))
+    .filter((r) => Number.isFinite(r.value))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((r) => r.value);
+
+  const readinessAsc = readinessRows
+    .map((r) => ({ date: r.date, value: Number(r.score) }))
+    .filter((r) => Number.isFinite(r.value))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const load = computeTrainingLoad(volume);
+  recovery.value = computeRecoveryRecommendation({
+    rhrToday: rhrAsc.length > 0 ? rhrAsc[rhrAsc.length - 1] : null,
+    rhrBaseline: rhrAsc.length >= 3 ? mean(rhrAsc) : null,
+    readinessToday: readinessAsc.length > 0 ? readinessAsc[readinessAsc.length - 1].value : null,
+    acwr: load.status === 'insufficient' ? null : load.acwr,
+  });
+};
+
+const openAnalytics = () => {
+  hapticLight();
+  router.push('/analytics');
+};
+
+const weekDigest = ref<ReviewDigest | null>(null);
+const loadWeekDigest = async () => {
+  weekDigest.value = await getReviewDigest('week').catch(() => null);
+};
+
+const openReview = () => {
+  hapticLight();
+  router.push('/analytics/review');
+};
+
 const toggleTodayHabit = async (h: Record<string, any>) => {
   const completing = h.completed !== 1;
   if (completing) {
@@ -1046,6 +1134,8 @@ const loadAll = async () => {
     loadActiveWorkout(),
     loadTodayWeight(),
     loadCircadian(),
+    loadRecovery(),
+    loadWeekDigest(),
     getCalendarEventsForDate(todayStr).then((evs) => { todayEvents.value = evs; }),
     getHabitsWithStatus(todayStr).then((habs) => { todayHabits.value = habs; }),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
@@ -1255,6 +1345,100 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+.recovery-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.recovery-chip:active {
+  opacity: 0.7;
+}
+
+.recovery-chip--recover {
+  background: rgba(215, 26, 33, 0.12);
+  border-color: rgba(215, 26, 33, 0.35);
+}
+
+.recovery-chip--train {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.recovery-chip__label {
+  font-family: var(--nt-font-head);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.recovery-chip--recover .recovery-chip__label {
+  color: var(--ion-color-accent-red);
+}
+
+.recovery-chip--train .recovery-chip__label {
+  color: var(--nt-data-positive);
+}
+
+.recovery-chip__reason {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+.week-card {
+  cursor: pointer;
+}
+
+.week-card__chevron {
+  color: rgba(255, 255, 255, 0.4);
+  transform: rotate(90deg);
+  font-size: 16px;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.week-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.week-stat__label {
+  font-family: var(--nt-font-head);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nt-text-dim);
+}
+
+.week-stat__val {
+  font-family: var(--nt-font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.week-stat__val--pos { color: var(--nt-data-positive); }
+.week-stat__val--neg { color: var(--ion-color-accent-red); }
 
 .drain-line {
   margin: 0;

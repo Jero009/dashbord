@@ -12,6 +12,11 @@ export const financeRoutes: Array<RouteRecordRaw> = [
     component: () => import('./pages/FinanceBudgetPage.vue')
   },
   {
+    path: '/finance/analytics',
+    name: 'FinanceAnalytics',
+    component: () => import('./pages/FinanceAnalyticsPage.vue')
+  },
+  {
     path: '/finance/accounts',
     name: 'FinanceAccounts',
     component: () => import('./pages/FinanceAccountsPage.vue')

@@ -21,6 +21,21 @@
             <input v-model="goalTarget" class="form-input" type="number" inputmode="decimal" placeholder="Target value" />
             <input v-model="goalDueDate" class="form-input form-input--time" type="date" title="Due date" />
           </div>
+          <select v-model="goalLinkType" class="form-input form-select">
+            <option value="">Manual progress</option>
+            <option value="weight">Track body weight</option>
+            <option value="lift_pr">Track lift PR (est. 1RM)</option>
+            <option value="savings">Track account balance</option>
+          </select>
+          <select v-if="goalLinkType === 'lift_pr'" v-model="goalLinkRef" class="form-input form-select">
+            <option value="">Select exercise…</option>
+            <option v-for="ex in linkExerciseOptions" :key="ex.id" :value="String(ex.id)">{{ ex.name }}</option>
+          </select>
+          <select v-if="goalLinkType === 'savings'" v-model="goalLinkRef" class="form-input form-select">
+            <option value="">Select account…</option>
+            <option v-for="a in linkAccountOptions" :key="a.id" :value="String(a.id)">{{ a.name }}</option>
+          </select>
+          <p v-if="goalLinkType" class="link-hint">Progress updates automatically from your data.</p>
           <div class="form-row form-row--end">
             <button class="save-btn" @click="saveGoal">Add goal</button>
           </div>
@@ -101,6 +116,10 @@ const {
   goalName,
   goalTarget,
   goalDueDate,
+  goalLinkType,
+  goalLinkRef,
+  linkExerciseOptions,
+  linkAccountOptions,
   resetGoalForm,
   saveGoal,
   bumpGoal,
@@ -111,3 +130,17 @@ const {
 </script>
 
 <style scoped src="../../plan/planner.css"></style>
+<style scoped>
+.form-select {
+  width: 100%;
+  color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.link-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--nt-text-dim);
+}
+</style>

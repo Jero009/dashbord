@@ -20,6 +20,9 @@ import {
   updateGoalProgress,
   incrementGoalProgressBy,
   deleteGoal,
+  recomputeLinkedGoals,
+  getExercises,
+  getFinanceAccounts,
   getTemplates,
   getWorkouts,
 } from '@/shared/db/app_db';
@@ -394,11 +397,19 @@ export function usePlanner() {
   const goalName = ref('');
   const goalTarget = ref('');
   const goalDueDate = ref('');
+  // Optional link to live data: '' = manual goal, else weight | lift_pr | savings.
+  const goalLinkType = ref<'' | 'weight' | 'lift_pr' | 'savings'>('');
+  const goalLinkRef = ref('');
+  // Picker options for lift_pr / savings links.
+  const linkExerciseOptions = ref<{ id: number; name: string }[]>([]);
+  const linkAccountOptions = ref<{ id: number; name: string }[]>([]);
 
   const resetGoalForm = () => {
     goalName.value = '';
     goalTarget.value = '';
     goalDueDate.value = '';
+    goalLinkType.value = '';
+    goalLinkRef.value = '';
   };
 
   const saveGoal = async () => {
@@ -413,7 +424,16 @@ export function usePlanner() {
       await t.present();
       return;
     }
-    await addGoal(goalName.value.trim(), targetValue, goalDueDate.value || undefined);
+    const linkType = goalLinkType.value || null;
+    // lift_pr / savings need a chosen reference; weight needs none.
+    const needsRef = linkType === 'lift_pr' || linkType === 'savings';
+    if (needsRef && !goalLinkRef.value) {
+      const t = await toastController.create({ message: 'Choose what to link this goal to.', duration: 1800, color: 'warning' });
+      await t.present();
+      return;
+    }
+    const linkRef = needsRef ? goalLinkRef.value : null;
+    await addGoal(goalName.value.trim(), targetValue, goalDueDate.value || undefined, linkType, linkRef);
     resetGoalForm();
     showAddGoal.value = false;
     await loadAll();
@@ -478,13 +498,19 @@ export function usePlanner() {
   };
 
   const loadHabitsAndGoals = async () => {
-    const [habs, gls, logs] = await Promise.all([
+    // Refresh linked goals from live data (weight / lift PR / savings) before reading.
+    await recomputeLinkedGoals();
+    const [habs, gls, logs, exs, accts] = await Promise.all([
       getAllHabits(),
       getGoals(),
       getHabitLogsForRange(shiftDate(todayStr, -365), todayStr),
+      getExercises(),
+      getFinanceAccounts(),
     ]);
     allHabits.value = habs;
     goals.value = gls;
+    linkExerciseOptions.value = (exs as { id: number; name: string }[]).map((e) => ({ id: e.id, name: e.name }));
+    linkAccountOptions.value = (accts as { id: number; name: string }[]).map((a) => ({ id: a.id, name: a.name }));
     const sets = new Map<number, Set<string>>();
     for (const log of logs) {
       if (log.completed !== 1) continue;
@@ -581,6 +607,10 @@ export function usePlanner() {
     goalName,
     goalTarget,
     goalDueDate,
+    goalLinkType,
+    goalLinkRef,
+    linkExerciseOptions,
+    linkAccountOptions,
     resetGoalForm,
     saveGoal,
     bumpGoal,

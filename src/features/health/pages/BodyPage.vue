@@ -28,6 +28,36 @@
                 />
               </div>
             </div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label">Waist (cm)</label>
+                <input v-model="form.waist" type="number" step="0.1" inputmode="decimal" placeholder="–" class="form-input" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Chest (cm)</label>
+                <input v-model="form.chest" type="number" step="0.1" inputmode="decimal" placeholder="–" class="form-input" />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label">Hips (cm)</label>
+                <input v-model="form.hips" type="number" step="0.1" inputmode="decimal" placeholder="–" class="form-input" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Arm (cm)</label>
+                <input v-model="form.arm" type="number" step="0.1" inputmode="decimal" placeholder="–" class="form-input" />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label">Thigh (cm)</label>
+                <input v-model="form.thigh" type="number" step="0.1" inputmode="decimal" placeholder="–" class="form-input" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Body fat (%)</label>
+                <input v-model="form.bodyFat" type="number" step="0.1" inputmode="decimal" placeholder="–" class="form-input" />
+              </div>
+            </div>
             <div class="field-group">
               <label class="field-label">Notes</label>
               <input v-model="form.notes" type="text" placeholder="Optional" class="form-input" />
@@ -51,7 +81,14 @@
         <!-- Progress chart -->
         <div v-if="entries.length >= 2" class="card chart-card">
           <div class="chart-header">
-            <p class="section-kicker">Progress</p>
+            <ion-select
+              v-model="chartMetric"
+              interface="action-sheet"
+              :interface-options="{ cssClass: 'app-action-sheet' }"
+              class="app-select metric-select"
+            >
+              <ion-select-option v-for="m in METRICS" :key="m.key" :value="m.key">{{ m.label }}</ion-select-option>
+            </ion-select>
             <div class="chart-range-btns">
               <button
                 v-for="opt in ([30, 90, 180, 0] as const)"
@@ -110,7 +147,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { IonPage, IonHeader, IonContent, IonIcon, onIonViewWillEnter, toastController } from '@ionic/vue'
+import { IonPage, IonHeader, IonContent, IonIcon, IonSelect, IonSelectOption, onIonViewWillEnter, toastController } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler)
@@ -136,15 +173,36 @@ const chartRef = ref<HTMLCanvasElement>()
 let chartInstance: Chart | null = null
 const chartRange = ref<30 | 90 | 180 | 0>(90)
 
+// Metrics the progress chart can plot. Weight is the default and the only one
+// with a goal line.
+const METRICS = [
+  { key: 'weight_kg', label: 'Weight', unit: 'kg' },
+  { key: 'body_fat_pct', label: 'Body fat', unit: '%' },
+  { key: 'waist_cm', label: 'Waist', unit: 'cm' },
+  { key: 'chest_cm', label: 'Chest', unit: 'cm' },
+  { key: 'hips_cm', label: 'Hips', unit: 'cm' },
+  { key: 'arm_cm', label: 'Arm', unit: 'cm' },
+  { key: 'thigh_cm', label: 'Thigh', unit: 'cm' },
+] as const
+type MetricKey = typeof METRICS[number]['key']
+const chartMetric = ref<MetricKey>('weight_kg')
+const currentMetric = computed(() => METRICS.find(m => m.key === chartMetric.value)!)
+
 const buildChart = () => {
   if (!chartRef.value || !entries.value.length) return
-  const goal = getGoalWeightKg()
+  const metric = currentMetric.value
+  const goal = metric.key === 'weight_kg' ? getGoalWeightKg() : null
 
   const sorted = [...entries.value].reverse()
   const cutoff = chartRange.value === 0
     ? null
     : localDateISO(new Date(Date.now() - chartRange.value * 86400000))
-  const filtered = cutoff ? sorted.filter(e => e.date >= cutoff) : sorted
+  const ranged = cutoff ? sorted.filter(e => e.date >= cutoff) : sorted
+  // Only keep entries that actually have a value for the selected metric.
+  const filtered = ranged.filter(e => {
+    const v = (e as Record<string, unknown>)[metric.key]
+    return v != null && Number.isFinite(Number(v))
+  })
 
   if (filtered.length < 2) {
     if (chartInstance) { chartInstance.destroy(); chartInstance = null }
@@ -155,7 +213,7 @@ const buildChart = () => {
     const d = new Date(e.date + 'T12:00:00')
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   })
-  const data = filtered.map(e => e.weight_kg)
+  const data = filtered.map(e => Number((e as Record<string, unknown>)[metric.key]))
   const goalData = goal ? filtered.map(() => goal) : null
 
   if (chartInstance) chartInstance.destroy()
@@ -167,7 +225,7 @@ const buildChart = () => {
       datasets: [
         {
           ...chartLineDataset,
-          label: 'Weight',
+          label: metric.label,
           data,
           pointRadius: filtered.length > 60 ? 0 : 3,
         },
@@ -188,7 +246,7 @@ const buildChart = () => {
         legend: { display: false },
         tooltip: {
           ...chartTooltip,
-          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)} kg` }
+          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)} ${metric.unit}` }
         }
       },
       scales: {
@@ -197,7 +255,7 @@ const buildChart = () => {
           grid: chartGrid,
         },
         y: {
-          ticks: { ...chartTicks, callback: (v) => `${v} kg` },
+          ticks: { ...chartTicks, callback: (v) => `${v} ${metric.unit}` },
           grid: chartGrid,
         }
       }
@@ -205,7 +263,7 @@ const buildChart = () => {
   })
 }
 
-watch(chartRange, buildChart, { flush: 'post' })
+watch([chartRange, chartMetric], buildChart, { flush: 'post' })
 
 onUnmounted(() => {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null }
@@ -214,11 +272,23 @@ onUnmounted(() => {
 const form = ref({
   date: localDateISO(),
   weight: '',
+  waist: '',
+  chest: '',
+  hips: '',
+  arm: '',
+  thigh: '',
+  bodyFat: '',
   notes: '',
   photoBase64: '',
   photoMime: '',
   photoPreview: '',
 })
+
+// Parse an optional measurement field: blank/invalid -> null.
+const optionalNum = (v: string): number | null => {
+  const n = parseFloat(v)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
 
 const trendDelta = computed(() => {
   if (entries.value.length < 2) return null
@@ -329,11 +399,23 @@ const saveEntry = async () => {
       weight_kg: weight,
       notes: form.value.notes.trim() || undefined,
       photo_path: photoPath,
+      waist_cm: optionalNum(form.value.waist),
+      chest_cm: optionalNum(form.value.chest),
+      hips_cm: optionalNum(form.value.hips),
+      arm_cm: optionalNum(form.value.arm),
+      thigh_cm: optionalNum(form.value.thigh),
+      body_fat_pct: optionalNum(form.value.bodyFat),
     })
     const today = localDateISO()
     if (form.value.date === today) dismissWeightReminder()
 
     form.value.weight = ''
+    form.value.waist = ''
+    form.value.chest = ''
+    form.value.hips = ''
+    form.value.arm = ''
+    form.value.thigh = ''
+    form.value.bodyFat = ''
     form.value.notes = ''
     clearPhoto()
     form.value.date = localDateISO()
@@ -644,6 +726,18 @@ onIonViewWillEnter(loadEntries)
 
 .chart-header .section-kicker {
   margin: 0;
+}
+
+.metric-select {
+  max-width: 150px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  min-height: auto;
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--nt-text-dim);
 }
 
 .chart-range-btns {

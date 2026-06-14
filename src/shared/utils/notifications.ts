@@ -9,6 +9,8 @@ const ID_SLEEP         = 3
 const ID_CIRC_MORNING  = 8
 const ID_CIRC_NOON     = 9
 const ID_CIRC_EVENING  = 10
+const ID_MORNING       = 11
+const ID_WEEKLY        = 12
 const ID_CAL_BASE      = 4000   // 4000 + event id
 const ID_SUB_BASE      = 5000   // 5000 + sub id
 
@@ -18,6 +20,18 @@ function nextOccurrence(hhmm: string): Date {
   const next = new Date(now)
   next.setHours(h, m, 0, 0)
   if (next <= now) next.setDate(next.getDate() + 1)
+  return next
+}
+
+// Next time the given weekday (0=Sun..6=Sat) occurs at hh:mm, strictly in the future.
+function nextWeekdayOccurrence(weekday: number, hhmm: string): Date {
+  const [h, m] = hhmm.split(':').map(Number)
+  const now = new Date()
+  const next = new Date(now)
+  next.setHours(h, m, 0, 0)
+  let delta = (weekday - next.getDay() + 7) % 7
+  if (delta === 0 && next <= now) delta = 7
+  next.setDate(next.getDate() + delta)
   return next
 }
 
@@ -119,6 +133,51 @@ export async function scheduleCircadianNudges(slots: {
 
   if (toSchedule.length) await LocalNotifications.schedule({ notifications: toSchedule })
   return true
+}
+
+// Daily morning summary. Body is composed by the caller (App.vue) from the latest
+// snapshot and re-scheduled on every app open so it reflects current data.
+export async function scheduleMorningSummary(time: string, body: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_MORNING }] })
+  const granted = (await LocalNotifications.checkPermissions()).display === 'granted'
+  if (!granted) return
+  await LocalNotifications.schedule({
+    notifications: [{
+      id: ID_MORNING,
+      title: 'Good morning',
+      body,
+      schedule: { at: nextOccurrence(time), repeats: true, every: 'day' },
+      smallIcon: 'ic_stat_icon_config_sample',
+    }]
+  })
+}
+
+export async function cancelMorningSummary(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_MORNING }] })
+}
+
+// Weekly digest fired once a week on `weekday` (0=Sun..6=Sat) at `time`.
+export async function scheduleWeeklyDigest(weekday: number, time: string, body: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_WEEKLY }] })
+  const granted = (await LocalNotifications.checkPermissions()).display === 'granted'
+  if (!granted) return
+  await LocalNotifications.schedule({
+    notifications: [{
+      id: ID_WEEKLY,
+      title: 'Your week in review',
+      body,
+      schedule: { at: nextWeekdayOccurrence(weekday, time), repeats: true, every: 'week' },
+      smallIcon: 'ic_stat_icon_config_sample',
+    }]
+  })
+}
+
+export async function cancelWeeklyDigest(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_WEEKLY }] })
 }
 
 export async function scheduleCalendarReminders(
