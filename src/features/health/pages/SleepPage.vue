@@ -70,31 +70,35 @@
 
         <!-- Stage timeline -->
         <ion-card class="sleep-card">
-          <p class="section-kicker">Stage timeline</p>
-          <div v-if="hypnogramBlocks.length" class="hypnogram-wrap">
-            <div class="hypnogram-inner">
-              <svg viewBox="0 0 100 63" class="hypnogram-svg" preserveAspectRatio="none">
-                <rect
-                  v-for="(block, i) in hypnogramBlocks" :key="i"
-                  :x="block.x" :y="block.y" :width="block.w" :height="block.h"
-                  :fill="block.fill"
-                />
-                <line
-                  v-for="(conn, i) in hypnogramConnectors" :key="`c${i}`"
-                  :x1="conn.x" :y1="conn.y1" :x2="conn.x" :y2="conn.y2"
-                  stroke="rgba(255,255,255,0.5)" stroke-width="0.4"
-                />
-              </svg>
-              <div class="hypnogram-labels">
-                <span>Aw</span>
-                <span>RE</span>
-                <span>Li</span>
-                <span>De</span>
-              </div>
-            </div>
-            <div class="axis-row">
-              <span>{{ bedTimeClock }}</span>
-              <span>{{ wakeTimeClock }}</span>
+          <p class="section-kicker">Sleep stages</p>
+          <div v-if="hypGeo.bars.length || hypGeo.spikes.length" class="hypnogram-wrap">
+            <svg :viewBox="`0 0 ${HYP_W} ${HYP_H}`" class="hypnogram-svg" preserveAspectRatio="xMidYMid meet">
+              <!-- plot frame -->
+              <rect class="hyp-frame" x="3" y="6" :width="HYP_W - 6" :height="HYP_BAND.deep + 16" rx="6" />
+              <!-- horizontal gridlines -->
+              <line
+                v-for="(g, i) in HYP_GRID" :key="`g${i}`"
+                class="hyp-grid" :x1="6" :y1="g" :x2="HYP_W - 6" :y2="g"
+              />
+              <!-- step connectors -->
+              <line
+                v-for="(c, i) in hypGeo.connectors" :key="`c${i}`"
+                class="hyp-conn" :x1="c.x" :y1="c.y1" :x2="c.x" :y2="c.y2" :stroke="c.color"
+              />
+              <!-- stage bars -->
+              <line
+                v-for="(b, i) in hypGeo.bars" :key="`b${i}`"
+                class="hyp-bar" :x1="b.x1" :y1="b.y" :x2="b.x2" :y2="b.y" :stroke="b.color"
+              />
+              <!-- awake spikes -->
+              <line
+                v-for="(s, i) in hypGeo.spikes" :key="`s${i}`"
+                class="hyp-spike" :x1="s.x" :y1="HYP_SPIKE_TOP" :x2="s.x" :y2="HYP_SPIKE_BOTTOM"
+                :stroke="s.color" :stroke-width="s.w"
+              />
+            </svg>
+            <div class="axis-row hyp-axis">
+              <span v-for="(t, i) in hypTimeAxis" :key="i">{{ t }}</span>
             </div>
           </div>
           <p v-else class="empty-state">No stage timeline yet</p>
@@ -494,45 +498,75 @@ const stageLabel = (stage: string) =>
     inBed: 'In bed',
   }[stage] ?? stage);
 
-// Hypnogram — fixed vertical bands top→bottom: Awake, REM, Light, Deep
-const STAGE_BANDS: Record<string, { y: number; h: number; fill: string }> = {
-  awake:              { y: 2,  h: 11, fill: 'rgba(255,215,0,0.88)' },
-  inBed:              { y: 2,  h: 11, fill: 'rgba(148,163,184,0.30)' },
-  out_of_bed:         { y: 2,  h: 11, fill: 'rgba(148,163,184,0.30)' },
-  unknown:            { y: 2,  h: 11, fill: 'rgba(148,163,184,0.20)' },
-  rem:                { y: 17, h: 12, fill: 'rgba(34,211,238,0.82)' },
-  light:              { y: 33, h: 12, fill: 'rgba(96,149,240,0.78)' },
-  asleep:             { y: 33, h: 12, fill: 'rgba(96,149,240,0.55)' },
-  sleeping:           { y: 33, h: 12, fill: 'rgba(96,149,240,0.55)' },
-  deep:               { y: 49, h: 12, fill: 'rgba(37,78,195,0.92)' },
-};
+// Hypnogram — Zepp-style stepped waveform: thick rounded capsule bars per stage
+// level, vertical connectors forming steps, brief wake-ups as spikes at the top.
+const HYP_W = 600;
+const HYP_H = 200;
+const HYP_PAD_X = 12;
+const HYP_INNER_W = HYP_W - HYP_PAD_X * 2;
+const HYP_SPIKE_TOP = 18;
+const HYP_SPIKE_BOTTOM = 54;
+// stage-level Y centres
+const HYP_BAND = { rem: 86, light: 124, deep: 162 } as const;
+// dotted gridlines between levels
+const HYP_GRID = [70, 105, 143] as const;
 
-const hypnogramBlocks = computed(() => {
+type HypMeta =
+  | { kind: 'awake'; color: string }
+  | { kind: 'bar'; y: number; color: string };
+
+function hypStageMeta(raw: string | undefined): HypMeta {
+  const k = (raw ?? '').toLowerCase();
+  if (k === 'awake' || k === 'inbed' || k === 'in_bed' || k === 'out_of_bed' || k === 'unknown') {
+    return { kind: 'awake', color: 'rgba(255,215,0,0.95)' };
+  }
+  if (k === 'rem') return { kind: 'bar', y: HYP_BAND.rem, color: 'rgba(45,212,238,0.95)' };
+  if (k === 'deep') return { kind: 'bar', y: HYP_BAND.deep, color: 'rgba(58,99,216,0.97)' };
+  // light / asleep / sleeping default to the light band
+  return { kind: 'bar', y: HYP_BAND.light, color: 'rgba(130,170,250,0.95)' };
+}
+
+const hypGeo = computed(() => {
   const segs = [...(summary.value?.timeline ?? [])]
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-  return segs.map(s => {
-    const key = s.stage?.toLowerCase() ?? '';
-    const band = STAGE_BANDS[key] ?? STAGE_BANDS.inBed;
-    return { x: s.offset, y: band.y, w: Math.max(s.width, 0.3), h: band.h, fill: band.fill };
-  });
+
+  const bars: { x1: number; x2: number; y: number; color: string }[] = [];
+  const spikes: { x: number; w: number; color: string }[] = [];
+  const connectors: { x: number; y1: number; y2: number; color: string }[] = [];
+
+  let prevBar: { x1: number; x2: number; y: number; color: string } | null = null;
+
+  for (const s of segs) {
+    const x = HYP_PAD_X + (s.offset / 100) * HYP_INNER_W;
+    const w = Math.max((s.width / 100) * HYP_INNER_W, 1);
+    const meta = hypStageMeta(s.stage);
+
+    if (meta.kind === 'awake') {
+      spikes.push({ x: x + w / 2, w: clampVal(w, 4, 12), color: meta.color });
+      continue;
+    }
+
+    const bar = { x1: x, x2: x + w, y: meta.y, color: meta.color };
+    if (prevBar && Math.abs(prevBar.y - bar.y) > 0.5) {
+      connectors.push({ x: bar.x1, y1: prevBar.y, y2: bar.y, color: bar.color });
+    }
+    bars.push(bar);
+    prevBar = bar;
+  }
+
+  return { bars, spikes, connectors };
 });
 
-const hypnogramConnectors = computed(() => {
-  const blocks = hypnogramBlocks.value;
-  const result: { x: number; y1: number; y2: number }[] = [];
-  for (let i = 1; i < blocks.length; i++) {
-    const prev = blocks[i - 1];
-    const curr = blocks[i];
-    const prevBottom = prev.y + prev.h;
-    if (Math.abs(prev.y - curr.y) > 0.5) {
-      // connector at end of previous block, spanning from prev band edge to curr band edge
-      const x = prev.x + prev.w;
-      const y1 = Math.min(prevBottom, curr.y + curr.h);
-      const y2 = Math.max(curr.y, prev.y);
-      result.push({ x, y1, y2 });
-    }
-  }
-  return result;
+const hypTimeAxis = computed(() => {
+  if (!summary.value) return [];
+  const start = new Date(summary.value.wentToSleepAt).getTime();
+  const end = new Date(summary.value.wokeUpAt).getTime();
+  if (!(end > start)) return [];
+  const count = 4;
+  return Array.from({ length: count }, (_, i) => {
+    const t = start + (end - start) * (i / (count - 1));
+    return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  });
 });
 
 onIonViewWillEnter(async () => {
@@ -727,43 +761,42 @@ onIonViewWillEnter(async () => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Hypnogram */
-.hypnogram-wrap { display: grid; gap: 6px; }
-
-.hypnogram-inner {
-  display: flex;
-  gap: 6px;
-  align-items: stretch;
-}
+/* Hypnogram — Zepp-style stepped waveform */
+.hypnogram-wrap { display: grid; gap: 8px; }
 
 .hypnogram-svg {
-  flex: 1;
-  height: 90px;
+  width: 100%;
+  height: auto;
   display: block;
 }
 
-.hypnogram-labels {
-  position: relative;
-  width: 22px;
-  height: 90px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
-  flex-shrink: 0;
+.hyp-frame {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
 }
 
-.hypnogram-labels span {
-  position: absolute;
-  right: 0;
-  transform: translateY(-50%);
+.hyp-grid {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
 }
 
-/* band midpoints as % of viewBox height (63): 7.5, 23, 39, 55 */
-.hypnogram-labels span:nth-child(1) { top: 11.9%; }
-.hypnogram-labels span:nth-child(2) { top: 36.5%; }
-.hypnogram-labels span:nth-child(3) { top: 61.9%; }
-.hypnogram-labels span:nth-child(4) { top: 87.3%; }
+.hyp-bar {
+  stroke-width: 18;
+  stroke-linecap: round;
+}
+
+.hyp-conn {
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.hyp-spike {
+  stroke-linecap: round;
+}
 
 .axis-row {
   display: flex;
@@ -792,11 +825,11 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.stage-dot--awake  { background: rgba(255, 215, 0, 0.88); }
-.stage-dot--rem    { background: rgba(34, 211, 238, 0.82); }
-.stage-dot--light  { background: rgba(96, 149, 240, 0.78); }
-.stage-dot--deep   { background: rgba(37, 78, 195, 0.92); }
-.stage-dot--asleep { background: rgba(96, 149, 240, 0.55); }
+.stage-dot--awake  { background: rgba(255, 215, 0, 0.95); }
+.stage-dot--rem    { background: rgba(45, 212, 238, 0.95); }
+.stage-dot--light  { background: rgba(130, 170, 250, 0.95); }
+.stage-dot--deep   { background: rgba(58, 99, 216, 0.97); }
+.stage-dot--asleep { background: rgba(130, 170, 250, 0.6); }
 
 .stage-row span {
   flex: 1;
