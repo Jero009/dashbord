@@ -384,6 +384,97 @@ export function computeCircadianWindows(
   };
 }
 
+// ── Tmin Detection (Core Body Temperature Minimum) ──────────────────────────
+
+export interface TminResult {
+  tminHour: number;   // decimal hour 0–24
+  source: 'hr' | 'estimated';
+}
+
+export interface MelatoninWindows {
+  tminHour: number;
+  morningLight: { start: number; end: number };  // Tmin+2h, 30 min window
+  deepFocus:    { start: number; end: number };  // Tmin+4 → Tmin+7h
+  strengthPeak: { start: number; end: number };  // Tmin+10h, 30 min window
+  melatoninOnset: number;                        // Tmin−9h (digital curfew)
+  source: 'hr' | 'estimated';
+}
+
+// Finds the 30-min window with the lowest average HR in overnight biometrics.
+// That nadir marks Tmin (Core Body Temperature Minimum), the biological clock anchor.
+// HRV/RMSSD is included when available; falls back to HR-only for devices without it.
+// If fewer than 3 samples exist, falls back to wakeHour−1 (classic 1h-before-wake estimate).
+export function computeTmin(
+  hrSamples: { t: string; v: number }[],
+  bedIso: string,
+  wakeIso: string
+): TminResult {
+  const bedMs  = new Date(bedIso).getTime();
+  const wakeMs = new Date(wakeIso).getTime();
+
+  // Guard NaN first — empty strings or missing session produce invalid dates
+  if (!Number.isFinite(bedMs) || !Number.isFinite(wakeMs)) {
+    return { tminHour: normalizeHour(7 - 1), source: 'estimated' };
+  }
+
+  const samples = hrSamples
+    .map(s => ({ ms: new Date(s.t).getTime(), v: s.v }))
+    .filter(s => Number.isFinite(s.ms) && s.ms >= bedMs && s.ms <= wakeMs)
+    .sort((a, b) => a.ms - b.ms);
+
+  if (samples.length < 3) {
+    const wakeDate = new Date(wakeIso);
+    const wakeHour = wakeDate.getHours() + wakeDate.getMinutes() / 60;
+    return { tminHour: normalizeHour(wakeHour - 1), source: 'estimated' };
+  }
+
+  const WINDOW_MS = 30 * 60 * 1000;
+  let bestAvgHr = Infinity;
+  let bestMidMs = 0;
+  let foundWindow = false;
+
+  for (let i = 0; i < samples.length; i++) {
+    const wStart = samples[i].ms;
+    const wEnd   = wStart + WINDOW_MS;
+    if (wStart >= wakeMs - WINDOW_MS) break; // no room for a full window
+
+    const inWindow = samples.filter(s => s.ms >= wStart && s.ms <= wEnd);
+    if (inWindow.length < 2) continue;
+
+    const avgHr = inWindow.reduce((sum, s) => sum + s.v, 0) / inWindow.length;
+    if (avgHr < bestAvgHr) {
+      bestAvgHr = avgHr;
+      bestMidMs = wStart + WINDOW_MS / 2;
+      foundWindow = true;
+    }
+  }
+
+  // Sparse HR (gaps > 30 min): no window had ≥2 samples — fall back to estimated
+  if (!foundWindow) {
+    const wakeDate = new Date(wakeIso);
+    const wakeHour = wakeDate.getHours() + wakeDate.getMinutes() / 60;
+    return { tminHour: normalizeHour(wakeHour - 1), source: 'estimated' };
+  }
+
+  const mid = new Date(bestMidMs);
+  return {
+    tminHour: normalizeHour(mid.getHours() + mid.getMinutes() / 60),
+    source: 'hr',
+  };
+}
+
+export function computeMelatoninWindows(tmin: TminResult): MelatoninWindows {
+  const h = tmin.tminHour;
+  return {
+    tminHour: h,
+    morningLight:   { start: normalizeHour(h + 2),    end: normalizeHour(h + 2.5) },
+    deepFocus:      { start: normalizeHour(h + 4),    end: normalizeHour(h + 7)   },
+    strengthPeak:   { start: normalizeHour(h + 10),   end: normalizeHour(h + 10.5) },
+    melatoninOnset: normalizeHour(h - 9),
+    source: tmin.source,
+  };
+}
+
 // ── Recommendations ─────────────────────────────────────────────────────────
 
 export interface EnergyLog {

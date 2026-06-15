@@ -169,6 +169,30 @@
                     </div>
                   </div>
 
+                  <!-- Tmin windows row (Tmin-anchored, separate from wake-anchored rows above) -->
+                  <div class="timeline-tmin-row" v-if="tminPos">
+                    <!-- Tmin anchor spike -->
+                    <div class="tmin-spike" :style="{ left: (tminPos.tmin * HOUR_PX) + 'px' }"></div>
+                    <!-- Morning light: Tmin+2h, 30 min -->
+                    <div class="tl-block tl-block--light" :style="{ left: (tminPos.lightStart * HOUR_PX) + 'px', width: (tminPos.lightWidthH * HOUR_PX) + 'px' }">
+                      <span class="tl-block-label">Light</span>
+                    </div>
+                    <!-- Deep focus: Tmin+4 → Tmin+7h -->
+                    <div class="tl-block tl-block--deepfocus" :style="{ left: (tminPos.focusStart * HOUR_PX) + 'px', width: (tminPos.focusWidthH * HOUR_PX) + 'px' }">
+                      <span class="tl-block-label">Deep focus</span>
+                    </div>
+                    <!-- Strength peak: Tmin+10h, 30 min -->
+                    <div class="tl-block tl-block--strength" :style="{ left: (tminPos.strengthStart * HOUR_PX) + 'px', width: (tminPos.strengthWidthH * HOUR_PX) + 'px' }">
+                      <span class="tl-block-label">Strength</span>
+                    </div>
+                    <!-- Melatonin onset / digital curfew: Tmin−9h -->
+                    <div class="tl-pin tl-pin--mel" :style="{ left: (tminPos.curfew * HOUR_PX) + 'px' }">
+                      <div class="tl-pin-line"></div>
+                      <span class="tl-pin-label">Curfew<br/>{{ formatHour(tminPos.curfew) }}</span>
+                    </div>
+                    <div class="tl-now" :style="{ left: (currentHour * HOUR_PX) + 'px' }"></div>
+                  </div>
+
                 </div>
               </div><!-- end timeline-scroll -->
             </div><!-- end unified-scroll-wrap -->
@@ -185,6 +209,48 @@
               <span class="legend-item"><span class="legend-swatch legend-swatch--red"></span>Focus</span>
               <span class="legend-item"><span class="legend-swatch legend-swatch--white"></span>Exercise</span>
               <span class="legend-item"><span class="legend-swatch legend-swatch--sleep"></span>Sleep</span>
+            </div>
+            <div v-if="tminPos" class="legend-row legend-row--tmin">
+              <span class="legend-kicker">Tmin</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--light"></span>Light</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--deepfocus"></span>Deep focus</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--strength"></span>Strength</span>
+            </div>
+          </div>
+
+          <!-- 3. Tmin Windows card -->
+          <div class="card" v-if="melatoninWindows">
+            <div class="tmin-card-header">
+              <p class="section-kicker">Tmin windows</p>
+              <span class="tmin-source-badge" :class="melatoninWindows.source === 'hr' ? 'tmin-source-badge--hr' : 'tmin-source-badge--est'">
+                {{ melatoninWindows.source === 'hr' ? 'HR-anchored' : 'Estimated' }}
+              </span>
+            </div>
+            <div class="tmin-anchor-row">
+              <span class="metric-label">Tmin (CBT minimum)</span>
+              <strong class="metric-value tmin-anchor-value">{{ formatHour(melatoninWindows.tminHour) }}</strong>
+            </div>
+            <div class="metric-grid">
+              <div class="card-metric tmin-metric--light">
+                <span class="metric-label">Morning light</span>
+                <strong class="metric-value">{{ formatHour(melatoninWindows.morningLight.start) }}</strong>
+                <span class="metric-sub">Tmin +2h · 30 min · reset clock</span>
+              </div>
+              <div class="card-metric tmin-metric--focus">
+                <span class="metric-label">Deep focus peak</span>
+                <strong class="metric-value">{{ formatHour(melatoninWindows.deepFocus.start) }}–{{ formatHour(melatoninWindows.deepFocus.end) }}</strong>
+                <span class="metric-sub">Tmin +4–7h · cognitive peak</span>
+              </div>
+              <div class="card-metric tmin-metric--strength">
+                <span class="metric-label">Strength peak</span>
+                <strong class="metric-value">{{ formatHour(melatoninWindows.strengthPeak.start) }}</strong>
+                <span class="metric-sub">Tmin +10h · muscle performance</span>
+              </div>
+              <div class="card-metric">
+                <span class="metric-label">Melatonin onset</span>
+                <strong class="metric-value">{{ formatHour(melatoninWindows.melatoninOnset) }}</strong>
+                <span class="metric-sub">Tmin −9h · kill blue light</span>
+              </div>
             </div>
           </div>
 
@@ -354,6 +420,8 @@ import {
   computeAlertnessCurve,
   computeCircadianWindows,
   computeCircadianRecommendations,
+  computeTmin,
+  computeMelatoninWindows,
   type SleepRecord,
   type DayType,
   type CircadianProfile,
@@ -361,6 +429,7 @@ import {
   type AlertnessPoint,
   type CircadianWindows,
   type CircadianRecommendations,
+  type MelatoninWindows,
 } from '@/shared/health/circadian';
 
 import {
@@ -381,6 +450,7 @@ const score = ref<CircadianScore | null>(null);
 const alertnessCurve = ref<AlertnessPoint[]>([]);
 const windows = ref<CircadianWindows | null>(null);
 const recs = ref<CircadianRecommendations | null>(null);
+const melatoninWindows = ref<MelatoninWindows | null>(null);
 const todayLog = ref<CircadianLogEntry | null>(null);
 const loading = ref(true);
 const avgWakeHour = ref(7.0);
@@ -459,6 +529,27 @@ const nowActivityLabel = computed(() => {
   return 'Rest / low-intensity time';
 });
 
+// Timeline positions read directly from melatoninWindows so any model change auto-propagates.
+// widthH fields drive block widths so the model's .end values are the single source of truth.
+const tminPos = computed(() => {
+  const mw = melatoninWindows.value;
+  if (!mw) return null;
+  const wrapDiff = (end: number, start: number) => {
+    const d = end - start;
+    return d >= 0 ? d : d + 24;
+  };
+  return {
+    tmin:            mw.tminHour,
+    lightStart:      mw.morningLight.start,
+    lightWidthH:     wrapDiff(mw.morningLight.end, mw.morningLight.start),
+    focusStart:      mw.deepFocus.start,
+    focusWidthH:     wrapDiff(mw.deepFocus.end, mw.deepFocus.start),
+    strengthStart:   mw.strengthPeak.start,
+    strengthWidthH:  wrapDiff(mw.strengthPeak.end, mw.strengthPeak.start),
+    curfew:          mw.melatoninOnset,
+  };
+});
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const formatHour = (h: number): string => {
@@ -483,6 +574,23 @@ const loadData = async () => {
       timeAsleepHours: s.time_asleep_hours,
       efficiency: s.efficiency,
     }));
+
+    // Tmin from last night's HR timeline — requires a real session to be meaningful
+    const lastSession = sessions[0];
+    if (!lastSession) {
+      melatoninWindows.value = null;
+    } else {
+      let hrSamples: { t: string; v: number }[] = [];
+      if (lastSession.hr_timeline_json) {
+        try {
+          hrSamples = JSON.parse(lastSession.hr_timeline_json);
+        } catch {
+          // corrupted stored JSON — treat as no overnight HR data
+        }
+      }
+      const tminResult = computeTmin(hrSamples, lastSession.bedtime, lastSession.waketime);
+      melatoninWindows.value = computeMelatoninWindows(tminResult);
+    }
 
     const logs = await getRecentCircadianLogs(30);
     const dayTypes = new Map<string, DayType>(
@@ -1317,6 +1425,109 @@ const saveLog = async () => {
 .save-btn:active {
   background: rgb(178, 19, 25);
 }
+
+/* ── Tmin timeline row ───────────────────────────────────────────────────────── */
+.timeline-tmin-row {
+  position: relative;
+  height: 52px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin-top: 6px;
+}
+
+.tmin-spike {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.tl-block--light {
+  background: rgba(255, 215, 0, 0.28);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 8px;
+}
+.tl-block--light .tl-block-label { color: rgba(255, 215, 0, 0.85); }
+
+.tl-block--deepfocus {
+  background: rgba(34, 197, 94, 0.22);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+  border-radius: 8px;
+}
+.tl-block--deepfocus .tl-block-label { color: rgba(34, 197, 94, 0.85); }
+
+.tl-block--strength {
+  background: rgba(215, 26, 33, 0.42);
+  border: 1px solid rgba(215, 26, 33, 0.3);
+  border-radius: 8px;
+}
+.tl-block--strength .tl-block-label { color: rgba(255, 255, 255, 0.85); }
+
+.tl-pin--mel .tl-pin-line { background: rgba(255, 255, 255, 0.22); }
+.tl-pin--mel .tl-pin-label { color: rgba(255, 255, 255, 0.38); }
+
+/* Second legend row (Tmin) */
+.legend-row--tmin {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.legend-kicker {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.25);
+  margin-right: 4px;
+}
+
+.legend-swatch--light     { background: rgba(255, 215, 0, 0.5); }
+.legend-swatch--deepfocus { background: rgba(34, 197, 94, 0.45); }
+.legend-swatch--strength  { background: rgba(215, 26, 33, 0.55); }
+
+/* ── Tmin card ───────────────────────────────────────────────────────────────── */
+.tmin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.tmin-card-header .section-kicker { margin: 0; }
+
+.tmin-source-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.tmin-source-badge--hr {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: rgb(34, 197, 94);
+}
+.tmin-source-badge--est {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tmin-anchor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.tmin-anchor-value {
+  font-family: var(--nt-font-display);
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tmin-metric--light  { border-left: 2px solid rgba(255, 215, 0, 0.4); }
+.tmin-metric--focus  { border-left: 2px solid rgba(34, 197, 94, 0.4); }
+.tmin-metric--strength { border-left: 2px solid rgba(215, 26, 33, 0.5); }
 
 /* ── Loading ────────────────────────────────────────────────────────────────── */
 .loading-state {
