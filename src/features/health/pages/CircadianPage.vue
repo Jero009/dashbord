@@ -48,9 +48,14 @@
                 <span class="metric-sub">est. sleep drive start</span>
               </div>
               <div class="card-metric">
-                <span class="metric-label">Temp minimum</span>
-                <strong class="metric-value">{{ profile?.ctminEstimate != null ? formatHour(profile.ctminEstimate) : '—' }}</strong>
-                <span class="metric-sub">deepest sleep marker</span>
+                <span class="metric-label">Temp minimum (Tmin)</span>
+                <strong class="metric-value">
+                  {{ melatoninWindows ? formatHour(melatoninWindows.tminHour) : (profile?.ctminEstimate != null ? formatHour(profile.ctminEstimate) : '—') }}
+                  <span v-if="melatoninWindows" class="tmin-source-inline" :class="melatoninWindows.source === 'hr' ? 'tmin-source-inline--hr' : ''">
+                    {{ melatoninWindows.source === 'hr' ? 'measured' : 'est' }}
+                  </span>
+                </strong>
+                <span class="metric-sub">{{ melatoninWindows?.source === 'hr' ? 'HR nadir · last night' : 'deepest sleep marker' }}</span>
               </div>
               <div class="card-metric">
                 <span class="metric-label">Free-day midpoint</span>
@@ -143,23 +148,37 @@
                     </svg>
                   </div>
 
-                  <!-- Activity blocks row -->
+                  <!-- Unified activity row: wake-anchored blocks + Tmin-anchored blocks in one line.
+                       When measured Tmin is available both sets share the same anchor, so the
+                       Tmin deep-focus peak sits naturally inside the broader cognitive-peak band. -->
                   <div class="timeline-bar-row" v-if="windows">
                     <div class="tl-block tl-block--sleep" :style="{ left: '0px', width: (avgWakeHour * HOUR_PX) + 'px' }"><span class="tl-block-label">Sleep</span></div>
+                    <!-- Morning light (Tmin+2h, 30 min) — only when Tmin data exists -->
+                    <div v-if="tminPos" class="tl-block tl-block--light" :style="{ left: (tminPos.lightStart * HOUR_PX) + 'px', width: (tminPos.lightWidthH * HOUR_PX) + 'px' }"><span class="tl-block-label">Light</span></div>
                     <div v-if="windows.exerciseMorning" class="tl-block tl-block--exercise" :style="{ left: (windows.exerciseMorning.start * HOUR_PX) + 'px', width: ((windows.exerciseMorning.end - windows.exerciseMorning.start) * HOUR_PX) + 'px' }"><span class="tl-block-label">Exercise</span></div>
+                    <!-- Cognitive peak — broader zone (ctmin+2→+8); red band -->
                     <div class="tl-block tl-block--focus" :style="{ left: (windows.cognitiveStart * HOUR_PX) + 'px', width: ((windows.cognitiveEnd - windows.cognitiveStart) * HOUR_PX) + 'px' }"><span class="tl-block-label">Focus</span></div>
+                    <!-- Deep focus peak — Tmin+4→+7, subset of cognitive zone; green highlight -->
+                    <div v-if="tminPos" class="tl-block tl-block--deepfocus" :style="{ left: (tminPos.focusStart * HOUR_PX) + 'px', width: (tminPos.focusWidthH * HOUR_PX) + 'px' }"><span class="tl-block-label">Peak</span></div>
                     <div v-if="windows.exerciseAfternoon" class="tl-block tl-block--exercise" :style="{ left: (windows.exerciseAfternoon.start * HOUR_PX) + 'px', width: ((windows.exerciseAfternoon.end - windows.exerciseAfternoon.start) * HOUR_PX) + 'px' }"><span class="tl-block-label">Exercise</span></div>
+                    <!-- Strength peak (Tmin+10h, 30 min) -->
+                    <div v-if="tminPos" class="tl-block tl-block--strength" :style="{ left: (tminPos.strengthStart * HOUR_PX) + 'px', width: (tminPos.strengthWidthH * HOUR_PX) + 'px' }"><span class="tl-block-label">Strength</span></div>
                     <div class="tl-block tl-block--sleep" :style="{ left: (windows.bedtimeTarget * HOUR_PX) + 'px', width: ((24 - windows.bedtimeTarget) * HOUR_PX) + 'px' }"><span class="tl-block-label">Sleep</span></div>
                     <div class="tl-now" :style="{ left: (currentHour * HOUR_PX) + 'px' }"></div>
                   </div>
 
-                  <!-- Event pins row -->
+                  <!-- Event pins row: wake-anchored pins + melatonin curfew from Tmin -->
                   <div class="timeline-pins-row" v-if="windows">
                     <div class="tl-pin" :style="{ left: (windows.lastMealBy * HOUR_PX) + 'px' }">
                       <div class="tl-pin-line"></div>
                       <span class="tl-pin-label">Last meal<br/>{{ formatHour(windows.lastMealBy) }}</span>
                     </div>
-                    <div v-if="profile?.dlmoEstimate != null" class="tl-pin tl-pin--dim" :style="{ left: (profile.dlmoEstimate * HOUR_PX) + 'px' }">
+                    <!-- Melatonin onset: prefer measured Tmin−9h, fall back to DLMO estimate -->
+                    <div v-if="tminPos" class="tl-pin tl-pin--mel" :style="{ left: (tminPos.curfew * HOUR_PX) + 'px' }">
+                      <div class="tl-pin-line"></div>
+                      <span class="tl-pin-label">Dim screens<br/>{{ formatHour(tminPos.curfew) }}</span>
+                    </div>
+                    <div v-else-if="profile?.dlmoEstimate != null" class="tl-pin tl-pin--dim" :style="{ left: (profile.dlmoEstimate * HOUR_PX) + 'px' }">
                       <div class="tl-pin-line"></div>
                       <span class="tl-pin-label">Dim screens<br/>{{ formatHour(profile.dlmoEstimate) }}</span>
                     </div>
@@ -167,30 +186,6 @@
                       <div class="tl-pin-line"></div>
                       <span class="tl-pin-label">Bedtime<br/>{{ formatHour(windows.bedtimeTarget) }}</span>
                     </div>
-                  </div>
-
-                  <!-- Tmin windows row (Tmin-anchored, separate from wake-anchored rows above) -->
-                  <div class="timeline-tmin-row" v-if="tminPos">
-                    <!-- Tmin anchor spike -->
-                    <div class="tmin-spike" :style="{ left: (tminPos.tmin * HOUR_PX) + 'px' }"></div>
-                    <!-- Morning light: Tmin+2h, 30 min -->
-                    <div class="tl-block tl-block--light" :style="{ left: (tminPos.lightStart * HOUR_PX) + 'px', width: (tminPos.lightWidthH * HOUR_PX) + 'px' }">
-                      <span class="tl-block-label">Light</span>
-                    </div>
-                    <!-- Deep focus: Tmin+4 → Tmin+7h -->
-                    <div class="tl-block tl-block--deepfocus" :style="{ left: (tminPos.focusStart * HOUR_PX) + 'px', width: (tminPos.focusWidthH * HOUR_PX) + 'px' }">
-                      <span class="tl-block-label">Deep focus</span>
-                    </div>
-                    <!-- Strength peak: Tmin+10h, 30 min -->
-                    <div class="tl-block tl-block--strength" :style="{ left: (tminPos.strengthStart * HOUR_PX) + 'px', width: (tminPos.strengthWidthH * HOUR_PX) + 'px' }">
-                      <span class="tl-block-label">Strength</span>
-                    </div>
-                    <!-- Melatonin onset / digital curfew: Tmin−9h -->
-                    <div class="tl-pin tl-pin--mel" :style="{ left: (tminPos.curfew * HOUR_PX) + 'px' }">
-                      <div class="tl-pin-line"></div>
-                      <span class="tl-pin-label">Curfew<br/>{{ formatHour(tminPos.curfew) }}</span>
-                    </div>
-                    <div class="tl-now" :style="{ left: (currentHour * HOUR_PX) + 'px' }"></div>
                   </div>
 
                 </div>
@@ -209,48 +204,9 @@
               <span class="legend-item"><span class="legend-swatch legend-swatch--red"></span>Focus</span>
               <span class="legend-item"><span class="legend-swatch legend-swatch--white"></span>Exercise</span>
               <span class="legend-item"><span class="legend-swatch legend-swatch--sleep"></span>Sleep</span>
-            </div>
-            <div v-if="tminPos" class="legend-row legend-row--tmin">
-              <span class="legend-kicker">Tmin</span>
-              <span class="legend-item"><span class="legend-swatch legend-swatch--light"></span>Light</span>
-              <span class="legend-item"><span class="legend-swatch legend-swatch--deepfocus"></span>Deep focus</span>
-              <span class="legend-item"><span class="legend-swatch legend-swatch--strength"></span>Strength</span>
-            </div>
-          </div>
-
-          <!-- 3. Tmin Windows card -->
-          <div class="card" v-if="melatoninWindows">
-            <div class="tmin-card-header">
-              <p class="section-kicker">Tmin windows</p>
-              <span class="tmin-source-badge" :class="melatoninWindows.source === 'hr' ? 'tmin-source-badge--hr' : 'tmin-source-badge--est'">
-                {{ melatoninWindows.source === 'hr' ? 'HR-anchored' : 'Estimated' }}
-              </span>
-            </div>
-            <div class="tmin-anchor-row">
-              <span class="metric-label">Tmin (CBT minimum)</span>
-              <strong class="metric-value tmin-anchor-value">{{ formatHour(melatoninWindows.tminHour) }}</strong>
-            </div>
-            <div class="metric-grid">
-              <div class="card-metric tmin-metric--light">
-                <span class="metric-label">Morning light</span>
-                <strong class="metric-value">{{ formatHour(melatoninWindows.morningLight.start) }}</strong>
-                <span class="metric-sub">Tmin +2h · 30 min · reset clock</span>
-              </div>
-              <div class="card-metric tmin-metric--focus">
-                <span class="metric-label">Deep focus peak</span>
-                <strong class="metric-value">{{ formatHour(melatoninWindows.deepFocus.start) }}–{{ formatHour(melatoninWindows.deepFocus.end) }}</strong>
-                <span class="metric-sub">Tmin +4–7h · cognitive peak</span>
-              </div>
-              <div class="card-metric tmin-metric--strength">
-                <span class="metric-label">Strength peak</span>
-                <strong class="metric-value">{{ formatHour(melatoninWindows.strengthPeak.start) }}</strong>
-                <span class="metric-sub">Tmin +10h · muscle performance</span>
-              </div>
-              <div class="card-metric">
-                <span class="metric-label">Melatonin onset</span>
-                <strong class="metric-value">{{ formatHour(melatoninWindows.melatoninOnset) }}</strong>
-                <span class="metric-sub">Tmin −9h · kill blue light</span>
-              </div>
+              <span v-if="tminPos" class="legend-item"><span class="legend-swatch legend-swatch--light"></span>Light</span>
+              <span v-if="tminPos" class="legend-item"><span class="legend-swatch legend-swatch--deepfocus"></span>Peak</span>
+              <span v-if="tminPos" class="legend-item"><span class="legend-swatch legend-swatch--strength"></span>Strength</span>
             </div>
           </div>
 
@@ -575,11 +531,27 @@ const loadData = async () => {
       efficiency: s.efficiency,
     }));
 
-    // Tmin from last night's HR timeline — requires a real session to be meaningful
+    // Compute avg wake hour first — used as the Tmin anchor for stable windows
+    const localAvgWakeHour = sleepRecords.length
+      ? sleepRecords.slice(0, 7).reduce((s, r) => {
+          const d = new Date(r.waketime);
+          return s + d.getHours() + d.getMinutes() / 60;
+        }, 0) / Math.min(sleepRecords.length, 7)
+      : 7.0;
+
+    // Tmin: use avg wake time as the anchor so windows stay stable even after
+    // an off-schedule night. We build a synthetic "today at avg-wake" ISO and pass
+    // it as the wake boundary — this way both the HR search window and the estimated
+    // fallback (wakeHour−1) are grounded in the 7-night average, not today's outlier.
     const lastSession = sessions[0];
     if (!lastSession) {
       melatoninWindows.value = null;
     } else {
+      const avgWakeH = Math.floor(localAvgWakeHour);
+      const avgWakeMin = Math.round((localAvgWakeHour - avgWakeH) * 60);
+      const avgWakeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), avgWakeH, avgWakeMin);
+      const avgWakeIso = avgWakeDate.toISOString();
+
       let hrSamples: { t: string; v: number }[] = [];
       if (lastSession.hr_timeline_json) {
         try {
@@ -588,7 +560,7 @@ const loadData = async () => {
           // corrupted stored JSON — treat as no overnight HR data
         }
       }
-      const tminResult = computeTmin(hrSamples, lastSession.bedtime, lastSession.waketime);
+      const tminResult = computeTmin(hrSamples, lastSession.bedtime, avgWakeIso);
       melatoninWindows.value = computeMelatoninWindows(tminResult);
     }
 
@@ -609,15 +581,18 @@ const loadData = async () => {
     profile.value = computedProfile;
     score.value = computeCircadianScore(sleepRecords, rhrToday, rhrBaseline, lightFraction);
 
-    avgWakeHour.value = sleepRecords.length
-      ? sleepRecords.slice(0, 7).reduce((s, r) => {
-          const d = new Date(r.waketime);
-          return s + d.getHours() + d.getMinutes() / 60;
-        }, 0) / Math.min(sleepRecords.length, 7)
-      : 7.0;
+    avgWakeHour.value = localAvgWakeHour;
 
-    alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour.value);
-    const w = computeCircadianWindows(computedProfile, avgWakeHour.value);
+    // When HR data found last night's actual nadir, anchor both the alertness curve
+    // (Process C phase) and the timing windows (cognitive peak, DLMO) to that measurement
+    // instead of the 30-night MSFsc average.  This makes every derived time slot
+    // reflect last night's biology rather than a chronic estimate.
+    const measuredCtmin = melatoninWindows.value?.source === 'hr'
+      ? melatoninWindows.value.tminHour
+      : null;
+
+    alertnessCurve.value = computeAlertnessCurve(computedProfile, avgWakeHour.value, measuredCtmin);
+    const w = computeCircadianWindows(computedProfile, avgWakeHour.value, measuredCtmin);
     windows.value = w;
     recs.value = computeCircadianRecommendations(
       computedProfile, w, computedProfile.socialJetlag, [],
@@ -1468,66 +1443,21 @@ const saveLog = async () => {
 .tl-pin--mel .tl-pin-line { background: rgba(255, 255, 255, 0.22); }
 .tl-pin--mel .tl-pin-label { color: rgba(255, 255, 255, 0.38); }
 
-/* Second legend row (Tmin) */
-.legend-row--tmin {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.legend-kicker {
-  font-size: 0.6rem;
+/* Tmin source inline badge inside metric-value */
+.tmin-source-inline {
+  font-size: 0.62rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: rgba(255, 255, 255, 0.25);
-  margin-right: 4px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-left: 4px;
 }
+.tmin-source-inline--hr { color: rgb(34, 197, 94); }
 
 .legend-swatch--light     { background: rgba(255, 215, 0, 0.5); }
 .legend-swatch--deepfocus { background: rgba(34, 197, 94, 0.45); }
 .legend-swatch--strength  { background: rgba(215, 26, 33, 0.55); }
 
-/* ── Tmin card ───────────────────────────────────────────────────────────────── */
-.tmin-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.tmin-card-header .section-kicker { margin: 0; }
-
-.tmin-source-badge {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.tmin-source-badge--hr {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: rgb(34, 197, 94);
-}
-.tmin-source-badge--est {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.tmin-anchor-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.tmin-anchor-value {
-  font-family: var(--nt-font-display);
-  font-size: 1.5rem;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.tmin-metric--light  { border-left: 2px solid rgba(255, 215, 0, 0.4); }
-.tmin-metric--focus  { border-left: 2px solid rgba(34, 197, 94, 0.4); }
-.tmin-metric--strength { border-left: 2px solid rgba(215, 26, 33, 0.5); }
 
 /* ── Loading ────────────────────────────────────────────────────────────────── */
 .loading-state {

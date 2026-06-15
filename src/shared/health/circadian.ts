@@ -285,11 +285,12 @@ export function computeCircadianScore(
 
 export function computeAlertnessCurve(
   profile: CircadianProfile,
-  wakeHour: number
+  wakeHour: number,
+  measuredCtmin: number | null = null   // last night's HR-nadir Tmin; overrides chronic MSFsc estimate
 ): AlertnessPoint[] {
   const safeWake = (wakeHour >= 4 && wakeHour <= 13) ? wakeHour : 7.0;
-  // Process C: sinusoidal anchored to CTmin (nadir of alertness)
-  const ctmin = profile.ctminEstimate ?? normalizeHour(safeWake - 1);
+  // Process C: prefer the measured HR nadir (tonight's actual biology) over the 30-night average
+  const ctmin = measuredCtmin ?? profile.ctminEstimate ?? normalizeHour(safeWake - 1);
 
   // Process S constants (Borbély 1982, typical values)
   const tauWake  = 18.2;  // wake time constant (hours)
@@ -340,12 +341,16 @@ export function computeAlertnessCurve(
 
 export function computeCircadianWindows(
   profile: CircadianProfile,
-  wakeHour: number
+  wakeHour: number,
+  measuredCtmin: number | null = null   // last night's HR-nadir Tmin; overrides chronic MSFsc estimate
 ): CircadianWindows {
   // Guard against bad HC timestamp data (e.g. UTC offset errors producing 1–3am)
   const safeWake = (wakeHour >= 4 && wakeHour <= 13) ? wakeHour : 7.0;
-  const ctmin = profile.ctminEstimate ?? normalizeHour(safeWake - 1);
-  const dlmo  = profile.dlmoEstimate ?? normalizeHour(safeWake + 14);
+  // When measured: ctmin is the HR nadir; DLMO = ctmin−7h (Czeisler/Van Dongen inverse)
+  const ctmin = measuredCtmin ?? profile.ctminEstimate ?? normalizeHour(safeWake - 1);
+  const dlmo  = measuredCtmin != null
+    ? normalizeHour(measuredCtmin - 7)
+    : (profile.dlmoEstimate ?? normalizeHour(safeWake + 14));
 
   // Cognitive peak: CTmin + 2h → CTmin + 8h (peak alertness window)
   const cognitiveStart = normalizeHour(ctmin + 2);
@@ -400,14 +405,16 @@ export interface MelatoninWindows {
   source: 'hr' | 'estimated';
 }
 
-// Finds the 30-min window with the lowest average HR in overnight biometrics.
-// That nadir marks Tmin (Core Body Temperature Minimum), the biological clock anchor.
-// HRV/RMSSD is included when available; falls back to HR-only for devices without it.
-// If fewer than 3 samples exist, falls back to wakeHour−1 (classic 1h-before-wake estimate).
+// Finds the 30-min lowest-HR window in the pre-wake portion of overnight biometrics.
+// Tmin (Core Body Temperature Minimum) always occurs 0.5–2h before spontaneous wake,
+// so only the final `priorHoursBeforeWake` hours are scanned — this avoids
+// confusing the early-night deep-sleep HR dip (which is NOT Tmin) with the real nadir.
+// Falls back to avgWakeHour−1 when HR data is sparse or absent.
 export function computeTmin(
   hrSamples: { t: string; v: number }[],
   bedIso: string,
-  wakeIso: string
+  wakeIso: string,
+  priorHoursBeforeWake = 3   // physiological Tmin window; scanning whole night finds wrong nadir
 ): TminResult {
   const bedMs  = new Date(bedIso).getTime();
   const wakeMs = new Date(wakeIso).getTime();
@@ -417,9 +424,12 @@ export function computeTmin(
     return { tminHour: normalizeHour(7 - 1), source: 'estimated' };
   }
 
+  // Constrain search to the pre-wake window where Tmin actually lives
+  const searchFromMs = Math.max(bedMs, wakeMs - priorHoursBeforeWake * 3600000);
+
   const samples = hrSamples
     .map(s => ({ ms: new Date(s.t).getTime(), v: s.v }))
-    .filter(s => Number.isFinite(s.ms) && s.ms >= bedMs && s.ms <= wakeMs)
+    .filter(s => Number.isFinite(s.ms) && s.ms >= searchFromMs && s.ms <= wakeMs)
     .sort((a, b) => a.ms - b.ms);
 
   if (samples.length < 3) {
@@ -449,7 +459,7 @@ export function computeTmin(
     }
   }
 
-  // Sparse HR (gaps > 30 min): no window had ≥2 samples — fall back to estimated
+  // Sparse HR in the pre-wake window — fall back to estimated
   if (!foundWindow) {
     const wakeDate = new Date(wakeIso);
     const wakeHour = wakeDate.getHours() + wakeDate.getMinutes() / 60;
