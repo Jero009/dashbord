@@ -113,7 +113,46 @@
           </div>
         </div>
 
-        <!-- 4. Today's plan events -->
+        <!-- 4. Heart rate trend -->
+        <div class="card">
+          <div class="hr-head">
+            <p class="section-kicker">Heart rate · last 14 days</p>
+            <div v-if="restingHrAvg !== null" class="hr-avg">
+              <span class="hr-avg-label">Avg resting</span>
+              <span class="hr-avg-val">{{ restingHrAvgDisplay }}</span>
+            </div>
+          </div>
+          <div v-if="restingHrHistory.length >= 2" class="rh-chart">
+            <svg viewBox="0 0 100 40" class="rh-svg" aria-label="Resting heart rate history">
+              <line
+                v-if="hrAvgLineY !== null"
+                class="hr-avg-line"
+                x1="2" :y1="hrAvgLineY" x2="98" :y2="hrAvgLineY"
+              />
+              <polygon class="rh-area" :points="hrAreaPoints" />
+              <polyline class="rh-line" :points="hrLinePoints" />
+              <circle
+                v-for="pt in restingHrHistory"
+                :key="pt.date"
+                class="rh-dot"
+                :class="{ 'rh-dot--selected': selectedHrPoint?.date === pt.date }"
+                :cx="pt.x" :cy="pt.y" r="1.2"
+                @click="selectedHrPoint = pt"
+              />
+            </svg>
+            <div v-if="selectedHrPoint" class="rh-tooltip">
+              <strong>{{ selectedHrPoint.value }}</strong>
+              <small>{{ new Date(selectedHrPoint.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) }} · bpm</small>
+            </div>
+            <div class="rh-axis">
+              <span>{{ restingHrHistory[0]?.dateLabel }}</span>
+              <span>{{ restingHrHistory[restingHrHistory.length - 1]?.dateLabel }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-hint">Not enough heart rate data yet — sync Health Connect to populate</p>
+        </div>
+
+        <!-- 5. Today's plan events -->
         <div v-if="todayEvents.length" class="card">
           <p class="section-kicker">Today's schedule</p>
           <ul class="event-list">
@@ -126,7 +165,7 @@
           </ul>
         </div>
 
-        <!-- 5. Readiness history -->
+        <!-- 6. Readiness history -->
         <div class="card">
           <p class="section-kicker">Readiness · last 14 days</p>
           <div v-if="readinessHistory.length >= 2" class="rh-chart">
@@ -154,7 +193,7 @@
           <p v-else class="empty-hint">No readiness data yet — sync Health Connect to populate</p>
         </div>
 
-        <!-- 6. Recent activities -->
+        <!-- 7. Recent activities -->
         <section v-if="activities.length">
           <p class="section-kicker">Activity · last 7 days</p>
           <div class="activity-list">
@@ -173,7 +212,7 @@
           </div>
         </section>
 
-        <!-- 7. Sync -->
+        <!-- 8. Sync -->
         <div class="card sync-card">
           <p class="section-kicker">Health Connect</p>
           <p class="sync-status">{{ healthConnectStatus }}</p>
@@ -220,6 +259,7 @@ import { computeCircadianScore } from '@/shared/health/circadian';
 import { getRecentCircadianLogs, getRecentSleepSessions, getRecentHealthMetrics } from '@/shared/db/app_db';
 
 type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
+type HrPoint = { date: string; value: number; x: number; y: number; dateLabel: string };
 
 // --- State ---
 const sleepHours      = ref<number | null>(null);
@@ -242,6 +282,8 @@ const activities      = ref<ActivitySummary[]>([]);
 const syncing         = ref(false);
 const readinessHistory = ref<RhPoint[]>([]);
 const selectedRhPoint  = ref<RhPoint | null>(null);
+const restingHrHistory = ref<HrPoint[]>([]);
+const selectedHrPoint  = ref<HrPoint | null>(null);
 
 // --- Displays ---
 const sleepDisplay           = computed(() => sleepHours.value === null      ? '—' : `${sleepHours.value.toFixed(1)} h`);
@@ -406,6 +448,50 @@ const rhAreaPoints = computed(() => {
   return `${pts[0].x},40 ${rhLinePoints.value} ${pts[pts.length - 1].x},40`;
 });
 
+// --- Heart rate history (resting HR trend + daily average) ---
+const loadHrHistory = async () => {
+  const raw = await getRecentHealthMetrics('resting_heart_rate', 14);
+  const rows = (raw as { date: string; value: number }[])
+    .map(r => ({ date: r.date, value: Number(r.value) }))
+    .filter(r => Number.isFinite(r.value))
+    .reverse(); // DB returns newest-first; chart reads oldest → newest
+  if (rows.length < 2) { restingHrHistory.value = []; return; }
+  const minV = Math.min(...rows.map(r => r.value));
+  const maxV = Math.max(...rows.map(r => r.value));
+  const range = maxV - minV || 1;
+  restingHrHistory.value = rows.map((r, i) => ({
+    date: r.date,
+    value: Math.round(r.value),
+    x: (i / (rows.length - 1)) * 96 + 2,
+    y: 36 - ((r.value - minV) / range) * 32 + 2,
+    dateLabel: new Date(r.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }),
+  }));
+};
+
+const restingHrAvg = computed(() => {
+  const pts = restingHrHistory.value;
+  if (!pts.length) return null;
+  return Math.round(pts.reduce((s, p) => s + p.value, 0) / pts.length);
+});
+const restingHrAvgDisplay = computed(() => restingHrAvg.value === null ? '—' : `${restingHrAvg.value} bpm`);
+
+const hrLinePoints = computed(() => restingHrHistory.value.map(p => `${p.x},${p.y}`).join(' '));
+const hrAreaPoints = computed(() => {
+  const pts = restingHrHistory.value;
+  if (!pts.length) return '';
+  return `${pts[0].x},40 ${hrLinePoints.value} ${pts[pts.length - 1].x},40`;
+});
+// Average plotted on the same min/max scale as the line so the dashed baseline lines up.
+const hrAvgLineY = computed(() => {
+  const pts = restingHrHistory.value;
+  if (pts.length < 2 || restingHrAvg.value === null) return null;
+  const values = pts.map(p => p.value);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+  return 36 - ((restingHrAvg.value - minV) / range) * 32 + 2;
+});
+
 const loadTodayContext = async () => {
   const today = localDateISO();
   const [workouts, events] = await Promise.all([
@@ -447,7 +533,7 @@ const loadCircadianScore = async () => {
 };
 
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadTodayContext(), loadCircadianScore()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
   await loadReadiness();
 });
 
@@ -467,7 +553,7 @@ const handleConnect = async () => {
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities(), loadTodayContext(), loadCircadianScore()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
     await loadReadiness();
     const t = await toastController.create({ message: `Synced ${syncResult.synced} records.`, duration: 2200, color: 'success' });
     await t.present();
@@ -761,6 +847,39 @@ const handleConnect = async () => {
 }
 
 .empty-hint { margin: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.5); }
+
+/* ── Heart rate trend ── */
+.hr-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.hr-head .section-kicker { margin: 0; }
+
+.hr-avg { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+.hr-avg-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.hr-avg-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-avg-line {
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 0.8;
+  stroke-dasharray: 3 2;
+}
 
 /* ── Activities ── */
 .activity-list { display: grid; gap: 10px; }
