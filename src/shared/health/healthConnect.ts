@@ -615,16 +615,23 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     sleepByDate.set(key, bucket);
   }
 
-  const heartRateByDate = new Map<string, { values: number[]; samples: HealthSample[] }>();
-  for (const sample of heartRateResult.samples) {
-    if (!Number.isFinite(sample.value)) continue;
+  // All HR samples sorted chronologically. Sleep HR is computed from the samples that
+  // fall WITHIN each night's sleep window (bedtime→waketime) rather than bucketed by
+  // calendar day: an overnight session straddles midnight, so date-bucketing split the
+  // night's HR across two days and left the wake-up day with only the post-midnight
+  // (and daytime-polluted) portion. Window matching fixes same-day sleep-HR sync.
+  const heartRateSamples = heartRateResult.samples
+    .filter((sample) => Number.isFinite(sample.value))
+    .map((sample) => ({ time: new Date(sample.startDate).getTime(), value: sample.value, startDate: sample.startDate }))
+    .filter((sample) => Number.isFinite(sample.time))
+    .sort((a, b) => a.time - b.time);
 
-    const key = toDateKey(sample.startDate || sample.endDate);
-    const bucket = heartRateByDate.get(key) ?? { values: [], samples: [] };
-    bucket.values.push(sample.value);
-    bucket.samples.push(sample);
-    heartRateByDate.set(key, bucket);
-  }
+  const sleepWindowHeartRate = (sample: HealthSample) => {
+    const startMs = new Date(sample.startDate).getTime();
+    const endMs = new Date(sample.endDate).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return [];
+    return heartRateSamples.filter((s) => s.time >= startMs && s.time <= endMs);
+  };
 
   const restingHeartRateByDate = new Map<string, number>();
   for (const sample of (restingHeartRateResult as { samples: AggregatedSample[] }).samples) {
@@ -678,8 +685,8 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     // no stages) — otherwise we'd persist a bogus 0-hour sleep_duration metric.
     if (!latestSample || getSleepHours(latestSample) === null) continue;
 
-    const hrBucket = heartRateByDate.get(date);
-    const sleepHeartRate = average(hrBucket?.values ?? []);
+    const sleepHrSamples = sleepWindowHeartRate(latestSample);
+    const sleepHeartRate = average(sleepHrSamples.map((s) => s.value));
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
 
     // Bedtime in minutes since midnight, handling overnight sessions (e.g. 23:00)
@@ -739,14 +746,13 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       const windowStart = new Date(latestSample.startDate).getTime();
       const windowEnd = new Date(latestSample.endDate).getTime();
       const windowSpan = Math.max(1, windowEnd - windowStart);
-      const hrTimelineJson = hrBucket?.samples.length
+      const hrTimelineJson = sleepHrSamples.length
         ? JSON.stringify(
-            hrBucket.samples
-              .filter((s) => Number.isFinite(s.value))
+            sleepHrSamples
               .map((s) => ({
                 t: s.startDate,
                 v: Math.round(s.value),
-                o: Math.round(clamp(((new Date(s.startDate).getTime() - windowStart) / windowSpan) * 100, 0, 100)),
+                o: Math.round(clamp(((s.time - windowStart) / windowSpan) * 100, 0, 100)),
               }))
               .sort((a, b) => a.t.localeCompare(b.t))
           )
@@ -839,7 +845,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       (sleepBucket?.samples ?? []).map((sample) => getSleepHours(sample)).filter((value): value is number => value !== null)
     );
     const restingHr = restingHeartRateByDate.get(date) ?? null;
-    const sleepHeartRate = average(heartRateByDate.get(date)?.values ?? []);
+    const sleepHeartRate = latestSample ? average(sleepWindowHeartRate(latestSample).map((s) => s.value)) : null;
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
     const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate) : null;
 
