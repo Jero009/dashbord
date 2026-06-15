@@ -2,6 +2,8 @@ import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { goalReached, goalProgressFraction } from '@/shared/utils/goalProgress';
+import { expandOccurrencesInRange, type RecurringEventLike } from '@/shared/utils/recurrence';
+import { shiftDate } from '@/shared/utils/habitStats';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
 let db: SQLiteDBConnection | null = null;
@@ -822,6 +824,21 @@ async function doInitDB() {
     }
     if (!calColNames.has('end_date')) {
       await db.execute(`ALTER TABLE calendar_event ADD COLUMN end_date TEXT;`);
+    }
+    if (!calColNames.has('all_day')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN all_day INTEGER DEFAULT 0;`);
+    }
+    if (!calColNames.has('color')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN color TEXT;`);
+    }
+    if (!calColNames.has('recur_interval')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recur_interval INTEGER DEFAULT 1;`);
+    }
+    if (!calColNames.has('recur_days')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recur_days TEXT;`);
+    }
+    if (!calColNames.has('recur_count')) {
+      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recur_count INTEGER;`);
     }
 
     const subColumns = await db.query(`PRAGMA table_info("finance_subscription");`);
@@ -2087,27 +2104,60 @@ export async function getGoalDueDatesForMonth(yearMonth: string) {
   return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
 }
 
-export async function addCalendarEvent(
-  title: string,
-  date: string,
-  type: string,
-  notes?: string,
-  timeStart?: string,
-  timeEnd?: string,
-  workoutTemplateId?: number,
-  recurrence?: string,
-  endDate?: string
-) {
+export interface CalendarEventInput {
+  title: string;
+  date: string;
+  type: string;
+  notes?: string | null;
+  timeStart?: string | null;
+  timeEnd?: string | null;
+  workoutTemplateId?: number | null;
+  recurrence?: string;
+  endDate?: string | null;
+  allDay?: boolean;
+  color?: string | null;
+  recurInterval?: number | null;
+  recurDays?: string | null;
+  recurCount?: number | null;
+}
+
+const CALENDAR_EVENT_TYPES = ['general', 'workout', 'recovery', 'school', 'sleep', 'reminder'];
+const CALENDAR_RECURRENCE_TYPES = ['none', 'daily', 'weekly', 'weekdays', 'monthly', 'yearly'];
+
+// Normalize an event-input payload into the row tuple the columns expect.
+function calendarEventColumnValues(ev: CalendarEventInput) {
+  // Allowlist event types: each has a defined battery drain rate in calculateBattery.
+  // An unknown type would silently fall through to the default 4/hr drain.
+  const safeType = CALENDAR_EVENT_TYPES.includes(ev.type) ? ev.type : 'general';
+  const safeRecurrence = CALENDAR_RECURRENCE_TYPES.includes(ev.recurrence ?? '') ? ev.recurrence : 'none';
+  return {
+    title: ev.title,
+    date: ev.date,
+    type: safeType,
+    notes: ev.notes ?? null,
+    time_start: ev.allDay ? null : (ev.timeStart ?? null),
+    time_end: ev.allDay ? null : (ev.timeEnd ?? null),
+    workout_template_id: ev.workoutTemplateId ?? null,
+    recurrence: safeRecurrence,
+    end_date: ev.endDate ?? null,
+    all_day: ev.allDay ? 1 : 0,
+    color: ev.color ?? null,
+    recur_interval: ev.recurInterval && ev.recurInterval > 0 ? Math.floor(ev.recurInterval) : 1,
+    recur_days: ev.recurDays ?? null,
+    recur_count: ev.recurCount && ev.recurCount > 0 ? Math.floor(ev.recurCount) : null,
+  };
+}
+
+export async function addCalendarEvent(ev: CalendarEventInput) {
   if (!db) return;
   try {
-    // Allowlist event types: each has a defined battery drain rate in calculateBattery.
-    // An unknown type would silently fall through to the default 4/hr drain.
-    const safeType = ['general', 'workout', 'recovery', 'school', 'sleep', 'reminder'].includes(type)
-      ? type
-      : 'general';
+    const v = calendarEventColumnValues(ev);
     const result = await db.run(
-      `INSERT INTO calendar_event (title, date, type, notes, time_start, time_end, workout_template_id, recurrence, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [title, date, safeType, notes ?? null, timeStart ?? null, timeEnd ?? null, workoutTemplateId ?? null, ['none','daily','weekly'].includes(recurrence ?? '') ? recurrence : 'none', endDate ?? null]
+      `INSERT INTO calendar_event
+        (title, date, type, notes, time_start, time_end, workout_template_id, recurrence, end_date, all_day, color, recur_interval, recur_days, recur_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [v.title, v.date, v.type, v.notes, v.time_start, v.time_end, v.workout_template_id,
+       v.recurrence, v.end_date, v.all_day, v.color, v.recur_interval, v.recur_days, v.recur_count]
     );
     return result;
   } catch (error) {
@@ -2116,18 +2166,121 @@ export async function addCalendarEvent(
   }
 }
 
-export async function getCalendarEventsForDate(date: string) {
+export async function updateCalendarEvent(id: number, ev: CalendarEventInput) {
+  if (!db) return;
+  try {
+    const v = calendarEventColumnValues(ev);
+    await db.run(
+      `UPDATE calendar_event SET
+        title = ?, date = ?, type = ?, notes = ?, time_start = ?, time_end = ?,
+        workout_template_id = ?, recurrence = ?, end_date = ?, all_day = ?, color = ?,
+        recur_interval = ?, recur_days = ?, recur_count = ?
+       WHERE id = ?;`,
+      [v.title, v.date, v.type, v.notes, v.time_start, v.time_end, v.workout_template_id,
+       v.recurrence, v.end_date, v.all_day, v.color, v.recur_interval, v.recur_days, v.recur_count, id]
+    );
+  } catch (error) {
+    console.error('Error updating calendar event:', error);
+    throw error;
+  }
+}
+
+// Full-text-ish search over event title and notes, newest first.
+export async function searchCalendarEvents(query: string) {
   if (!db) return [];
+  const q = query.trim();
+  if (!q) return [];
+  const like = `%${q}%`;
   const result = await db.query(
-    `SELECT * FROM calendar_event
-     WHERE (end_date IS NULL OR end_date >= ?)
-       AND (date = ?
-        OR (recurrence = 'daily' AND date < ?)
-        OR (recurrence = 'weekly' AND date < ? AND strftime('%w', date) = strftime('%w', ?)))
-     ORDER BY time_start ASC, id DESC;`,
-    [date, date, date, date, date]
+    `SELECT * FROM calendar_event WHERE title LIKE ? OR notes LIKE ? ORDER BY date DESC, time_start ASC;`,
+    [like, like]
   );
   return result.values || [];
+}
+
+// Order events for a single day: all-day first, then by start time, then id.
+function sortDayEvents(a: any, b: any): number {
+  const aAll = a.all_day ? 1 : 0;
+  const bAll = b.all_day ? 1 : 0;
+  if (aAll !== bAll) return bAll - aAll;
+  // A tail segment (continuation from the previous day) effectively starts at 00:00.
+  const at = a.continued_from_prev_day ? '00:00' : (a.time_start || '99:99');
+  const bt = b.continued_from_prev_day ? '00:00' : (b.time_start || '99:99');
+  if (at !== bt) return at < bt ? -1 : 1;
+  return (b.id ?? 0) - (a.id ?? 0);
+}
+
+// An event is "overnight" when its end time is at/before its start (e.g.
+// 19:00→05:00): the end belongs to the next day.
+function isOvernightRow(r: any): boolean {
+  return !r.all_day && !!r.time_start && !!r.time_end && r.time_end <= r.time_start;
+}
+
+// Expand one event row into dated segments within [start, end]. A normal
+// occurrence yields one "start" segment on its day. An overnight occurrence
+// additionally yields a "tail" segment on the following day (00:00→end) so the
+// event visibly spans both days. Each segment carries `base_date` (the original
+// first-occurrence date) plus `seg`/`continues_next_day`/`continued_from_prev_day`.
+function expandEventSegments(r: any, start: string, end: string, includeTails = true): any[] {
+  const overnight = isOvernightRow(r);
+  // Look back one day so an occurrence the day before `start` can spill a tail in.
+  const occStart = shiftDate(start, -1);
+  const occDates = (!r.recurrence || r.recurrence === 'none')
+    ? (r.date >= occStart && r.date <= end ? [r.date] : [])
+    : expandOccurrencesInRange(r as RecurringEventLike, occStart, end);
+  const segs: any[] = [];
+  for (const d of occDates) {
+    if (d >= start && d <= end) {
+      segs.push({ ...r, date: d, base_date: r.date, seg: 'start',
+        continues_next_day: overnight, continued_from_prev_day: false });
+    }
+    if (includeTails && overnight) {
+      const tail = shiftDate(d, 1);
+      if (tail >= start && tail <= end) {
+        segs.push({ ...r, date: tail, base_date: r.date, seg: 'tail',
+          continues_next_day: false, continued_from_prev_day: true });
+      }
+    }
+  }
+  return segs;
+}
+
+// Events occurring on `date`. When `includeOvernightTails` is set, overnight
+// events that started the previous day also appear (as a 00:00→end tail) so the
+// calendar can show them spanning into this day. Default off so battery /
+// reminder / digest consumers keep seeing one row per event on its start day.
+export async function getCalendarEventsForDate(date: string, includeOvernightTails = false) {
+  if (!db) return [];
+  const prev = shiftDate(date, -1);
+  const result = await db.query(
+    `SELECT * FROM calendar_event
+     WHERE date = ? OR date = ?
+        OR (recurrence IS NOT NULL AND recurrence != 'none'
+            AND date < ? AND (end_date IS NULL OR end_date >= ?));`,
+    [date, prev, date, prev]
+  );
+  const rows = (result.values || []) as any[];
+  const out: any[] = [];
+  for (const r of rows) out.push(...expandEventSegments(r, date, date, includeOvernightTails));
+  return out.sort(sortDayEvents);
+}
+
+// Expand all events (single + recurring, splitting overnight spans) into concrete
+// dated segments within an inclusive [start, end] range.
+export async function getCalendarEventsInRange(start: string, end: string) {
+  if (!db) return [];
+  const prev = shiftDate(start, -1);
+  const result = await db.query(
+    `SELECT * FROM calendar_event
+     WHERE ((recurrence IS NULL OR recurrence = 'none') AND date BETWEEN ? AND ?)
+        OR (recurrence IS NOT NULL AND recurrence != 'none'
+            AND date <= ? AND (end_date IS NULL OR end_date >= ?));`,
+    [prev, end, end, prev]
+  );
+  const rows = (result.values || []) as any[];
+  const out: any[] = [];
+  for (const r of rows) out.push(...expandEventSegments(r, start, end));
+  return out.sort((a, b) => (a.date === b.date ? sortDayEvents(a, b) : a.date < b.date ? -1 : 1));
 }
 
 export async function deleteCalendarEvent(id: number) {
@@ -2149,37 +2302,22 @@ export async function getCalendarEventDatesForMonth(yearMonth: string) {
   if (!db) return [] as string[];
   const [year, month] = yearMonth.split('-').map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
-  const monthEnd = `${yearMonth}-${String(daysInMonth).padStart(2, '0')}`;
-
-  // Non-recurring events within the month
-  const exactResult = await db.query(
-    `SELECT DISTINCT date FROM calendar_event WHERE date LIKE ? AND (recurrence IS NULL OR recurrence = 'none');`,
-    [`${yearMonth}-%`]
-  );
-  const dates = new Set<string>(
-    ((exactResult.values ?? []) as { date: string }[]).map((r) => r.date)
-  );
-
   const monthStart = `${yearMonth}-01`;
+  const monthEnd = `${yearMonth}-${String(daysInMonth).padStart(2, '0')}`;
+  const prev = shiftDate(monthStart, -1);
 
-  // Recurring events that started on or before month end and haven't ended before month start
-  const recurResult = await db.query(
-    `SELECT date, recurrence, end_date FROM calendar_event WHERE recurrence != 'none' AND recurrence IS NOT NULL AND date <= ? AND (end_date IS NULL OR end_date >= ?);`,
-    [monthEnd, monthStart]
+  // Any event whose occurrence (or overnight tail) could land in the month: a
+  // non-recurring event from the day before the month start onward, or a
+  // recurring event that began on/before month end and hasn't ended.
+  const result = await db.query(
+    `SELECT * FROM calendar_event
+     WHERE ((recurrence IS NULL OR recurrence = 'none') AND date BETWEEN ? AND ?)
+        OR (recurrence IS NOT NULL AND recurrence != 'none' AND date <= ? AND (end_date IS NULL OR end_date >= ?));`,
+    [prev, monthEnd, monthEnd, prev]
   );
-  for (const row of (recurResult.values ?? []) as { date: string; recurrence: string; end_date: string | null }[]) {
-    const startDow = new Date(row.date + 'T12:00:00').getDay();
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${yearMonth}-${String(d).padStart(2, '0')}`;
-      if (dateStr < row.date) continue; // before this event's start
-      if (row.end_date && dateStr > row.end_date) continue; // after end date
-      if (row.recurrence === 'daily') {
-        dates.add(dateStr);
-      } else if (row.recurrence === 'weekly') {
-        const dow = new Date(dateStr + 'T12:00:00').getDay();
-        if (dow === startDow) dates.add(dateStr);
-      }
-    }
+  const dates = new Set<string>();
+  for (const row of (result.values ?? []) as any[]) {
+    for (const seg of expandEventSegments(row, monthStart, monthEnd)) dates.add(seg.date);
   }
   return [...dates];
 }

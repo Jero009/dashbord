@@ -1,9 +1,13 @@
 import { ref, computed, reactive, watch } from 'vue';
-import { onIonViewWillEnter, toastController } from '@ionic/vue';
+import { onIonViewWillEnter, toastController, actionSheetController } from '@ionic/vue';
 import { localDateISO } from '@/shared/utils/timeFormat';
 import {
   addCalendarEvent,
+  updateCalendarEvent,
+  searchCalendarEvents,
+  getCalendarEventsInRange,
   deleteCalendarEvent,
+  stopCalendarEventAt,
   getCalendarEventsForDate,
   getCalendarEventDatesForMonth,
   getHabitCompletedDatesForMonth,
@@ -35,8 +39,24 @@ import {
 } from '@/shared/utils/habitStats';
 import { goalProgressFraction, type GoalLike } from '@/shared/utils/goalProgress';
 import { cancelCalendarReminders } from '@/shared/utils/notifications';
+import { recurrenceLabel } from '@/shared/utils/recurrence';
 
 const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+// Calendar view modes for the view switcher (month grid / week / day / agenda list).
+export type CalendarViewMode = 'month' | 'week' | 'day' | 'agenda';
+
+// Restrained data-encoding palette for event color-coding (Nothing-friendly:
+// muted, one-per-purpose). Empty value = fall back to the event type's color.
+const EVENT_COLORS = [
+  { name: 'Default', value: '' },
+  { name: 'Red', value: '#D71A21' },
+  { name: 'Amber', value: '#E0A82E' },
+  { name: 'Green', value: '#22C55E' },
+  { name: 'Blue', value: '#3B82F6' },
+  { name: 'Violet', value: '#8B5CF6' },
+  { name: 'Slate', value: '#94A3B8' },
+];
 const HEAT_COLORS = [
   'rgba(255,255,255,0.06)',
   'rgba(215, 26, 33,0.25)',
@@ -56,6 +76,7 @@ export function usePlanner() {
   const viewYear = ref(now.getFullYear());
   const viewMonth = ref(now.getMonth());
   const selectedDate = ref(todayStr);
+  const viewMode = ref<CalendarViewMode>('month');
 
   // ---- data stores ----
   const events = ref<Record<string, any>[]>([]);
@@ -107,6 +128,75 @@ export function usePlanner() {
     if (viewMonth.value === 11) { viewYear.value++; viewMonth.value = 0; }
     else viewMonth.value++;
   };
+
+  // ---- week / day / agenda views ----
+  // Range events: every concrete occurrence within the currently-viewed window,
+  // already expanded by the recurrence engine (each row carries its own `date`).
+  const rangeEvents = ref<Record<string, any>[]>([]);
+
+  // The 7 dates (Sun→Sat) of the week containing the selected date.
+  const calWeekDates = computed(() => {
+    const dow = new Date(selectedDate.value + 'T12:00:00').getDay();
+    const start = shiftDate(selectedDate.value, -dow);
+    return Array.from({ length: 7 }, (_, i) => shiftDate(start, i));
+  });
+
+  const weekRangeLabel = computed(() => {
+    const a = new Date(calWeekDates.value[0] + 'T12:00:00');
+    const b = new Date(calWeekDates.value[6] + 'T12:00:00');
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${fmt(a)} – ${fmt(b)}`;
+  });
+
+  // Per-day buckets for the week view.
+  const weekColumns = computed(() =>
+    calWeekDates.value.map((date) => ({
+      date,
+      day: Number(date.slice(8, 10)),
+      dow: DOW[new Date(date + 'T12:00:00').getDay()],
+      isToday: date === todayStr,
+      events: rangeEvents.value.filter((e) => e.date === date),
+    }))
+  );
+
+  // Upcoming events grouped by date (agenda view), only days that have events.
+  const agendaGroups = computed(() => {
+    const groups: { date: string; label: string; events: Record<string, any>[] }[] = [];
+    const byDate = new Map<string, Record<string, any>[]>();
+    for (const e of rangeEvents.value) {
+      if (!byDate.has(e.date)) byDate.set(e.date, []);
+      byDate.get(e.date)!.push(e);
+    }
+    for (const date of [...byDate.keys()].sort()) {
+      groups.push({
+        date,
+        label: new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric',
+        }),
+        events: byDate.get(date)!,
+      });
+    }
+    return groups;
+  });
+
+  const setViewMode = (mode: CalendarViewMode) => { viewMode.value = mode; };
+
+  // Period navigation honouring the active view (month / week / day).
+  const goPrev = () => {
+    if (viewMode.value === 'month') prevMonth();
+    else if (viewMode.value === 'week') selectedDate.value = shiftDate(selectedDate.value, -7);
+    else if (viewMode.value === 'day') selectedDate.value = shiftDate(selectedDate.value, -1);
+  };
+  const goNext = () => {
+    if (viewMode.value === 'month') nextMonth();
+    else if (viewMode.value === 'week') selectedDate.value = shiftDate(selectedDate.value, 7);
+    else if (viewMode.value === 'day') selectedDate.value = shiftDate(selectedDate.value, 1);
+  };
+  const periodLabel = computed(() =>
+    viewMode.value === 'month' ? monthLabel.value
+      : viewMode.value === 'week' ? weekRangeLabel.value
+      : selectedDateLabel.value
+  );
 
   // ---- goals ----
   const activeGoals = computed(() => goals.value.filter((g) => g.status !== 'completed'));
@@ -210,15 +300,117 @@ export function usePlanner() {
 
   // ---- event form ----
   const showAddEvent = ref(false);
+  const editingEventId = ref<number | null>(null); // null = adding, else editing this id
   const newTitle = ref('');
   const newType = ref('general');
   const newNotes = ref('');
   const newTimeStart = ref('');
   const newTimeEnd = ref('');
+  const newAllDay = ref(false);
+  const newColor = ref('');
   const newRecurrence = ref('none');
+  const newRecurInterval = ref(1);
+  const newRecurDays = ref<Set<number>>(new Set());
+  const newRecurEnd = ref<'never' | 'until' | 'count'>('never');
+  const newRecurUntil = ref('');
+  const newRecurCount = ref<number | null>(null);
   const templates = ref<{ id: number; name: string }[]>([]);
   const newWorkoutTemplateId = ref<number | null>(null);
   const recommendedTemplateId = ref<number | null>(null);
+
+  const toggleRecurDay = (i: number) => {
+    const next = new Set(newRecurDays.value);
+    if (next.has(i)) next.delete(i);
+    else next.add(i);
+    newRecurDays.value = next;
+  };
+
+  // Resolve an event's display color: explicit custom color, else empty so the
+  // CSS type class (item-tag--<type>) supplies it.
+  const eventColor = (ev: Record<string, any>) => (ev.color ? String(ev.color) : '');
+  const recurLabel = (ev: Record<string, any>) => recurrenceLabel(ev as any);
+
+  // Overnight when the end time is at/before the start (e.g. 19:00 → 05:00):
+  // the end belongs to the next day. Matches the battery-drain duration logic.
+  const isOvernight = (ev: Record<string, any>) =>
+    !ev.all_day && !!ev.time_start && !!ev.time_end && ev.time_end <= ev.time_start;
+
+  // Single source of truth for an event's time label across all views, including
+  // overnight segments: a "tail" shows the carried-over end; a spanning start
+  // shows the (+1 day) marker.
+  const eventTimeLabel = (ev: Record<string, any>) => {
+    if (ev.all_day) return 'All day';
+    if (ev.continued_from_prev_day) return `cont. until ${ev.time_end}`;
+    if (!ev.time_start) return '';
+    if (!ev.time_end) return String(ev.time_start);
+    const range = `${ev.time_start} – ${ev.time_end}`;
+    return (ev.continues_next_day || isOvernight(ev)) ? `${range} (+1 day)` : range;
+  };
+
+  // ---- day-view timeline (mirrors the HomePage schedule timeline) ----
+  const HOUR_PX = 52;
+  const parseHourStr = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h + (m || 0) / 60;
+  };
+  // Tail segments anchor at 00:00; overnight start segments run to 24:00.
+  const segStartHour = (e: Record<string, any>) =>
+    e.continued_from_prev_day ? 0 : parseHourStr(e.time_start);
+  const segEndHour = (e: Record<string, any>) => {
+    if (e.continued_from_prev_day) return parseHourStr(e.time_end);
+    if (!e.time_end) return segStartHour(e) + 1;
+    const end = parseHourStr(e.time_end);
+    return end <= parseHourStr(e.time_start) ? 24 : end; // overnight → midnight
+  };
+
+  const timedDayEvents = computed(() => events.value.filter((e) => e.time_start && !e.all_day));
+
+  const dayTlStart = computed(() => {
+    const times = [
+      ...timedDayEvents.value.map(segStartHour),
+      ...dayHabits.value.filter((h) => h.time).map((h) => parseHourStr(h.time)),
+    ];
+    return times.length ? Math.max(0, Math.floor(Math.min(...times)) - 0.5) : 6;
+  });
+  const dayTlEnd = computed(() => {
+    const times = [
+      ...timedDayEvents.value.map(segEndHour),
+      ...dayHabits.value.filter((h) => h.time).map((h) => parseHourStr(h.time) + 0.25),
+    ];
+    return times.length ? Math.min(24, Math.ceil(Math.max(...times)) + 0.5) : 22;
+  });
+  const dayHourToY = (h: number) => (h - dayTlStart.value) * HOUR_PX;
+  const dayTlHeight = computed(() => (dayTlEnd.value - dayTlStart.value) * HOUR_PX);
+  const dayVisibleHours = computed(() => {
+    const s = Math.ceil(dayTlStart.value);
+    const e = Math.floor(dayTlEnd.value);
+    return Array.from({ length: Math.max(0, e - s + 1) }, (_, i) => s + i);
+  });
+  const dayTimedEvents = computed<Record<string, any>[]>(() =>
+    timedDayEvents.value
+      .map((e) => ({
+        ...e,
+        top: dayHourToY(segStartHour(e)),
+        height: Math.max(34, (segEndHour(e) - segStartHour(e)) * HOUR_PX),
+        timeLabel: eventTimeLabel(e),
+      }))
+      .sort((a, b) => a.top - b.top)
+  );
+  const dayTimedHabits = computed<Record<string, any>[]>(() =>
+    dayHabits.value
+      .filter((h) => h.time)
+      .map((h) => ({ ...h, top: dayHourToY(parseHourStr(h.time)) }))
+      .sort((a, b) => a.top - b.top)
+  );
+  const dayAllDayEvents = computed(() => events.value.filter((e) => e.all_day || !e.time_start));
+  const dayHasTimeline = computed(() => dayTimedEvents.value.length > 0 || dayTimedHabits.value.length > 0);
+  const dayNowY = computed(() => {
+    if (selectedDate.value !== todayStr) return -1;
+    const now = new Date();
+    const h = now.getHours() + now.getMinutes() / 60;
+    if (h < dayTlStart.value || h > dayTlEnd.value) return -1;
+    return dayHourToY(h);
+  });
 
   const computeRecommendation = async (timeStart: string) => {
     if (!templates.value.length) return;
@@ -260,14 +452,46 @@ export function usePlanner() {
   });
 
   const resetEventForm = () => {
+    editingEventId.value = null;
     newTitle.value = '';
     newNotes.value = '';
     newType.value = 'general';
     newTimeStart.value = '';
     newTimeEnd.value = '';
+    newAllDay.value = false;
+    newColor.value = '';
     newWorkoutTemplateId.value = null;
     newRecurrence.value = 'none';
+    newRecurInterval.value = 1;
+    newRecurDays.value = new Set();
+    newRecurEnd.value = 'never';
+    newRecurUntil.value = '';
+    newRecurCount.value = null;
     recommendedTemplateId.value = null;
+  };
+
+  // Populate the form from an existing event row and switch into edit mode.
+  const beginEditEvent = (ev: Record<string, any>) => {
+    resetEventForm();
+    editingEventId.value = ev.id;
+    selectedDate.value = ev.base_date || ev.date;
+    newTitle.value = ev.title ?? '';
+    newNotes.value = ev.notes ?? '';
+    newType.value = ev.type ?? 'general';
+    newTimeStart.value = ev.time_start ?? '';
+    newTimeEnd.value = ev.time_end ?? '';
+    newAllDay.value = ev.all_day === 1 || ev.all_day === true;
+    newColor.value = ev.color ?? '';
+    newWorkoutTemplateId.value = ev.workout_template_id ?? null;
+    newRecurrence.value = ev.recurrence ?? 'none';
+    newRecurInterval.value = Number(ev.recur_interval) || 1;
+    newRecurDays.value = ev.recur_days
+      ? new Set(String(ev.recur_days).split(',').map(Number))
+      : new Set();
+    if (ev.recur_count) { newRecurEnd.value = 'count'; newRecurCount.value = Number(ev.recur_count); }
+    else if (ev.end_date) { newRecurEnd.value = 'until'; newRecurUntil.value = ev.end_date; }
+    else { newRecurEnd.value = 'never'; }
+    showAddEvent.value = true;
   };
 
   const saveEvent = async () => {
@@ -276,27 +500,107 @@ export function usePlanner() {
       await t.present();
       return;
     }
-    await addCalendarEvent(
-      newTitle.value.trim(),
-      selectedDate.value,
-      newType.value,
-      newNotes.value.trim() || undefined,
-      newTimeStart.value || undefined,
-      newTimeEnd.value || undefined,
-      newWorkoutTemplateId.value ?? undefined,
-      newRecurrence.value
-    );
+    const recurring = newRecurrence.value !== 'none';
+    const payload = {
+      title: newTitle.value.trim(),
+      date: selectedDate.value,
+      type: newType.value,
+      notes: newNotes.value.trim() || null,
+      timeStart: newTimeStart.value || null,
+      timeEnd: newTimeEnd.value || null,
+      allDay: newAllDay.value,
+      color: newColor.value || null,
+      workoutTemplateId: newWorkoutTemplateId.value ?? null,
+      recurrence: newRecurrence.value,
+      recurInterval: recurring ? newRecurInterval.value : 1,
+      recurDays: recurring && newRecurrence.value === 'weekly' && newRecurDays.value.size
+        ? [...newRecurDays.value].sort().join(',')
+        : null,
+      endDate: recurring && newRecurEnd.value === 'until' ? (newRecurUntil.value || null) : null,
+      recurCount: recurring && newRecurEnd.value === 'count' ? (newRecurCount.value || null) : null,
+    };
+    if (editingEventId.value !== null) {
+      // Re-scheduling can move the time; clear the old reminder so it re-arms.
+      await cancelCalendarReminders([editingEventId.value]);
+      await updateCalendarEvent(editingEventId.value, payload);
+    } else {
+      await addCalendarEvent(payload);
+    }
     resetEventForm();
     showAddEvent.value = false;
-    await Promise.all([loadDayDetail(), loadMonthDots()]);
+    await Promise.all([loadDayDetail(), loadMonthDots(), loadRangeEvents()]);
   };
 
-  const removeEvent = async (id: number) => {
-    await deleteCalendarEvent(id);
-    // Cancel any reminder already scheduled for this event so it doesn't fire.
+  const refreshAfterEventChange = () =>
+    Promise.all([loadDayDetail(), loadMonthDots(), loadRangeEvents()]);
+
+  // Delete an event. For a recurring series, ask whether to remove the whole
+  // series or just this occurrence onward (the latter caps the series the day
+  // before the selected occurrence via end_date — history is preserved).
+  const removeEvent = async (ev: Record<string, any> | number) => {
+    const id = typeof ev === 'number' ? ev : ev.id;
+    const recurrence = typeof ev === 'number' ? null : ev.recurrence;
+
+    if (!recurrence || recurrence === 'none') {
+      await deleteCalendarEvent(id);
+      await cancelCalendarReminders([id]); // stop any scheduled reminder firing
+      await refreshAfterEventChange();
+      return;
+    }
+
+    const sheet = await actionSheetController.create({
+      header: 'Delete recurring event',
+      buttons: [
+        { text: 'Delete all occurrences', role: 'destructive', data: 'all' },
+        { text: 'Delete this and future occurrences', data: 'future' },
+        { text: 'Cancel', role: 'cancel', data: 'cancel' },
+      ],
+    });
+    await sheet.present();
+    const { data } = await sheet.onDidDismiss();
+
+    if (data === 'all') {
+      await deleteCalendarEvent(id);
+    } else if (data === 'future') {
+      const base = (typeof ev === 'number' ? '' : (ev.base_date || ev.date)) as string;
+      // Stopping at/before the first occurrence leaves nothing — delete the row.
+      if (selectedDate.value <= base) await deleteCalendarEvent(id);
+      else await stopCalendarEventAt(id, shiftDate(selectedDate.value, -1));
+    } else {
+      return; // cancelled
+    }
     await cancelCalendarReminders([id]);
-    await Promise.all([loadDayDetail(), loadMonthDots()]);
+    await refreshAfterEventChange();
   };
+
+  // Delete the event currently open in the edit form (used by the day-view
+  // timeline, which has no per-row delete button). Reconstructs the minimal row
+  // removeEvent needs to detect recurrence.
+  const deleteEditingEvent = async () => {
+    if (editingEventId.value === null) return;
+    await removeEvent({
+      id: editingEventId.value,
+      recurrence: newRecurrence.value,
+      base_date: selectedDate.value,
+      date: selectedDate.value,
+    });
+    resetEventForm();
+    showAddEvent.value = false;
+  };
+
+  // ---- search ----
+  const searchQuery = ref('');
+  const searchResults = ref<Record<string, any>[]>([]);
+  let searchToken = 0;
+  const runSearch = async () => {
+    const token = ++searchToken;
+    const q = searchQuery.value.trim();
+    if (!q) { searchResults.value = []; return; }
+    const res = await searchCalendarEvents(q);
+    if (token !== searchToken) return;
+    searchResults.value = res as Record<string, any>[];
+  };
+  watch(searchQuery, runSearch);
 
   // ---- habit form ----
   const showAddHabit = ref(false);
@@ -472,6 +776,21 @@ export function usePlanner() {
   // overwrite the result of a later one.
   let monthDotsToken = 0;
   let dayDetailToken = 0;
+  let rangeToken = 0;
+
+  // Load expanded occurrences for the active view's window (week strip / agenda
+  // horizon). Month uses dots and Day uses the day-detail list, so for those we
+  // only need the selected day.
+  const loadRangeEvents = async () => {
+    const token = ++rangeToken;
+    let start = selectedDate.value;
+    let end = selectedDate.value;
+    if (viewMode.value === 'week') { start = calWeekDates.value[0]; end = calWeekDates.value[6]; }
+    else if (viewMode.value === 'agenda') { start = todayStr; end = shiftDate(todayStr, 45); }
+    const res = await getCalendarEventsInRange(start, end);
+    if (token !== rangeToken) return;
+    rangeEvents.value = res as Record<string, any>[];
+  };
 
   const loadMonthDots = async () => {
     const token = ++monthDotsToken;
@@ -489,7 +808,7 @@ export function usePlanner() {
   const loadDayDetail = async () => {
     const token = ++dayDetailToken;
     const [evs, habs] = await Promise.all([
-      getCalendarEventsForDate(selectedDate.value),
+      getCalendarEventsForDate(selectedDate.value, true), // include overnight tails for the day view
       getHabitsWithStatus(selectedDate.value),
     ]);
     if (token !== dayDetailToken) return;
@@ -521,10 +840,11 @@ export function usePlanner() {
     logSets.value = sets;
   };
 
-  const loadAll = () => Promise.all([loadMonthDots(), loadDayDetail(), loadHabitsAndGoals()]);
+  const loadAll = () => Promise.all([loadMonthDots(), loadDayDetail(), loadHabitsAndGoals(), loadRangeEvents()]);
 
   watch(yearMonthStr, loadMonthDots);
   watch(selectedDate, loadDayDetail);
+  watch([viewMode, selectedDate], loadRangeEvents);
 
   onIonViewWillEnter(async () => {
     templates.value = await getTemplates();
@@ -535,6 +855,7 @@ export function usePlanner() {
     // consts
     DOW,
     HEAT_COLORS,
+    EVENT_COLORS,
     isScheduledOn,
     // month grid
     todayStr,
@@ -545,6 +866,21 @@ export function usePlanner() {
     selectedDateLabel,
     prevMonth,
     nextMonth,
+    // view switching + week/day/agenda
+    viewMode,
+    setViewMode,
+    goPrev,
+    goNext,
+    periodLabel,
+    calWeekDates,
+    weekRangeLabel,
+    weekColumns,
+    agendaGroups,
+    rangeEvents,
+    // search
+    searchQuery,
+    searchResults,
+    runSearch,
     // goals
     activeGoals,
     completedGoals,
@@ -570,19 +906,43 @@ export function usePlanner() {
     heatCells,
     // event form
     showAddEvent,
+    editingEventId,
     newTitle,
     newType,
     newNotes,
     newTimeStart,
     newTimeEnd,
+    newAllDay,
+    newColor,
     newRecurrence,
+    newRecurInterval,
+    newRecurDays,
+    newRecurEnd,
+    newRecurUntil,
+    newRecurCount,
+    toggleRecurDay,
     templates,
     newWorkoutTemplateId,
     recommendedTemplateId,
     resetEventForm,
+    beginEditEvent,
     saveEvent,
+    deleteEditingEvent,
     events,
     removeEvent,
+    eventColor,
+    recurLabel,
+    isOvernight,
+    eventTimeLabel,
+    // day-view timeline
+    dayTlHeight,
+    dayVisibleHours,
+    dayHourToY,
+    dayTimedEvents,
+    dayTimedHabits,
+    dayAllDayEvents,
+    dayHasTimeline,
+    dayNowY,
     // habit form
     showAddHabit,
     habitName,

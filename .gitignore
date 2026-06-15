@@ -47,3 +47,5 @@ release.keystore
 
 # Graphify generated cache — local tool only
 graphify-out/
+.claude/worktrees/agent-a661213ae98e94606
+.claude/worktrees/agent-a55eaaa9d111b3eb0

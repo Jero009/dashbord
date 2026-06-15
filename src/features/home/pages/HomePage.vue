@@ -387,7 +387,7 @@
                 :style="{ top: ev.top + 'px', height: ev.height + 'px' }"
               >
                 <strong class="ev-title">{{ ev.title }}</strong>
-                <span class="ev-time">{{ ev.time_start }}{{ ev.time_end ? ' – ' + ev.time_end : '' }}</span>
+                <span class="ev-time">{{ ev.timeLabel }}</span>
                 <button
                   v-if="ev.type === 'workout' && ev.workout_template_id"
                   class="ev-start-btn"
@@ -639,7 +639,13 @@ const tlStart = computed(() => {
 
 const tlEnd = computed(() => {
   const times = [
-    ...todayEvents.value.filter((e) => e.time_end).map((e) => parseHour(e.time_end)),
+    ...todayEvents.value.filter((e) => e.time_end).map((e) => {
+      const end = parseHour(e.time_end);
+      const start = e.time_start ? parseHour(e.time_start) : end;
+      // Overnight (end <= start, e.g. 19:00→05:00): the end is next day, so for
+      // today's axis extend the event to midnight rather than collapsing it.
+      return e.time_start && end <= start ? 24 : end;
+    }),
     ...todayEvents.value.filter((e) => e.time_start && !e.time_end).map((e) => parseHour(e.time_start) + 1),
     ...todayHabits.value.filter((h) => h.time).map((h) => parseHour(h.time) + 0.25),
   ];
@@ -663,8 +669,11 @@ const timedEvents = computed<TimedEvent[]>(() =>
     .filter((e) => e.time_start)
     .map((e) => {
       const start = parseHour(e.time_start);
-      const end = e.time_end ? parseHour(e.time_end) : start + 1;
-      return { ...e, top: hourToY(start), height: Math.max(32, (end - start) * HOUR_PX) } as TimedEvent;
+      const overnight = !!e.time_end && parseHour(e.time_end) <= start;
+      // Overnight events run to midnight on today's timeline (the end is next day).
+      const end = e.time_end ? (overnight ? 24 : parseHour(e.time_end)) : start + 1;
+      const timeLabel = e.time_start + (e.time_end ? ` – ${e.time_end}${overnight ? ' (+1)' : ''}` : '');
+      return { ...e, top: hourToY(start), height: Math.max(32, (end - start) * HOUR_PX), timeLabel } as TimedEvent;
     })
     .sort((a, b) => a.top - b.top)
 );
