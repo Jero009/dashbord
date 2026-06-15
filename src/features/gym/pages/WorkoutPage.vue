@@ -433,7 +433,7 @@ import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
-import { duckAndDing } from '@/shared/utils/restTimerAudio';
+import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight } from '@/shared/db/app_db';
@@ -525,7 +525,7 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
   hapticMedium();
 
   if (isChecked) {
-    startRestTimer(Number(exercise.rest_seconds) || 60);
+    startRestTimer(Number(exercise.rest_seconds) || 60, exercise.name || '');
   } else {
     stopRestTimer();
     clearTimerState();
@@ -805,6 +805,7 @@ const restTimer = ref({
 });
 let restInterval: any = null;
 let restEndTime = 0;
+let restExerciseName = '';
 let audioContext: AudioContext | null = null;
 
 // Web-only fallback ding (dev). On native, duckAndDing() handles the sound.
@@ -839,12 +840,19 @@ const playRestDing = async () => {
 };
 
 const persistTimerState = () => {
-  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({ endTime: restEndTime }));
+  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({ endTime: restEndTime, exerciseName: restExerciseName }));
 };
 
 const clearTimerState = () => {
   localStorage.removeItem(REST_TIMER_KEY);
   void cancelRestTimerDing();
+  void clearRestNotification();
+};
+
+// (Re)post the ongoing countdown notification for the time remaining.
+const showRestCountdown = () => {
+  const remainingMs = Math.max(0, restEndTime - Date.now());
+  if (remainingMs > 0) void showRestNotification(restExerciseName, remainingMs);
 };
 
 const tickRestTimer = () => {
@@ -864,8 +872,9 @@ const restoreTimerState = () => {
   if (!saved) return;
 
   try {
-    const { endTime } = JSON.parse(saved);
+    const { endTime, exerciseName } = JSON.parse(saved);
     if (!Number.isFinite(endTime)) { clearTimerState(); return; }
+    restExerciseName = typeof exerciseName === 'string' ? exerciseName : '';
     const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
     if (remaining > 0) {
       // Resume the running timer; the notification scheduled before the app was
@@ -887,10 +896,11 @@ const resumeRestTimer = (endTime: number, remaining: number) => {
   restTimer.value.total = remaining;
   restTimer.value.remaining = remaining;
   restTimer.value.isActive = true;
+  showRestCountdown();
   restInterval = setInterval(tickRestTimer, 1000);
 };
 
-const startRestTimer = (seconds: number) => {
+const startRestTimer = (seconds: number, exerciseName = '') => {
   hapticLight();
   // Stop any existing timer before starting a new one
   stopRestTimer();
@@ -899,11 +909,13 @@ const startRestTimer = (seconds: number) => {
   const restSeconds = Math.max(1, Number(seconds) || 60);
 
   restEndTime = Date.now() + restSeconds * 1000;
+  restExerciseName = exerciseName;
   restTimer.value.total = restSeconds;
   restTimer.value.remaining = restSeconds;
   restTimer.value.isActive = true;
   persistTimerState();
   void scheduleRestTimerDing(new Date(restEndTime));
+  showRestCountdown();
 
   restInterval = setInterval(tickRestTimer, 1000);
 };
@@ -932,8 +944,9 @@ const adjustRestTimer = (seconds: number) => {
   restEndTime = Math.max(Date.now(), restEndTime + seconds * 1000);
   restTimer.value.remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
   persistTimerState();
-  // Reschedule the OS ding to the new end time.
+  // Reschedule the OS ding and refresh the countdown notification.
   void scheduleRestTimerDing(new Date(restEndTime));
+  showRestCountdown();
 };
 
 const formatRestTime = (seconds: number) => {

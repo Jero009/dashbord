@@ -1,10 +1,15 @@
 import { registerPlugin, Capacitor } from '@capacitor/core'
 
-// Native bridge to RestTimerAudio (android/app/.../RestTimerAudio.java). Ducks
-// other audio (the user's music), plays the rest-timer ding, then restores the
-// original volume. No-op web fallback is handled by the caller.
+// Native bridge to RestTimerAudio (android/app/.../RestTimerAudio.java).
+// - duckAndDing: ducks other audio (the user's music), plays the rest-timer
+//   ding, then restores the original volume.
+// - showRestNotification/clearRestNotification: ongoing notification with a live
+//   countdown (system chronometer) and the current exercise name. Keeps ticking
+//   while backgrounded/killed; self-clears at zero.
 interface RestTimerAudioPlugin {
   duckAndDing(): Promise<void>
+  showRestNotification(options: { exerciseName: string; durationMs: number }): Promise<void>
+  clearRestNotification(): Promise<void>
 }
 
 const RestTimerAudio = registerPlugin<RestTimerAudioPlugin>('RestTimerAudio')
@@ -20,5 +25,25 @@ export async function duckAndDing(): Promise<boolean> {
   } catch (e) {
     console.warn('RestTimerAudio.duckAndDing failed:', e)
     return false
+  }
+}
+
+// Show/update the ongoing rest-timer countdown notification. `durationMs` is the
+// time remaining from now; the native side renders a live countdown to that point.
+export async function showRestNotification(exerciseName: string, durationMs: number): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await RestTimerAudio.showRestNotification({ exerciseName, durationMs })
+  } catch (e) {
+    console.warn('RestTimerAudio.showRestNotification failed:', e)
+  }
+}
+
+export async function clearRestNotification(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await RestTimerAudio.clearRestNotification()
+  } catch (e) {
+    console.warn('RestTimerAudio.clearRestNotification failed:', e)
   }
 }
