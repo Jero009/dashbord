@@ -45,7 +45,9 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 
 ### Health Connect
 
-- Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
+- Syncs steps, sleep, heart rate, respiratory rate, HRV via `@capgo/capacitor-health`
+- **HRV** (`heartRateVariability` → `hrv` health_metric, ms): optional read type, NOT in `HEALTH_CONNECT_CORE_READ_TYPES` (never gates sync). Read only when `auth.readAuthorized.includes('heartRateVariability')` — reading an ungranted HC type can raise a native SecurityException that kills the process (same failure mode as READ_EXERCISE). The Amazfit Active 2 does not expose HRV, so the chart shows an empty hint until an HRV-capable device grants it. Bucketed by sample date (not the sleep window). Shown as a 14-day trend chart on `HealthPage.vue`.
+- **Sleep HR** is computed from HR samples within the sleep window `[bedtime, waketime]`, NOT bucketed by wake date — an overnight session straddles midnight, so date-bucketing dropped the pre-midnight portion and polluted the average with daytime HR.
 - `HealthConnectAutoSync.vue` — initial sync on mount + 6 s retry for cold-start race condition
 - Readiness score inputs: sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, steps
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`) — 100-pt model: duration vs target (25), efficiency (15), WASO (10), deep% ≥18% (10), REM% ≥22% (12.5), bedtime timing variance vs 14-night mean (15), respiratory rate vs 14-night baseline (12.5). Returns `number | null` — null when `timeAsleepHours < 1`.

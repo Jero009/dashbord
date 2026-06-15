@@ -3,7 +3,7 @@ import { Health, type AuthorizationStatus, type HealthSample, type AggregatedSam
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 
-type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'workouts';
+type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'heartRateVariability' | 'workouts';
 
 // Core metrics the app actually depends on. These — and ONLY these — gate sync.
 const HEALTH_CONNECT_CORE_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate'];
@@ -12,7 +12,10 @@ const HEALTH_CONNECT_CORE_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep
 // It is requested so users CAN grant it, but it must never gate core sync: the Amazfit
 // produces no exercise sessions, so this permission is commonly ungranted/reset and
 // requiring it silently blocked all metric syncing.
-const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = [...HEALTH_CONNECT_CORE_READ_TYPES, 'workouts'];
+// 'heartRateVariability' is likewise optional: the current Amazfit Active 2 does not
+// expose HRV to Health Connect, so requiring it would block sync for everyone. It is
+// requested so HRV-capable devices can grant it, and synced only when authorized.
+const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = [...HEALTH_CONNECT_CORE_READ_TYPES, 'workouts', 'heartRateVariability'];
 
 // True when every core metric is granted. Optional 'workouts' is intentionally ignored.
 const hasCoreReadAccess = (readAuthorized: string[]) =>
@@ -547,6 +550,12 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     };
   }
 
+  // HRV is optional and only read when explicitly authorized. Reading an ungranted
+  // Health Connect type can raise a native SecurityException that bypasses JS
+  // try/catch and kills the process (same failure mode as READ_EXERCISE), so we must
+  // never query it speculatively.
+  const hrvAuthorized = auth.readAuthorized.includes('heartRateVariability');
+
   const endDate = new Date().toISOString();
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
   // Continuous HR is recorded per-minute by the Amazfit (~1440/day).
@@ -554,7 +563,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   // Use a 7-day window newest-first so recent days are always in the result set.
   const recentStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [stepsResult, sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
+  const [stepsResult, sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult, hrvResult] = await Promise.all([
     // queryAggregated returns one pre-summed total per day — avoids overcounting
     // that happens when per-minute delta samples are manually summed.
     // .catch guards against native bridge errors on APKs built before queryAggregated
@@ -595,6 +604,17 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       limit: 1000,
       ascending: true,
     }),
+    // HRV (RMSSD, ms) is low-frequency — typically one reading per night. Only read it
+    // when authorized; otherwise resolve empty so it never blocks or breaks core sync.
+    hrvAuthorized
+      ? Health.readSamples({
+          dataType: 'heartRateVariability',
+          startDate,
+          endDate,
+          limit: 1000,
+          ascending: true,
+        }).catch(() => ({ samples: [] as HealthSample[] }))
+      : Promise.resolve({ samples: [] as HealthSample[] }),
   ]);
 
   const stepsByDate = new Map<string, number>();
@@ -648,6 +668,18 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     const bucket = respiratoryRateByDate.get(key) ?? { values: [] };
     bucket.values.push(sample.value);
     respiratoryRateByDate.set(key, bucket);
+  }
+
+  // HRV is bucketed by its own date (not the sleep window) so it works regardless of
+  // how a device records it — overnight reading or daytime spot checks.
+  const hrvByDate = new Map<string, { values: number[] }>();
+  for (const sample of hrvResult.samples) {
+    if (!Number.isFinite(sample.value) || sample.value <= 0) continue;
+
+    const key = toDateKey(sample.startDate || sample.endDate);
+    const bucket = hrvByDate.get(key) ?? { values: [] };
+    bucket.values.push(sample.value);
+    hrvByDate.set(key, bucket);
   }
 
   let synced = 0;
@@ -813,6 +845,17 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       synced += 1;
     } catch (e) {
       console.error(`[healthConnect] Respiratory rate sync failed for ${date}:`, e);
+    }
+  }
+
+  for (const [date, bucket] of hrvByDate.entries()) {
+    const hrv = average(bucket.values);
+    if (hrv === null) continue;
+    try {
+      await replaceHealthMetric(date, 'hrv', Number(hrv.toFixed(1)), 'ms', HEALTH_CONNECT_SOURCE);
+      synced += 1;
+    } catch (e) {
+      console.error(`[healthConnect] HRV sync failed for ${date}:`, e);
     }
   }
 

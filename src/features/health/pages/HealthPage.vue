@@ -152,7 +152,46 @@
           <p v-else class="empty-hint">Not enough heart rate data yet — sync Health Connect to populate</p>
         </div>
 
-        <!-- 5. Today's plan events -->
+        <!-- 5. HRV trend -->
+        <div class="card">
+          <div class="hr-head">
+            <p class="section-kicker">HRV · last 14 days</p>
+            <div v-if="hrvAvg !== null" class="hr-avg">
+              <span class="hr-avg-label">Avg</span>
+              <span class="hr-avg-val">{{ hrvAvgDisplay }}</span>
+            </div>
+          </div>
+          <div v-if="hrvHistory.length >= 2" class="rh-chart">
+            <svg viewBox="0 0 100 40" class="rh-svg" aria-label="Heart rate variability history">
+              <line
+                v-if="hrvAvgLineY !== null"
+                class="hr-avg-line"
+                x1="2" :y1="hrvAvgLineY" x2="98" :y2="hrvAvgLineY"
+              />
+              <polygon class="rh-area" :points="hrvAreaPoints" />
+              <polyline class="rh-line" :points="hrvLinePoints" />
+              <circle
+                v-for="pt in hrvHistory"
+                :key="pt.date"
+                class="rh-dot"
+                :class="{ 'rh-dot--selected': selectedHrvPoint?.date === pt.date }"
+                :cx="pt.x" :cy="pt.y" r="1.2"
+                @click="selectedHrvPoint = pt"
+              />
+            </svg>
+            <div v-if="selectedHrvPoint" class="rh-tooltip">
+              <strong>{{ selectedHrvPoint.value }}</strong>
+              <small>{{ new Date(selectedHrvPoint.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) }} · ms</small>
+            </div>
+            <div class="rh-axis">
+              <span>{{ hrvHistory[0]?.dateLabel }}</span>
+              <span>{{ hrvHistory[hrvHistory.length - 1]?.dateLabel }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-hint">No HRV data yet — your current device may not report HRV to Health Connect</p>
+        </div>
+
+        <!-- 6. Today's plan events -->
         <div v-if="todayEvents.length" class="card">
           <p class="section-kicker">Today's schedule</p>
           <ul class="event-list">
@@ -165,7 +204,7 @@
           </ul>
         </div>
 
-        <!-- 6. Readiness history -->
+        <!-- 7. Readiness history -->
         <div class="card">
           <p class="section-kicker">Readiness · last 14 days</p>
           <div v-if="readinessHistory.length >= 2" class="rh-chart">
@@ -193,7 +232,7 @@
           <p v-else class="empty-hint">No readiness data yet — sync Health Connect to populate</p>
         </div>
 
-        <!-- 7. Recent activities -->
+        <!-- 8. Recent activities -->
         <section v-if="activities.length">
           <p class="section-kicker">Activity · last 7 days</p>
           <div class="activity-list">
@@ -212,7 +251,7 @@
           </div>
         </section>
 
-        <!-- 8. Sync -->
+        <!-- 9. Sync -->
         <div class="card sync-card">
           <p class="section-kicker">Health Connect</p>
           <p class="sync-status">{{ healthConnectStatus }}</p>
@@ -284,6 +323,8 @@ const readinessHistory = ref<RhPoint[]>([]);
 const selectedRhPoint  = ref<RhPoint | null>(null);
 const restingHrHistory = ref<HrPoint[]>([]);
 const selectedHrPoint  = ref<HrPoint | null>(null);
+const hrvHistory       = ref<HrPoint[]>([]);
+const selectedHrvPoint = ref<HrPoint | null>(null);
 
 // --- Displays ---
 const sleepDisplay           = computed(() => sleepHours.value === null      ? '—' : `${sleepHours.value.toFixed(1)} h`);
@@ -492,6 +533,50 @@ const hrAvgLineY = computed(() => {
   return 36 - ((restingHrAvg.value - minV) / range) * 32 + 2;
 });
 
+// --- HRV history (heart rate variability trend + average) ---
+// Synced only on HRV-capable devices; otherwise the chart shows an empty hint.
+const loadHrvHistory = async () => {
+  const raw = await getRecentHealthMetrics('hrv', 14);
+  const rows = (raw as { date: string; value: number }[])
+    .map(r => ({ date: r.date, value: Number(r.value) }))
+    .filter(r => Number.isFinite(r.value))
+    .reverse(); // DB returns newest-first; chart reads oldest → newest
+  if (rows.length < 2) { hrvHistory.value = []; return; }
+  const minV = Math.min(...rows.map(r => r.value));
+  const maxV = Math.max(...rows.map(r => r.value));
+  const range = maxV - minV || 1;
+  hrvHistory.value = rows.map((r, i) => ({
+    date: r.date,
+    value: Math.round(r.value),
+    x: (i / (rows.length - 1)) * 96 + 2,
+    y: 36 - ((r.value - minV) / range) * 32 + 2,
+    dateLabel: new Date(r.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }),
+  }));
+};
+
+const hrvAvg = computed(() => {
+  const pts = hrvHistory.value;
+  if (!pts.length) return null;
+  return Math.round(pts.reduce((s, p) => s + p.value, 0) / pts.length);
+});
+const hrvAvgDisplay = computed(() => hrvAvg.value === null ? '—' : `${hrvAvg.value} ms`);
+
+const hrvLinePoints = computed(() => hrvHistory.value.map(p => `${p.x},${p.y}`).join(' '));
+const hrvAreaPoints = computed(() => {
+  const pts = hrvHistory.value;
+  if (!pts.length) return '';
+  return `${pts[0].x},40 ${hrvLinePoints.value} ${pts[pts.length - 1].x},40`;
+});
+const hrvAvgLineY = computed(() => {
+  const pts = hrvHistory.value;
+  if (pts.length < 2 || hrvAvg.value === null) return null;
+  const values = pts.map(p => p.value);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+  return 36 - ((hrvAvg.value - minV) / range) * 32 + 2;
+});
+
 const loadTodayContext = async () => {
   const today = localDateISO();
   const [workouts, events] = await Promise.all([
@@ -533,7 +618,7 @@ const loadCircadianScore = async () => {
 };
 
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadHrvHistory(), loadTodayContext(), loadCircadianScore()]);
   await loadReadiness();
 });
 
@@ -553,7 +638,7 @@ const handleConnect = async () => {
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadHrvHistory(), loadTodayContext(), loadCircadianScore()]);
     await loadReadiness();
     const t = await toastController.create({ message: `Synced ${syncResult.synced} records.`, duration: 2200, color: 'success' });
     await t.present();
