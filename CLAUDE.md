@@ -33,7 +33,7 @@ npm run test:e2e      # Cypress (requires dev server running separately)
 
 ### Data Flow
 
-Pages call exported functions from `src/shared/db/app_db.ts` directly. No global state store — state lives in `ref`/`computed` local to each page. Rest timer state uses `sessionStorage`.
+Pages call exported functions from `src/shared/db/app_db.ts` directly. No global state store — state lives in `ref`/`computed` local to each page. Rest timer state persists in `localStorage` (survives a full app close — see Rest Timer below).
 
 ### DB Conventions
 
@@ -131,6 +131,16 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 
 ### Health Connect Known Issues
 - **READ_EXERCISE SecurityException**: `@capgo/capacitor-health` declares `READ_EXERCISE` and reads `ExerciseSessionRecord` internally. After any HC permission reset, this permission may not be granted, causing a native SecurityException that kills the process. The app does not use exercise data but cannot prevent the plugin read. **Workaround**: user must manually grant Exercise permission in HC settings. A proper fix requires forking the plugin.
+
+### Rest Timer (WorkoutPage)
+
+Completing a set starts the rest timer in `WorkoutPage.vue`. Designed to survive a full app close and to ding audibly even when the app is backgrounded/killed:
+- **Canonical state is `endTime`** (wall-clock ms), stored in `localStorage` under `restTimer`. Not `sessionStorage` (wiped on process kill). The JS `setInterval` is display-only; `tickRestTimer` derives `remaining` from `endTime` each second, so a throttled background tab stays correct.
+- **Ding when closed**: `scheduleRestTimerDing(endTime)` (`notifications.ts`, ID 20) arms an OS local notification at the end time on `startRestTimer`/`adjustRestTimer`. Cancelled on skip/stop/end via `cancelRestTimerDing()`.
+- **Ding when alive (duck-then-ding)**: if the app is foreground at end, `tickRestTimer` calls `duckAndDing()` (`src/shared/utils/restTimerAudio.ts` → native `RestTimerAudio` plugin) which requests transient `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` so other audio (music) ducks while a `ToneGenerator` ding plays, then restores it. It also cancels the pending notification to avoid a double ding. Web/dev falls back to the Web Audio `playBeep`.
+- **Live countdown notification**: `showRestNotification(exerciseName, durationMs)` (native plugin) posts an ongoing notification with a system **chronometer** counting down (no per-second JS) and the current exercise name as the body. `setTimeoutAfter` self-clears it at zero even if the app was killed. (Re)posted on start/adjust/resume; cleared via `clearRestNotification()` inside `clearTimerState`. `exerciseName` is persisted in localStorage so the text survives a restore.
+- **Native plugin**: `android/app/src/main/java/io/ionic/starter/RestTimerAudio.java` (methods `duckAndDing`, `showRestNotification`, `clearRestNotification`; channel `rest_timer`, notification ID 21), registered in `MainActivity.onCreate` via `registerPlugin`. Small icon resolved by name (`ic_stat_icon_config_sample`, merged from LocalNotifications) with `android.R.drawable.ic_lock_idle_alarm` fallback. After any change, `npm run build` → `npx cap sync` → rebuild APK.
+- `restoreTimerState` (on view enter) resumes a running timer without re-dinging; an already-expired timer just clears (the notification already fired while closed).
 
 ## Key Conventions
 

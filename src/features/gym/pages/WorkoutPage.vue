@@ -433,6 +433,8 @@ import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
+import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
+import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight } from '@/shared/db/app_db';
 
@@ -523,10 +525,10 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
   hapticMedium();
 
   if (isChecked) {
-    startRestTimer(Number(exercise.rest_seconds) || 60);
+    startRestTimer(Number(exercise.rest_seconds) || 60, exercise.name || '');
   } else {
     stopRestTimer();
-    sessionStorage.removeItem('restTimer');
+    clearTimerState();
   }
 
   try {
@@ -576,7 +578,7 @@ const saveWorkout = async () => {
           interval = null;
           if (restInterval) clearInterval(restInterval);
           restInterval = null;
-          sessionStorage.removeItem('restTimer');
+          clearTimerState();
 
           const completedSets = workoutExercises.value.flatMap(ex =>
             (ex.sets || []).filter((s: any) => s.completed)
@@ -622,6 +624,7 @@ const handleCancelWorkout = async () => {
           interval = null;
           if (restInterval) clearInterval(restInterval);
           restInterval = null;
+          clearTimerState();
           router.push('/tabs/Home');
         }
       }
@@ -781,14 +784,31 @@ const formatTime = () => {
 };
 
 // Rest Timer
+//
+// Persistence model: the canonical state is the wall-clock `endTime`, stored in
+// localStorage (NOT sessionStorage — sessionStorage is wiped when the app process
+// is killed, so the timer would vanish on a full close). The JS interval is only
+// for the on-screen countdown; "done" is derived from endTime so the timer stays
+// correct even if the interval is throttled while backgrounded.
+//
+// Ding model: when the set is completed we schedule an OS-level local
+// notification at endTime, so the ding fires reliably even if the app is fully
+// closed (a JS timer/Web Audio beep can't run then). If the app is still alive
+// when the timer ends, we instead play the in-app ducked ding (lowers other
+// audio, dings, restores it) and cancel the pending notification so there's no
+// double ding.
+const REST_TIMER_KEY = 'restTimer';
 const restTimer = ref({
   isActive: false,
   remaining: 0,
   total: 0
 });
 let restInterval: any = null;
+let restEndTime = 0;
+let restExerciseName = '';
 let audioContext: AudioContext | null = null;
 
+// Web-only fallback ding (dev). On native, duckAndDing() handles the sound.
 const playBeep = () => {
   try {
     if (!audioContext) {
@@ -812,35 +832,75 @@ const playBeep = () => {
   }
 };
 
-const saveTimerState = () => {
-  if (restTimer.value.isActive) {
-    sessionStorage.setItem('restTimer', JSON.stringify({
-      remaining: restTimer.value.remaining,
-      total: restTimer.value.total,
-      endTime: Date.now() + (restTimer.value.remaining * 1000)
-    }));
+// Duck other audio + ding when the rest ends while the app is alive; fall back
+// to the Web Audio beep when the native plugin isn't available (web/dev).
+const playRestDing = async () => {
+  const played = await duckAndDing();
+  if (!played) playBeep();
+};
+
+const persistTimerState = () => {
+  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({ endTime: restEndTime, exerciseName: restExerciseName }));
+};
+
+const clearTimerState = () => {
+  localStorage.removeItem(REST_TIMER_KEY);
+  void cancelRestTimerDing();
+  void clearRestNotification();
+};
+
+// (Re)post the ongoing countdown notification for the time remaining.
+const showRestCountdown = () => {
+  const remainingMs = Math.max(0, restEndTime - Date.now());
+  if (remainingMs > 0) void showRestNotification(restExerciseName, remainingMs);
+};
+
+const tickRestTimer = () => {
+  const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
+  restTimer.value.remaining = remaining;
+  if (remaining <= 0) {
+    // App is alive at the end: ding in-app and cancel the scheduled notification
+    // so it doesn't also fire.
+    void playRestDing();
+    stopRestTimer();
+    clearTimerState();
   }
 };
 
 const restoreTimerState = () => {
-  const saved = sessionStorage.getItem('restTimer');
+  const saved = localStorage.getItem(REST_TIMER_KEY);
   if (!saved) return;
 
   try {
-    const { endTime } = JSON.parse(saved);
-    if (!Number.isFinite(endTime)) { sessionStorage.removeItem('restTimer'); return; }
+    const { endTime, exerciseName } = JSON.parse(saved);
+    if (!Number.isFinite(endTime)) { clearTimerState(); return; }
+    restExerciseName = typeof exerciseName === 'string' ? exerciseName : '';
     const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
     if (remaining > 0) {
-      startRestTimer(remaining);
+      // Resume the running timer; the notification scheduled before the app was
+      // closed is still queued in the OS, so don't re-ding here.
+      resumeRestTimer(endTime, remaining);
     } else {
-      sessionStorage.removeItem('restTimer');
+      // It already finished while the app was closed — the notification dinged.
+      clearTimerState();
     }
   } catch {
-    sessionStorage.removeItem('restTimer');
+    clearTimerState();
   }
 };
 
-const startRestTimer = (seconds: number) => {
+// Resume a timer from a known endTime without re-scheduling (used on restore).
+const resumeRestTimer = (endTime: number, remaining: number) => {
+  stopRestTimer();
+  restEndTime = endTime;
+  restTimer.value.total = remaining;
+  restTimer.value.remaining = remaining;
+  restTimer.value.isActive = true;
+  showRestCountdown();
+  restInterval = setInterval(tickRestTimer, 1000);
+};
+
+const startRestTimer = (seconds: number, exerciseName = '') => {
   hapticLight();
   // Stop any existing timer before starting a new one
   stopRestTimer();
@@ -848,21 +908,16 @@ const startRestTimer = (seconds: number) => {
   // Validate seconds input
   const restSeconds = Math.max(1, Number(seconds) || 60);
 
+  restEndTime = Date.now() + restSeconds * 1000;
+  restExerciseName = exerciseName;
   restTimer.value.total = restSeconds;
   restTimer.value.remaining = restSeconds;
   restTimer.value.isActive = true;
-  sessionStorage.removeItem('restTimer');
+  persistTimerState();
+  void scheduleRestTimerDing(new Date(restEndTime));
+  showRestCountdown();
 
-  restInterval = setInterval(() => {
-    if (restTimer.value.remaining > 0) {
-      restTimer.value.remaining--;
-      saveTimerState();
-    } else {
-      playBeep();
-      stopRestTimer();
-      sessionStorage.removeItem('restTimer');
-    }
-  }, 1000);
+  restInterval = setInterval(tickRestTimer, 1000);
 };
 
 const stopRestTimer = () => {
@@ -881,12 +936,17 @@ const onSkipRestTimer = (event: Event) => {
   restTimer.value.isActive = false;
 
   stopRestTimer();
-  sessionStorage.removeItem('restTimer');
+  clearTimerState();
 };
 
 const adjustRestTimer = (seconds: number) => {
-  restTimer.value.remaining = Math.max(0, restTimer.value.remaining + seconds);
-  saveTimerState();
+  if (!restTimer.value.isActive) return;
+  restEndTime = Math.max(Date.now(), restEndTime + seconds * 1000);
+  restTimer.value.remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
+  persistTimerState();
+  // Reschedule the OS ding and refresh the countdown notification.
+  void scheduleRestTimerDing(new Date(restEndTime));
+  showRestCountdown();
 };
 
 const formatRestTime = (seconds: number) => {

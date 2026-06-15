@@ -12,6 +12,7 @@ const ID_CIRC_NOON     = 9
 const ID_CIRC_EVENING  = 10
 const ID_MORNING       = 11
 const ID_WEEKLY        = 12
+const ID_REST_TIMER    = 20
 const ID_CAL_BASE      = 4000   // 4000 + event id
 const ID_SUB_BASE      = 5000   // 5000 + sub id
 
@@ -247,6 +248,34 @@ export async function scheduleSubscriptionReminders(
     })
   }
   if (toSchedule.length) await LocalNotifications.schedule({ notifications: toSchedule })
+}
+
+// Rest timer ding. Scheduled at the timer's end time when the set is completed,
+// so the OS fires the alert even if the app is backgrounded or fully closed (a
+// JS interval/Web Audio beep can't run then). When the app is alive at the end
+// it plays an in-app ducked ding instead and cancels this so there's no double
+// ding. The default notification sound ducks other media via its notification
+// audio usage, matching the in-app duck-then-ding behaviour.
+export async function scheduleRestTimerDing(at: Date): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_REST_TIMER }] })
+  if (at.getTime() <= Date.now()) return
+  const granted = (await LocalNotifications.checkPermissions()).display === 'granted'
+  if (!granted) return
+  await LocalNotifications.schedule({
+    notifications: [{
+      id: ID_REST_TIMER,
+      title: 'Rest complete',
+      body: 'Time for your next set.',
+      schedule: { at },
+      smallIcon: 'ic_stat_icon_config_sample',
+    }]
+  })
+}
+
+export async function cancelRestTimerDing(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_REST_TIMER }] })
 }
 
 export async function cancelWeightReminder(): Promise<void> {
