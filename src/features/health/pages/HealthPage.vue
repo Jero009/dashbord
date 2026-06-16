@@ -6,6 +6,9 @@
     </ion-header>
 
     <ion-content :fullscreen="true" class="health-content">
+      <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
       <div class="health-shell">
 
         <!-- 1. Battery hero -->
@@ -228,7 +231,8 @@
 
 <script setup lang="ts">
 import {
-  IonPage, IonHeader, IonContent, onIonViewWillEnter, toastController,
+  IonPage, IonHeader, IonContent, IonRefresher, IonRefresherContent,
+  onIonViewWillEnter, toastController, type RefresherCustomEvent,
 } from '@ionic/vue';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
@@ -536,6 +540,18 @@ onIonViewWillEnter(async () => {
   await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
   await loadReadiness();
 });
+
+const handleRefresh = async (event: RefresherCustomEvent) => {
+  try {
+    await syncHealthConnectMetrics();
+    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
+    await loadReadiness();
+  } catch {
+    // silent — sync unavailable or permissions missing
+  } finally {
+    event.target.complete();
+  }
+};
 
 const handleConnect = async () => {
   syncing.value = true;
