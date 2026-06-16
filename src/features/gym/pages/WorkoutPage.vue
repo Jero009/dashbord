@@ -57,9 +57,18 @@
                   </div>
                 </ion-card-header>
                 <ion-card-content>
+                  <div class="set-cols-header">
+                    <span class="col-label col-prev-lbl">PREV</span>
+                    <span class="col-label">KG</span>
+                    <span class="col-label">REPS</span>
+                  </div>
                   <ion-item-sliding class="set-sliding" v-for="set in ex.sets" :key="set.id">
                     <ion-item lines="none" class="set">
                       <ion-checkbox slot="start" v-model="set.completed" @ionChange="(ev) => handleSetChange(ex, set, ev)" class="checkbox"></ion-checkbox>
+                      <div class="prev-col">
+                        <span class="prev-val" v-if="(set.previous_weight ?? 0) > 0">{{ set.previous_weight }}<span class="prev-x">×</span>{{ set.previous_reps }}</span>
+                        <span class="prev-val prev-none" v-else>—</span>
+                      </div>
                       <div class="input-container metric-field">
                         <ion-input fill="outline" type="number" :placeholder="getWeightPlaceholder(ex, set)" v-model.number="set.weight" @ionBlur="saveSet(set)" class="input-small"></ion-input>
                         <span class="unit">Kg</span>
@@ -225,6 +234,48 @@
   margin-bottom: 6px;
   --background: transparent;
   background: transparent;
+}
+
+.set-cols-header {
+  display: flex;
+  align-items: center;
+  padding: 0 0 4px 48px;
+}
+.col-label {
+  flex: 1;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: var(--nt-font-head);
+  text-align: center;
+}
+.col-prev-lbl {
+  flex: none;
+  width: 72px;
+  text-align: center;
+}
+
+.prev-col {
+  width: 72px;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.prev-val {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--nt-font-mono);
+  white-space: nowrap;
+}
+.prev-x {
+  color: rgba(255, 255, 255, 0.2);
+  margin: 0 1px;
+}
+.prev-none {
+  color: rgba(255, 255, 255, 0.2);
+  font-family: var(--nt-font-body);
 }
 .input-small {
   width: 100%;
@@ -704,11 +755,15 @@ const addNewSet = async (exercise: any) => {
   
   let defaultReps = 10;
   let defaultWeight = 0;
+  let prevWeight = 0;
+  let prevReps = 0;
 
   if (previousSets.length > 0) {
     const prevSet = previousSets.find((s: any) => Number(s.set_number) === nextSetNum) || previousSets[previousSets.length - 1];
     defaultReps = prevSet.reps;
     defaultWeight = prevSet.weight;
+    prevWeight = Number(prevSet.weight) || 0;
+    prevReps = Number(prevSet.reps) || 0;
   }
 
   const newSetId = await addSetToWorkoutExercise(
@@ -728,7 +783,9 @@ const addNewSet = async (exercise: any) => {
         set_number: nextSetNum,
         reps: defaultReps,
         weight: defaultWeight,
-        completed: false
+        completed: false,
+        previous_weight: prevWeight,
+        previous_reps: prevReps,
       });
     }
   }
