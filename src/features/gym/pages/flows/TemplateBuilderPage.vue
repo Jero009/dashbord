@@ -57,6 +57,19 @@
                           style="width: 60px"
                           placeholder="Reps"
                         ></ion-input>
+                        <ion-select
+                          label="RPE"
+                          label-placement="floating"
+                          interface="action-sheet"
+                          :interface-options="{ cssClass: 'app-action-sheet', header: 'Target RPE' }"
+                          v-model="ex.rpe"
+                          style="width: 72px"
+                          placeholder="—"
+                        >
+                          <ion-select-option v-for="opt in RPE_OPTIONS" :key="opt.value" :value="opt.value">
+                            {{ opt.value }} — {{ opt.detail }} · {{ opt.feel }}
+                          </ion-select-option>
+                        </ion-select>
                       </ion-item>
                       <ion-item-options side="end">
                         <ion-item-option color="danger" @click="removeSelectedExercise(index)">Remove</ion-item-option>
@@ -90,11 +103,12 @@
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Draggable from 'vuedraggable';
 import { createTemplate, addExerciseToTemplate } from '@/shared/db/app_db';
+import { RPE_OPTIONS } from '@/features/gym/types/rpe';
 
 const router = useRouter();
 
@@ -189,7 +203,8 @@ const confirm = async () => {
       ex.id,
       Number(ex.set_number),
       Number(ex.rep_number),
-      i // order index
+      i,
+      ex.rpe ?? null
     );
   }
 
@@ -217,6 +232,7 @@ type SelectedExercise = {
   name: string;
   rep_number: number;
   set_number: number;
+  rpe?: number | null;
 }
 
 
@@ -232,7 +248,8 @@ onIonViewWillEnter(() => {
           id: ex.id,
           name: ex.name,
           set_number: 3,
-          rep_number: 10
+          rep_number: 10,
+          rpe: null,
         });
       }
     } catch (e) {

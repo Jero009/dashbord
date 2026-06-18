@@ -32,7 +32,7 @@
                       <ion-item class="exercise-row" v-for="ex in w.exercises" :key="ex.id" button :detail="false" @click="openExercise(ex.exercise_id)">
                         <div class="exercise-copy">
                           <div class="exercise-copy__name">{{ ex.name }}</div>
-                          <div class="exercise-copy__stats">{{ ex.set_count }} sets &nbsp; {{ ex.reps }} reps</div>
+                          <div class="exercise-copy__stats">{{ ex.set_count }} sets &nbsp; {{ ex.reps }} reps<span v-if="ex.avg_rpe != null" class="exercise-copy__rpe">&nbsp; @{{ ex.avg_rpe }}</span></div>
                           <ion-icon class="exercise-copy__icon" :icon="statsChartOutline"></ion-icon>
                         </div>
                       </ion-item>
@@ -141,6 +141,11 @@ ion-content.home-content {
   flex-shrink: 0;
   text-align: right;
   color: rgba(255, 255, 255, 0.84);
+}
+
+.exercise-copy__rpe {
+  color: var(--nt-text-dim);
+  font-size: 0.8em;
 }
 
 .exercise-copy__icon {

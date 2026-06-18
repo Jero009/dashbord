@@ -546,6 +546,7 @@ const runImportWithConfirm = async (sqlContent: string) => {
   const confirmAlert = await alertController.create({
     header: 'Import SQL Backup?',
     message: 'Importing will replace your current data with the file content.',
+    cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
       {
@@ -585,6 +586,7 @@ const pickNativeImportFile = async () => {
       const alert = await alertController.create({
         header: 'Import Failed',
         message: 'Could not read file content from selected file.',
+        cssClass: 'app-confirm-alert',
         buttons: ['OK']
       })
       await alert.present()
@@ -602,6 +604,7 @@ const pickNativeImportFile = async () => {
     const alert = await alertController.create({
       header: 'Import Failed',
       message: 'Unable to open file picker. Please try again.',
+      cssClass: 'app-confirm-alert',
       buttons: ['OK']
     })
     await alert.present()

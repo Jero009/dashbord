@@ -68,6 +68,9 @@
                         <ion-input fill="outline" type="number" :placeholder="getRepsPlaceholder(ex, set)" v-model.number="set.reps" @ionBlur="saveSet(set)" class="input-small"></ion-input>
                         <span class="unit">reps</span>
                       </div>
+                      <button class="rpe-chip" :class="{ 'rpe-chip--set': set.rpe != null }" @click="pickRpe(set)">
+                        <span class="rpe-chip__label">{{ set.rpe != null ? set.rpe : 'RPE' }}</span>
+                      </button>
                     </ion-item>
                     <ion-item-options side="end">
                       <ion-item-option color="danger" @click="handleRemoveSet(ex.id, set.id)">
@@ -253,6 +256,40 @@
   max-width: 160px;
 }
 
+.rpe-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 54px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 140ms;
+}
+
+.rpe-chip:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rpe-chip__label {
+  font-family: var(--nt-font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.rpe-chip--set .rpe-chip__label {
+  color: #fff;
+  font-size: 1rem;
+}
+
 .metric-field .unit {
   position: absolute;
   right: 14px;
@@ -429,6 +466,7 @@ import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
 import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
+import RpePickerModal from '@/features/gym/components/RpePickerModal.vue';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
@@ -466,7 +504,7 @@ const loadWorkout = async () => {
 
   for (let i = 0; i < data.length; i++) {
     const isBodyweight = data[i].equipment === 'bodyweight';
-    const bw = isBodyweight && bodyWeight ? bodyWeight : 0;
+    const bw = isBodyweight ? (bodyWeight ?? null) : null;
     const previousSetByNumber = new Map<number, any>(
       previousSetsArray[i].map((row: any) => [Number(row.set_number), row])
     );
@@ -479,6 +517,7 @@ const loadWorkout = async () => {
         weight: storedWeight > 0 ? storedWeight : bw,
         previous_weight: prevWeight > 0 ? prevWeight : bw,
         previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0,
+        rpe: s.rpe ?? null,
       };
     });
   }
@@ -511,11 +550,28 @@ const swapExercises = async (index1: number, index2: number) => {
 
 const saveSet = async (set: any) => {
   await updateWorkoutSet(
-  set.id,
-  set.reps,
-  set.weight,
-  set.completed
-);
+    set.id,
+    set.reps,
+    set.weight,
+    set.completed,
+    set.rpe ?? null
+  );
+};
+
+const pickRpe = async (set: any) => {
+  hapticLight();
+  const modal = await modalController.create({
+    component: RpePickerModal,
+    componentProps: { current: set.rpe ?? null },
+    breakpoints: [0, 0.75, 1],
+    initialBreakpoint: 0.75,
+    cssClass: 'rpe-picker-modal',
+  });
+  await modal.present();
+  const { data, role } = await modal.onDidDismiss();
+  if (role !== 'confirm') return;
+  set.rpe = data ?? null;
+  await saveSet(set);
 };
 
 const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => {
@@ -526,9 +582,6 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
 
   if (isChecked) {
     startRestTimer(Number(exercise.rest_seconds) || 60, exercise.name || '');
-  } else {
-    stopRestTimer();
-    clearTimerState();
   }
 
   try {
@@ -728,7 +781,8 @@ const addNewSet = async (exercise: any) => {
         set_number: nextSetNum,
         reps: defaultReps,
         weight: defaultWeight,
-        completed: false
+        completed: false,
+        rpe: null,
       });
     }
   }
@@ -840,7 +894,11 @@ const playRestDing = async () => {
 };
 
 const persistTimerState = () => {
-  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({ endTime: restEndTime, exerciseName: restExerciseName }));
+  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({
+    endTime: restEndTime,
+    exerciseName: restExerciseName,
+    total: restTimer.value.total,
+  }));
 };
 
 const clearTimerState = () => {
@@ -872,14 +930,14 @@ const restoreTimerState = () => {
   if (!saved) return;
 
   try {
-    const { endTime, exerciseName } = JSON.parse(saved);
+    const { endTime, exerciseName, total } = JSON.parse(saved);
     if (!Number.isFinite(endTime)) { clearTimerState(); return; }
     restExerciseName = typeof exerciseName === 'string' ? exerciseName : '';
     const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
     if (remaining > 0) {
       // Resume the running timer; the notification scheduled before the app was
       // closed is still queued in the OS, so don't re-ding here.
-      resumeRestTimer(endTime, remaining);
+      resumeRestTimer(endTime, remaining, typeof total === 'number' ? total : undefined);
     } else {
       // It already finished while the app was closed — the notification dinged.
       clearTimerState();
@@ -890,10 +948,10 @@ const restoreTimerState = () => {
 };
 
 // Resume a timer from a known endTime without re-scheduling (used on restore).
-const resumeRestTimer = (endTime: number, remaining: number) => {
+const resumeRestTimer = (endTime: number, remaining: number, total?: number) => {
   stopRestTimer();
   restEndTime = endTime;
-  restTimer.value.total = remaining;
+  restTimer.value.total = total ?? remaining;
   restTimer.value.remaining = remaining;
   restTimer.value.isActive = true;
   showRestCountdown();

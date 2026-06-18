@@ -779,7 +779,7 @@ async function doInitDB() {
         time_asleep_hours REAL NOT NULL,
         time_in_bed_hours REAL NOT NULL,
         efficiency REAL NOT NULL,
-        score INTEGER NOT NULL,
+        score INTEGER,
         sleep_hr REAL,
         respiratory_rate REAL,
         stage_deep_min INTEGER DEFAULT 0,
@@ -874,6 +874,35 @@ async function doInitDB() {
     }
     if (!goalColNames.has('start_value')) {
       await db.execute(`ALTER TABLE goal ADD COLUMN start_value REAL;`);
+    }
+
+    const sleepColumns = await db.query(`PRAGMA table_info("sleep_session");`);
+    const sleepColNames = new Set((sleepColumns.values || []).map((c: any) => String(c.name)));
+    for (const [col, def] of [
+      ['stage_deep_min',      'INTEGER DEFAULT 0'],
+      ['stage_light_min',     'INTEGER DEFAULT 0'],
+      ['stage_rem_min',       'INTEGER DEFAULT 0'],
+      ['stage_awake_min',     'INTEGER DEFAULT 0'],
+      ['stage_asleep_min',    'INTEGER DEFAULT 0'],
+      ['hr_timeline_json',    'TEXT'],
+      ['stage_timeline_json', 'TEXT'],
+      ['source',              "TEXT DEFAULT 'health-connect'"],
+    ] as [string, string][]) {
+      if (!sleepColNames.has(col)) {
+        await db.execute(`ALTER TABLE sleep_session ADD COLUMN ${col} ${def};`);
+      }
+    }
+
+    const setColumns = await db.query(`PRAGMA table_info("workout_exercise_sets");`);
+    const setColNames = new Set((setColumns.values || []).map((c: any) => String(c.name)));
+    if (!setColNames.has('rpe')) {
+      await db.execute(`ALTER TABLE workout_exercise_sets ADD COLUMN rpe INTEGER;`);
+    }
+
+    const tplExColumns = await db.query(`PRAGMA table_info("workout_template_exercise");`);
+    const tplExColNames = new Set((tplExColumns.values || []).map((c: any) => String(c.name)));
+    if (!tplExColNames.has('rpe')) {
+      await db.execute(`ALTER TABLE workout_template_exercise ADD COLUMN rpe INTEGER;`);
     }
 
     // One-time dedup: remove duplicate health_metric rows accumulated by the
@@ -1022,16 +1051,17 @@ export async function addExerciseToTemplate(
   exerciseId: number,
   setNumber: number,
   repNumber: number,
-  orderIndex: number
+  orderIndex: number,
+  rpe?: number | null
 ) {
   if (!db) return;
 
   try {
     const result = await db.run(
       `INSERT INTO workout_template_exercise
-       (id_workout_template, id_exercise, set_number, rep_number, order_index)
-       VALUES (?, ?, ?, ?, ?);`,
-      [templateId, exerciseId, setNumber, repNumber, orderIndex]
+       (id_workout_template, id_exercise, set_number, rep_number, order_index, rpe)
+       VALUES (?, ?, ?, ?, ?, ?);`,
+      [templateId, exerciseId, setNumber, repNumber, orderIndex, rpe ?? null]
     );
 
     return result;
@@ -1060,13 +1090,14 @@ export async function getTemplateExercises(templateId: number) {
   if (!db) return [];
 
   const result = await db.query(`
-    SELECT 
+    SELECT
       wte.id,
       e.name,
       wte.id_exercise,
       wte.set_number,
       wte.rep_number,
-      wte.order_index
+      wte.order_index,
+      wte.rpe
     FROM workout_template_exercise wte
     JOIN exercise e ON e.id = wte.id_exercise
     WHERE wte.id_workout_template = ?
@@ -1310,9 +1341,9 @@ export async function getWorkoutSets(workoutExerciseId: number) {
   if (!db) return [];
 
   const result = await db.query(`
-    select id, set_number, reps,weight,completed from workout_exercise_sets
-    where workout_exercise_id = ?
-    order by set_number
+    SELECT id, set_number, reps, weight, completed, rpe FROM workout_exercise_sets
+    WHERE workout_exercise_id = ?
+    ORDER BY set_number
   `, [workoutExerciseId]);
 
   return result.values || [];
@@ -1320,15 +1351,14 @@ export async function getWorkoutSets(workoutExerciseId: number) {
 
 // saving workout
 
-export async function updateWorkoutSet(id: number, reps: number, weight: number, completed: boolean) {
+export async function updateWorkoutSet(id: number, reps: number, weight: number, completed: boolean, rpe?: number | null) {
   if (!db) return;
 
   const result = await db.run(
-    'UPDATE workout_exercise_sets SET reps = ?, weight = ?, completed = ? WHERE id = ?',
-    [reps, weight, completed ? 1 : 0, id]
-  );  
+    'UPDATE workout_exercise_sets SET reps = ?, weight = ?, completed = ?, rpe = ? WHERE id = ?',
+    [reps, weight, completed ? 1 : 0, rpe ?? null, id]
+  );
   return result;
-  
 }
 
 export async function deleteWorkoutSet(setId: number) {
@@ -1420,7 +1450,8 @@ export async function getWorkoutHistoryExercises(workoutId: number) {
         we.exercise_id,
         e.name,
         SUM(CASE WHEN wes.completed = 1 THEN 1 ELSE 0 END) as set_count,
-        MAX(wes.reps) as reps
+        MAX(wes.reps) as reps,
+        ROUND(AVG(CASE WHEN wes.completed = 1 AND wes.rpe IS NOT NULL THEN wes.rpe END), 1) as avg_rpe
       FROM workout_exercise we
       JOIN exercise e ON e.id = we.exercise_id
       LEFT JOIN workout_exercise_sets wes
@@ -1527,14 +1558,15 @@ export async function addSetToWorkoutExercise(
   workoutExerciseId: number,
   setNumber: number,
   repNumber: number,
-  weight: number = 0
+  weight: number = 0,
+  rpe?: number | null
 ) {
   if (!db) return;
 
   try {
     const result = await db.run(
-      'INSERT INTO workout_exercise_sets (workout_exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?)',
-      [workoutExerciseId, setNumber, repNumber, weight]
+      'INSERT INTO workout_exercise_sets (workout_exercise_id, set_number, reps, weight, rpe) VALUES (?, ?, ?, ?, ?)',
+      [workoutExerciseId, setNumber, repNumber, weight, rpe ?? null]
     );
     return result.changes?.lastId;
   } catch (error) {
@@ -1600,15 +1632,16 @@ export async function editTemplateExercises(
   rowId: number,
   setNumber: number,
   repNumber: number,
-  orderIndex: number
+  orderIndex: number,
+  rpe?: number | null
 ) {
   if (!db) return;
 
   const result = await db.run(
-    `UPDATE workout_template_exercise 
-     SET set_number = ?, rep_number = ?, order_index = ?
+    `UPDATE workout_template_exercise
+     SET set_number = ?, rep_number = ?, order_index = ?, rpe = ?
      WHERE id = ?`,
-    [setNumber, repNumber, orderIndex, rowId]
+    [setNumber, repNumber, orderIndex, rpe ?? null, rowId]
   );
 
   return result;
@@ -1627,13 +1660,13 @@ export async function deleteTemplateExercise(rowId: number) {
 
 
 export async function getTemplateById(templateId: number) {
-  if (!db) return;
+  if (!db) return null;
   const result = await db.query('SELECT * FROM workout_template WHERE id = ?', [templateId]);
   return result.values?.[0] || null;
 }
 
 export async function getTemplateExercisesByTemplateId(templateId: number) {
-  if (!db) return;
+  if (!db) return [];
   const result = await db.query(`
     SELECT
       wte.id,
@@ -1641,7 +1674,8 @@ export async function getTemplateExercisesByTemplateId(templateId: number) {
       wte.id_exercise,
       wte.set_number,
       wte.rep_number,
-      wte.order_index
+      wte.order_index,
+      wte.rpe
     FROM workout_template_exercise wte
     JOIN exercise e ON e.id = wte.id_exercise
     WHERE wte.id_workout_template = ?
@@ -2257,7 +2291,7 @@ export async function getCalendarEventsForDate(date: string, includeOvernightTai
      WHERE date = ? OR date = ?
         OR (recurrence IS NOT NULL AND recurrence != 'none'
             AND date < ? AND (end_date IS NULL OR end_date >= ?));`,
-    [date, prev, date, prev]
+    [date, prev, date, date]
   );
   const rows = (result.values || []) as any[];
   const out: any[] = [];
@@ -2275,7 +2309,7 @@ export async function getCalendarEventsInRange(start: string, end: string) {
      WHERE ((recurrence IS NULL OR recurrence = 'none') AND date BETWEEN ? AND ?)
         OR (recurrence IS NOT NULL AND recurrence != 'none'
             AND date <= ? AND (end_date IS NULL OR end_date >= ?));`,
-    [prev, end, end, prev]
+    [prev, end, end, start]
   );
   const rows = (result.values || []) as any[];
   const out: any[] = [];
@@ -3097,7 +3131,8 @@ export async function getExerciseSessions(exerciseId: number, limit = 8) {
       COUNT(*) as set_count,
       MAX(wes.weight) as top_weight,
       MAX(wes.reps) as top_reps,
-      SUM(wes.weight * wes.reps) as volume
+      SUM(wes.weight * wes.reps) as volume,
+      ROUND(AVG(CASE WHEN wes.rpe IS NOT NULL THEN wes.rpe END), 1) as avg_rpe
     FROM workout_exercise_sets wes
     JOIN workout_exercise we ON we.id = wes.workout_exercise_id
     JOIN workout w ON w.id = we.workout_id

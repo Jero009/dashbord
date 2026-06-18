@@ -518,20 +518,12 @@ export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummary
 
 export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthConnectSyncResult> {
   if (!isHealthConnectAvailable()) {
-    return {
-      available: false,
-      granted: false,
-      synced: 0,
-    };
+    return { available: false, granted: false, synced: 0 };
   }
 
   const availability = await ensureAvailability();
   if (!availability.available) {
-    return {
-      available: false,
-      granted: false,
-      synced: 0,
-    };
+    return { available: false, granted: false, synced: 0 };
   }
 
   const auth = await Health.checkAuthorization({
@@ -540,11 +532,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
 
   const granted = hasCoreReadAccess(auth.readAuthorized);
   if (!granted) {
-    return {
-      available: true,
-      granted: false,
-      synced: 0,
-    };
+    return { available: true, granted: false, synced: 0 };
   }
 
   const endDate = new Date().toISOString();

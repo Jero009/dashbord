@@ -50,6 +50,19 @@
                           style="width: 60px"
                           placeholder="Reps"
                         ></ion-input>
+                        <ion-select
+                          label="RPE"
+                          label-placement="floating"
+                          interface="action-sheet"
+                          :interface-options="{ cssClass: 'app-action-sheet', header: 'Target RPE' }"
+                          v-model="ex.rpe"
+                          style="width: 72px"
+                          placeholder="—"
+                        >
+                          <ion-select-option v-for="opt in RPE_OPTIONS" :key="opt.value" :value="opt.value">
+                            {{ opt.value }} — {{ opt.detail }} · {{ opt.feel }}
+                          </ion-select-option>
+                        </ion-select>
                       </ion-item>
                       <ion-item-options side="end">
                         <ion-item-option color="danger" @click="removeExercise(index)">Remove</ion-item-option>
@@ -82,11 +95,12 @@
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Draggable from 'vuedraggable';
 import { getTemplateById, getTemplateExercisesByTemplateId, renameTemplate, editTemplateExercises, addExerciseToTemplate, deleteTemplateExercise } from '@/shared/db/app_db';
+import { RPE_OPTIONS } from '@/features/gym/types/rpe';
 
 const router = useRouter();
 const route = useRoute();
@@ -117,6 +131,7 @@ const onDragEnd = () => {
 
 
 const cancel = () => {
+  isLoaded.value = false;
   router.push({ name: 'Template' });
 };
 
@@ -202,7 +217,8 @@ const confirm = async () => {
         ex.id_exercise,
         Number(ex.set_number),
         Number(ex.rep_number),
-        i
+        i,
+        ex.rpe ?? null
       );
     } else {
       // 🔁 EXISTING → UPDATE
@@ -210,22 +226,24 @@ const confirm = async () => {
         ex.id,
         Number(ex.set_number),
         Number(ex.rep_number),
-        i
+        i,
+        ex.rpe ?? null
       );
     }
   }
 
-  // Show success and reset state
   showToast('Template updated successfully!', 'success');
   exercises.value = [];
   removedExerciseRowIds.value = [];
   TemplateName.value = '';
+  isLoaded.value = false;
 
   router.push({ name: 'Template' });
 
 };
-// exercises 
+// exercises
 const exercises = ref<TemplateExercise[]>([])
+const isLoaded = ref(false);
 
 type TemplateExercise = {
   id: number;
@@ -234,46 +252,44 @@ type TemplateExercise = {
   set_number: number;
   rep_number: number;
   order_index: number;
+  rpe?: number | null;
 }
 // refresh
 onIonViewWillEnter(async () => {
   const id = Number(route.params.id);
 
-  // ✅ Load template name
-  const template = await getTemplateById(id);
-  if (template) {
-    TemplateName.value = template.name;
+  // Only reload from DB on first entry — not when returning from the exercise
+  // picker, which would clobber any unsaved in-memory edits the user made.
+  if (!isLoaded.value) {
+    const template = await getTemplateById(id);
+    if (template) {
+      TemplateName.value = template.name;
+    }
+    const data = await getTemplateExercisesByTemplateId(id);
+    exercises.value = data || [];
+    isLoaded.value = true;
   }
 
-  // ✅ Load existing exercises
-  const data = await getTemplateExercisesByTemplateId(id);
-  exercises.value = data || [];
-
-  // ✅ Then check if new exercise was selected
+  // Always check for a picker selection (present only when returning from picker).
   const selectedExerciseStr = localStorage.getItem('selectedExerciseForTemplate');
-
   if (selectedExerciseStr) {
     try {
       const ex = JSON.parse(selectedExerciseStr);
-
-      // ✅ prevent duplicates (use id_exercise!)
       const exists = exercises.value.some(e => e.id_exercise === ex?.id);
-
       if (ex && ex.id != null && !exists) {
         exercises.value.push({
-          id: 0, // 🔥 IMPORTANT (new row, not in DB yet)
+          id: 0,
           id_exercise: ex.id,
           name: ex.name,
           set_number: 3,
           rep_number: 10,
-          order_index: exercises.value.length
+          order_index: exercises.value.length,
+          rpe: null,
         });
       }
-
     } catch (e) {
       console.error('Failed to parse selected exercise:', e);
     }
-
     localStorage.removeItem('selectedExerciseForTemplate');
   }
 });

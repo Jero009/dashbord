@@ -550,6 +550,7 @@ export function usePlanner() {
 
     const sheet = await actionSheetController.create({
       header: 'Delete recurring event',
+      cssClass: 'app-action-sheet',
       buttons: [
         { text: 'Delete all occurrences', role: 'destructive', data: 'all' },
         { text: 'Delete this and future occurrences', data: 'future' },

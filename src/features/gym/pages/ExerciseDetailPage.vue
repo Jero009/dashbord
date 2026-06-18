@@ -102,6 +102,11 @@
               <span class="tile__label">Top set trend</span>
               <strong class="tile__value" :class="trendClass">{{ weightTrendLabel }}</strong>
             </div>
+            <div v-if="avgRPE !== null" class="tile">
+              <span class="tile__label">Avg RPE</span>
+              <strong class="tile__value">{{ avgRPE }}</strong>
+              <small class="tile__detail">/ 10</small>
+            </div>
           </div>
         </div>
 
@@ -113,6 +118,8 @@
               <span class="session-row__date">{{ formatWorkoutDate(s.date) }}</span>
               <span class="session-row__sets">{{ s.set_count }} sets</span>
               <span class="session-row__top">{{ s.top_weight }} kg <small>x {{ s.top_reps }}</small></span>
+              <span v-if="s.avg_rpe != null" class="session-row__rpe">@{{ s.avg_rpe }}</span>
+              <span v-else class="session-row__rpe session-row__rpe--empty">—</span>
               <span class="session-row__volume">{{ formatVolume(s.volume) }}</span>
             </div>
           </div>
@@ -184,6 +191,12 @@ const avgVolume = computed(() => {
 const maxVolume = computed(() => {
   if (historyData.value.length === 0) return 0;
   return Math.max(...historyData.value.map((item) => Number(item.volume) || 0));
+});
+
+const avgRPE = computed(() => {
+  const vals = sessions.value.map(s => s.avg_rpe).filter(v => v != null) as number[];
+  if (vals.length === 0) return null;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
 });
 
 // Delta between first and last top-set weight inside the window
@@ -513,7 +526,7 @@ onUnmounted(() => {
 
 .session-row {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -542,6 +555,18 @@ onUnmounted(() => {
 
 .session-row__top small {
   color: rgba(255, 255, 255, 0.55);
+}
+
+.session-row__rpe {
+  font-family: var(--nt-font-mono);
+  font-size: 0.8rem;
+  color: var(--nt-text-dim);
+  text-align: right;
+  min-width: 28px;
+}
+
+.session-row__rpe--empty {
+  color: rgba(255, 255, 255, 0.2);
 }
 
 .session-row__volume {

@@ -34,6 +34,7 @@ export interface TemplateExercise {
   set_number: number;
   rep_number: number;
   order_index: number;
+  rpe?: number | null;
 }
 
 export interface Workout {
@@ -62,6 +63,7 @@ export interface WorkoutExerciseSet {
   weight: number;
   completed?: boolean;
   workout_exercise_id?: number;
+  rpe?: number | null;
 }
 
 export interface LatestCompletedSet {
@@ -76,6 +78,7 @@ export interface WorkoutHistoryExercise {
   name: string;
   set_count: number;
   reps: number;
+  avg_rpe?: number | null;
 }
 
 export interface WorkoutHistory {
@@ -122,4 +125,5 @@ export interface ExerciseSession {
   top_weight: number;
   top_reps: number;
   volume: number;
+  avg_rpe?: number | null;
 }
