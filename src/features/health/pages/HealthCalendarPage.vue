@@ -47,9 +47,9 @@
         <template v-if="!searchQuery">
           <!-- period nav -->
           <div class="month-nav">
-            <button class="month-nav__btn" @click="goPrev">&#8249;</button>
+            <button class="month-nav__btn" @click="goPrev"><ion-icon :icon="chevronBackOutline" /></button>
             <span class="month-nav__label">{{ periodLabel }}</span>
-            <button class="month-nav__btn" @click="goNext">&#8250;</button>
+            <button class="month-nav__btn" @click="goNext"><ion-icon :icon="chevronForwardOutline" /></button>
           </div>
 
           <!-- MONTH GRID -->
@@ -359,7 +359,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { IonPage, IonHeader, IonContent, IonIcon } from '@ionic/vue';
-import { addOutline, closeOutline, checkmarkOutline, searchOutline, createOutline, ellipseOutline } from 'ionicons/icons';
+import { addOutline, closeOutline, checkmarkOutline, searchOutline, createOutline, ellipseOutline, chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
 import { usePlanner, type CalendarViewMode } from '@/features/plan/composables/usePlanner';
