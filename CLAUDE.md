@@ -69,6 +69,17 @@ Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all
 - Streak math lives in `src/shared/utils/habitStats.ts` (`currentStreak`, `bestStreak`, `completionRate`, `isScheduledOn`) — unscheduled days never break a streak; an incomplete *today* doesn't either. Unit tests in `tests/unit/habitStats.spec.ts`.
 - `goal.status`: `active` | `completed`. `getGoalDueDatesForMonth` feeds the yellow calendar dots.
 
+### Training Load vs Recovery Overlay
+
+Three pure-TS services in `src/shared/health/` (no DB/Vue deps, unit-tested in `tests/unit/{trainingLoad,recoveryBaseline,overtraining}.spec.ts`):
+- **`trainingLoad.ts`** — `sessionRpeLoad(rpe, durationMin)`, `computeDailyLoads(sessions)` (per-day volume load `Σ reps×weight`; sRPE load `Σ rpe×duration` when RPE present, else volume fallback), `computeAcwrSeries(dailyLoads, {acuteDays=7, chronicDays=28, minChronicDays=14})`. Acute/chronic are **average daily loads** over gap-filled windows (rest days = 0), so ACWR ≈ 1.0 in steady state. `acwrFlag`: `<0.8` detraining · `0.8–1.3` optimal · `1.3–1.5` caution · `>1.5` high_risk.
+- **`recoveryBaseline.ts`** — `computeRecoverySeries(readings, metric)` for `metric: 'hrv' | 'rhr'`. Trailing 7/28-reading means, 28-reading sample SD, raw `z = (v−mean28)/sd28`, and **`recoveryZ`** (sign-normalised so **negative = worse recovery**: HRV uses raw z, RHR uses `−z` since elevated RHR is bad). HRV-ready — fed by RHR today; drop in an `hrv` health_metric and it switches automatically.
+- **`overtraining.ts`** — `evaluateOvertraining(points)` → `{status: 'green'|'yellow'|'red', overreaching, acwr, consecutiveLowRecovery, reasons}`. **Red** = ACWR > 1.5 AND `recoveryZ ≤ −1.0` for 2+ consecutive (trailing) days. Yellow = a single warning. `acwrZoneLabel(acwr)` helper.
+
+**Data**: `workout.session_rpe REAL` (nullable, added via migration block; auto-handled by export/import). Set by `setWorkoutSessionRpe(id, rpe)` — optional 1–10 prompt in `WorkoutPage` end-workout flow. `getSessionLoads(days)` → per-workout `{date, duration_minutes, session_rpe, volume}`; `getHealthMetricDailySeries(type, days)` → one averaged value/date ascending (RHR today, `hrv`-ready).
+
+**UI**: `src/features/analytics/components/TrainingLoadOverlay.vue` — mounted on `AnalyticsGymPage`. Custom **SVG dual-axis chart** (not Chart.js): load bars color-coded by ACWR zone (detraining=dim white, optimal=green, caution=gold, high_risk=red) + overlaid recovery-z polyline. Day N+1's recovery point is drawn at the **left edge of its bar** (= right edge of bar N) so the load→recovery lag reads at a glance. Status banner (green/yellow/red) + ACWR/acute/chronic/recovery-z tiles. Window selector 28/56/90 days.
+
 ### Battery Score
 
 `calculateBattery(baseline, now, workouts, activities, events, circadianScore?)` in `healthConnect.ts`:

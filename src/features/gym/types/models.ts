@@ -43,6 +43,7 @@ export interface Workout {
   time_start: string;
   time_end?: string;
   total_kg?: number;
+  session_rpe?: number | null;
 }
 
 export interface WorkoutExercise {

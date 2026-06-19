@@ -436,7 +436,7 @@ import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/
 import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
-import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight } from '@/shared/db/app_db';
+import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe } from '@/shared/db/app_db';
 
 const router = useRouter();
 // id from route
@@ -559,6 +559,34 @@ const editRestTime = async (exercise: any) => {
   }
 };
 
+// Optional post-workout session RPE (1–10) for sRPE training-load tracking.
+// Resolves to a clamped number, or null if skipped / invalid.
+const promptSessionRpe = async (): Promise<number | null> => {
+  let resolveRpe: (value: number | null) => void;
+  const result = new Promise<number | null>((resolve) => { resolveRpe = resolve; });
+  const alert = await alertController.create({
+    header: 'Session RPE',
+    message: 'How hard was this session overall? (1 easy – 10 maximal). Optional.',
+    cssClass: 'app-confirm-alert',
+    inputs: [
+      { name: 'rpe', type: 'number', min: 1, max: 10, placeholder: 'RPE 1–10' },
+    ],
+    buttons: [
+      { text: 'Skip', role: 'cancel', handler: () => resolveRpe(null) },
+      {
+        text: 'Save',
+        handler: (data) => {
+          const n = Number(data?.rpe);
+          if (!Number.isFinite(n) || n <= 0) { resolveRpe(null); return; }
+          resolveRpe(Math.min(10, Math.max(1, Math.round(n))));
+        },
+      },
+    ],
+  });
+  await alert.present();
+  return result;
+};
+
 const saveWorkout = async () => {
   hapticHeavy();
   const alert = await alertController.create({
@@ -572,6 +600,8 @@ const saveWorkout = async () => {
         role: 'destructive',
         handler: async () => {
           hapticSuccess();
+          const sessionRpe = await promptSessionRpe();
+          if (sessionRpe != null) await setWorkoutSessionRpe(workoutId, sessionRpe);
           const achievedPRs = await endWorkout(workoutId);
           const durationStr = formatTime();
           if (interval) clearInterval(interval);

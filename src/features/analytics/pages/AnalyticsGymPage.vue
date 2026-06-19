@@ -42,6 +42,9 @@
           </div>
         </div>
 
+        <!-- Training load vs recovery overlay -->
+        <training-load-overlay />
+
         <!-- Volume by muscle group -->
         <div class="card">
           <p class="section-kicker">Volume by muscle group</p>
@@ -124,6 +127,7 @@ import {
 import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSectionTabs.vue';
+import TrainingLoadOverlay from '@/features/analytics/components/TrainingLoadOverlay.vue';
 import {
   queryVolumeByMuscleGroup,
   queryWeeklyTonnage,
