@@ -1,0 +1,4 @@
+# Skip dated snapshots (large, regeneratable) and cache
+2026-*/
+cache/
+cost.json

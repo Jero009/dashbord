@@ -45,7 +45,6 @@ android/.idea/
 keystore.properties
 release.keystore
 
-# Graphify generated cache — local tool only
-graphify-out/
+# graphify-out is tracked (graph.json only); cache + dated snapshots excluded via nested .gitignore
 .claude/worktrees/agent-a661213ae98e94606
 .claude/worktrees/agent-a55eaaa9d111b3eb0
