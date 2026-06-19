@@ -14,16 +14,16 @@
       </ion-select>
     </div>
 
-    <!-- Status banner -->
-    <div class="status" :class="`status--${overtraining.status}`">
-      <ion-icon :icon="statusIcon" class="status__icon" />
-      <div class="status__body">
-        <span class="status__label">{{ statusLabel }}</span>
-        <span class="status__reason">{{ overtraining.reasons[0] }}</span>
-      </div>
-    </div>
-
     <template v-if="hasData">
+      <!-- Status banner -->
+      <div class="status" :class="`status--${displayStatus}`">
+        <ion-icon :icon="statusIcon" class="status__icon" />
+        <div class="status__body">
+          <span class="status__label">{{ statusLabel }}</span>
+          <span class="status__reason">{{ statusReason }}</span>
+        </div>
+      </div>
+
       <!-- Metric tiles -->
       <div class="tile-grid">
         <div class="tile">
@@ -48,7 +48,7 @@
 
       <!-- Dual-axis chart -->
       <div class="chart-wrap">
-        <div class="axis-label axis-label--left">Load</div>
+        <div class="axis-label axis-label--left">Load · {{ loadMetricLabel }}</div>
         <div class="axis-label axis-label--right">{{ signalLabel }} z</div>
         <div class="chart-scroll">
           <svg
@@ -130,11 +130,12 @@
 
 <script setup lang="ts">
 import { IonIcon, IonSelect, IonSelectOption, onIonViewWillEnter } from '@ionic/vue';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import {
   checkmarkCircleOutline,
   warningOutline,
   alertCircleOutline,
+  ellipsisHorizontalCircleOutline,
 } from 'ionicons/icons';
 import { getSessionLoads, getHealthMetricDailySeries } from '@/shared/db/app_db';
 import type { SessionLoadRow } from '@/shared/db/app_db';
@@ -157,14 +158,25 @@ const Z_MIN = -3;
 const Z_MAX = 3;
 const baseY = PAD_TOP + PLOT_H;
 const svgH = baseY + 22;
+// Only let HRV take over from RHR once there's enough of it for a stable
+// baseline (z-scores need a populated 28-reading window), so a handful of early
+// HRV samples don't blank out the established RHR line.
+const HRV_TAKEOVER_MIN = 14;
 
 const windowDays = ref(28);
 const sessions = ref<SessionLoadRow[]>([]);
 const rhr = ref<{ date: string; value: number }[]>([]);
 const hrv = ref<{ date: string; value: number }[]>([]);
 
+const todayKey = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+})();
+
 // ── derived series ───────────────────────────────────────────────────────────
 
+// endDate: todayKey extends the series across rest days so the acute load decays
+// (detraining shows up instead of the ACWR freezing at the last workout).
 const acwrSeries = computed<AcwrPoint[]>(() =>
   computeAcwrSeries(
     computeDailyLoads(
@@ -174,12 +186,15 @@ const acwrSeries = computed<AcwrPoint[]>(() =>
         durationMinutes: s.duration_minutes,
         sessionRpe: s.session_rpe,
       }))
-    )
+    ),
+    { endDate: todayKey }
   )
 );
 
-// Prefer HRV when present (HRV-ready); fall back to RHR.
-const signalMetric = computed<RecoveryMetric>(() => (hrv.value.length >= 3 ? 'hrv' : 'rhr'));
+// Prefer HRV once there's enough of it (HRV-ready); fall back to RHR.
+const signalMetric = computed<RecoveryMetric>(() =>
+  hrv.value.length >= HRV_TAKEOVER_MIN ? 'hrv' : 'rhr'
+);
 const signalLabel = computed(() => (signalMetric.value === 'hrv' ? 'HRV' : 'RHR'));
 
 const recoverySeries = computed(() =>
@@ -223,11 +238,6 @@ const latest = computed<AcwrPoint | null>(() => {
 });
 
 // ── chart geometry ───────────────────────────────────────────────────────────
-
-const todayKey = (() => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-})();
 
 const axis = computed(() => {
   const start = addDays(todayKey, -(windowDays.value - 1));
@@ -310,14 +320,46 @@ const recoveryColor = computed(() => {
   return '#fff';
 });
 
+// Overreaching can only be judged with a recovery signal. Without one, show a
+// neutral "unknown" state rather than a falsely confident green.
+const hasRecoverySignal = computed(() =>
+  recoverySeries.value.some((p) => p.recoveryZ != null)
+);
+const displayStatus = computed<'green' | 'yellow' | 'red' | 'unknown'>(() =>
+  hasRecoverySignal.value ? overtraining.value.status : 'unknown'
+);
+
 const statusLabel = computed(
-  () => ({ green: 'In balance', yellow: 'Monitor', red: 'Potential overreaching' }[overtraining.value.status])
+  () =>
+    ({
+      green: 'In balance',
+      yellow: 'Monitor',
+      red: 'Potential overreaching',
+      unknown: 'Load tracked',
+    }[displayStatus.value])
 );
 const statusIcon = computed(
   () =>
-    ({ green: checkmarkCircleOutline, yellow: warningOutline, red: alertCircleOutline }[
-      overtraining.value.status
-    ])
+    ({
+      green: checkmarkCircleOutline,
+      yellow: warningOutline,
+      red: alertCircleOutline,
+      unknown: ellipsisHorizontalCircleOutline,
+    }[displayStatus.value])
+);
+const statusReason = computed(() => {
+  if (!hasRecoverySignal.value) {
+    const zoneNote =
+      latest.value?.flag === 'caution' || latest.value?.flag === 'high_risk'
+        ? ` Load is ${acwrZone.value.toLowerCase()}.`
+        : '';
+    return `No recovery data yet — add RHR/HRV to enable the overreaching check.${zoneNote}`;
+  }
+  return overtraining.value.reasons[0];
+});
+
+const loadMetricLabel = computed(() =>
+  acwrSeries.value[0]?.metric === 'rpe' ? 'sRPE' : 'volume'
 );
 
 const formatLoad = (v: number) => (v >= 10000 ? `${Math.round(v / 100) / 10}k` : `${Math.round(v)}`);
@@ -341,6 +383,9 @@ watch(windowDays, () => {
   load();
 });
 
+// onIonViewWillEnter covers tab re-entry; onMounted guarantees the first load
+// even if the Ionic view hook doesn't reach this child component.
+onMounted(load);
 onIonViewWillEnter(load);
 </script>
 
@@ -393,6 +438,7 @@ onIonViewWillEnter(load);
 .status--green .status__icon { color: rgb(34, 197, 94); }
 .status--yellow .status__icon { color: rgb(255, 215, 0); }
 .status--red .status__icon { color: var(--ion-color-accent-red); }
+.status--unknown .status__icon { color: rgba(255, 255, 255, 0.5); }
 .status__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .status__label {
   font-family: var(--nt-font-head);

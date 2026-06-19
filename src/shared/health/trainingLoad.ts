@@ -26,20 +26,16 @@ export interface SessionLoadInput {
   sessionRpe: number | null;
 }
 
-/** Per-day aggregated load. */
+/** Which unit the ACWR series is computed in. */
+export type LoadMetric = 'rpe' | 'volume';
+
+/** Per-day aggregated load, carrying both candidate metrics. */
 export interface DailyLoad {
   date: string;
+  /** Σ(reps × weight) over completed sets that day. */
   volumeLoad: number;
   /** Σ(rpe × duration) across the day's sessions; null when no session had RPE. */
   rpeLoad: number | null;
-  /**
-   * The load value fed into the ACWR model. Uses RPE load when at least one
-   * session that day recorded RPE (sessions without RPE contribute 0 to the RPE
-   * sum but volume still counts elsewhere); otherwise falls back to volume load.
-   */
-  load: number;
-  /** Which metric `load` was derived from — useful for labelling. */
-  loadSource: 'rpe' | 'volume';
 }
 
 export interface AcwrPoint {
@@ -52,6 +48,8 @@ export interface AcwrPoint {
   /** acute / chronic; null until enough history exists or chronic is 0. */
   acwr: number | null;
   flag: AcwrFlag | null;
+  /** The unit this whole series is computed in (same for every point). */
+  metric: LoadMetric;
 }
 
 export interface AcwrOptions {
@@ -59,6 +57,19 @@ export interface AcwrOptions {
   chronicDays?: number;
   /** Calendar days of history required before ACWR is emitted (else null). */
   minChronicDays?: number;
+  /**
+   * Force a load unit. Default 'auto' picks 'rpe' only when *every* training day
+   * has an RPE load (so the series never mixes sRPE and volume units, which are
+   * not comparable); otherwise 'volume'.
+   */
+  metric?: LoadMetric | 'auto';
+  /**
+   * Extend the series (gap-filled with zero-load rest days) up to this date when
+   * it is after the last workout. This lets the acute average decay during a
+   * rest streak so detraining actually shows up — without it the ACWR would
+   * freeze at the last training day.
+   */
+  endDate?: string;
 }
 
 /** sRPE load for a single session. Returns null when RPE or duration missing. */
@@ -90,17 +101,28 @@ export function computeDailyLoads(sessions: SessionLoadInput[]): DailyLoad[] {
 
   return [...byDate.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-    .map(([date, b]) => {
-      const rpeLoad = b.hasRpe ? b.rpe : null;
-      const useRpe = rpeLoad != null && rpeLoad > 0;
-      return {
-        date,
-        volumeLoad: b.volume,
-        rpeLoad,
-        load: useRpe ? rpeLoad : b.volume,
-        loadSource: useRpe ? 'rpe' : 'volume',
-      } satisfies DailyLoad;
-    });
+    .map(([date, b]) => ({
+      date,
+      volumeLoad: b.volume,
+      rpeLoad: b.hasRpe ? b.rpe : null,
+    } satisfies DailyLoad));
+}
+
+/**
+ * Pick a single, consistent load unit for the whole series. Returns 'rpe' only
+ * when every day that has any load also has an RPE load — otherwise 'volume',
+ * which is always available. This guards against mixing incomparable units in
+ * the ACWR ratio (e.g. when RPE was only recently adopted).
+ */
+export function selectLoadMetric(dailyLoads: DailyLoad[]): LoadMetric {
+  const active = dailyLoads.filter((d) => d.volumeLoad > 0 || (d.rpeLoad ?? 0) > 0);
+  if (active.length === 0) return 'volume';
+  return active.every((d) => d.rpeLoad != null && d.rpeLoad > 0) ? 'rpe' : 'volume';
+}
+
+/** The load value for a day under a chosen metric. */
+export function dailyLoadValue(d: DailyLoad, metric: LoadMetric): number {
+  return metric === 'rpe' ? d.rpeLoad ?? 0 : d.volumeLoad;
 }
 
 /** <0.8 detraining · 0.8–1.3 optimal · 1.3–1.5 caution · >1.5 high risk. */
@@ -126,11 +148,17 @@ export function computeAcwrSeries(
 
   if (dailyLoads.length === 0) return [];
 
+  const metric: LoadMetric =
+    !options.metric || options.metric === 'auto'
+      ? selectLoadMetric(dailyLoads)
+      : options.metric;
+
   const loadByDate = new Map<string, number>();
-  for (const d of dailyLoads) loadByDate.set(d.date, d.load);
+  for (const d of dailyLoads) loadByDate.set(d.date, dailyLoadValue(d, metric));
 
   const start = dailyLoads[0].date;
-  const end = dailyLoads[dailyLoads.length - 1].date;
+  const lastLoad = dailyLoads[dailyLoads.length - 1].date;
+  const end = options.endDate && options.endDate > lastLoad ? options.endDate : lastLoad;
   const dates = enumerateDates(start, end);
   const loads = dates.map((d) => loadByDate.get(d) ?? 0);
 
@@ -149,6 +177,7 @@ export function computeAcwrSeries(
       chronic: round2(chronic),
       acwr,
       flag: acwr == null ? null : acwrFlag(acwr),
+      metric,
     } satisfies AcwrPoint;
   });
 }
