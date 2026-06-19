@@ -265,7 +265,7 @@ const deleteTemp = async (id: number) => {
 
   const alert = await alertController.create({
     header: 'Delete Template?',
-    message: `Are you sure you want to delete "${templateName}"? This action cannot be undone.`,
+    message: `Delete "${templateName}"? This can't be undone.`,
     cssClass: 'app-confirm-alert',
     buttons: [
       {

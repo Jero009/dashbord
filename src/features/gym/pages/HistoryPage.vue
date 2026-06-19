@@ -249,7 +249,7 @@ const formatDuration = (start: string, end: any) => {
 const handleDelete = async (id: number) => {
   const alert = await alertController.create({
     header: 'Delete Workout?',
-    message: 'Are you sure you want to delete this workout from your history?',
+    message: 'Delete this workout from history?',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },

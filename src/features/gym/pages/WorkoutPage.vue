@@ -619,7 +619,7 @@ const promptSessionRpe = async (): Promise<number | null> => {
   const result = new Promise<number | null>((resolve) => { resolveRpe = resolve; });
   const alert = await alertController.create({
     header: 'Session RPE',
-    message: 'How hard was this session overall? (1 easy – 10 maximal). Optional.',
+    message: 'How hard was this session? (1–10, optional)',
     cssClass: 'app-confirm-alert',
     inputs: [
       { name: 'rpe', type: 'number', min: 1, max: 10, placeholder: 'RPE 1–10' },
@@ -644,7 +644,7 @@ const saveWorkout = async () => {
   hapticHeavy();
   const alert = await alertController.create({
     header: 'End Workout?',
-    message: 'This will save the workout and return you to the home screen.',
+    message: 'Saves the workout and returns home.',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
@@ -694,7 +694,7 @@ const saveWorkout = async () => {
 const handleCancelWorkout = async () => {
   const alert = await alertController.create({
     header: 'Cancel Workout?',
-    message: 'Are you sure you want to cancel? This workout will not be saved.',
+    message: "This workout won't be saved.",
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'No', role: 'cancel' },
@@ -720,7 +720,7 @@ const handleCancelWorkout = async () => {
 const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
   const alert = await alertController.create({
     header: 'Remove Set?',
-    message: 'This will remove only this set from the exercise.',
+    message: 'Removes only this set.',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },

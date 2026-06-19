@@ -124,7 +124,7 @@ const saveSubscription = async () => {
   const amount = Number(subscriptionAmount.value);
   if (!Number.isFinite(amount) || amount <= 0) {
     const toast = await toastController.create({
-      message: 'Amount must be a number greater than zero.',
+      message: 'Enter an amount above zero.',
       duration: 2000,
       color: 'warning',
     });
@@ -143,7 +143,7 @@ const saveSubscription = async () => {
     );
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save subscription. Please try again.',
+      message: 'Could not save subscription.',
       duration: 2000,
       color: 'warning',
     });

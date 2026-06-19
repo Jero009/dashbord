@@ -43,7 +43,7 @@
               <small class="tile__detail">&nbsp;</small>
             </div>
           </div>
-          <p v-else class="empty-copy">No record yet — finish a workout with this exercise to set one.</p>
+          <p v-else class="empty-copy">No record yet.</p>
         </div>
 
         <!-- Strength chart -->
@@ -127,7 +127,7 @@
 
         <!-- Global empty state -->
         <div v-if="!hasAnyData" class="card">
-          <p class="empty-copy">No workout history for this exercise yet. Log a few sessions and your progress will show up here.</p>
+          <p class="empty-copy">No history yet.</p>
         </div>
       </div>
     </ion-content>
