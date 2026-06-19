@@ -17,7 +17,7 @@
         @touchmove="handleTouchMove"
         @touchend="handleTouchEnd"
       >
-        <!-- Background circle -->
+        <!-- Background circledddd -->
         <circle cx="150" cy="150" r="140" class="dial-bg" />
         
         <!-- Progress arc -->
