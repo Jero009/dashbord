@@ -114,9 +114,9 @@ const saveInvestment = async () => {
 
   const quantity = Number(investmentQuantity.value);
   const value = Number(investmentValue.value);
-  if (!Number.isFinite(quantity) || !Number.isFinite(value)) {
+  if (!Number.isFinite(quantity) || !Number.isFinite(value) || quantity < 0 || value < 0) {
     const toast = await toastController.create({
-      message: 'Quantity and value must be valid numbers.',
+      message: 'Quantity and value must be valid, non-negative numbers.',
       duration: 2000,
       color: 'warning',
     });

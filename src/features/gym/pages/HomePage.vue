@@ -241,12 +241,15 @@ const clearActiveRestTimer = (removeStorage = false) => {
   activeRestTimer.value.total = 0;
 
   if (removeStorage) {
-    sessionStorage.removeItem('restTimer');
+    localStorage.removeItem('restTimer');
   }
 };
 
 const restoreActiveRestTimer = () => {
-  const savedTimer = sessionStorage.getItem('restTimer');
+  // Canonical rest-timer state lives in localStorage (written by WorkoutPage so it
+  // survives a full process kill); sessionStorage is wiped on kill and nothing
+  // writes the key there, so reading it left this countdown permanently blank.
+  const savedTimer = localStorage.getItem('restTimer');
 
   if (!savedTimer) {
     clearActiveRestTimer();

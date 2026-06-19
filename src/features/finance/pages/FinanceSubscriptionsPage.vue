@@ -122,9 +122,9 @@ const saveSubscription = async () => {
   }
 
   const amount = Number(subscriptionAmount.value);
-  if (!Number.isFinite(amount)) {
+  if (!Number.isFinite(amount) || amount <= 0) {
     const toast = await toastController.create({
-      message: 'Amount must be a valid number.',
+      message: 'Amount must be a number greater than zero.',
       duration: 2000,
       color: 'warning',
     });
