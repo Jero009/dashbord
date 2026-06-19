@@ -747,6 +747,15 @@ async function doInitDB() {
       await db.execute(`ALTER TABLE workout ADD COLUMN name TEXT;`);
     }
 
+    // Session RPE (1–10) for sRPE training-load tracking. Nullable — older
+    // workouts and skipped prompts leave it NULL and fall back to volume load.
+    const hasSessionRpeColumn = (workoutColumns.values || []).some(
+      (column: any) => String(column.name) === 'session_rpe'
+    );
+    if (!hasSessionRpeColumn) {
+      await db.execute(`ALTER TABLE workout ADD COLUMN session_rpe REAL;`);
+    }
+
     // Archive flag for templates (so old defaults can be hidden from the gym
     // homepage / recommendations without deleting them).
     const tplColumns = await db.query(`PRAGMA table_info("workout_template");`);
@@ -3272,6 +3281,94 @@ export async function queryDailyVolume(days = 28): Promise<{ date: string; value
 
   return ((result.values ?? []) as { date: string; value: number }[])
     .map((r) => ({ date: r.date, value: Number(r.value) || 0 }));
+}
+
+/** Set (or clear, with null) the post-workout session RPE for sRPE load. */
+export async function setWorkoutSessionRpe(workoutId: number, rpe: number | null) {
+  if (!db) return;
+  await db.run('UPDATE workout SET session_rpe = ? WHERE id = ?', [rpe, workoutId]);
+}
+
+export interface SessionLoadRow {
+  workout_id: number;
+  date: string;            // local YYYY-MM-DD
+  duration_minutes: number | null;
+  session_rpe: number | null;
+  volume: number;          // Σ(weight × reps) over completed sets
+}
+
+/**
+ * One row per workout in the window with its volume load, derived duration
+ * (minutes, from time_start→time_end) and session RPE. Feeds TrainingLoadService.
+ */
+export async function getSessionLoads(days = 120): Promise<SessionLoadRow[]> {
+  if (!db) return [];
+
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - days);
+  const dateLimit = daysAgo.toISOString().replace('T', ' ').slice(0, 19);
+
+  const result = await db.query(`
+    SELECT
+      w.id AS workout_id,
+      date(w.time_start, 'localtime') AS date,
+      w.time_start AS time_start,
+      w.time_end AS time_end,
+      w.session_rpe AS session_rpe,
+      COALESCE(SUM(CASE WHEN wes.completed = 1 THEN wes.weight * wes.reps ELSE 0 END), 0) AS volume
+    FROM workout w
+    LEFT JOIN workout_exercise we ON we.workout_id = w.id
+    LEFT JOIN workout_exercise_sets wes ON wes.workout_exercise_id = we.id
+    WHERE w.time_start >= ?
+    GROUP BY w.id
+    ORDER BY w.time_start ASC
+  `, [dateLimit]);
+
+  return ((result.values ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const start = r.time_start ? new Date(String(r.time_start)).getTime() : NaN;
+    const end = r.time_end ? new Date(String(r.time_end)).getTime() : NaN;
+    const duration =
+      Number.isFinite(start) && Number.isFinite(end) && end > start
+        ? Math.round((end - start) / 60000)
+        : null;
+    const rpe = r.session_rpe == null ? null : Number(r.session_rpe);
+    return {
+      workout_id: Number(r.workout_id),
+      date: String(r.date),
+      duration_minutes: duration,
+      session_rpe: rpe != null && Number.isFinite(rpe) ? rpe : null,
+      volume: Number(r.volume) || 0,
+    } satisfies SessionLoadRow;
+  });
+}
+
+/**
+ * Daily series for a health_metric type (one averaged value per date), ascending.
+ * Used by the recovery baseline overlay (resting_heart_rate today, hrv-ready).
+ */
+export async function getHealthMetricDailySeries(
+  type: string,
+  days = 120
+): Promise<{ date: string; value: number }[]> {
+  if (!db) return [];
+
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - days);
+  const y = daysAgo.getFullYear();
+  const m = String(daysAgo.getMonth() + 1).padStart(2, '0');
+  const d = String(daysAgo.getDate()).padStart(2, '0');
+  const dateLimit = `${y}-${m}-${d}`;
+
+  const result = await db.query(`
+    SELECT date AS date, AVG(value) AS value
+    FROM health_metric
+    WHERE type = ? AND date >= ?
+    GROUP BY date
+    ORDER BY date ASC
+  `, [type, dateLimit]);
+
+  return ((result.values ?? []) as Array<Record<string, unknown>>)
+    .map((r) => ({ date: String(r.date), value: Number(r.value) || 0 }));
 }
 
 // ── Circadian log ────────────────────────────────────────────────────────────
