@@ -83,7 +83,7 @@
               </div>
             </div>
 
-            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough sleep data to compute alertness curve</div>
+            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough sleep data yet</div>
 
             <div v-else class="unified-scroll-wrap">
               <!-- Fixed Y-axis (does not scroll) -->

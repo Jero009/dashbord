@@ -350,8 +350,10 @@ export function usePlanner() {
   // ---- day-view timeline (mirrors the HomePage schedule timeline) ----
   const HOUR_PX = 52;
   const parseHourStr = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return h + (m || 0) / 60;
+    const [h, m] = (t || '').split(':').map(Number);
+    // A malformed time (empty or non-HH:MM) must not leak NaN into the day-view
+    // SVG geometry — treat it as midnight.
+    return Number.isFinite(h) ? h + (Number.isFinite(m) ? m : 0) / 60 : 0;
   };
   // Tail segments anchor at 00:00; overnight start segments run to 24:00.
   const segStartHour = (e: Record<string, any>) =>

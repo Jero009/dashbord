@@ -77,7 +77,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No budgets yet. Set a monthly limit per category below.</p>
+          <p v-else class="empty-state">No budgets yet.</p>
 
           <div class="form-fields form-fields--inline">
             <div class="field-group">

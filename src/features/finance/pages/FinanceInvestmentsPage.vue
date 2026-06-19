@@ -114,9 +114,9 @@ const saveInvestment = async () => {
 
   const quantity = Number(investmentQuantity.value);
   const value = Number(investmentValue.value);
-  if (!Number.isFinite(quantity) || !Number.isFinite(value)) {
+  if (!Number.isFinite(quantity) || !Number.isFinite(value) || quantity < 0 || value < 0) {
     const toast = await toastController.create({
-      message: 'Quantity and value must be valid numbers.',
+      message: 'Enter valid amounts.',
       duration: 2000,
       color: 'warning',
     });
@@ -128,7 +128,7 @@ const saveInvestment = async () => {
     await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value, investmentAccountId.value);
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save investment. Please try again.',
+      message: 'Could not save investment.',
       duration: 2000,
       color: 'warning',
     });

@@ -120,7 +120,7 @@
             </template>
           </div>
         </div>
-        <p v-else class="empty-hint empty-hint--pad">No habits yet — add one above to start tracking.</p>
+        <p v-else class="empty-hint empty-hint--pad">No habits yet.</p>
 
         <!-- ============ CONSISTENCY HEATMAP ============ -->
         <template v-if="allHabits.length">

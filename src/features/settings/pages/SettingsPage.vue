@@ -545,7 +545,7 @@ const parseBase64Text = (base64Data: string) => {
 const runImportWithConfirm = async (sqlContent: string) => {
   const confirmAlert = await alertController.create({
     header: 'Import SQL Backup?',
-    message: 'Importing will replace your current data with the file content.',
+    message: 'This replaces all current data.',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
@@ -585,7 +585,7 @@ const pickNativeImportFile = async () => {
     if (!data) {
       const alert = await alertController.create({
         header: 'Import Failed',
-        message: 'Could not read file content from selected file.',
+        message: 'Could not read the file.',
         cssClass: 'app-confirm-alert',
         buttons: ['OK']
       })
@@ -603,7 +603,7 @@ const pickNativeImportFile = async () => {
 
     const alert = await alertController.create({
       header: 'Import Failed',
-      message: 'Unable to open file picker. Please try again.',
+      message: 'Could not open file picker.',
       cssClass: 'app-confirm-alert',
       buttons: ['OK']
     })

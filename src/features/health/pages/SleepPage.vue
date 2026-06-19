@@ -246,7 +246,9 @@ function parseJsonArray<T>(raw: string | null): T[] {
 function sessionToSummary(record: SleepSessionRecord): SleepSummary {
   const bedMs = new Date(record.bedtime).getTime();
   const wakeMs = new Date(record.waketime).getTime();
-  const span = Math.max(1, wakeMs - bedMs);
+  // Unparseable bedtime/waketime would make span NaN, poisoning every offset/width
+  // below into NaN SVG coordinates. Fall back to a 1ms span so the hypnogram still renders.
+  const span = Number.isFinite(bedMs) && Number.isFinite(wakeMs) ? Math.max(1, wakeMs - bedMs) : 1;
   const spanMin = span / 60000;
 
   const rawStages = parseJsonArray<{ s: string; start: string; end: string; dur: number }>(

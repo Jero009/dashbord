@@ -546,7 +546,9 @@ const formatWorkoutTimer = () => {
 };
 
 const restoreRestTimer = () => {
-  const saved = sessionStorage.getItem('restTimer');
+  // Read from localStorage to match WorkoutPage's canonical rest-timer storage
+  // (sessionStorage is wiped on process kill and nothing ever writes the key there).
+  const saved = localStorage.getItem('restTimer');
   if (!saved) return;
   try {
     const parsed = JSON.parse(saved);
@@ -557,7 +559,7 @@ const restoreRestTimer = () => {
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
       activeRestTimer.value.remaining = remaining;
-      if (remaining <= 0) { clearRestTimer(); sessionStorage.removeItem('restTimer'); }
+      if (remaining <= 0) { clearRestTimer(); localStorage.removeItem('restTimer'); }
     };
     tick();
     if (activeRestTimer.value.isActive) restInterval = setInterval(tick, 1000);

@@ -366,13 +366,19 @@ const formatLoad = (v: number) => (v >= 10000 ? `${Math.round(v / 100) / 10}k` :
 
 // ── data loading ─────────────────────────────────────────────────────────────
 
+let loadToken = 0;
 const load = async () => {
+  // mount, view-enter and the window-switch watcher can all fire load() concurrently;
+  // a monotonic token drops any resolved-but-stale result so a slower earlier request
+  // can't overwrite a newer window's data.
+  const token = ++loadToken;
   const span = Math.max(120, windowDays.value + 28);
   const [s, r, h] = await Promise.all([
     getSessionLoads(span).catch(() => []),
     getHealthMetricDailySeries('resting_heart_rate', span).catch(() => []),
     getHealthMetricDailySeries('hrv', span).catch(() => []),
   ]);
+  if (token !== loadToken) return;
   sessions.value = s;
   rhr.value = r;
   hrv.value = h;

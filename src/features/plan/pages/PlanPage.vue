@@ -90,6 +90,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue'
 import { getHabitsWithStatus, getGoals, getCalendarEventsForDate } from '@/shared/db/app_db'
 import { hapticLight } from '@/shared/utils/haptics'
+import { localDateISO } from '@/shared/utils/timeFormat'
 
 const router = useRouter()
 
@@ -98,7 +99,7 @@ const navTo = (path: string) => {
   router.push(path);
 };
 
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateISO()
 const todayLabel = new Date(today + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
 const habits = ref<Record<string, any>[]>([])
@@ -108,7 +109,7 @@ const events = ref<Record<string, any>[]>([])
 const habitsDone  = computed(() => habits.value.filter(h => h.completed === 1).length)
 const habitsTotal = computed(() => habits.value.length)
 const allHabitsDone = computed(() => habitsTotal.value > 0 && habitsDone.value === habitsTotal.value)
-const activeGoals = computed(() => goals.value.filter(g => g.status !== 'done').length)
+const activeGoals = computed(() => goals.value.filter(g => g.status !== 'completed').length)
 
 const upcomingEvents = computed(() =>
   [...events.value].sort((a, b) => (a.time_start ?? '').localeCompare(b.time_start ?? ''))
