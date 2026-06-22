@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(RestTimerAudio.class);
+        registerPlugin(GlyphMatrix.class);
         super.onCreate(savedInstanceState);
     }
 }

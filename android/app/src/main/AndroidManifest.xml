@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -30,6 +31,12 @@
     </application>
 
     <!-- Permissions -->
+
+    <!-- Glyph Matrix (Nothing Phone back display). The SDK AAR declares
+         minSdk 33; this app supports 26, so override the merge — the Glyph
+         plugin guards itself off at runtime on non-Nothing / older devices. -->
+    <uses-sdk tools:overrideLibrary="com.nothing.thirdparty" />
+    <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />

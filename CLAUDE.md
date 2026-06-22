@@ -161,6 +161,16 @@ Completing a set starts the rest timer in `WorkoutPage.vue`. Designed to survive
 - **Native plugin**: `android/app/src/main/java/io/ionic/starter/RestTimerAudio.java` (methods `duckAndDing`, `showRestNotification`, `clearRestNotification`; channel `rest_timer`, notification ID 21), registered in `MainActivity.onCreate` via `registerPlugin`. Small icon resolved by name (`ic_stat_icon_config_sample`, merged from LocalNotifications) with `android.R.drawable.ic_lock_idle_alarm` fallback. After any change, `npm run build` → `npx cap sync` → rebuild APK.
 - `restoreTimerState` (on view enter) resumes a running timer without re-dinging; an already-expired timer just clears (the notification already fired while closed).
 
+### Glyph Matrix (Nothing back display)
+
+Bridge to the dot-matrix LED display on the back of the Nothing Phone (4a) Pro (and Phone (3)). **Transport only** — it connects and pushes raw per-LED frames; callers decide what to draw.
+- **SDK**: `android/app/libs/glyph-matrix-sdk-2.0.aar` (from [Nothing-Developer-Programme/GlyphMatrix-Developer-Kit](https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit)), package `com.nothing.ketchum`. Wired via `implementation files('libs/glyph-matrix-sdk-2.0.aar')` in `android/app/build.gradle`.
+- **minSdk conflict**: the AAR declares `minSdk 33`, the app is `26`. Resolved with `<uses-sdk tools:overrideLibrary="com.nothing.thirdparty"/>` (+ `xmlns:tools`) in `AndroidManifest.xml` — **do not bump the app's minSdk**. Also needs `<uses-permission android:name="com.nothing.ketchum.permission.ENABLE"/>`.
+- **Native plugin**: `android/app/src/main/java/io/ionic/starter/GlyphMatrix.java`, registered in `MainActivity.onCreate`. Uses **app-matrix mode** (`GlyphMatrixManager.setAppMatrixFrame(int[])`), NOT a Glyph Toy service — so the app drives the matrix directly while foreground, no carousel registration. `init()` binds the manager async and registers the device in `onServiceConnected` (defaults `Glyph.DEVICE_25111p` = 4a Pro; `Glyph.DEVICE_23112` if `Common.is23112()` = Phone (3)), with a 5 s connect timeout that rejects so JS never hangs on non-Nothing devices. Methods: `init`/`draw`/`clear`/`turnOff`/`getMatrixLength`/`isReady`/`deinit`.
+- **TS bridge**: `src/shared/utils/glyphMatrix.ts` — `glyphInit()`, `glyphDraw(pixels: number[])`, `glyphClear()`, `glyphTurnOff()`, `glyphMatrixLength()`, `glyphIsReady()`, `glyphDeinit()`. All no-op (or return falsy) off-device, like the other native wrappers.
+- **Frame format**: row-major array of per-LED brightness `0–255`. **4a Pro = 13×13 = 169 LEDs** (Phone (3) = 25×25 = 625). Size the array with `glyphMatrixLength()` (returns 0 until `glyphInit()` succeeds).
+- **Constraints**: app-matrix mode requires Nothing system version **20250801+** (else `setAppMatrixFrame` throws `GlyphException`, surfaced as a rejected `draw()`), and only drives the display while the app is foreground. After any native change: `npm run build` → `npx cap sync` → rebuild APK. Verify Java with `cd android && JAVA_HOME=/opt/android-studio/jbr ./gradlew :app:compileDebugJavaWithJavac` (a green `npm run build` does NOT check the Java).
+
 ## Key Conventions
 
 - `<script setup lang="ts">` for all components; no `reactive()` unless complex state demands it
