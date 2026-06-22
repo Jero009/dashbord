@@ -141,7 +141,7 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   margin: 0 0 12px 2px;
 }
 
@@ -162,7 +162,7 @@ onIonViewWillEnter(async () => {
 }
 
 .snapshot-tile {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -172,19 +172,19 @@ onIonViewWillEnter(async () => {
   transition: background-color 150ms ease;
 }
 
-.snapshot-tile:active { background: rgba(255, 255, 255, 0.08); }
+.snapshot-tile:active { background: rgba(var(--nt-ink), 0.08); }
 
 .snapshot-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
 
 .snapshot-denom {
   font-size: 0.9rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .snapshot-value--event {
@@ -192,7 +192,7 @@ onIonViewWillEnter(async () => {
   color: rgb(215, 26, 33);
 }
 
-.snapshot-value--muted { color: rgba(255, 255, 255, 0.25); }
+.snapshot-value--muted { color: rgba(var(--nt-ink), 0.25); }
 
 .value--done { color: rgb(34, 197, 94); }
 
@@ -200,7 +200,7 @@ onIonViewWillEnter(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -224,7 +224,7 @@ onIonViewWillEnter(async () => {
 
 .event-time {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   width: 38px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -238,16 +238,16 @@ onIonViewWillEnter(async () => {
 }
 
 .dot--workout  { background: rgb(215, 26, 33); }
-.dot--school   { background: rgba(255, 255, 255, 0.85); }
+.dot--school   { background: rgba(var(--nt-ink), 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
-.dot--sleep    { background: rgba(255, 255, 255, 0.5); }
-.dot--reminder { background: rgba(255, 255, 255, 0.35); }
-.dot--general  { background: rgba(255, 255, 255, 0.25); }
+.dot--sleep    { background: rgba(var(--nt-ink), 0.5); }
+.dot--reminder { background: rgba(var(--nt-ink), 0.35); }
+.dot--general  { background: rgba(var(--nt-ink), 0.25); }
 
 .event-title {
   flex: 1;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
@@ -264,11 +264,11 @@ onIonViewWillEnter(async () => {
 }
 
 .tag--workout  { background: rgba(215, 26, 33,0.15);  color: rgb(215, 26, 33); }
-.tag--school   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.tag--school   { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);  color: rgb(34,197,94); }
-.tag--sleep    { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-.tag--reminder { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+.tag--sleep    { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
+.tag--reminder { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
+.tag--general  { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.5); }
 
 /* ── Nav tiles ── */
 .nav-grid {
@@ -291,7 +291,7 @@ onIonViewWillEnter(async () => {
   transition: background-color 150ms ease;
 }
 
-.nav-tile:active { background: rgba(255, 255, 255, 0.08); }
+.nav-tile:active { background: rgba(var(--nt-ink), 0.08); }
 
 .nav-tile__icon {
   font-size: 20px;
@@ -309,17 +309,17 @@ onIonViewWillEnter(async () => {
 .nav-tile__label {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .nav-tile__hint {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .nav-tile__arrow {
   font-size: 20px;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(var(--nt-ink), 0.25);
   flex-shrink: 0;
 }
 </style>

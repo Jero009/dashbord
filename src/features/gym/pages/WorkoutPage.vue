@@ -187,27 +187,27 @@
 .overload-hint {
   margin: 2px 0 0;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .rest-settings {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
   padding: 10px 12px;
   border-radius: 999px;
   font-size: 0.9rem;
   color: var(--ion-color-light);
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   box-shadow: none;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .rest-settings:active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--nt-ink), 0.08);
+  border-color: rgba(var(--nt-ink), 0.12);
 }
 .set{
   width: 100%;
@@ -218,7 +218,7 @@
   --inner-border-width: 0;
   --inner-padding-end: 0;
   --padding-start: 0;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -234,11 +234,11 @@
   height: 54px;
   --padding-start: 0;
   --padding-end: 0;
-  --background: rgba(255, 255, 255, 0.06);
-  --border-color: rgba(255, 255, 255, 0.1);
+  --background: rgba(var(--nt-ink), 0.06);
+  --border-color: rgba(var(--nt-ink), 0.1);
   --border-radius: 8px;
   text-align: center;
-  --placeholder-color: rgba(255, 255, 255, 0.35);
+  --placeholder-color: rgba(var(--nt-ink), 0.35);
   --placeholder-opacity: 1;
   font-size: 1.2rem;
   font-weight: 600;
@@ -263,8 +263,8 @@
   min-width: 52px;
   height: 54px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   cursor: pointer;
   flex-shrink: 0;
@@ -272,7 +272,7 @@
 }
 
 .rpe-chip:active {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--nt-ink), 0.12);
 }
 
 .rpe-chip__label {
@@ -281,12 +281,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--nt-ink), 0.35);
   pointer-events: none;
 }
 
 .rpe-chip--set .rpe-chip__label {
-  color: #fff;
+  color: var(--nt-fg);
   font-size: 1rem;
 }
 
@@ -299,7 +299,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   pointer-events: none;
 }
 
@@ -337,7 +337,7 @@
   background: var(--ion-color-primary);
   margin-top: 10px;
   --border-radius: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .add-set-icon {
@@ -356,7 +356,7 @@
   z-index: 9999;
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
 .rest-timer-content {
@@ -374,7 +374,7 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .rest-time {
@@ -442,12 +442,12 @@
 
 .stats-btn ion-icon {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 ion-toast.pr-toast {
   --background: var(--nt-surface-2);
-  --color: #fff;
+  --color: var(--nt-fg);
   --border-radius: var(--nt-radius-md);
   font-family: var(--nt-font-head);
 }

@@ -207,7 +207,7 @@ onIonViewWillEnter(() => {
   font-family: var(--nt-font-display);
   font-size: 2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
 
@@ -221,7 +221,7 @@ onIonViewWillEnter(() => {
 
 .recovery-reason {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--nt-ink), 0.7);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -233,8 +233,8 @@ onIonViewWillEnter(() => {
   letter-spacing: 0.1em;
   padding: 4px 12px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(var(--nt-ink), 0.08);
+  color: rgba(var(--nt-ink), 0.7);
 }
 
 .recovery-pill--recover {
@@ -260,7 +260,7 @@ onIonViewWillEnter(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   text-align: center;
 }
@@ -277,7 +277,7 @@ onIonViewWillEnter(() => {
   font-family: var(--nt-font-display);
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .tile__value--accent {
@@ -290,7 +290,7 @@ onIonViewWillEnter(() => {
 
 .load-note {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -306,7 +306,7 @@ onIonViewWillEnter(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
 }
 
@@ -316,7 +316,7 @@ onIonViewWillEnter(() => {
   border-radius: 50%;
   margin-top: 6px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(var(--nt-ink), 0.4);
 }
 
 .insight-dot--warning {
@@ -329,13 +329,13 @@ onIonViewWillEnter(() => {
 
 .insight-text {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   line-height: 1.45;
 }
 
 .empty-copy {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   font-size: 0.9rem;
   line-height: 1.5;
 }

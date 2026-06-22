@@ -473,7 +473,7 @@ onIonViewWillEnter(loadEntries)
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Form */
@@ -500,15 +500,15 @@ onIonViewWillEnter(loadEntries)
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .form-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #fff;
+  color: var(--nt-fg);
   font-size: 0.9rem;
   outline: none;
   width: 100%;
@@ -521,11 +521,11 @@ onIonViewWillEnter(loadEntries)
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--nt-ink), 0.35);
 }
 
 .form-input--date {
-  color-scheme: dark;
+  color-scheme: var(--nt-color-scheme);
 }
 
 /* Photo source row */
@@ -538,7 +538,7 @@ onIonViewWillEnter(loadEntries)
   flex: 1;
   padding: 10px 12px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   cursor: pointer;
   text-align: center;
@@ -546,12 +546,12 @@ onIonViewWillEnter(loadEntries)
 }
 
 .photo-source-btn:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(var(--nt-ink), 0.12);
 }
 
 .photo-btn__label {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .photo-preview-wrap {
@@ -574,7 +574,7 @@ onIonViewWillEnter(loadEntries)
   background: rgba(0, 0, 0, 0.6);
   border: none;
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-size: 0.72rem;
   cursor: pointer;
 }
@@ -585,7 +585,7 @@ onIonViewWillEnter(loadEntries)
   background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -603,13 +603,13 @@ onIonViewWillEnter(loadEntries)
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
 }
 
 .trend-label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -617,7 +617,7 @@ onIonViewWillEnter(loadEntries)
 .trend-value {
   font-size: 0.95rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .trend-value--down { color: rgb(34, 197, 94); }
@@ -631,7 +631,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .entry-row {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -656,18 +656,18 @@ onIonViewWillEnter(loadEntries)
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .entry-weight {
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .entry-notes {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .entry-photo {
@@ -681,7 +681,7 @@ onIonViewWillEnter(loadEntries)
 .delete-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(var(--nt-ink), 0.25);
   line-height: 1;
   cursor: pointer;
   min-width: 40px;
@@ -697,7 +697,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .delete-btn:hover {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Empty state */
@@ -709,7 +709,7 @@ onIonViewWillEnter(loadEntries)
 .empty-text {
   margin: 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Chart card */
@@ -748,9 +748,9 @@ onIonViewWillEnter(loadEntries)
 .range-btn {
   padding: 3px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.72rem;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
@@ -759,13 +759,13 @@ onIonViewWillEnter(loadEntries)
 .range-btn--active {
   background: var(--ion-color-accent-red);
   border-color: var(--ion-color-accent-red);
-  color: #fff;
+  color: var(--nt-on-accent);
 }
 
 .chart-wrap {
   height: 180px;
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 10px 6px 6px;
 }

@@ -190,8 +190,8 @@ const balanceSegments = computed(() => {
   return [
     { label: 'Push', pct: pct(push), color: 'rgb(215, 26, 33)' },
     { label: 'Pull', pct: pct(pull), color: 'rgba(215, 26, 33, 0.6)' },
-    { label: 'Legs', pct: pct(legs), color: 'rgba(255, 255, 255, 0.45)' },
-    { label: 'Core', pct: pct(core), color: 'rgba(255, 255, 255, 0.2)' },
+    { label: 'Legs', pct: pct(legs), color: 'rgba(var(--nt-ink), 0.45)' },
+    { label: 'Core', pct: pct(core), color: 'rgba(var(--nt-ink), 0.2)' },
   ].filter((s) => s.pct > 0);
 });
 
@@ -232,7 +232,7 @@ function withinWindow(dateKey: string): boolean {
 }
 
 const heatColor = (count: number): string => {
-  if (count <= 0) return 'rgba(255, 255, 255, 0.06)';
+  if (count <= 0) return 'rgba(var(--nt-ink), 0.06)';
   if (count === 1) return 'rgba(215, 26, 33, 0.55)';
   return 'rgb(215, 26, 33)';
 };
@@ -422,7 +422,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   text-align: center;
 }
@@ -439,7 +439,7 @@ onUnmounted(() => {
   font-family: var(--nt-font-display);
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .time-select {
@@ -454,7 +454,7 @@ onUnmounted(() => {
   position: relative;
   height: 260px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--nt-ink), 0.03);
   border-radius: 8px;
   padding: 8px 4px 4px;
 }
@@ -469,7 +469,7 @@ onUnmounted(() => {
   height: 14px;
   border-radius: var(--nt-radius-pill);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .balance-bar__seg {
@@ -511,7 +511,7 @@ onUnmounted(() => {
 .freq-cell {
   aspect-ratio: 1;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--nt-ink), 0.06);
 }
 
 .freq-cell--future {
@@ -534,13 +534,13 @@ onUnmounted(() => {
 
 .freq-legend__label {
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--nt-ink), 0.35);
   margin: 0 4px;
 }
 
 .empty-copy {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   font-size: 0.9rem;
 }
 

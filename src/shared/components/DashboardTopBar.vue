@@ -89,7 +89,7 @@ const goToSettings = () => {
 }
 
 .seg-pill {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
   border-radius: 999px;
   padding: 6px;
   overflow: hidden;
@@ -103,7 +103,7 @@ ion-segment {
 ion-segment-button {
   --background: transparent;
   --background-checked: transparent;
-  --color: rgba(255, 255, 255, 0.5);
+  --color: rgba(var(--nt-ink), 0.5);
   --color-checked: var(--ion-color-accent-red);
   --indicator-color: var(--ion-color-accent-red);
   min-height: 34px;
@@ -126,7 +126,7 @@ ion-segment-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   border-radius: 8px;
   transition: background-color 150ms ease;
 }

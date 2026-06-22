@@ -96,7 +96,7 @@ const dismiss = () => modalController.dismiss();
   align-items: center;
   gap: 4px;
   padding: 16px 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   text-align: center;
 }
@@ -113,7 +113,7 @@ const dismiss = () => modalController.dismiss();
   font-family: var(--nt-font-display);
   font-size: 1.6rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
 
@@ -123,7 +123,7 @@ const dismiss = () => modalController.dismiss();
 
 .tile__detail {
   font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
 }
 
 .pr-card {
@@ -155,7 +155,7 @@ const dismiss = () => modalController.dismiss();
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--nt-ink), 0.04);
   border-radius: 8px;
 }
 
@@ -170,7 +170,7 @@ const dismiss = () => modalController.dismiss();
 .pr-row__name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -190,7 +190,7 @@ const dismiss = () => modalController.dismiss();
   padding: 3px 8px;
   border-radius: var(--nt-radius-pill);
   background: var(--ion-color-accent-red);
-  color: #fff;
+  color: var(--nt-on-accent);
   flex-shrink: 0;
 }
 
