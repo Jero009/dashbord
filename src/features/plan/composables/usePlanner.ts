@@ -58,7 +58,7 @@ const EVENT_COLORS = [
   { name: 'Slate', value: '#94A3B8' },
 ];
 const HEAT_COLORS = [
-  'rgba(255,255,255,0.06)',
+  'rgba(var(--nt-ink), 0.06)',
   'rgba(215, 26, 33,0.25)',
   'rgba(215, 26, 33,0.45)',
   'rgba(215, 26, 33,0.7)',

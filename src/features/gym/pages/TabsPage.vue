@@ -53,7 +53,7 @@ const fadeTransition: AnimationBuilder = (_, opts) => {
 </script>
 <style>
 ion-tab-bar {
-  --background: rgba(255, 255, 255, 0.03);
+  --background: rgba(var(--nt-ink), 0.03);
   --border: 0;
   padding: 6px 10px calc(env(safe-area-inset-bottom, 0px) + 6px);
   transition: background 0.3s ease;
@@ -61,7 +61,7 @@ ion-tab-bar {
 
 
 ion-tab-button {
-  --color: rgba(255, 255, 255, 0.68);
+  --color: rgba(var(--nt-ink), 0.68);
   --color-selected: var(--ion-color-danger);
   --ripple-color: transparent;
   min-height: 56px;

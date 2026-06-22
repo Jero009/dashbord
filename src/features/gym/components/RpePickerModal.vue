@@ -46,7 +46,7 @@ const select = (value: number | null) => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 20px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.06);
 }
 
 .rpe-sheet__kicker {
@@ -90,7 +90,7 @@ const select = (value: number | null) => {
 }
 
 .rpe-row:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--nt-ink), 0.04);
 }
 
 .rpe-row--active {
@@ -101,7 +101,7 @@ const select = (value: number | null) => {
   font-family: var(--nt-font-display);
   font-size: 1.8rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--nt-ink), 0.3);
   min-width: 36px;
   line-height: 1;
 }
@@ -123,11 +123,11 @@ const select = (value: number | null) => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .rpe-row--active .rpe-row__detail {
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .rpe-row__feel {

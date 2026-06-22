@@ -93,13 +93,13 @@
   margin-left: 8px;
   padding: 2px 8px;
   border-radius: var(--nt-radius-pill, 999px);
-  border: 1px solid var(--nt-border-strong, rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--nt-border-strong, rgba(var(--nt-ink), 0.12));
   font-family: var(--nt-font-head, inherit);
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--nt-text-dim, rgba(255, 255, 255, 0.5));
+  color: var(--nt-text-dim, rgba(var(--nt-ink), 0.5));
   vertical-align: middle;
 }
 
@@ -132,7 +132,7 @@
 
 .card-subtitle{
   font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(var(--nt-ink), 0.58);
   margin: 0;
 }
 
@@ -165,7 +165,7 @@
   width: 100%;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--nt-ink), 0.035);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -180,7 +180,7 @@
 }
 
 .template-exercise-item__meta {
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(var(--nt-ink), 0.84);
   font-size: 0.9rem;
   white-space: nowrap;
   text-align: right;

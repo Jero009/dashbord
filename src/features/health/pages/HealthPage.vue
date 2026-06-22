@@ -329,9 +329,9 @@ const readinessLabelClass = computed(() => {
 
 const batteryBarColor = computed(() => {
   const s = readinessScore.value;
-  if (s === null) return 'rgba(255,255,255,0.25)';
+  if (s === null) return 'rgba(var(--nt-ink), 0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgba(255,255,255,0.85)';
+  if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
   return 'rgb(215, 26, 33)';
 });
 
@@ -607,7 +607,7 @@ const handleConnect = async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* ── Metric tiles ── */
@@ -616,7 +616,7 @@ const handleConnect = async () => {
 .metric-grid--3col { grid-template-columns: repeat(3, 1fr); }
 
 .card-metric {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -628,10 +628,10 @@ const handleConnect = async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
-.metric-value { font-size: 0.95rem; font-weight: 600; color: #fff; }
+.metric-value { font-size: 0.95rem; font-weight: 600; color: var(--nt-fg); }
 
 /* ── Battery hero ── */
 .readiness-hero {
@@ -646,13 +646,13 @@ const handleConnect = async () => {
 .readiness-score-num {
   font-size: 3.2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
 
 .readiness-score-denom {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-weight: 400;
 }
 
@@ -670,9 +670,9 @@ const handleConnect = async () => {
 }
 
 .label--green  { color: rgb(34, 197, 94); }
-.label--yellow { color: rgba(255, 255, 255, 0.85); }
+.label--yellow { color: rgba(var(--nt-ink), 0.85); }
 .label--red    { color: rgb(215, 26, 33); }
-.label--muted  { color: rgba(255, 255, 255, 0.5); }
+.label--muted  { color: rgba(var(--nt-ink), 0.5); }
 
 .ready-badges { display: flex; gap: 6px; }
 
@@ -686,11 +686,11 @@ const handleConnect = async () => {
 }
 
 .badge--green { background: rgba(34,197,94,0.15); color: rgb(34,197,94); }
-.badge--muted { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); }
+.badge--muted { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.35); }
 
 .readiness-bar-track {
   height: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.1);
   border-radius: 999px;
   margin-bottom: 14px;
   overflow: hidden;
@@ -722,7 +722,7 @@ const handleConnect = async () => {
   gap: 10px;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 14px 16px;
   flex-shrink: 0;
@@ -736,15 +736,15 @@ const handleConnect = async () => {
 }
 
 .score--green  { color: rgb(34, 197, 94); }
-.score--yellow { color: rgba(255, 255, 255, 0.85); }
+.score--yellow { color: rgba(var(--nt-ink), 0.85); }
 .score--red    { color: rgb(215, 26, 33); }
-.score--muted  { color: rgba(255, 255, 255, 0.25); }
+.score--muted  { color: rgba(var(--nt-ink), 0.25); }
 
 .sleep-score-sub {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   margin-top: 6px;
 }
 
@@ -753,10 +753,10 @@ const handleConnect = async () => {
 .sleep-insight {
   margin: 12px 0 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   line-height: 1.5;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   border-left: 2px solid rgba(215, 26, 33, 0.5);
 }
@@ -775,7 +775,7 @@ const handleConnect = async () => {
 
 .event-time {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   width: 38px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -789,16 +789,16 @@ const handleConnect = async () => {
 }
 
 .dot--workout  { background: rgb(215, 26, 33); }
-.dot--school   { background: rgba(255, 255, 255, 0.85); }
+.dot--school   { background: rgba(var(--nt-ink), 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
-.dot--sleep    { background: rgba(255, 255, 255, 0.5); }
-.dot--reminder { background: rgba(255, 255, 255, 0.35); }
-.dot--general  { background: rgba(255, 255, 255, 0.25); }
+.dot--sleep    { background: rgba(var(--nt-ink), 0.5); }
+.dot--reminder { background: rgba(var(--nt-ink), 0.35); }
+.dot--general  { background: rgba(var(--nt-ink), 0.25); }
 
 .event-title {
   flex: 1;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
@@ -815,11 +815,11 @@ const handleConnect = async () => {
 }
 
 .tag--workout  { background: rgba(215, 26, 33,0.15);   color: rgb(215, 26, 33); }
-.tag--school   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.tag--school   { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);   color: rgb(34,197,94); }
-.tag--sleep    { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-.tag--reminder { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-.tag--general  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+.tag--sleep    { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
+.tag--reminder { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
+.tag--general  { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.5); }
 
 /* ── Readiness chart ── */
 .rh-chart { display: grid; gap: 10px; }
@@ -859,10 +859,10 @@ const handleConnect = async () => {
   display: flex;
   justify-content: space-between;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
 }
 
-.empty-hint { margin: 0; font-size: 0.9rem; color: rgba(255, 255, 255, 0.5); }
+.empty-hint { margin: 0; font-size: 0.9rem; color: rgba(var(--nt-ink), 0.5); }
 
 /* ── Heart rate trend ── */
 .hr-head {
@@ -881,18 +881,18 @@ const handleConnect = async () => {
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
 }
 
 .hr-avg-val {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
   font-variant-numeric: tabular-nums;
 }
 
 .hr-avg-line {
-  stroke: rgba(255, 255, 255, 0.4);
+  stroke: rgba(var(--nt-ink), 0.4);
   stroke-width: 0.8;
   stroke-dasharray: 3 2;
 }
@@ -925,8 +925,8 @@ const handleConnect = async () => {
 }
 
 .activity-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.activity-name { font-size: 0.95rem; color: #fff; font-weight: 600; }
-.activity-date { font-size: 0.72rem; color: rgba(255, 255, 255, 0.5); }
+.activity-name { font-size: 0.95rem; color: var(--nt-fg); font-weight: 600; }
+.activity-date { font-size: 0.72rem; color: rgba(var(--nt-ink), 0.5); }
 
 .activity-metrics {
   display: flex;
@@ -934,21 +934,21 @@ const handleConnect = async () => {
   gap: 2px;
   margin-top: 6px;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 /* ── Sync card ── */
 .sync-status {
   margin: 0 0 14px;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .sync-btn {
   width: 100%;
   padding: 12px;
   background: rgb(215, 26, 33);
-  color: #fff;
+  color: var(--nt-on-accent);
   border: none;
   border-radius: 8px;
   font-size: 0.9rem;

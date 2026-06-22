@@ -235,7 +235,7 @@ defineExpose({
 <style scoped>
 .timer-dial-container {
   padding: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(135deg, rgba(var(--nt-ink), 0.05), rgba(var(--nt-ink), 0.02));
   border-radius: 16px;
   color: var(--ion-color-light);
   display: flex;
@@ -287,8 +287,8 @@ defineExpose({
 }
 
 .dial-bg {
-  fill: rgba(255, 255, 255, 0.04);
-  stroke: rgba(255, 255, 255, 0.12);
+  fill: rgba(var(--nt-ink), 0.04);
+  stroke: rgba(var(--nt-ink), 0.12);
   stroke-width: 2;
 }
 
@@ -307,7 +307,7 @@ defineExpose({
 }
 
 .tick {
-  stroke: rgba(255, 255, 255, 0.3);
+  stroke: rgba(var(--nt-ink), 0.3);
   stroke-width: 1.5;
 }
 
@@ -315,13 +315,13 @@ defineExpose({
   text-anchor: middle;
   dominant-baseline: middle;
   font-size: 10px;
-  fill: rgba(255, 255, 255, 0.6);
+  fill: rgba(var(--nt-ink), 0.6);
   font-weight: 500;
 }
 
 .pointer {
   fill: var(--ion-color-accent-red);
-  stroke: rgba(255, 255, 255, 0.2);
+  stroke: rgba(var(--nt-ink), 0.2);
   stroke-width: 2;
   cursor: grab;
   transition: filter 0.1s ease;
@@ -332,8 +332,8 @@ defineExpose({
 }
 
 .center-circle {
-  fill: rgba(255, 255, 255, 0.15);
-  stroke: rgba(255, 255, 255, 0.2);
+  fill: rgba(var(--nt-ink), 0.15);
+  stroke: rgba(var(--nt-ink), 0.2);
   stroke-width: 1;
 }
 
@@ -341,15 +341,15 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--nt-ink), 0.06);
   padding: 12px 16px;
   border-radius: var(--nt-radius-md);
 }
 
 .time-input {
   width: 80px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(var(--nt-ink), 0.08);
+  border: 1px solid rgba(var(--nt-ink), 0.12);
   border-radius: 8px;
   padding: 8px 12px;
   color: var(--ion-color-light);
@@ -362,11 +362,11 @@ defineExpose({
 .time-input:focus {
   outline: none;
   border-color: var(--ion-color-accent-red);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--nt-ink), 0.12);
 }
 
 .time-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .input-label {
@@ -382,8 +382,8 @@ defineExpose({
 
 .preset-btn {
   padding: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(var(--nt-ink), 0.08);
+  border: 1px solid rgba(var(--nt-ink), 0.12);
   border-radius: 8px;
   color: var(--ion-color-light);
   font-size: 0.9rem;
@@ -393,8 +393,8 @@ defineExpose({
 }
 
 .preset-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--nt-ink), 0.12);
+  border-color: rgba(var(--nt-ink), 0.2);
 }
 
 .preset-btn.active {
@@ -417,8 +417,8 @@ defineExpose({
 }
 
 .btn-cancel {
-  --background: rgba(255, 255, 255, 0.08);
-  --border-color: rgba(255, 255, 255, 0.12);
+  --background: rgba(var(--nt-ink), 0.08);
+  --border-color: rgba(var(--nt-ink), 0.12);
 }
 
 .btn-confirm {

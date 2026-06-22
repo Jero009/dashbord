@@ -36,6 +36,10 @@ import '@fontsource/space-mono/700.css'
 
 /* Theme */
 import './theme/variables.css'
+import { initTheme } from '@/shared/composables/useTheme'
+
+// Apply the persisted light/dark theme before mount so there's no flash.
+initTheme()
 
 // ✅ Create app ONCE
 const app = createApp(App)

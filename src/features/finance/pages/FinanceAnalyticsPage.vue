@@ -31,7 +31,7 @@
             </div>
             <div class="cat-legend">
               <div v-for="(c, i) in categories" :key="c.category" class="cat-legend__row">
-                <i class="cat-legend__dot" :style="{ background: palette[i % palette.length] }"></i>
+                <i class="cat-legend__dot" :style="{ background: palette()[i % palette().length] }"></i>
                 <span class="cat-legend__name">{{ c.category }}</span>
                 <span class="cat-legend__amt">{{ formatCurrency(c.amount) }}</span>
               </div>
@@ -105,21 +105,23 @@ import {
   DoughnutController, ArcElement,
   LinearScale, CategoryScale, Filler, Tooltip,
 } from 'chart.js';
-import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid, chartInk } from '@/shared/utils/chartStyle';
 import { hapticLight } from '@/shared/utils/haptics';
 
 Chart.register(LineController, LineElement, PointElement, DoughnutController, ArcElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 // Data-encoding palette: red shades fading into neutral greys (design system
 // allows shades for data, the single red accent stays the lead).
-const palette = [
+// Resolved fresh (not a const) so slices/legend pick up the active theme's ink
+// on each render — the neutral greys flip to dark on the light theme.
+const palette = () => [
   'rgb(215, 26, 33)',
   'rgba(215, 26, 33, 0.72)',
   'rgba(215, 26, 33, 0.48)',
-  'rgba(255, 255, 255, 0.5)',
-  'rgba(255, 255, 255, 0.35)',
-  'rgba(255, 255, 255, 0.22)',
-  'rgba(255, 255, 255, 0.14)',
+  chartInk(0.5),
+  chartInk(0.35),
+  chartInk(0.22),
+  chartInk(0.14),
 ];
 
 const localMonthKey = (d: Date) => {
@@ -197,7 +199,7 @@ const renderDonut = () => {
       datasets: [
         {
           data: categories.value.map((c) => c.amount),
-          backgroundColor: categories.value.map((_, i) => palette[i % palette.length]),
+          backgroundColor: categories.value.map((_, i) => { const p = palette(); return p[i % p.length]; }),
           borderWidth: 0,
         },
       ],
@@ -306,7 +308,7 @@ onUnmounted(() => {
   font-family: var(--nt-font-head);
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .month-nav__btn {
@@ -317,8 +319,8 @@ onUnmounted(() => {
   height: 36px;
   border: none;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(var(--nt-ink), 0.05);
+  color: rgba(var(--nt-ink), 0.8);
   cursor: pointer;
 }
 
@@ -357,7 +359,7 @@ onUnmounted(() => {
   font-family: var(--nt-font-display);
   font-size: 1.4rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .cat-legend {
@@ -381,14 +383,14 @@ onUnmounted(() => {
 .cat-legend__name {
   flex: 1;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(var(--nt-ink), 0.8);
   text-transform: capitalize;
 }
 
 .cat-legend__amt {
   font-family: var(--nt-font-mono);
   font-size: 0.85rem;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 /* Budget rows */
@@ -411,18 +413,18 @@ onUnmounted(() => {
 
 .budget-row__name {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(var(--nt-ink), 0.8);
   text-transform: capitalize;
 }
 
 .budget-row__nums {
   font-family: var(--nt-font-mono);
   font-size: 0.82rem;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .budget-row__limit {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .over-text {
@@ -432,7 +434,7 @@ onUnmounted(() => {
 .prog-bar {
   height: 8px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--nt-ink), 0.06);
   overflow: hidden;
 }
 
@@ -455,7 +457,7 @@ onUnmounted(() => {
   position: relative;
   height: 220px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--nt-ink), 0.03);
   border-radius: 8px;
   padding: 8px 4px 4px;
 }
@@ -487,12 +489,12 @@ onUnmounted(() => {
 }
 
 .chart-legend__swatch--dim {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(var(--nt-ink), 0.35);
 }
 
 .empty-copy {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   font-size: 0.9rem;
 }
 </style>

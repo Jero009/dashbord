@@ -168,18 +168,18 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .card-sub {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .net-worth-value {
   font-size: 3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
 
@@ -192,7 +192,7 @@ onIonViewWillEnter(async () => {
 .card-metric {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .card-metric span {
@@ -201,14 +201,14 @@ onIonViewWillEnter(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .card-metric strong {
   display: block;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .metric-over {

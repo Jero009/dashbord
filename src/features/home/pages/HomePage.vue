@@ -156,7 +156,7 @@
                 y="0"
                 :width="((circWindows.cognitiveEnd - circWindows.cognitiveStart + 24) % 24)"
                 height="10"
-                fill="rgba(255,255,255,0.08)" />
+                :style="{ fill: 'rgba(var(--nt-ink), 0.08)' }" />
               <rect v-if="circWindows?.exerciseMorning"
                 :x="circWindows.exerciseMorning.start"
                 y="0"
@@ -175,7 +175,7 @@
               <polyline :points="circLinePoints" fill="none" stroke="rgb(215, 26, 33)" stroke-width="0.28" stroke-linecap="round" stroke-linejoin="round" />
               <!-- Now line -->
               <line :x1="circNowX" :x2="circNowX" y1="0" y2="10"
-                stroke="rgba(255,255,255,0.5)" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
+                :style="{ stroke: 'rgba(var(--nt-ink), 0.5)' }" stroke-width="0.2" stroke-dasharray="0.4 0.3" />
             </svg>
             <div class="circ-axis">
               <span>0</span><span>6</span><span>12</span><span>18</span>
@@ -756,16 +756,16 @@ const batteryRatio = computed(() => batteryScore.value === null ? 0 : batterySco
 const batteryDashOffset = computed(() => 289 - 289 * batteryRatio.value);
 const batteryColor = computed(() => {
   const s = batteryScore.value;
-  if (s === null) return 'rgba(255,255,255,0.25)';
+  if (s === null) return 'rgba(var(--nt-ink), 0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgba(255,255,255,0.85)';
+  if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
   return 'var(--ion-color-accent-red)';
 });
 const sleepScoreColor = computed(() => {
   const s = sleepScoreVal.value;
-  if (s === null) return '#fff';
+  if (s === null) return 'var(--nt-fg)';
   if (s >= 70) return 'rgb(34,197,94)';
-  if (s >= 45) return 'rgba(255,255,255,0.85)';
+  if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
   return 'var(--ion-color-accent-red)';
 });
 
@@ -1227,7 +1227,7 @@ onMounted(() => {
   margin: 0 0 16px;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1.2;
 }
 
@@ -1241,7 +1241,7 @@ onMounted(() => {
   background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -1271,12 +1271,12 @@ onMounted(() => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .card-date {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* 3-score row */
@@ -1290,7 +1290,7 @@ onMounted(() => {
 .score-tile {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1300,14 +1300,14 @@ onMounted(() => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .score-tile__val {
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 /* Battery / Readiness layout */
@@ -1352,9 +1352,9 @@ onMounted(() => {
 }
 
 .ready-chip--off {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.05);
+  color: rgba(var(--nt-ink), 0.35);
+  border: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
 .recovery-chip {
@@ -1366,8 +1366,8 @@ onMounted(() => {
   padding: 10px 12px;
   border-radius: 10px;
   text-align: left;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.05);
+  border: 1px solid rgba(var(--nt-ink), 0.08);
   cursor: pointer;
   transition: opacity 150ms ease;
 }
@@ -1391,7 +1391,7 @@ onMounted(() => {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .recovery-chip--recover .recovery-chip__label {
@@ -1404,7 +1404,7 @@ onMounted(() => {
 
 .recovery-chip__reason {
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   line-height: 1.4;
 }
 
@@ -1413,7 +1413,7 @@ onMounted(() => {
 }
 
 .week-card__chevron {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
   transform: rotate(90deg);
   font-size: 16px;
 }
@@ -1445,7 +1445,7 @@ onMounted(() => {
   font-family: var(--nt-font-display);
   font-size: 1.1rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .week-stat__val--pos { color: var(--nt-data-positive); }
@@ -1454,14 +1454,14 @@ onMounted(() => {
 .drain-line {
   margin: 0;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .battery-timeline {
   height: 90px;
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
 /* Metric tiles */
@@ -1478,14 +1478,14 @@ onMounted(() => {
 .card-metric {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .card-metric span {
   display: block;
   margin-bottom: 6px;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -1494,7 +1494,7 @@ onMounted(() => {
   display: block;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 /* Active workout timers */
@@ -1507,14 +1507,14 @@ onMounted(() => {
 .active-card__timer {
   border-radius: 10px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .active-card__timer span {
   display: block;
   margin-bottom: 6px;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -1556,7 +1556,7 @@ onMounted(() => {
 }
 
 .readiness-ring__track {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: rgba(var(--nt-ink), 0.08);
 }
 
 .readiness-ring__progress {
@@ -1574,18 +1574,18 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   text-align: center;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .readiness-ring__content strong {
   font-size: 3rem;
   font-weight: 700;
   line-height: 1;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .readiness-ring__content span {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Day view */
@@ -1606,7 +1606,7 @@ onMounted(() => {
 .day-view__header h2 {
   margin: 0;
   font-size: 1rem;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 /* Habit blocks */
@@ -1616,7 +1616,7 @@ onMounted(() => {
   gap: 10px;
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
 .habit-block {
@@ -1626,7 +1626,7 @@ onMounted(() => {
   gap: 6px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
@@ -1641,11 +1641,11 @@ onMounted(() => {
   width: 22px;
   height: 22px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(var(--nt-ink), 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--nt-fg);
   flex-shrink: 0;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
@@ -1661,18 +1661,18 @@ onMounted(() => {
 
 .habit-block__name {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   line-height: 1.2;
 }
 
 .habit-block--done .habit-block__name {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   text-decoration: line-through;
 }
 
 .habit-block__time {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* All-day strip */
@@ -1682,7 +1682,7 @@ onMounted(() => {
   gap: 6px;
   margin-bottom: 14px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
 .allday-pill {
@@ -1692,14 +1692,14 @@ onMounted(() => {
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(var(--nt-ink), 0.85);
+  background: rgba(var(--nt-ink), 0.08);
 }
 
 .allday-pill--workout   { background: rgba(215, 26, 33, 0.15);  color: rgb(215, 26, 33); }
 .allday-pill--recovery  { background: rgba(34, 197, 94, 0.15);  color: rgb(34, 197, 94); }
-.allday-pill--reminder  { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
-.allday-pill--habit     { background: rgba(215, 26, 33, 0.1);   color: rgba(255,255,255,0.85); }
+.allday-pill--reminder  { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
+.allday-pill--habit     { background: rgba(215, 26, 33, 0.1);   color: rgba(var(--nt-ink), 0.85); }
 .allday-pill--habit-done { background: rgba(215, 26, 33, 0.25); color: rgb(215, 26, 33); }
 
 .allday-check {
@@ -1745,7 +1745,7 @@ onMounted(() => {
   width: 40px;
   flex-shrink: 0;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(var(--nt-ink), 0.25);
   text-align: right;
   padding-right: 10px;
   margin-top: -0.45em;
@@ -1755,7 +1755,7 @@ onMounted(() => {
 .hour-line {
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
 }
 
 /* Now line */
@@ -1787,19 +1787,19 @@ onMounted(() => {
   border-radius: 10px;
   padding: 6px 10px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
 }
 
 .ev-block--workout  { background: rgba(215, 26, 33, 0.25); }
 .ev-block--recovery { background: rgba(34, 197, 94, 0.15); }
-.ev-block--reminder { background: rgba(255, 255, 255, 0.08); }
-.ev-block--sleep    { background: rgba(255, 255, 255, 0.05); }
+.ev-block--reminder { background: rgba(var(--nt-ink), 0.08); }
+.ev-block--sleep    { background: rgba(var(--nt-ink), 0.05); }
 
 .ev-title {
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1808,7 +1808,7 @@ onMounted(() => {
 .ev-time {
   display: block;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   margin-top: 1px;
 }
 
@@ -1824,7 +1824,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   background: rgba(215, 26, 33, 0.15);
   border: 1px solid rgba(215, 26, 33, 0.3);
   cursor: pointer;
@@ -1834,7 +1834,7 @@ onMounted(() => {
 
 .habit-pill--done {
   background: rgba(215, 26, 33, 0.3);
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .habit-pill__check {
@@ -1849,7 +1849,7 @@ onMounted(() => {
 .day-view__empty {
   margin: 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .ev-start-btn {
@@ -1858,7 +1858,7 @@ onMounted(() => {
   background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
@@ -1891,13 +1891,13 @@ onMounted(() => {
 .weight-val {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1.1;
 }
 
 .weight-goal-line {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .weight-quick-log {
@@ -1910,10 +1910,10 @@ onMounted(() => {
 .weight-input {
   width: 70px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-fg);
   font-size: 0.9rem;
   outline: none;
   transition: border-color 150ms ease;
@@ -1928,7 +1928,7 @@ onMounted(() => {
   background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -2001,7 +2001,7 @@ onMounted(() => {
   padding: 12px 14px;
   text-align: center;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .circ-svg {
@@ -2009,14 +2009,14 @@ onMounted(() => {
   height: 72px;
   display: block;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .circ-axis {
   display: flex;
   justify-content: space-between;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
   margin-top: 3px;
   padding: 0 2px;
 }
@@ -2027,7 +2027,7 @@ onMounted(() => {
   gap: 6px;
   margin-top: 10px;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .circ-legend-dot {
@@ -2037,14 +2037,14 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.circ-legend-dot--focus    { background: rgba(255, 255, 255, 0.5); }
+.circ-legend-dot--focus    { background: rgba(var(--nt-ink), 0.5); }
 .circ-legend-dot--exercise { background: rgb(34, 197, 94); }
 .circ-legend-dot--curve    { background: rgb(215, 26, 33); }
 
 .circ-log-section {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(var(--nt-ink), 0.08);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2058,10 +2058,10 @@ onMounted(() => {
   justify-content: space-between;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(var(--nt-ink), 0.05);
+  color: rgba(var(--nt-ink), 0.85);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -2069,7 +2069,7 @@ onMounted(() => {
 
 .circ-log-trigger ion-icon {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .circ-sheet::part(content) {
@@ -2091,7 +2091,7 @@ onMounted(() => {
   border: none;
   border-radius: 8px;
   background: rgb(215, 26, 33);
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -2105,7 +2105,7 @@ onMounted(() => {
 
 .circ-log-label {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   flex-shrink: 0;
   width: 82px;
 }
@@ -2114,9 +2114,9 @@ onMounted(() => {
   flex: 1;
   padding: 6px 0;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -2126,15 +2126,15 @@ onMounted(() => {
 .circ-type-btn--active {
   background: rgb(215, 26, 33);
   border-color: rgb(215, 26, 33);
-  color: #fff;
+  color: var(--nt-on-accent);
 }
 
 .circ-light-btn {
   padding: 6px 14px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -2157,9 +2157,9 @@ onMounted(() => {
   flex: 1;
   padding: 6px 0;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -2169,12 +2169,12 @@ onMounted(() => {
 .circ-energy-btn--active {
   background: rgb(215, 26, 33);
   border-color: rgb(215, 26, 33);
-  color: #fff;
+  color: var(--nt-on-accent);
 }
 
 .circ-log-complete {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   text-align: center;
   padding: 6px 0;
 }

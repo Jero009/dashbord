@@ -532,13 +532,13 @@ ion-content.home-content {
 
 .weekly-card__header .section-kicker {
   margin: 0;
-  color: rgba(255,255,255,0.5) !important;
+  color: rgba(var(--nt-ink), 0.5) !important;
 }
 
 .weekly-count {
   font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .weekly-dots {
@@ -551,7 +551,7 @@ ion-content.home-content {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(var(--nt-ink), 0.12);
   background: transparent;
   transition: background-color 150ms ease, border-color 150ms ease;
 }
@@ -563,7 +563,7 @@ ion-content.home-content {
 
 .weekly-progress-bar {
   height: 3px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(var(--nt-ink), 0.08);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -652,7 +652,7 @@ ion-content.home-content {
 .active-card__timer {
   border-radius: 10px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .card-metric span,
@@ -660,7 +660,7 @@ ion-content.home-content {
 .workout-tile__copy span {
   display: block;
   margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -738,7 +738,7 @@ ion-content.home-content {
   display: block;
   margin-top: 6px;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .graph-card {
@@ -763,7 +763,7 @@ ion-content.home-content {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .pr-list {
@@ -777,7 +777,7 @@ ion-content.home-content {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border: none;
   border-radius: 10px;
   text-align: left;
@@ -792,7 +792,7 @@ ion-content.home-content {
 .pr-row__name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--nt-ink), 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -807,14 +807,14 @@ ion-content.home-content {
 }
 
 .pr-row__stat small {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--nt-ink), 0.55);
   font-family: var(--nt-font-mono);
   font-weight: 400;
 }
 
 .pr-row__date {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   white-space: nowrap;
 }
 
@@ -825,7 +825,7 @@ ion-content.home-content {
 .chart-frame {
   margin-top: 16px;
   height: 240px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 10px 6px 6px;
 }
