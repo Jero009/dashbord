@@ -9,18 +9,17 @@
         <!-- APPEARANCE -->
         <div class="card">
           <p class="section-kicker">Appearance</p>
-          <div class="notif-row notif-row--single">
-            <div class="notif-row__label">
-              <span class="notif-title">Light theme</span>
-              <span class="notif-sub">Switch between dark and light</span>
-            </div>
-            <div class="notif-row__controls">
-              <label class="notif-toggle">
-                <input type="checkbox" :checked="isLight" @change="onToggleTheme" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
+          <div class="theme-seg">
+            <button
+              v-for="opt in themeOptions"
+              :key="opt.value"
+              type="button"
+              class="theme-seg__btn"
+              :class="{ 'theme-seg__btn--active': themeMode === opt.value }"
+              @click="selectTheme(opt.value)"
+            >{{ opt.label }}</button>
           </div>
+          <p class="hint-text">System follows your device's light/dark setting.</p>
         </div>
 
         <!-- HEALTH TARGETS -->
@@ -286,6 +285,7 @@ import {
 import { buildMorningBody, buildWeeklyBody } from '@/shared/utils/notificationDigests'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
 import { useTheme } from '@/shared/composables/useTheme'
+import type { ThemeMode } from '@/shared/composables/useTheme'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
@@ -297,10 +297,15 @@ import { FilePicker } from '@capawesome/capacitor-file-picker'
 const router = useRouter()
 
 // --- Appearance ---
-const { isLight, toggleTheme } = useTheme()
-const onToggleTheme = () => {
-  hapticLight()
-  toggleTheme()
+const { mode: themeMode, setThemeMode } = useTheme()
+const themeOptions: { value: ThemeMode; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+const selectTheme = (value: ThemeMode) => {
+  hapticSelect()
+  setThemeMode(value)
 }
 
 // --- Health Targets ---
@@ -818,9 +823,34 @@ const handleImportFile = async (event: Event) => {
   padding-bottom: 0;
 }
 
-.notif-row--single {
-  padding: 0;
-  border-bottom: none;
+/* Theme segmented control */
+.theme-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(var(--nt-ink), 0.05);
+  border-radius: var(--nt-radius-pill);
+}
+
+.theme-seg__btn {
+  flex: 1;
+  padding: 9px 0;
+  border: none;
+  background: transparent;
+  color: var(--nt-text-dim);
+  font-family: var(--nt-font-head);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--nt-radius-pill);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.theme-seg__btn--active {
+  background: var(--nt-surface-2);
+  color: var(--ion-color-light);
 }
 
 .notif-row__label {
