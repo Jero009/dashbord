@@ -17,7 +17,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Type</label>
-              <ion-select v-model="investmentType" class="styled-select">
+              <ion-select v-model="investmentType" class="styled-select" interface="action-sheet">
                 <ion-select-option value="stock">Stock</ion-select-option>
                 <ion-select-option value="crypto">Crypto</ion-select-option>
                 <ion-select-option value="fund">Fund</ion-select-option>
@@ -34,7 +34,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Funded from</label>
-              <ion-select v-model="investmentAccountId" class="styled-select" placeholder="Select account" :disabled="!accounts.length">
+              <ion-select v-model="investmentAccountId" class="styled-select" interface="action-sheet" placeholder="Select account" :disabled="!accounts.length">
                 <ion-select-option :value="null">No account</ion-select-option>
                 <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
                   {{ account.name }}

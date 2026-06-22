@@ -13,7 +13,7 @@
           <div class="form-fields">
             <div class="field-group">
               <label class="field-label">Type</label>
-              <ion-select v-model="subscriptionDirection" class="styled-select">
+              <ion-select v-model="subscriptionDirection" class="styled-select" interface="action-sheet">
                 <ion-select-option value="expense">Payment</ion-select-option>
                 <ion-select-option value="income">Income</ion-select-option>
               </ion-select>
@@ -28,7 +28,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Cadence</label>
-              <ion-select v-model="subscriptionCadence" class="styled-select">
+              <ion-select v-model="subscriptionCadence" class="styled-select" interface="action-sheet">
                 <ion-select-option value="monthly">Monthly</ion-select-option>
                 <ion-select-option value="yearly">Yearly</ion-select-option>
                 <ion-select-option value="weekly">Weekly</ion-select-option>
@@ -40,7 +40,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">{{ subscriptionDirection === 'income' ? 'Deposited to' : 'Paid from' }}</label>
-              <ion-select v-model="subscriptionAccountId" class="styled-select" placeholder="Select account" :disabled="!accounts.length">
+              <ion-select v-model="subscriptionAccountId" class="styled-select" interface="action-sheet" placeholder="Select account" :disabled="!accounts.length">
                 <ion-select-option :value="null">No account</ion-select-option>
                 <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
                   {{ account.name }}

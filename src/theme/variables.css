@@ -173,9 +173,11 @@ ion-header::after {
   display: none !important;
 }
 
-/* ─── Confirm / destructive alerts ─── */
-ion-alert.app-confirm-alert,
-ion-alert.history-delete-alert {
+/* ─── Alerts — global (confirm / destructive / prompt / select popups) ───
+   Generalised from opt-in cssClass to the bare element so EVERY ion-alert
+   (incl. default-interface ion-select popups) follows the Nothing-OS theme.
+   All colours use theme tokens so they flip in the light theme. */
+ion-alert {
   --background: var(--nt-surface);
   --color: var(--nt-fg);
   --border-radius: var(--nt-radius-lg);
@@ -184,18 +186,15 @@ ion-alert.history-delete-alert {
   --max-width: 360px;
 }
 
-ion-alert.app-confirm-alert .alert-wrapper,
-ion-alert.history-delete-alert .alert-wrapper {
+ion-alert .alert-wrapper {
   border: 1px solid var(--nt-border);
 }
 
-ion-alert.app-confirm-alert .alert-head,
-ion-alert.history-delete-alert .alert-head {
+ion-alert .alert-head {
   padding: 24px 24px 10px;
 }
 
-ion-alert.app-confirm-alert .alert-title,
-ion-alert.history-delete-alert .alert-title {
+ion-alert .alert-title {
   font-family: var(--nt-font-head);
   font-size: 0.95rem;
   font-weight: 600;
@@ -204,8 +203,11 @@ ion-alert.history-delete-alert .alert-title {
   color: var(--nt-fg);
 }
 
-ion-alert.app-confirm-alert .alert-message,
-ion-alert.history-delete-alert .alert-message {
+ion-alert .alert-sub-title {
+  color: var(--nt-text-dim);
+}
+
+ion-alert .alert-message {
   padding: 0 24px 20px;
   font-family: var(--nt-font-body);
   font-size: 0.875rem;
@@ -213,93 +215,12 @@ ion-alert.history-delete-alert .alert-message {
   color: var(--nt-text-dim);
 }
 
-ion-alert.app-confirm-alert .alert-button-group,
-ion-alert.history-delete-alert .alert-button-group {
-  flex-direction: column-reverse;
-  padding: 0 16px 16px;
-  gap: 8px;
-}
-
-ion-alert.app-confirm-alert .alert-button,
-ion-alert.history-delete-alert .alert-button {
-  font-family: var(--nt-font-head) !important;
-  font-size: 0.78rem !important;
-  letter-spacing: 0.1em !important;
-  text-transform: uppercase !important;
-  font-weight: 600 !important;
-  border-radius: var(--nt-radius-sm) !important;
-  min-height: 46px !important;
-  margin: 0 !important;
-  border: none !important;
-  width: 100% !important;
-}
-
-ion-alert.app-confirm-alert .alert-button .alert-button-inner,
-ion-alert.history-delete-alert .alert-button .alert-button-inner {
-  justify-content: center !important;
-}
-
-/* cancel — ghost */
-ion-alert.app-confirm-alert .alert-button-role-cancel,
-ion-alert.history-delete-alert .alert-button-role-cancel {
-  color: var(--nt-text-dim) !important;
-  background: transparent !important;
-  border: 1px solid var(--nt-border) !important;
-  font-weight: 500 !important;
-}
-
-/* destructive — solid red */
-ion-alert.app-confirm-alert .alert-button-role-destructive,
-ion-alert.history-delete-alert .alert-button-role-destructive {
-  color: var(--nt-on-accent) !important;
-  background: var(--nt-accent) !important;
-}
-
-/* confirm (positive) — solid white */
-ion-alert.app-confirm-alert .alert-button-role-confirm,
-ion-alert.history-delete-alert .alert-button-role-confirm {
-  color: var(--nt-bg) !important;
-  background: var(--ion-color-light) !important;
-}
-
-/* fallback for unlabeled single button (e.g. OK) */
-ion-alert.app-confirm-alert .alert-button:not(.alert-button-role-cancel):not(.alert-button-role-destructive):not(.alert-button-role-confirm),
-ion-alert.history-delete-alert .alert-button:not(.alert-button-role-cancel):not(.alert-button-role-destructive):not(.alert-button-role-confirm) {
-  color: var(--nt-bg) !important;
-  background: var(--ion-color-light) !important;
-}
-
-/* ─── Input (prompt) alerts ─── */
-ion-alert.rename-exercise-alert {
-  --background: var(--nt-surface);
-  --color: var(--nt-fg);
-  --border-radius: var(--nt-radius-lg);
-  --backdrop-opacity: 0.65;
-  --min-width: 300px;
-}
-
-ion-alert.rename-exercise-alert .alert-wrapper {
-  border: 1px solid var(--nt-border);
-}
-
-ion-alert.rename-exercise-alert .alert-head {
-  padding: 24px 24px 10px;
-}
-
-ion-alert.rename-exercise-alert .alert-title {
-  font-family: var(--nt-font-head);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--nt-fg);
-}
-
-ion-alert.rename-exercise-alert .alert-input-group {
+/* prompt input */
+ion-alert .alert-input-group {
   padding: 0 20px 8px;
 }
 
-ion-alert.rename-exercise-alert .alert-input {
+ion-alert .alert-input {
   background: rgba(var(--nt-ink), 0.06);
   border: 1px solid var(--nt-border-strong);
   border-radius: var(--nt-radius-sm);
@@ -309,13 +230,39 @@ ion-alert.rename-exercise-alert .alert-input {
   font-size: 0.9rem;
 }
 
-ion-alert.rename-exercise-alert .alert-button-group {
+/* select popup — radio / checkbox option lists */
+ion-alert .alert-radio-group,
+ion-alert .alert-checkbox-group {
+  border-top: 1px solid var(--nt-border);
+  border-bottom: 1px solid var(--nt-border);
+}
+
+ion-alert .alert-radio-label,
+ion-alert .alert-checkbox-label {
+  font-family: var(--nt-font-body);
+  color: var(--nt-fg);
+}
+
+ion-alert .alert-tappable.alert-radio[aria-checked="true"] .alert-radio-label,
+ion-alert .alert-tappable.alert-checkbox[aria-checked="true"] .alert-checkbox-label {
+  color: var(--nt-accent);
+}
+
+ion-alert [aria-checked="true"] .alert-radio-icon {
+  border-color: var(--nt-accent);
+}
+
+ion-alert [aria-checked="true"] .alert-radio-icon::after {
+  background-color: var(--nt-accent);
+}
+
+ion-alert .alert-button-group {
   flex-direction: column-reverse;
-  padding: 8px 16px 16px;
+  padding: 0 16px 16px;
   gap: 8px;
 }
 
-ion-alert.rename-exercise-alert .alert-button {
+ion-alert .alert-button {
   font-family: var(--nt-font-head) !important;
   font-size: 0.78rem !important;
   letter-spacing: 0.1em !important;
@@ -328,18 +275,32 @@ ion-alert.rename-exercise-alert .alert-button {
   width: 100% !important;
 }
 
-ion-alert.rename-exercise-alert .alert-button .alert-button-inner {
+ion-alert .alert-button .alert-button-inner {
   justify-content: center !important;
 }
 
-ion-alert.rename-exercise-alert .alert-button-role-cancel {
+/* cancel — ghost */
+ion-alert .alert-button-role-cancel {
   color: var(--nt-text-dim) !important;
   background: transparent !important;
   border: 1px solid var(--nt-border) !important;
   font-weight: 500 !important;
 }
 
-ion-alert.rename-exercise-alert .alert-button:not(.alert-button-role-cancel) {
+/* destructive — solid red */
+ion-alert .alert-button-role-destructive {
+  color: var(--nt-on-accent) !important;
+  background: var(--nt-accent) !important;
+}
+
+/* confirm (positive) — solid white */
+ion-alert .alert-button-role-confirm {
+  color: var(--nt-bg) !important;
+  background: var(--ion-color-light) !important;
+}
+
+/* fallback for unlabeled single button (e.g. OK) */
+ion-alert .alert-button:not(.alert-button-role-cancel):not(.alert-button-role-destructive):not(.alert-button-role-confirm) {
   color: var(--nt-bg) !important;
   background: var(--ion-color-light) !important;
 }
@@ -445,8 +406,8 @@ ion-select.app-select {
   color: var(--nt-fg);
 }
 
-/* ─── Action sheets ─── */
-ion-action-sheet.app-action-sheet {
+/* ─── Action sheets — global (incl. ion-select action-sheet popups) ─── */
+ion-action-sheet {
   --background: var(--nt-surface);
   --color: var(--ion-color-light);
   --button-background: transparent;
@@ -461,12 +422,12 @@ ion-action-sheet.app-action-sheet {
   font-family: var(--nt-font-head);
 }
 
-ion-action-sheet.app-action-sheet::part(content) {
+ion-action-sheet::part(content) {
   border-radius: var(--nt-radius-lg) var(--nt-radius-lg) 0 0;
   border-top: 1px solid var(--nt-border);
 }
 
-ion-action-sheet.app-action-sheet::part(title) {
+ion-action-sheet::part(title) {
   font-family: var(--nt-font-head);
   font-size: 0.72rem;
   letter-spacing: var(--nt-tracking-kicker);
@@ -475,7 +436,7 @@ ion-action-sheet.app-action-sheet::part(title) {
   padding-bottom: 4px;
 }
 
-ion-action-sheet.app-action-sheet .action-sheet-button {
+ion-action-sheet .action-sheet-button {
   font-family: var(--nt-font-head);
   font-size: 0.9rem;
   letter-spacing: 0.04em;
@@ -483,14 +444,46 @@ ion-action-sheet.app-action-sheet .action-sheet-button {
   border-bottom: 1px solid rgba(var(--nt-ink), 0.04);
 }
 
-ion-action-sheet.app-action-sheet .action-sheet-destructive {
+/* selected option in an ion-select action-sheet popup */
+ion-action-sheet .action-sheet-selected {
+  color: var(--nt-accent);
+  font-weight: 600;
+}
+
+ion-action-sheet .action-sheet-destructive {
   color: var(--nt-accent);
 }
 
-ion-action-sheet.app-action-sheet .action-sheet-cancel {
+ion-action-sheet .action-sheet-cancel {
   background: var(--nt-surface-2);
   margin-top: 8px;
   font-weight: 600;
+}
+
+/* ─── Popovers — global (incl. ion-select popover interface) ─── */
+ion-popover {
+  --background: var(--nt-surface);
+  --color: var(--nt-fg);
+  --backdrop-opacity: 0.4;
+  --border-radius: var(--nt-radius-md);
+  --box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+ion-popover::part(content) {
+  border: 1px solid var(--nt-border);
+  border-radius: var(--nt-radius-md);
+}
+
+ion-popover ion-list {
+  --background: var(--nt-surface);
+  background: var(--nt-surface);
+  padding: 4px 0;
+}
+
+ion-popover ion-item {
+  --background: var(--nt-surface);
+  --color: var(--nt-fg);
+  font-family: var(--nt-font-body);
 }
 
 ion-list {

@@ -17,7 +17,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Type</label>
-              <ion-select v-model="accountType" class="styled-select">
+              <ion-select v-model="accountType" class="styled-select" interface="action-sheet">
                 <ion-select-option value="cash">Cash</ion-select-option>
                 <ion-select-option value="bank">Bank</ion-select-option>
                 <ion-select-option value="credit">Credit</ion-select-option>
