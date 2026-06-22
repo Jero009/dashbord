@@ -24,6 +24,14 @@
         </div>
       </div>
 
+      <!-- Recovery recommendations -->
+      <div v-if="recommendations.length" class="recs">
+        <p class="section-kicker">Recommendations</p>
+        <ul class="rec-list">
+          <li v-for="(r, i) in recommendations" :key="i" class="rec-item">{{ r }}</li>
+        </ul>
+      </div>
+
       <!-- Metric tiles -->
       <div class="tile-grid">
         <div class="tile">
@@ -358,6 +366,47 @@ const statusReason = computed(() => {
   return overtraining.value.reasons[0];
 });
 
+const recommendations = computed((): string[] => {
+  if (!hasData.value) return [];
+
+  // Detraining: low acute load even without a recovery signal
+  if (latest.value?.flag === 'detraining') {
+    return [
+      'Ramp up gradually — add one extra session this week.',
+      'Aim for ACWR between 0.8 and 1.3 to stay in the optimal zone.',
+    ];
+  }
+
+  if (!hasRecoverySignal.value) return [];
+
+  const result = overtraining.value;
+  const acwr = result.acwr;
+
+  if (result.status === 'red') {
+    const targetPct = acwr != null ? Math.max(50, Math.round((1.1 / acwr) * 100)) : 60;
+    return [
+      'Take 2–3 complete rest days before your next session.',
+      `When you return, target ~${targetPct}% of your recent load.`,
+      'Prioritise sleep and nutrition — recovery is training.',
+    ];
+  }
+
+  if (result.status === 'yellow') {
+    const recs: string[] = [];
+    if (acwr != null && acwr > 1.3) {
+      recs.push('Cap this week at or below your chronic load level.');
+      recs.push('Add one extra rest day between sessions.');
+    }
+    if (result.consecutiveLowRecovery >= 1) {
+      recs.push('Keep today\'s session short and low-intensity.');
+      recs.push('Check sleep quality — RHR elevation often follows poor sleep.');
+    }
+    return recs;
+  }
+
+  return [];
+});
+
 const loadMetricLabel = computed(() =>
   acwrSeries.value[0]?.metric === 'rpe' ? 'sRPE' : 'volume'
 );
@@ -534,6 +583,33 @@ onIonViewWillEnter(load);
   width: 16px;
   height: 0;
   border-top: 2px solid rgba(255, 255, 255, 0.65);
+}
+.recs {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+.rec-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.rec-item {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+  padding-left: 12px;
+  position: relative;
+}
+.rec-item::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--nt-text-dim);
 }
 .lag-note {
   margin: 0;

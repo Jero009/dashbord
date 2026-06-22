@@ -57,9 +57,13 @@
             <span class="card-count">{{ subscriptions.length }} active</span>
           </div>
           <div v-if="subscriptions.length" class="item-list">
-            <div v-for="subscription in subscriptions" :key="subscription.id" class="list-item">
+            <div v-for="subscription in subscriptions" :key="subscription.id" class="list-item" :class="{ 'list-item--due-soon': isDueSoon(subscription.next_due_date), 'list-item--overdue': isOverdue(subscription.next_due_date) }">
               <div class="list-item__info">
-                <strong class="list-item__name">{{ subscription.name }}</strong>
+                <div class="list-item__name-row">
+                  <strong class="list-item__name">{{ subscription.name }}</strong>
+                  <span v-if="isOverdue(subscription.next_due_date)" class="due-badge due-badge--overdue">Overdue</span>
+                  <span v-else-if="isDueSoon(subscription.next_due_date)" class="due-badge due-badge--soon">Due soon</span>
+                </div>
                 <span class="list-item__meta">{{ subscription.cadence }} · due {{ subscription.next_due_date || 'TBD' }}<template v-if="subscription.account_name"> · {{ subscription.direction === 'income' ? 'to' : 'from' }} {{ subscription.account_name }}</template></span>
               </div>
               <span class="list-item__value" :class="{ 'list-item__value--income': subscription.direction === 'income' }">
@@ -92,6 +96,8 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import { addFinanceSubscription, getFinanceSubscriptions, getFinanceAccounts } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
+import { scheduleSubscriptionReminders } from '@/shared/utils/notifications';
+import { getNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore } from '@/shared/utils/userSettings';
 
 const subscriptionName = ref('');
 const subscriptionAmount = ref('');
@@ -104,6 +110,28 @@ const accounts = ref<Array<Record<string, any>>>([]);
 
 const loadSubscriptions = async () => {
   subscriptions.value = await getFinanceSubscriptions();
+  if (getNotifSubscriptionEnabled()) {
+    await scheduleSubscriptionReminders(
+      subscriptions.value.map((s) => ({
+        id: Number(s.id),
+        name: String(s.name),
+        amount: Number(s.amount),
+        next_due_date: s.next_due_date ?? null,
+      })),
+      getNotifSubscriptionDaysBefore()
+    );
+  }
+};
+
+const isDueSoon = (dateStr: string | null): boolean => {
+  if (!dateStr) return false;
+  const days = (new Date(dateStr).getTime() - Date.now()) / 86400000;
+  return days >= 0 && days <= getNotifSubscriptionDaysBefore();
+};
+
+const isOverdue = (dateStr: string | null): boolean => {
+  if (!dateStr) return false;
+  return new Date(dateStr).getTime() < Date.now();
 };
 
 const loadAccounts = async () => {
@@ -272,11 +300,46 @@ onIonViewWillEnter(async () => {
   border-radius: 10px;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+}
+
+.list-item--due-soon {
+  border: 1px solid rgba(255, 215, 0, 0.35);
+}
+
+.list-item--overdue {
+  border: 1px solid rgba(215, 26, 33, 0.5);
 }
 
 .list-item__info {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+}
+
+.list-item__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.due-badge {
+  font-family: var(--nt-font-head);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.due-badge--soon {
+  color: rgb(255, 215, 0);
+  background: rgba(255, 215, 0, 0.12);
+}
+
+.due-badge--overdue {
+  color: var(--nt-accent);
+  background: rgba(215, 26, 33, 0.12);
 }
 
 .list-item__name {

@@ -14,6 +14,9 @@
         <ion-segment-button value="circadian">
           <ion-label>Circadian</ion-label>
         </ion-segment-button>
+        <ion-segment-button value="cardio">
+          <ion-label>Cardio</ion-label>
+        </ion-segment-button>
       </ion-segment>
     </div>
   </ion-toolbar>
@@ -32,6 +35,7 @@ const activeSegment = computed(() => {
   if (route.path.includes('/sleep'))     return 'sleep';
   if (route.path.includes('/body'))      return 'body';
   if (route.path.includes('/circadian')) return 'circadian';
+  if (route.path.includes('/cardio'))    return 'cardio';
   return 'overview';
 });
 
@@ -45,6 +49,7 @@ const handleSegmentChange = (event: CustomEvent) => {
     sleep:     '/health/sleep',
     body:      '/health/body',
     circadian: '/health/circadian',
+    cardio:    '/health/cardio',
   };
 
   const dest = target[value];
