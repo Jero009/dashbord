@@ -493,11 +493,9 @@ import RpePickerModal from '@/features/gym/components/RpePickerModal.vue';
 import { normalizeDateInput, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
-import { App } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
-import { showRestGlyph, hideRestGlyph, releaseRestGlyph } from '@/shared/utils/restTimerGlyph';
+import { glyphRestDraw, glyphRestEnd, glyphRestStop, glyphRestRelease } from '@/shared/utils/restTimerGlyph';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe } from '@/shared/db/app_db';
@@ -936,10 +934,6 @@ let restInterval: any = null;
 let restEndTime = 0;
 let restExerciseName = '';
 let audioContext: AudioContext | null = null;
-// Tracks foreground state so we never try to draw the (foreground-only) Glyph
-// while backgrounded, and so we can re-render on return.
-let appForeground = true;
-let appStateListener: { remove: () => void } | null = null;
 
 // Web-only fallback ding (dev). On native, duckAndDing() handles the sound.
 const playBeep = () => {
@@ -984,7 +978,6 @@ const clearTimerState = () => {
   localStorage.removeItem(REST_TIMER_KEY);
   void cancelRestTimerDing();
   void clearRestNotification();
-  void hideRestGlyph();
 };
 
 // (Re)post the ongoing countdown notification for the time remaining.
@@ -996,16 +989,16 @@ const showRestCountdown = () => {
 const tickRestTimer = () => {
   const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
   restTimer.value.remaining = remaining;
-  if (remaining > 0 && appForeground) {
-    // Foreground-only: render the countdown on the Glyph back display.
-    void showRestGlyph(remaining, restTimer.value.total);
-  }
   if (remaining <= 0) {
     // App is alive at the end: ding in-app and cancel the scheduled notification
     // so it doesn't also fire.
     void playRestDing();
+    void glyphRestEnd(); // flash the back matrix, then hand it back
     stopRestTimer();
     clearTimerState();
+  } else {
+    // Draw the depleting dial on the Nothing back matrix (no-op off-device).
+    void glyphRestDraw(remaining / (restTimer.value.total || remaining));
   }
 };
 
@@ -1039,7 +1032,7 @@ const resumeRestTimer = (endTime: number, remaining: number, total?: number) => 
   restTimer.value.remaining = remaining;
   restTimer.value.isActive = true;
   showRestCountdown();
-  void showRestGlyph(remaining, restTimer.value.total);
+  void glyphRestDraw(remaining / (restTimer.value.total || remaining));
   restInterval = setInterval(tickRestTimer, 1000);
 };
 
@@ -1059,7 +1052,7 @@ const startRestTimer = (seconds: number, exerciseName = '') => {
   persistTimerState();
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
-  void showRestGlyph(restSeconds, restSeconds);
+  void glyphRestDraw(1); // full dial on the Nothing back matrix
 
   restInterval = setInterval(tickRestTimer, 1000);
 };
@@ -1081,6 +1074,7 @@ const onSkipRestTimer = (event: Event) => {
 
   stopRestTimer();
   clearTimerState();
+  void glyphRestStop(); // blank the back matrix
 };
 
 const adjustRestTimer = (seconds: number) => {
@@ -1091,7 +1085,7 @@ const adjustRestTimer = (seconds: number) => {
   // Reschedule the OS ding and refresh the countdown notification.
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
-  void showRestGlyph(restTimer.value.remaining, restTimer.value.total);
+  void glyphRestDraw(restTimer.value.remaining / (restTimer.value.total || restTimer.value.remaining));
 };
 
 const formatRestTime = (seconds: number) => {
@@ -1105,26 +1099,10 @@ const restProgress = computed(() => {
   return (restTimer.value.remaining / restTimer.value.total) * 100;
 });
 
-
-// When the app is backgrounded/closed, blank the Glyph immediately. App-matrix
-// mode is foreground-only, so otherwise the last countdown frame freezes on the
-// back display ("the timer gets stuck"). Re-render on return if still running.
-const handleAppStateChange = ({ isActive }: { isActive: boolean }) => {
-  appForeground = isActive;
-  if (!isActive) {
-    void hideRestGlyph();
-  } else if (restTimer.value.isActive && restTimer.value.remaining > 0) {
-    void showRestGlyph(restTimer.value.remaining, restTimer.value.total);
-  }
-};
-
 onIonViewWillEnter(async () => {
   await loadWorkout();
   startTimer();
   restoreTimerState();
-  if (Capacitor.isNativePlatform() && !appStateListener) {
-    appStateListener = await App.addListener('appStateChange', handleAppStateChange);
-  }
 });
 
 onUnmounted(() => {
@@ -1140,11 +1118,7 @@ onUnmounted(() => {
     void audioContext.close().catch(() => undefined);
     audioContext = null;
   }
-  if (appStateListener) {
-    void appStateListener.remove();
-    appStateListener = null;
-  }
-  void releaseRestGlyph();
+  void glyphRestRelease(); // blank + release the Nothing back matrix
 });
 
 </script>
