@@ -114,9 +114,9 @@ const saveInvestment = async () => {
 
   const quantity = Number(investmentQuantity.value);
   const value = Number(investmentValue.value);
-  if (!Number.isFinite(quantity) || !Number.isFinite(value)) {
+  if (!Number.isFinite(quantity) || !Number.isFinite(value) || quantity < 0 || value < 0) {
     const toast = await toastController.create({
-      message: 'Quantity and value must be valid numbers.',
+      message: 'Enter valid amounts.',
       duration: 2000,
       color: 'warning',
     });
@@ -128,7 +128,7 @@ const saveInvestment = async () => {
     await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value, investmentAccountId.value);
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save investment. Please try again.',
+      message: 'Could not save investment.',
       duration: 2000,
       color: 'warning',
     });
@@ -189,12 +189,12 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .card-count {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .form-fields {
@@ -211,17 +211,17 @@ onIonViewWillEnter(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .styled-input,
 .styled-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: #fff;
-  --color: #fff;
-  --placeholder-color: rgba(255, 255, 255, 0.35);
+  color: var(--nt-fg);
+  --color: var(--nt-fg);
+  --placeholder-color: rgba(var(--nt-ink), 0.35);
   --padding-start: 12px;
   --padding-end: 12px;
   --padding-top: 10px;
@@ -255,7 +255,7 @@ onIonViewWillEnter(async () => {
   gap: 12px;
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .list-item__info {
@@ -266,25 +266,25 @@ onIonViewWillEnter(async () => {
 .list-item__name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .list-item__meta {
   font-size: 0.72rem;
   text-transform: capitalize;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .list-item__value {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
   white-space: nowrap;
 }
 
 .empty-state {
   margin: 0;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.9rem;
 }
 </style>

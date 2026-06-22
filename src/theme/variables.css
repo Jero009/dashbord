@@ -16,11 +16,22 @@
   --nt-bg: #0A0A0A;                  /* app background, near-black */
   --nt-surface: #1A1A1A;             /* cards: grey, not black */
   --nt-surface-2: #242424;           /* elevated / pressed */
-  --nt-border: rgba(255, 255, 255, 0.08);
-  --nt-border-strong: rgba(255, 255, 255, 0.12);
+  --nt-border: rgba(var(--nt-ink), 0.08);
+  --nt-border-strong: rgba(var(--nt-ink), 0.12);
   --nt-text: #FFFFFF;
-  --nt-text-dim: rgba(255, 255, 255, 0.5);
-  --nt-glow: rgba(255, 255, 255, 0.18); /* Glyph-style white bloom */
+  --nt-text-dim: rgba(var(--nt-ink), 0.5);
+  --nt-glow: rgba(var(--nt-ink), 0.18); /* Glyph-style white bloom */
+
+  /* ---- Theme-aware foreground "ink" ----
+     The whole UI paints its text/borders/fills as the foreground colour
+     over a surface. `--nt-ink` is that colour as a raw RGB triplet so it
+     can carry any alpha via rgba(var(--nt-ink), α); `--nt-fg` is the solid
+     form. Both flip in the light theme so a single token swap re-skins the
+     app. `--nt-on-accent` is text sitting ON the red accent — always white. */
+  --nt-ink: 255, 255, 255;
+  --nt-fg: #FFFFFF;
+  --nt-on-accent: #FFFFFF;
+  --nt-color-scheme: dark;
 
   /* ---- Data-semantic colors (data encoding only, never chrome) ---- */
   --nt-data-positive: rgb(34, 197, 94);
@@ -98,6 +109,58 @@
   --ion-background-color: var(--nt-bg);
 }
 
+/* =========================================================
+   LIGHT THEME
+   Applied via the `theme-light` class on <html> (set in
+   main.ts before mount, toggled from Settings). It only
+   re-points the surface / ink tokens — every page reads the
+   same tokens, so the whole app re-skins from this block.
+   Still Nothing-OS: near-monochrome light greys, ONE red
+   accent used as a signal, dot-matrix type for numerics.
+   ========================================================= */
+html.theme-light {
+  /* ---- Surfaces ---- */
+  --nt-bg: #EBEBEB;                  /* app background, light grey */
+  --nt-surface: #FFFFFF;            /* cards: white */
+  --nt-surface-2: #E2E2E2;          /* elevated / pressed */
+  --nt-border: rgba(0, 0, 0, 0.08);
+  --nt-border-strong: rgba(0, 0, 0, 0.14);
+  --nt-text: #0A0A0A;
+  --nt-text-dim: rgba(0, 0, 0, 0.5);
+  --nt-glow: rgba(0, 0, 0, 0.12);    /* Glyph bloom inverts to a soft shadow */
+
+  /* ---- Foreground ink flips to near-black ---- */
+  --nt-ink: 10, 10, 10;
+  --nt-fg: #0A0A0A;
+  --nt-color-scheme: light;
+
+  /* ---- Data-semantic colors: darken so they read on white ---- */
+  --nt-data-positive: rgb(21, 128, 61);
+  --nt-data-goal: #B8860B;
+
+  /* ---- Ionic mapping overrides ---- */
+  --ion-color-primary: var(--nt-surface);
+  --ion-color-primary-rgb: 255, 255, 255;
+  --ion-color-dark: var(--nt-bg);
+  --ion-color-medium: var(--nt-surface-2);
+  /* `--ion-color-light` is the high-contrast foreground (titles, labels,
+     values), so it must track the ink — NOT stay white. Solid "light"
+     buttons get their contrast from `--nt-bg` text in the rules below. */
+  --ion-color-light: var(--nt-fg);
+
+  --ion-toolbar-background: var(--nt-bg);
+  --ion-content-background: var(--nt-bg);
+  --ion-tabs-bar-background: var(--nt-bg);
+  --ion-title-color: var(--ion-color-light);
+
+  --ion-card-background: var(--nt-surface);
+  --ion-card-color: var(--ion-color-light);
+  --ion-item-background: var(--nt-surface);
+  --ion-background-color: var(--nt-bg);
+
+  color-scheme: light;
+}
+
 /* ---- Dot-matrix display face (OFL) ---- */
 @font-face {
   font-family: 'Doto';
@@ -114,7 +177,7 @@ ion-header::after {
 ion-alert.app-confirm-alert,
 ion-alert.history-delete-alert {
   --background: var(--nt-surface);
-  --color: #ffffff;
+  --color: var(--nt-fg);
   --border-radius: var(--nt-radius-lg);
   --backdrop-opacity: 0.65;
   --min-width: 300px;
@@ -138,7 +201,7 @@ ion-alert.history-delete-alert .alert-title {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #ffffff;
+  color: var(--nt-fg);
 }
 
 ion-alert.app-confirm-alert .alert-message,
@@ -188,28 +251,28 @@ ion-alert.history-delete-alert .alert-button-role-cancel {
 /* destructive — solid red */
 ion-alert.app-confirm-alert .alert-button-role-destructive,
 ion-alert.history-delete-alert .alert-button-role-destructive {
-  color: #ffffff !important;
+  color: var(--nt-on-accent) !important;
   background: var(--nt-accent) !important;
 }
 
 /* confirm (positive) — solid white */
 ion-alert.app-confirm-alert .alert-button-role-confirm,
 ion-alert.history-delete-alert .alert-button-role-confirm {
-  color: #000000 !important;
-  background: #ffffff !important;
+  color: var(--nt-bg) !important;
+  background: var(--ion-color-light) !important;
 }
 
 /* fallback for unlabeled single button (e.g. OK) */
 ion-alert.app-confirm-alert .alert-button:not(.alert-button-role-cancel):not(.alert-button-role-destructive):not(.alert-button-role-confirm),
 ion-alert.history-delete-alert .alert-button:not(.alert-button-role-cancel):not(.alert-button-role-destructive):not(.alert-button-role-confirm) {
-  color: #000000 !important;
-  background: #ffffff !important;
+  color: var(--nt-bg) !important;
+  background: var(--ion-color-light) !important;
 }
 
 /* ─── Input (prompt) alerts ─── */
 ion-alert.rename-exercise-alert {
   --background: var(--nt-surface);
-  --color: #ffffff;
+  --color: var(--nt-fg);
   --border-radius: var(--nt-radius-lg);
   --backdrop-opacity: 0.65;
   --min-width: 300px;
@@ -229,7 +292,7 @@ ion-alert.rename-exercise-alert .alert-title {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #ffffff;
+  color: var(--nt-fg);
 }
 
 ion-alert.rename-exercise-alert .alert-input-group {
@@ -237,10 +300,10 @@ ion-alert.rename-exercise-alert .alert-input-group {
 }
 
 ion-alert.rename-exercise-alert .alert-input {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--nt-ink), 0.06);
   border: 1px solid var(--nt-border-strong);
   border-radius: var(--nt-radius-sm);
-  color: #ffffff;
+  color: var(--nt-fg);
   padding: 12px 14px;
   font-family: var(--nt-font-body);
   font-size: 0.9rem;
@@ -277,13 +340,13 @@ ion-alert.rename-exercise-alert .alert-button-role-cancel {
 }
 
 ion-alert.rename-exercise-alert .alert-button:not(.alert-button-role-cancel) {
-  color: #000000 !important;
-  background: #ffffff !important;
+  color: var(--nt-bg) !important;
+  background: var(--ion-color-light) !important;
 }
 
 ion-modal.exercise-modal {
   --background: var(--nt-surface);
-  --color: #f9fafb;
+  --color: var(--nt-fg);
   --border-radius: var(--nt-radius-lg) var(--nt-radius-lg) 0 0;
   --height: 72%;
   --width: 100%;
@@ -320,7 +383,7 @@ ion-checkbox {
 
   --border-color-checked: var(--ion-color-accent-red);
   --checkbox-background-checked: var(--ion-color-accent-red);
-  --checkmark-color: #ffffff;
+  --checkmark-color: var(--nt-on-accent);
 }
 
 ion-card-subtitle, ion-label, ion-item {
@@ -337,14 +400,14 @@ ion-card-title {
 
 .button-red {
   --background: var(--ion-color-accent-red) !important;
-  --color: #ffffff !important;
+  --color: var(--nt-on-accent) !important;
   --border-radius: var(--nt-radius-pill) !important;
   font-family: var(--nt-font-head);
 }
 
 .button-white {
   --background: var(--ion-color-light) !important;
-  --color: #000000 !important;
+  --color: var(--nt-bg) !important;
   --border-radius: var(--nt-radius-pill) !important;
   font-family: var(--nt-font-head);
 }
@@ -379,7 +442,7 @@ ion-select.app-select {
   --placeholder-opacity: 0.72;
   min-height: 48px;
   font-family: var(--nt-font-head);
-  color: #ffffff;
+  color: var(--nt-fg);
 }
 
 /* ─── Action sheets ─── */
@@ -387,9 +450,9 @@ ion-action-sheet.app-action-sheet {
   --background: var(--nt-surface);
   --color: var(--ion-color-light);
   --button-background: transparent;
-  --button-background-activated: rgba(255, 255, 255, 0.06);
+  --button-background-activated: rgba(var(--nt-ink), 0.06);
   --button-background-activated-opacity: 1;
-  --button-background-hover: rgba(255, 255, 255, 0.04);
+  --button-background-hover: rgba(var(--nt-ink), 0.04);
   --button-background-hover-opacity: 1;
   --button-color: var(--ion-color-light);
   --button-padding-start: 20px;
@@ -417,7 +480,7 @@ ion-action-sheet.app-action-sheet .action-sheet-button {
   font-size: 0.9rem;
   letter-spacing: 0.04em;
   min-height: 52px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.04);
 }
 
 ion-action-sheet.app-action-sheet .action-sheet-destructive {

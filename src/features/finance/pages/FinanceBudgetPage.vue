@@ -77,7 +77,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No budgets yet. Set a monthly limit per category below.</p>
+          <p v-else class="empty-state">No budgets yet.</p>
 
           <div class="form-fields form-fields--inline">
             <div class="field-group">
@@ -445,7 +445,7 @@ onIonViewWillEnter(async () => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: var(--nt-tracking-label);
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   min-width: 110px;
   text-align: center;
 }
@@ -456,9 +456,9 @@ onIonViewWillEnter(async () => {
   width: 30px;
   height: 30px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border: none;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-size: 1rem;
 }
 
@@ -482,7 +482,7 @@ onIonViewWillEnter(async () => {
   font-family: var(--nt-font-display);
   font-size: 3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
 
@@ -499,7 +499,7 @@ onIonViewWillEnter(async () => {
 .card-metric {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .card-metric span {
@@ -515,7 +515,7 @@ onIonViewWillEnter(async () => {
   display: block;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .metric-negative {
@@ -534,7 +534,7 @@ onIonViewWillEnter(async () => {
 .budget-row {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   display: grid;
   gap: 8px;
 }
@@ -549,13 +549,13 @@ onIonViewWillEnter(async () => {
 .budget-row__name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .budget-row__figures {
   font-family: var(--nt-font-mono);
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   white-space: nowrap;
 }
 
@@ -566,19 +566,19 @@ onIonViewWillEnter(async () => {
 .budget-bar {
   height: 6px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
   overflow: hidden;
 }
 
 .budget-bar__fill {
   height: 100%;
   border-radius: var(--nt-radius-pill);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(var(--nt-ink), 0.85);
   transition: width var(--nt-dur-std) var(--nt-ease-std);
 }
 
 .budget-bar__fill--warn {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(var(--nt-ink), 0.5);
 }
 
 .budget-bar__fill--over {
@@ -602,7 +602,7 @@ onIonViewWillEnter(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: var(--nt-radius-pill);
   padding: 4px;
 }
@@ -623,7 +623,7 @@ onIonViewWillEnter(async () => {
 
 .type-toggle__btn--active {
   background: var(--nt-surface-2);
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .form-fields {
@@ -651,18 +651,18 @@ onIonViewWillEnter(async () => {
 
 .styled-input,
 .styled-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: var(--nt-radius-sm);
-  color: #fff;
-  --color: #fff;
-  --placeholder-color: rgba(255, 255, 255, 0.35);
+  color: var(--nt-fg);
+  --color: var(--nt-fg);
+  --placeholder-color: rgba(var(--nt-ink), 0.35);
   --padding-start: 12px;
   --padding-end: 12px;
   --padding-top: 10px;
   --padding-bottom: 10px;
   min-height: 44px;
-  color-scheme: dark;
+  color-scheme: var(--nt-color-scheme);
 }
 
 .styled-input:focus-within,
@@ -684,7 +684,7 @@ onIonViewWillEnter(async () => {
   --background-activated: var(--nt-surface-2);
   --border-radius: 8px;
   --box-shadow: none;
-  --color: rgba(255, 255, 255, 0.85);
+  --color: rgba(var(--nt-ink), 0.85);
   --border-color: var(--nt-border-strong);
   --border-style: solid;
   --border-width: 1px;
@@ -704,7 +704,7 @@ onIonViewWillEnter(async () => {
   gap: 12px;
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .list-item__info {
@@ -715,7 +715,7 @@ onIonViewWillEnter(async () => {
 .list-item__name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .list-item__meta {
@@ -733,7 +733,7 @@ onIonViewWillEnter(async () => {
   font-family: var(--nt-font-mono);
   font-size: 0.9rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
   white-space: nowrap;
 }
 
@@ -744,7 +744,7 @@ onIonViewWillEnter(async () => {
   height: 26px;
   border-radius: var(--nt-radius-pill);
   border: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   color: var(--nt-text-dim);
   font-size: 0.9rem;
 }

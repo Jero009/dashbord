@@ -246,7 +246,9 @@ function parseJsonArray<T>(raw: string | null): T[] {
 function sessionToSummary(record: SleepSessionRecord): SleepSummary {
   const bedMs = new Date(record.bedtime).getTime();
   const wakeMs = new Date(record.waketime).getTime();
-  const span = Math.max(1, wakeMs - bedMs);
+  // Unparseable bedtime/waketime would make span NaN, poisoning every offset/width
+  // below into NaN SVG coordinates. Fall back to a 1ms span so the hypnogram still renders.
+  const span = Number.isFinite(bedMs) && Number.isFinite(wakeMs) ? Math.max(1, wakeMs - bedMs) : 1;
   const spanMin = span / 60000;
 
   const rawStages = parseJsonArray<{ s: string; start: string; end: string; dur: number }>(
@@ -592,7 +594,7 @@ onIonViewWillEnter(async () => {
   margin: 0;
   border-radius: var(--nt-radius-md);
   background: var(--ion-color-primary);
-  color: #fff;
+  color: var(--nt-fg);
   padding: 18px;
 }
 
@@ -601,7 +603,7 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Card topline */
@@ -628,7 +630,7 @@ onIonViewWillEnter(async () => {
 .card-metric {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
 }
 
 .card-metric span {
@@ -637,14 +639,14 @@ onIonViewWillEnter(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .card-metric strong {
   display: block;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .card-metric--full {
@@ -658,15 +660,15 @@ onIonViewWillEnter(async () => {
   padding: 12px;
   border-radius: 8px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
+  color: rgba(var(--nt-ink), 0.85);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 150ms ease;
 }
 .sync-btn:disabled { opacity: 0.4; }
-.sync-btn:not(:disabled):active { border-color: rgba(255, 255, 255, 0.12); }
+.sync-btn:not(:disabled):active { border-color: rgba(var(--nt-ink), 0.12); }
 
 /* Date nav */
 .date-nav {
@@ -677,7 +679,7 @@ onIonViewWillEnter(async () => {
 
 .date-nav__label {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   min-width: 110px;
   text-align: center;
 }
@@ -686,9 +688,9 @@ onIonViewWillEnter(async () => {
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
+  color: var(--nt-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -729,7 +731,7 @@ onIonViewWillEnter(async () => {
   stroke-width: 12;
 }
 
-.sleep-ring__track { stroke: rgba(255, 255, 255, 0.08); }
+.sleep-ring__track { stroke: rgba(var(--nt-ink), 0.08); }
 
 .sleep-ring__progress {
   stroke: rgb(215, 26, 33);
@@ -753,12 +755,12 @@ onIonViewWillEnter(async () => {
   font-size: 2.8rem;
   line-height: 1;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .sleep-ring__content span {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Hypnogram — Zepp-style stepped waveform */
@@ -772,13 +774,13 @@ onIonViewWillEnter(async () => {
 
 .hyp-frame {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.12);
+  stroke: rgba(var(--nt-ink), 0.12);
   stroke-width: 1;
   stroke-dasharray: 2 4;
 }
 
 .hyp-grid {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: rgba(var(--nt-ink), 0.08);
   stroke-width: 1;
   stroke-dasharray: 2 5;
 }
@@ -803,7 +805,7 @@ onIonViewWillEnter(async () => {
   justify-content: space-between;
   margin-top: 6px;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Two-column sections */
@@ -834,18 +836,18 @@ onIonViewWillEnter(async () => {
 .stage-row span {
   flex: 1;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .stage-row strong {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .stage-row small {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   min-width: 32px;
   text-align: right;
 }
@@ -920,13 +922,13 @@ onIonViewWillEnter(async () => {
   position: absolute;
   transform: translateX(-50%);
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .empty-state {
   margin: 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 @media (min-width: 600px) {

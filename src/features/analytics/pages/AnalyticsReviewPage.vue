@@ -161,7 +161,7 @@ onIonViewWillEnter(load);
 }
 
 .period-toggle .seg-pill {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
   border-radius: 999px;
   padding: 6px;
   overflow: hidden;
@@ -174,7 +174,7 @@ onIonViewWillEnter(load);
 .period-toggle ion-segment-button {
   --background: transparent;
   --background-checked: transparent;
-  --color: rgba(255, 255, 255, 0.5);
+  --color: rgba(var(--nt-ink), 0.5);
   --color-checked: var(--ion-color-accent-red);
   --indicator-color: var(--ion-color-accent-red);
   min-height: 34px;
@@ -194,7 +194,7 @@ onIonViewWillEnter(load);
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   text-align: center;
 }
@@ -211,12 +211,12 @@ onIonViewWillEnter(load);
   font-family: var(--nt-font-display);
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .tile__detail {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
 }
 
 .tile__detail--up { color: var(--nt-data-positive); }
@@ -231,13 +231,13 @@ onIonViewWillEnter(load);
 
 .bar-row__label {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--nt-ink), 0.7);
 }
 
 .bar-row__value {
   font-family: var(--nt-font-mono);
   font-size: 0.9rem;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .bar-row__value--pos { color: var(--nt-data-positive); }
@@ -246,7 +246,7 @@ onIonViewWillEnter(load);
 .prog-bar {
   height: 8px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--nt-ink), 0.06);
   overflow: hidden;
 }
 

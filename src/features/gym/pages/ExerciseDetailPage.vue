@@ -43,7 +43,7 @@
               <small class="tile__detail">&nbsp;</small>
             </div>
           </div>
-          <p v-else class="empty-copy">No record yet — finish a workout with this exercise to set one.</p>
+          <p v-else class="empty-copy">No record yet.</p>
         </div>
 
         <!-- Strength chart -->
@@ -127,7 +127,7 @@
 
         <!-- Global empty state -->
         <div v-if="!hasAnyData" class="card">
-          <p class="empty-copy">No workout history for this exercise yet. Log a few sessions and your progress will show up here.</p>
+          <p class="empty-copy">No history yet.</p>
         </div>
       </div>
     </ion-content>
@@ -431,7 +431,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   text-align: center;
 }
@@ -448,7 +448,7 @@ onUnmounted(() => {
   font-family: var(--nt-font-display);
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .tile__value--accent {
@@ -465,7 +465,7 @@ onUnmounted(() => {
 
 .tile__detail {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
 }
 
 .time-select {
@@ -480,7 +480,7 @@ onUnmounted(() => {
   position: relative;
   height: 260px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--nt-ink), 0.03);
   border-radius: 8px;
   padding: 8px 4px 4px;
 }
@@ -516,7 +516,7 @@ onUnmounted(() => {
 }
 
 .chart-legend__swatch--dim {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(var(--nt-ink), 0.35);
 }
 
 .session-list {
@@ -530,14 +530,14 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
 }
 
 .session-row__date {
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .session-row__sets {
@@ -550,11 +550,11 @@ onUnmounted(() => {
 .session-row__top {
   font-family: var(--nt-font-mono);
   font-size: 0.85rem;
-  color: #fff;
+  color: var(--nt-fg);
 }
 
 .session-row__top small {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--nt-ink), 0.55);
 }
 
 .session-row__rpe {
@@ -566,13 +566,13 @@ onUnmounted(() => {
 }
 
 .session-row__rpe--empty {
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(var(--nt-ink), 0.2);
 }
 
 .session-row__volume {
   font-family: var(--nt-font-mono);
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   text-align: right;
   min-width: 64px;
 }
@@ -589,15 +589,15 @@ onUnmounted(() => {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.06);
+  color: rgba(var(--nt-ink), 0.7);
+  background: rgba(var(--nt-ink), 0.06);
   padding: 3px 10px;
   border-radius: var(--nt-radius-pill);
 }
 
 .empty-copy {
   margin: 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--nt-ink), 0.6);
   font-size: 0.9rem;
 }
 

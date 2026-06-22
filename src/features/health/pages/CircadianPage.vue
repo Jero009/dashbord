@@ -83,7 +83,7 @@
               </div>
             </div>
 
-            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough sleep data to compute alertness curve</div>
+            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough sleep data yet</div>
 
             <div v-else class="unified-scroll-wrap">
               <!-- Fixed Y-axis (does not scroll) -->
@@ -689,7 +689,7 @@ const saveLog = async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   margin: 0 0 12px 0;
 }
 
@@ -702,7 +702,7 @@ const saveLog = async () => {
 }
 
 .card-metric {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -716,19 +716,19 @@ const saveLog = async () => {
 
 .metric-sub {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .metric-label {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .metric-value {
   font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-weight: 600;
   display: flex;
   align-items: baseline;
@@ -738,7 +738,7 @@ const saveLog = async () => {
 .metric-unit {
   font-size: 0.72rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* ── Chronotype ─────────────────────────────────────────────────────────────── */
@@ -753,11 +753,11 @@ const saveLog = async () => {
   font-size: 1.4rem;
   font-weight: 700;
   text-transform: capitalize;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 .chronotype-label--early      { color: rgb(34, 197, 94); }
-.chronotype-label--intermediate { color: rgba(255, 255, 255, 0.85); }
+.chronotype-label--intermediate { color: rgba(var(--nt-ink), 0.85); }
 .chronotype-label--late       { color: rgb(215, 26, 33); }
 
 .quality-badge {
@@ -766,12 +766,12 @@ const saveLog = async () => {
   letter-spacing: 0.1em;
   padding: 2px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .quality-badge--high   { border-color: rgba(34, 197, 94, 0.4); color: rgb(34, 197, 94); }
-.quality-badge--medium { border-color: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.85); }
+.quality-badge--medium { border-color: rgba(var(--nt-ink), 0.12); color: rgba(var(--nt-ink), 0.85); }
 .quality-badge--low    { border-color: rgba(215, 26, 33, 0.4); color: rgb(215, 26, 33); }
 
 .warn-flag {
@@ -802,7 +802,7 @@ const saveLog = async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
 }
 
 .curve-now-value {
@@ -831,7 +831,7 @@ const saveLog = async () => {
 
 .y-label {
   font-size: 0.58rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--nt-ink), 0.3);
   text-align: right;
   line-height: 1;
 }
@@ -856,7 +856,7 @@ const saveLog = async () => {
 .timeline-ruler {
   position: relative;
   height: 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.07);
 }
 
 .timeline-hour {
@@ -864,14 +864,14 @@ const saveLog = async () => {
   top: 4px;
   transform: translateX(-50%);
   font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--nt-ink), 0.35);
   font-family: var(--nt-font-mono);
 }
 
 /* Alertness curve SVG row */
 .curve-svg-row {
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.02);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.05);
 }
 
 .alertness-svg-scroll {
@@ -879,17 +879,17 @@ const saveLog = async () => {
 }
 
 /* SVG elements */
-.band-sleep    { fill: rgba(255, 255, 255, 0.04); }
-.band-exercise { fill: rgba(255, 255, 255, 0.07); }
+.band-sleep    { fill: rgba(var(--nt-ink), 0.04); }
+.band-exercise { fill: rgba(var(--nt-ink), 0.07); }
 .band-cognitive { fill: rgba(215, 26, 33, 0.12); }
 
 .grid-line {
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: rgba(var(--nt-ink), 0.05);
   stroke-width: 1;
 }
 
 .mid-line {
-  stroke: rgba(255, 255, 255, 0.07);
+  stroke: rgba(var(--nt-ink), 0.07);
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
@@ -905,27 +905,27 @@ const saveLog = async () => {
 }
 
 .now-line {
-  stroke: rgba(255, 255, 255, 0.6);
+  stroke: rgba(var(--nt-ink), 0.6);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
 
-.now-dot  { fill: #fff; }
+.now-dot  { fill: var(--nt-fg); }
 
 .peak-dot {
   fill: rgb(215, 26, 33);
-  stroke: #fff;
+  stroke: var(--nt-fg);
   stroke-width: 1.5;
 }
 
 .peak-label {
-  fill: rgba(255, 255, 255, 0.7);
+  fill: rgba(var(--nt-ink), 0.7);
   font-size: 8px;
   font-family: sans-serif;
 }
 
 .band-label {
-  fill: rgba(255, 255, 255, 0.4);
+  fill: rgba(var(--nt-ink), 0.4);
   font-size: 7px;
   font-family: sans-serif;
   text-transform: uppercase;
@@ -940,7 +940,7 @@ const saveLog = async () => {
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   text-align: center;
 }
 
@@ -956,7 +956,7 @@ const saveLog = async () => {
   align-items: center;
   gap: 5px;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .legend-dot {
@@ -976,8 +976,8 @@ const saveLog = async () => {
 }
 
 .legend-swatch--red   { background: rgba(215, 26, 33, 0.3); }
-.legend-swatch--white { background: rgba(255, 255, 255, 0.12); }
-.legend-swatch--sleep { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255,255,255,0.1); }
+.legend-swatch--white { background: rgba(var(--nt-ink), 0.12); }
+.legend-swatch--sleep { background: rgba(var(--nt-ink), 0.06); border: 1px solid rgba(var(--nt-ink), 0.1); }
 
 .timeline-bar-row {
   position: relative;
@@ -996,9 +996,9 @@ const saveLog = async () => {
   min-width: 4px;
 }
 
-.tl-block--sleep   { background: rgba(255, 255, 255, 0.05); }
+.tl-block--sleep   { background: rgba(var(--nt-ink), 0.05); }
 .tl-block--exercise {
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(var(--nt-ink), 0.11);
   border-radius: 8px;
 }
 .tl-block--focus {
@@ -1012,7 +1012,7 @@ const saveLog = async () => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--nt-ink), 0.55);
   white-space: nowrap;
 }
 
@@ -1023,7 +1023,7 @@ const saveLog = async () => {
   top: -6px;
   bottom: -6px;
   width: 2px;
-  background: #fff;
+  background: var(--nt-fg);
   border-radius: 999px;
   z-index: 2;
 }
@@ -1031,7 +1031,7 @@ const saveLog = async () => {
 .timeline-pins-row {
   position: relative;
   height: 60px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(var(--nt-ink), 0.07);
 }
 
 .tl-pin {
@@ -1047,22 +1047,22 @@ const saveLog = async () => {
 .tl-pin-line {
   width: 1px;
   height: 8px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--nt-ink), 0.3);
 }
 
-.tl-pin--dim .tl-pin-line   { background: rgba(255, 255, 255, 0.15); }
-.tl-pin--sleep .tl-pin-line { background: rgba(255, 255, 255, 0.2); }
+.tl-pin--dim .tl-pin-line   { background: rgba(var(--nt-ink), 0.15); }
+.tl-pin--sleep .tl-pin-line { background: rgba(var(--nt-ink), 0.2); }
 
 .tl-pin-label {
   font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--nt-ink), 0.55);
   text-align: center;
   line-height: 1.4;
   white-space: nowrap;
 }
 
-.tl-pin--dim .tl-pin-label   { color: rgba(255, 255, 255, 0.35); }
-.tl-pin--sleep .tl-pin-label { color: rgba(255, 255, 255, 0.4); }
+.tl-pin--dim .tl-pin-label   { color: rgba(var(--nt-ink), 0.35); }
+.tl-pin--sleep .tl-pin-label { color: rgba(var(--nt-ink), 0.4); }
 
 .now-activity {
   display: flex;
@@ -1070,21 +1070,21 @@ const saveLog = async () => {
   gap: 8px;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--nt-ink), 0.06);
 }
 
 .now-activity-label {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
   white-space: nowrap;
 }
 
 .now-activity-value {
   font-size: 0.88rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
 }
 
 /* ── Score ──────────────────────────────────────────────────────────────────── */
@@ -1104,13 +1104,13 @@ const saveLog = async () => {
 }
 
 .score-number.score--green  { color: rgb(34, 197, 94); }
-.score-number.score--yellow { color: rgba(255, 255, 255, 0.85); }
+.score-number.score--yellow { color: rgba(var(--nt-ink), 0.85); }
 .score-number.score--red    { color: rgb(215, 26, 33); }
 
 .score-bar-track {
   flex: 1;
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.1);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1122,7 +1122,7 @@ const saveLog = async () => {
 }
 
 .score-bar-fill.score--green  { background: rgb(34, 197, 94); }
-.score-bar-fill.score--yellow { background: rgba(255, 255, 255, 0.85); }
+.score-bar-fill.score--yellow { background: rgba(var(--nt-ink), 0.85); }
 .score-bar-fill.score--red    { background: rgb(215, 26, 33); }
 
 .score-grid {
@@ -1140,7 +1140,7 @@ const saveLog = async () => {
 
 .mini-bar-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1148,14 +1148,14 @@ const saveLog = async () => {
 .mini-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--nt-ink), 0.3);
   transition: width 400ms ease;
 }
 
 .score-val {
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   text-align: right;
 }
 
@@ -1183,7 +1183,7 @@ const saveLog = async () => {
 
 .nudge-text {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   line-height: 1.5;
 }
 
@@ -1214,9 +1214,9 @@ const saveLog = async () => {
 .toggle-btn {
   font-size: 0.9rem;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   padding: 6px 12px;
   cursor: pointer;
   transition: border-color 150ms ease;
@@ -1237,7 +1237,7 @@ const saveLog = async () => {
 
 .meal-item {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .morning-light-row {
@@ -1247,12 +1247,12 @@ const saveLog = async () => {
 }
 
 .text-green  { color: rgb(34, 197, 94); }
-.text-subtle { color: rgba(255, 255, 255, 0.5); }
+.text-subtle { color: rgba(var(--nt-ink), 0.5); }
 
 .empty-log { margin-top: 10px; }
 .empty-text {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* ── Log form ───────────────────────────────────────────────────────────────── */
@@ -1285,7 +1285,7 @@ const saveLog = async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .type-btns {
@@ -1297,9 +1297,9 @@ const saveLog = async () => {
   flex: 1;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
@@ -1308,7 +1308,7 @@ const saveLog = async () => {
 .type-btn--active {
   background: rgb(215, 26, 33);
   border-color: rgb(215, 26, 33);
-  color: #fff;
+  color: var(--nt-on-accent);
   font-weight: 600;
 }
 
@@ -1322,9 +1322,9 @@ const saveLog = async () => {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.72rem;
   cursor: pointer;
   display: flex;
@@ -1343,20 +1343,20 @@ const saveLog = async () => {
 .energy-box--active {
   background: rgb(215, 26, 33);
   border-color: rgb(215, 26, 33);
-  color: #fff;
+  color: var(--nt-on-accent);
   font-weight: 600;
 }
 
 .form-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-fg);
   padding: 10px 12px;
   font-size: 0.9rem;
   width: 100%;
   box-sizing: border-box;
-  color-scheme: dark;
+  color-scheme: var(--nt-color-scheme);
   transition: border-color 150ms ease;
 }
 
@@ -1369,9 +1369,9 @@ const saveLog = async () => {
   align-self: flex-start;
   padding: 10px 18px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
@@ -1390,7 +1390,7 @@ const saveLog = async () => {
   background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -1405,7 +1405,7 @@ const saveLog = async () => {
 .timeline-tmin-row {
   position: relative;
   height: 52px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(var(--nt-ink), 0.07);
   margin-top: 6px;
 }
 
@@ -1414,7 +1414,7 @@ const saveLog = async () => {
   top: 6px;
   bottom: 6px;
   width: 2px;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(var(--nt-ink), 0.35);
   border-radius: 999px;
   transform: translateX(-50%);
 }
@@ -1438,10 +1438,10 @@ const saveLog = async () => {
   border: 1px solid rgba(215, 26, 33, 0.3);
   border-radius: 8px;
 }
-.tl-block--strength .tl-block-label { color: rgba(255, 255, 255, 0.85); }
+.tl-block--strength .tl-block-label { color: rgba(var(--nt-ink), 0.85); }
 
-.tl-pin--mel .tl-pin-line { background: rgba(255, 255, 255, 0.22); }
-.tl-pin--mel .tl-pin-label { color: rgba(255, 255, 255, 0.38); }
+.tl-pin--mel .tl-pin-line { background: rgba(var(--nt-ink), 0.22); }
+.tl-pin--mel .tl-pin-label { color: rgba(var(--nt-ink), 0.38); }
 
 /* Tmin source inline badge inside metric-value */
 .tmin-source-inline {
@@ -1449,7 +1449,7 @@ const saveLog = async () => {
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--nt-ink), 0.35);
   margin-left: 4px;
 }
 .tmin-source-inline--hr { color: rgb(34, 197, 94); }
@@ -1473,6 +1473,6 @@ const saveLog = async () => {
 
 .loading-text {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 </style>

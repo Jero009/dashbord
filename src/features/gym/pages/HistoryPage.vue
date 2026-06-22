@@ -89,7 +89,7 @@ ion-content.home-content {
 }
 
 .card-template ion-card-subtitle {
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(var(--nt-ink), 0.58);
   margin-top: 6px;
   display: block;
 }
@@ -113,7 +113,7 @@ ion-content.home-content {
 }
 
 .card-template ion-list ion-item.exercise-row {
-  --background: rgba(255, 255, 255, 0.035);
+  --background: rgba(var(--nt-ink), 0.035);
   --border-radius: 8px;
   --inner-border-width: 0px;
   --box-shadow: none;
@@ -140,7 +140,7 @@ ion-content.home-content {
 .exercise-copy__stats {
   flex-shrink: 0;
   text-align: right;
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(var(--nt-ink), 0.84);
 }
 
 .exercise-copy__rpe {
@@ -151,7 +151,7 @@ ion-content.home-content {
 .exercise-copy__icon {
   flex-shrink: 0;
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--nt-ink), 0.4);
 }
 
 @media (min-width: 700px) {
@@ -249,7 +249,7 @@ const formatDuration = (start: string, end: any) => {
 const handleDelete = async (id: number) => {
   const alert = await alertController.create({
     header: 'Delete Workout?',
-    message: 'Are you sure you want to delete this workout from your history?',
+    message: 'Delete this workout from history?',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },

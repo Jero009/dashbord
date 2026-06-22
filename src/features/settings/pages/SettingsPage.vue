@@ -6,6 +6,22 @@
     <ion-content class="settings-content">
       <div class="settings-shell">
 
+        <!-- APPEARANCE -->
+        <div class="card">
+          <p class="section-kicker">Appearance</p>
+          <div class="theme-seg">
+            <button
+              v-for="opt in themeOptions"
+              :key="opt.value"
+              type="button"
+              class="theme-seg__btn"
+              :class="{ 'theme-seg__btn--active': themeMode === opt.value }"
+              @click="selectTheme(opt.value)"
+            >{{ opt.label }}</button>
+          </div>
+          <p class="hint-text">System follows your device's light/dark setting.</p>
+        </div>
+
         <!-- HEALTH TARGETS -->
         <div class="card">
           <p class="section-kicker">Health Targets</p>
@@ -268,6 +284,8 @@ import {
 } from '@/shared/utils/notifications'
 import { buildMorningBody, buildWeeklyBody } from '@/shared/utils/notificationDigests'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
+import { useTheme } from '@/shared/composables/useTheme'
+import type { ThemeMode } from '@/shared/composables/useTheme'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
@@ -277,6 +295,18 @@ import { Share } from '@capacitor/share'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
 
 const router = useRouter()
+
+// --- Appearance ---
+const { mode: themeMode, setThemeMode } = useTheme()
+const themeOptions: { value: ThemeMode; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+const selectTheme = (value: ThemeMode) => {
+  hapticSelect()
+  setThemeMode(value)
+}
 
 // --- Health Targets ---
 const sleepGoal = ref(getSleepGoalHours())
@@ -545,7 +575,7 @@ const parseBase64Text = (base64Data: string) => {
 const runImportWithConfirm = async (sqlContent: string) => {
   const confirmAlert = await alertController.create({
     header: 'Import SQL Backup?',
-    message: 'Importing will replace your current data with the file content.',
+    message: 'This replaces all current data.',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
@@ -585,7 +615,7 @@ const pickNativeImportFile = async () => {
     if (!data) {
       const alert = await alertController.create({
         header: 'Import Failed',
-        message: 'Could not read file content from selected file.',
+        message: 'Could not read the file.',
         cssClass: 'app-confirm-alert',
         buttons: ['OK']
       })
@@ -603,7 +633,7 @@ const pickNativeImportFile = async () => {
 
     const alert = await alertController.create({
       header: 'Import Failed',
-      message: 'Unable to open file picker. Please try again.',
+      message: 'Could not open file picker.',
       cssClass: 'app-confirm-alert',
       buttons: ['OK']
     })
@@ -649,7 +679,7 @@ const handleImportFile = async (event: Event) => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .fields {
@@ -669,15 +699,15 @@ const handleImportFile = async (event: Event) => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .form-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #fff;
+  color: var(--nt-fg);
   font-size: 0.9rem;
   outline: none;
   width: 100%;
@@ -690,7 +720,7 @@ const handleImportFile = async (event: Event) => {
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--nt-ink), 0.35);
 }
 
 .btn-primary {
@@ -699,7 +729,7 @@ const handleImportFile = async (event: Event) => {
   background: rgb(215, 26, 33);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-on-accent);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -719,9 +749,9 @@ const handleImportFile = async (event: Event) => {
   width: 100%;
   padding: 12px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -729,13 +759,13 @@ const handleImportFile = async (event: Event) => {
 }
 
 .btn-secondary:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(var(--nt-ink), 0.12);
 }
 
 .hint-text {
   margin: 10px 0 0;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .field-row {
@@ -746,13 +776,13 @@ const handleImportFile = async (event: Event) => {
 }
 
 .settings-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-fg);
   min-width: 140px;
-  --color: #fff;
-  --placeholder-color: rgba(255, 255, 255, 0.35);
+  --color: var(--nt-fg);
+  --placeholder-color: rgba(var(--nt-ink), 0.35);
 }
 
 .db-actions {
@@ -766,9 +796,9 @@ const handleImportFile = async (event: Event) => {
   padding: 12px;
   margin-bottom: 16px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -776,7 +806,7 @@ const handleImportFile = async (event: Event) => {
 }
 
 .notif-perm-btn:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(var(--nt-ink), 0.12);
 }
 
 .notif-row {
@@ -785,12 +815,42 @@ const handleImportFile = async (event: Event) => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
 .notif-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+/* Theme segmented control */
+.theme-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(var(--nt-ink), 0.05);
+  border-radius: var(--nt-radius-pill);
+}
+
+.theme-seg__btn {
+  flex: 1;
+  padding: 9px 0;
+  border: none;
+  background: transparent;
+  color: var(--nt-text-dim);
+  font-family: var(--nt-font-head);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--nt-radius-pill);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.theme-seg__btn--active {
+  background: var(--nt-surface-2);
+  color: var(--ion-color-light);
 }
 
 .notif-row__label {
@@ -801,13 +861,13 @@ const handleImportFile = async (event: Event) => {
 
 .notif-title {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--nt-ink), 0.85);
   font-weight: 400;
 }
 
 .notif-sub {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
 
 .notif-row__controls {
@@ -821,14 +881,14 @@ const handleImportFile = async (event: Event) => {
   width: 90px;
   padding: 6px 10px;
   font-size: 0.9rem;
-  color-scheme: dark;
+  color-scheme: var(--nt-color-scheme);
 }
 
 .form-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--nt-ink), 0.06);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
-  color: #fff;
+  color: var(--nt-fg);
   outline: none;
 }
 
@@ -858,7 +918,7 @@ const handleImportFile = async (event: Event) => {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--nt-ink), 0.12);
   transition: background-color 150ms ease;
 }
 
@@ -868,7 +928,7 @@ const handleImportFile = async (event: Event) => {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(var(--nt-ink), 0.5);
   top: 3px;
   left: 3px;
   transition: background-color 150ms ease;
@@ -880,6 +940,6 @@ const handleImportFile = async (event: Event) => {
 
 .notif-toggle input:checked + .notif-toggle__track::after {
   transform: translateX(18px);
-  background: #fff;
+  background: var(--nt-fg);
 }
 </style>

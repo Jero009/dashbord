@@ -133,7 +133,7 @@ const {
 <style scoped>
 .form-select {
   width: 100%;
-  color-scheme: dark;
+  color-scheme: var(--nt-color-scheme);
   appearance: none;
   -webkit-appearance: none;
 }

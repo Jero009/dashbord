@@ -47,9 +47,9 @@
         <template v-if="!searchQuery">
           <!-- period nav -->
           <div class="month-nav">
-            <button class="month-nav__btn" @click="goPrev">&#8249;</button>
+            <button class="month-nav__btn" @click="goPrev"><ion-icon :icon="chevronBackOutline" /></button>
             <span class="month-nav__label">{{ periodLabel }}</span>
-            <button class="month-nav__btn" @click="goNext">&#8250;</button>
+            <button class="month-nav__btn" @click="goNext"><ion-icon :icon="chevronForwardOutline" /></button>
           </div>
 
           <!-- MONTH GRID -->
@@ -359,7 +359,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { IonPage, IonHeader, IonContent, IonIcon } from '@ionic/vue';
-import { addOutline, closeOutline, checkmarkOutline, searchOutline, createOutline, ellipseOutline } from 'ionicons/icons';
+import { addOutline, closeOutline, checkmarkOutline, searchOutline, createOutline, ellipseOutline, chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue';
 import { usePlanner, type CalendarViewMode } from '@/features/plan/composables/usePlanner';
@@ -498,7 +498,7 @@ const evBlockStyle = (ev: Record<string, any>) => ({
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--nt-ink), 0.06);
   border: 1px solid var(--nt-border-strong);
   border-radius: var(--nt-radius-sm);
   padding: 8px 12px;
@@ -509,7 +509,7 @@ const evBlockStyle = (ev: Record<string, any>) => ({
   flex: 1;
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--nt-fg);
   font-family: var(--nt-font-body);
   font-size: 0.9rem;
   outline: none;
@@ -527,7 +527,7 @@ const evBlockStyle = (ev: Record<string, any>) => ({
   margin-bottom: 16px;
 }
 .week-col {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 8px 4px;
   min-height: 96px;
@@ -541,11 +541,11 @@ const evBlockStyle = (ev: Record<string, any>) => ({
   display: block; font-family: var(--nt-font-head); font-size: 0.6rem;
   text-transform: uppercase; letter-spacing: 0.08em; color: var(--nt-text-dim);
 }
-.week-col__day { display: block; font-family: var(--nt-font-display); font-size: 0.95rem; color: #fff; }
+.week-col__day { display: block; font-family: var(--nt-font-display); font-size: 0.95rem; color: var(--nt-fg); }
 .week-col__events { display: flex; flex-direction: column; gap: 4px; }
 .week-chip {
   border-left: 3px solid var(--ion-color-accent-red);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--nt-ink), 0.08);
   border-radius: 4px;
   padding: 3px 4px;
   font-size: 0.6rem;
@@ -553,7 +553,7 @@ const evBlockStyle = (ev: Record<string, any>) => ({
   overflow: hidden;
 }
 .week-chip__time { display: block; color: var(--nt-text-dim); font-family: var(--nt-font-mono); }
-.week-chip__title { display: block; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.week-chip__title { display: block; color: var(--nt-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Agenda view */
 .agenda-view { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
@@ -574,7 +574,7 @@ const evBlockStyle = (ev: Record<string, any>) => ({
 }
 .allday-row {
   display: flex; align-items: center; gap: 8px;
-  font-size: 0.85rem; color: rgba(255, 255, 255, 0.85); margin: 2px 0;
+  font-size: 0.85rem; color: rgba(var(--nt-ink), 0.85); margin: 2px 0;
 }
 .allday-row input { width: 18px; height: 18px; accent-color: var(--ion-color-accent-red); }
 .form-input--num { width: 70px; text-align: center; }
@@ -583,21 +583,21 @@ const evBlockStyle = (ev: Record<string, any>) => ({
 .recur-days { display: flex; gap: 4px; flex-wrap: wrap; }
 .recur-day {
   flex: 1; min-width: 34px; padding: 6px 0; border-radius: var(--nt-radius-sm);
-  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--nt-border-strong);
+  background: rgba(var(--nt-ink), 0.06); border: 1px solid var(--nt-border-strong);
   color: var(--nt-text-dim); font-family: var(--nt-font-head); font-size: 0.68rem;
   text-transform: uppercase; cursor: pointer;
 }
 .recur-day--on {
-  background: var(--ion-color-accent-red); color: #fff; border-color: var(--ion-color-accent-red);
+  background: var(--ion-color-accent-red); color: var(--nt-on-accent); border-color: var(--ion-color-accent-red);
 }
 .color-row { display: flex; gap: 8px; margin: 4px 0; flex-wrap: wrap; }
 .color-swatch {
   width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--nt-border-strong);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
-  color: #fff; font-size: 0.8rem;
+  color: var(--nt-fg); font-size: 0.8rem;
 }
 .color-swatch--default {
-  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.12), rgba(255,255,255,0.12) 3px, transparent 3px, transparent 6px);
+  background: repeating-linear-gradient(45deg, rgba(var(--nt-ink), 0.12), rgba(var(--nt-ink), 0.12) 3px, transparent 3px, transparent 6px);
 }
 .color-swatch--on { box-shadow: var(--nt-glow); }
 .item-note--recur { color: var(--ion-color-accent-red); }
@@ -613,16 +613,16 @@ const evBlockStyle = (ev: Record<string, any>) => ({
 .allday-pill {
   font-family: var(--nt-font-head); text-transform: uppercase; letter-spacing: 0.06em;
   font-size: 0.68rem; padding: 5px 10px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); cursor: pointer;
+  background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); cursor: pointer;
 }
 .day-view__scroll { overflow-y: auto; max-height: 420px; border-radius: 10px; }
 .day-view__inner { position: relative; }
 .hour-mark { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; pointer-events: none; }
 .hour-label {
-  width: 40px; flex-shrink: 0; font-size: 0.72rem; color: rgba(255, 255, 255, 0.25);
+  width: 40px; flex-shrink: 0; font-size: 0.72rem; color: rgba(var(--nt-ink), 0.25);
   text-align: right; padding-right: 10px; margin-top: -0.45em; line-height: 1; font-family: var(--nt-font-mono);
 }
-.hour-line { flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+.hour-line { flex: 1; height: 1px; background: rgba(var(--nt-ink), 0.08); }
 .now-line {
   position: absolute; left: 40px; right: 0; height: 2px;
   background: var(--ion-color-accent-red); pointer-events: none; display: flex; align-items: center; z-index: 3;
@@ -630,18 +630,18 @@ const evBlockStyle = (ev: Record<string, any>) => ({
 .now-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--ion-color-accent-red); margin-left: -3px; flex-shrink: 0; }
 .ev-block {
   position: absolute; left: 48px; right: 4px; border-radius: 10px; padding: 6px 10px;
-  overflow: hidden; background: rgba(255, 255, 255, 0.08); cursor: pointer; z-index: 2;
+  overflow: hidden; background: rgba(var(--nt-ink), 0.08); cursor: pointer; z-index: 2;
 }
 .ev-block--workout  { background: rgba(215, 26, 33, 0.25); }
 .ev-block--recovery { background: rgba(34, 197, 94, 0.15); }
 .ev-block--school   { background: rgba(59, 130, 246, 0.18); }
-.ev-block--sleep    { background: rgba(255, 255, 255, 0.05); }
-.ev-block--reminder { background: rgba(255, 255, 255, 0.08); }
-.ev-title { display: block; font-size: 0.9rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ev-time { display: block; font-size: 0.72rem; color: rgba(255, 255, 255, 0.5); margin-top: 1px; }
+.ev-block--sleep    { background: rgba(var(--nt-ink), 0.05); }
+.ev-block--reminder { background: rgba(var(--nt-ink), 0.08); }
+.ev-title { display: block; font-size: 0.9rem; font-weight: 600; color: var(--nt-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-time { display: block; font-size: 0.72rem; color: rgba(var(--nt-ink), 0.5); margin-top: 1px; }
 .habit-pill {
   position: absolute; left: 48px; right: 4px; height: 24px; border-radius: 999px; padding: 0 10px;
-  display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: rgba(255, 255, 255, 0.85);
+  display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: rgba(var(--nt-ink), 0.85);
   background: rgba(215, 26, 33, 0.15); border: 1px solid rgba(215, 26, 33, 0.3); cursor: pointer;
   overflow: hidden; white-space: nowrap; z-index: 2;
 }

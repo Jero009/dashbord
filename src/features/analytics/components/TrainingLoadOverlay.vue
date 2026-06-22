@@ -69,7 +69,7 @@
           >
             <!-- recovery z gridlines -->
             <line :x1="0" :x2="innerW" :y1="zToY(0)" :y2="zToY(0)"
-                  stroke="rgba(255,255,255,0.18)" stroke-width="1" />
+                  :style="{ stroke: 'rgba(var(--nt-ink), 0.18)' }" stroke-width="1" />
             <line :x1="0" :x2="innerW" :y1="zToY(-1)" :y2="zToY(-1)"
                   stroke="rgba(215,26,33,0.5)" stroke-width="1" stroke-dasharray="3 4" />
 
@@ -81,7 +81,7 @@
               :y="baseY - barH(d.load)"
               :width="SLOT - 4"
               :height="barH(d.load)"
-              :fill="zoneColor(d.flag)"
+              :style="{ fill: zoneColor(d.flag) }"
               rx="1.5"
             />
 
@@ -91,7 +91,7 @@
               v-if="recoveryPath.length > 1"
               :points="recoveryPolyline"
               fill="none"
-              stroke="rgba(255,255,255,0.65)"
+              :style="{ stroke: 'rgba(var(--nt-ink), 0.65)' }"
               stroke-width="1.5"
             />
             <circle
@@ -100,7 +100,7 @@
               :cx="p.x"
               :cy="p.y"
               r="2.6"
-              :fill="p.low ? 'rgb(215, 26, 33)' : '#fff'"
+              :style="{ fill: p.low ? 'var(--ion-color-accent-red)' : 'var(--nt-fg)' }"
             />
 
             <!-- now / today date ticks -->
@@ -299,13 +299,13 @@ const dateTicks = computed(() => {
 // ── display helpers ──────────────────────────────────────────────────────────
 
 const ZONE_COLORS: Record<AcwrFlag, string> = {
-  detraining: 'rgba(255, 255, 255, 0.28)',
+  detraining: 'rgba(var(--nt-ink), 0.28)',
   optimal: 'rgb(34, 197, 94)',
   caution: 'rgb(255, 215, 0)',
   high_risk: 'rgb(215, 26, 33)',
 };
 const zoneColor = (flag: AcwrFlag | null) =>
-  flag ? ZONE_COLORS[flag] : 'rgba(255, 255, 255, 0.14)';
+  flag ? ZONE_COLORS[flag] : 'rgba(var(--nt-ink), 0.14)';
 
 const acwrDisplay = computed(() => (latest.value?.acwr != null ? latest.value.acwr.toFixed(2) : '—'));
 const acwrZone = computed(() => acwrZoneLabel(latest.value?.acwr ?? null));
@@ -322,10 +322,10 @@ const recoveryDisplay = computed(() =>
 );
 const recoveryColor = computed(() => {
   const z = latestRecovery.value;
-  if (z == null) return '#fff';
+  if (z == null) return 'var(--nt-fg)';
   if (z <= -1) return 'rgb(215, 26, 33)';
   if (z >= 0.5) return 'rgb(34, 197, 94)';
-  return '#fff';
+  return 'var(--nt-fg)';
 });
 
 // Overreaching can only be judged with a recovery signal. Without one, show a
@@ -415,13 +415,19 @@ const formatLoad = (v: number) => (v >= 10000 ? `${Math.round(v / 100) / 10}k` :
 
 // ── data loading ─────────────────────────────────────────────────────────────
 
+let loadToken = 0;
 const load = async () => {
+  // mount, view-enter and the window-switch watcher can all fire load() concurrently;
+  // a monotonic token drops any resolved-but-stale result so a slower earlier request
+  // can't overwrite a newer window's data.
+  const token = ++loadToken;
   const span = Math.max(120, windowDays.value + 28);
   const [s, r, h] = await Promise.all([
     getSessionLoads(span).catch(() => []),
     getHealthMetricDailySeries('resting_heart_rate', span).catch(() => []),
     getHealthMetricDailySeries('hrv', span).catch(() => []),
   ]);
+  if (token !== loadToken) return;
   sessions.value = s;
   rhr.value = r;
   hrv.value = h;
@@ -478,7 +484,7 @@ onIonViewWillEnter(load);
   gap: 12px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border: 1px solid transparent;
 }
 .status--yellow { border-color: rgba(255, 215, 0, 0.4); }
@@ -487,14 +493,14 @@ onIonViewWillEnter(load);
 .status--green .status__icon { color: rgb(34, 197, 94); }
 .status--yellow .status__icon { color: rgb(255, 215, 0); }
 .status--red .status__icon { color: var(--ion-color-accent-red); }
-.status--unknown .status__icon { color: rgba(255, 255, 255, 0.5); }
+.status--unknown .status__icon { color: rgba(var(--nt-ink), 0.5); }
 .status__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .status__label {
   font-family: var(--nt-font-head);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #fff;
+  color: var(--nt-fg);
 }
 .status__reason { font-size: 0.78rem; color: var(--nt-text-dim); }
 
@@ -510,7 +516,7 @@ onIonViewWillEnter(load);
   align-items: center;
   gap: 3px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   text-align: center;
 }
@@ -525,15 +531,15 @@ onIonViewWillEnter(load);
   font-family: var(--nt-font-display);
   font-size: 1.3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--nt-fg);
   line-height: 1;
 }
-.tile__detail { font-size: 0.62rem; color: rgba(255, 255, 255, 0.4); }
+.tile__detail { font-size: 0.62rem; color: rgba(var(--nt-ink), 0.4); }
 
 /* Chart */
 .chart-wrap {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--nt-ink), 0.03);
   border-radius: 8px;
   padding: 6px 4px 2px;
 }
@@ -557,7 +563,7 @@ onIonViewWillEnter(load);
 }
 .chart-svg { display: block; }
 .tick-text {
-  fill: rgba(255, 255, 255, 0.4);
+  fill: rgba(var(--nt-ink), 0.4);
   font-family: var(--nt-font-mono);
   font-size: 9px;
 }
@@ -582,7 +588,7 @@ onIonViewWillEnter(load);
 .legend__line {
   width: 16px;
   height: 0;
-  border-top: 2px solid rgba(255, 255, 255, 0.65);
+  border-top: 2px solid rgba(var(--nt-ink), 0.65);
 }
 .recs {
   display: grid;
@@ -615,9 +621,9 @@ onIonViewWillEnter(load);
   margin: 0;
   font-size: 0.74rem;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--nt-ink), 0.5);
 }
-.empty-copy { margin: 0; color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; }
+.empty-copy { margin: 0; color: rgba(var(--nt-ink), 0.6); font-size: 0.9rem; }
 
 @media (min-width: 600px) {
   .tile-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }

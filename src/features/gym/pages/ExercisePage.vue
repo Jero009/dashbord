@@ -123,7 +123,7 @@
 .exercise-hero__text,
 .section-kicker {
   margin: 0;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(var(--nt-ink), 0.62);
 }
 
 .section-kicker {
@@ -189,8 +189,8 @@
 }
 
 .exercise-item__meta span {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.84);
+  background: rgba(var(--nt-ink), 0.06);
+  color: rgba(var(--nt-ink), 0.84);
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
