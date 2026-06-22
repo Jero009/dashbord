@@ -380,6 +380,9 @@ onUnmounted(() => {
 .analytics-shell {
   padding: 16px;
   display: grid;
+  /* shrinkable single column so a wide child (e.g. the load-chart SVG)
+     scrolls inside its own container instead of widening the page */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   max-width: 760px;
   margin: 0 auto;

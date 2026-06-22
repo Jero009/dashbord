@@ -450,6 +450,9 @@ onIonViewWillEnter(load);
   border-radius: var(--nt-radius-md);
   padding: 18px;
   display: grid;
+  /* single shrinkable column — without minmax(0,…) the wide chart SVG
+     forces the card (and page) past the viewport on the WebView */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -539,6 +542,7 @@ onIonViewWillEnter(load);
 /* Chart */
 .chart-wrap {
   position: relative;
+  min-width: 0;
   background: rgba(var(--nt-ink), 0.03);
   border-radius: 8px;
   padding: 6px 4px 2px;
