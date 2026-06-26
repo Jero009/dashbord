@@ -199,9 +199,16 @@ export function computeCircadianProfile(
     else chronotype = 'intermediate';
   }
 
-  // DLMO ≈ MSFsc − 2.5h (Lockley/Burgess: DLMO precedes sleep midpoint by ~2–3h)
-  const dlmoEstimate = msfsc !== null ? normalizeHour(msfsc - 2.5) : null;
-  // CTmin ≈ DLMO + 7h (Czeisler/Van Dongen: body temp nadir ~7h after melatonin onset)
+  // Phase estimates anchored to the sleep midpoint (MSFsc), using the
+  // well-established phase angles from the chronobiology literature:
+  //   • DLMO ≈ 2 h before habitual sleep onset (Burgess/Lewy). For a typical
+  //     ~8 h night, sleep onset is ~4 h before mid-sleep, so DLMO ≈ MSFsc − 6 h.
+  //   • CTmin (core-body-temperature / HR nadir) ≈ DLMO + 7 h (Czeisler/Van
+  //     Dongen) ≈ MSFsc + 1 h — i.e. ~2–3 h before habitual wake, which matches
+  //     the measured HR-nadir branch in computeTmin().
+  // The previous estimate (DLMO = MSFsc − 2.5, CTmin = MSFsc + 4.5) placed DLMO
+  // *after* sleep onset and CTmin *after* wake, which is physiologically wrong.
+  const dlmoEstimate = msfsc !== null ? normalizeHour(msfsc - 6) : null;
   const ctminEstimate = dlmoEstimate !== null ? normalizeHour(dlmoEstimate + 7) : null;
 
   return {

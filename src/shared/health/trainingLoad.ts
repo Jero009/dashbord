@@ -41,9 +41,16 @@ export interface DailyLoad {
 export interface AcwrPoint {
   date: string;
   load: number;
-  /** Average daily load over the trailing acute window (default 7 days). */
+  /**
+   * Acute load estimate at this day. With the default EWMA method this is the
+   * exponentially weighted average (≈ last week, recency-weighted); with the
+   * rolling method it is the simple mean over the acute window.
+   */
   acute: number;
-  /** Average daily load over the trailing chronic window (default 28 days). */
+  /**
+   * Chronic load estimate at this day — the EWMA (≈ last 4 weeks,
+   * recency-weighted) or the rolling-window mean, per `method`.
+   */
   chronic: number;
   /** acute / chronic; null until enough history exists or chronic is 0. */
   acwr: number | null;
@@ -51,6 +58,23 @@ export interface AcwrPoint {
   /** The unit this whole series is computed in (same for every point). */
   metric: LoadMetric;
 }
+
+/**
+ * Smoothing method for the acute/chronic loads.
+ *  - 'ewma'    — exponentially weighted moving averages (default). Williams et al.
+ *                (2017) showed EWMA is a *more sensitive* indicator of injury
+ *                likelihood than rolling averages because it models the
+ *                progressive decay of fitness/fatigue and weights recent days
+ *                more heavily. Because acute and chronic are independently
+ *                weighted exponential averages (not a window nested inside a
+ *                larger window) it also sidesteps the worst of the
+ *                rolling-average "mathematical coupling" that Lolli et al. and
+ *                Impellizzeri et al. showed inflates spurious ACWR–injury
+ *                correlations.
+ *  - 'rolling' — classic simple moving averages (Gabbett). Retained for
+ *                transparency/back-compat. `coupling` only affects this method.
+ */
+export type AcwrMethod = 'ewma' | 'rolling';
 
 export interface AcwrOptions {
   acuteDays?: number;
@@ -63,6 +87,18 @@ export interface AcwrOptions {
    * not comparable); otherwise 'volume'.
    */
   metric?: LoadMetric | 'auto';
+  /**
+   * Smoothing method. Default 'ewma' (Williams 2017 — more injury-sensitive and
+   * less prone to mathematical-coupling artefacts than rolling averages).
+   */
+  method?: AcwrMethod;
+  /**
+   * Only used when method='rolling'. 'uncoupled' computes the chronic mean from
+   * the window *before* the acute window (chronic and acute share no days),
+   * which Lolli/Impellizzeri recommend to avoid the spurious correlation caused
+   * by the acute window being nested inside the chronic one. Default 'uncoupled'.
+   */
+  coupling?: 'coupled' | 'uncoupled';
   /**
    * Extend the series (gap-filled with zero-load rest days) up to this date when
    * it is after the last workout. This lets the acute average decay during a
@@ -135,8 +171,9 @@ export function acwrFlag(acwr: number): AcwrFlag {
 
 /**
  * Build the ACWR series. Daily loads are gap-filled with 0 across the calendar
- * range so rest days correctly drag down the acute average. Acute and chronic
- * are average daily loads over their windows.
+ * range so rest days correctly decay the acute load. By default the acute and
+ * chronic loads are exponentially weighted moving averages (Williams 2017); set
+ * `method: 'rolling'` for the classic simple moving averages.
  */
 export function computeAcwrSeries(
   dailyLoads: DailyLoad[],
@@ -145,6 +182,8 @@ export function computeAcwrSeries(
   const acuteDays = options.acuteDays ?? 7;
   const chronicDays = options.chronicDays ?? 28;
   const minChronicDays = options.minChronicDays ?? 14;
+  const method = options.method ?? 'ewma';
+  const coupling = options.coupling ?? 'uncoupled';
 
   if (dailyLoads.length === 0) return [];
 
@@ -162,10 +201,38 @@ export function computeAcwrSeries(
   const dates = enumerateDates(start, end);
   const loads = dates.map((d) => loadByDate.get(d) ?? 0);
 
+  // EWMA decay constants: λ = 2/(N+1) (Williams et al. 2017). A larger N (chronic)
+  // decays more slowly, so chronic load lags acute load — exactly the
+  // fitness-vs-fatigue separation the ratio is meant to capture.
+  const acuteLambda = 2 / (acuteDays + 1);
+  const chronicLambda = 2 / (chronicDays + 1);
+
+  // Seed both EWMAs with the first day's load so a steady load yields ACWR ≈ 1.0
+  // immediately rather than ramping up from zero.
+  let acuteEwma = loads[0];
+  let chronicEwma = loads[0];
+
   return dates.map((date, i) => {
     const historyDays = i + 1;
-    const acute = windowMean(loads, i, acuteDays);
-    const chronic = windowMean(loads, i, chronicDays);
+
+    let acute: number;
+    let chronic: number;
+    if (method === 'ewma') {
+      if (i > 0) {
+        acuteEwma = loads[i] * acuteLambda + acuteEwma * (1 - acuteLambda);
+        chronicEwma = loads[i] * chronicLambda + chronicEwma * (1 - chronicLambda);
+      }
+      acute = acuteEwma;
+      chronic = chronicEwma;
+    } else {
+      acute = windowMean(loads, i, acuteDays);
+      chronic =
+        coupling === 'uncoupled'
+          ? // Chronic mean over the window *before* the acute days (no overlap).
+            windowMean(loads, i - acuteDays, chronicDays - acuteDays)
+          : windowMean(loads, i, chronicDays);
+    }
+
     const acwr =
       chronic > 0 && historyDays >= minChronicDays
         ? round2(acute / chronic)
@@ -208,6 +275,7 @@ export function addDays(dateKey: string, delta: number): string {
 
 /** Mean of the trailing `window` entries ending at index `i` (inclusive). */
 function windowMean(values: number[], i: number, window: number): number {
+  if (i < 0 || window <= 0) return 0; // not enough history yet
   const from = Math.max(0, i - window + 1);
   let sum = 0;
   for (let k = from; k <= i; k++) sum += values[k];
