@@ -36,6 +36,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class RestTimerAudio extends Plugin {
 
     private static final int DING_DURATION_MS = 700;
+    // Gap between ducking other audio and playing the ding, so the user's music
+    // audibly dips *before* the beep lands rather than at the same instant.
+    private static final int PRE_DUCK_DELAY_MS = 300;
     private static final int REST_NOTIFICATION_ID = 21;
     private static final String CHANNEL_ID = "rest_timer";
 
@@ -73,14 +76,19 @@ public class RestTimerAudio extends Plugin {
             return;
         }
 
-        toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, DING_DURATION_MS);
+        // Audio focus was requested above (music starts ducking now). Wait a
+        // short beat before the beep so the dip is audible first, then ding.
+        final Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(
+                () -> toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, DING_DURATION_MS),
+                PRE_DUCK_DELAY_MS);
 
         // Release the tone generator and hand audio focus back so the user's
         // music returns to full volume once the ding has finished.
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        handler.postDelayed(() -> {
             toneGenerator.release();
             audioManager.abandonAudioFocusRequest(focusRequest);
-        }, DING_DURATION_MS + 150);
+        }, PRE_DUCK_DELAY_MS + DING_DURATION_MS + 150);
 
         call.resolve();
     }

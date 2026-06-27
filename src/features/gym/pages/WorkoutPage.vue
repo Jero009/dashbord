@@ -48,6 +48,13 @@
                     @click="openExerciseStats(ex)">
                     <ion-icon :icon="statsChartOutline"></ion-icon>
                   </ion-button>
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    class="delete-exercise-btn"
+                    @click="handleRemoveExercise(ex)">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
                   <p v-if="overloadHint(ex)" class="overload-hint">{{ overloadHint(ex) }}</p>
                 </div>
                     <div class="rest-settings" @click="editRestTime(ex)">
@@ -445,6 +452,18 @@
   color: rgba(var(--nt-ink), 0.5);
 }
 
+.delete-exercise-btn {
+  --padding-start: 4px;
+  --padding-end: 4px;
+  margin: 0;
+  height: 28px;
+}
+
+.delete-exercise-btn ion-icon {
+  font-size: 18px;
+  color: var(--ion-color-accent-red);
+}
+
 ion-toast.pr-toast {
   --background: var(--nt-surface-2);
   --color: var(--nt-fg);
@@ -464,7 +483,7 @@ ion-toast.pr-toast::part(header) {
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
 import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
-import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline } from 'ionicons/icons';
+import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline, trashOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import RpePickerModal from '@/features/gym/components/RpePickerModal.vue';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
@@ -472,6 +491,7 @@ import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
+import { showRestGlyph, hideRestGlyph, releaseRestGlyph } from '@/shared/utils/restTimerGlyph';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe } from '@/shared/db/app_db';
@@ -765,6 +785,32 @@ const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
   await alert.present();
 };
 
+// Remove an entire exercise (and all its sets) from the workout.
+const handleRemoveExercise = async (exercise: any) => {
+  const alert = await alertController.create({
+    header: 'Remove Exercise?',
+    message: `Removes "${exercise.name}" and all of its sets.`,
+    cssClass: 'app-confirm-alert',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Remove',
+        role: 'destructive',
+        handler: async () => {
+          hapticHeavy();
+          // workout_exercise_sets cascade-deletes (PRAGMA foreign_keys = ON).
+          await deleteWorkoutExercise(Number(exercise.id));
+          workoutExercises.value = workoutExercises.value.filter(
+            (ex) => Number(ex.id) !== Number(exercise.id)
+          );
+        }
+      }
+    ]
+  });
+
+  await alert.present();
+};
+
 // Open the exercise detail page (PRs, strength + volume charts)
 const openExerciseStats = (exercise: any) => {
   hapticLight();
@@ -935,6 +981,7 @@ const clearTimerState = () => {
   localStorage.removeItem(REST_TIMER_KEY);
   void cancelRestTimerDing();
   void clearRestNotification();
+  void hideRestGlyph();
 };
 
 // (Re)post the ongoing countdown notification for the time remaining.
@@ -946,6 +993,10 @@ const showRestCountdown = () => {
 const tickRestTimer = () => {
   const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
   restTimer.value.remaining = remaining;
+  if (remaining > 0) {
+    // Foreground-only: render the countdown on the Glyph back display.
+    void showRestGlyph(remaining, restTimer.value.total);
+  }
   if (remaining <= 0) {
     // App is alive at the end: ding in-app and cancel the scheduled notification
     // so it doesn't also fire.
@@ -985,6 +1036,7 @@ const resumeRestTimer = (endTime: number, remaining: number, total?: number) => 
   restTimer.value.remaining = remaining;
   restTimer.value.isActive = true;
   showRestCountdown();
+  void showRestGlyph(remaining, restTimer.value.total);
   restInterval = setInterval(tickRestTimer, 1000);
 };
 
@@ -1004,6 +1056,7 @@ const startRestTimer = (seconds: number, exerciseName = '') => {
   persistTimerState();
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
+  void showRestGlyph(restSeconds, restSeconds);
 
   restInterval = setInterval(tickRestTimer, 1000);
 };
@@ -1035,6 +1088,7 @@ const adjustRestTimer = (seconds: number) => {
   // Reschedule the OS ding and refresh the countdown notification.
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
+  void showRestGlyph(restTimer.value.remaining, restTimer.value.total);
 };
 
 const formatRestTime = (seconds: number) => {
@@ -1068,6 +1122,7 @@ onUnmounted(() => {
     void audioContext.close().catch(() => undefined);
     audioContext = null;
   }
+  void releaseRestGlyph();
 });
 
 </script>
