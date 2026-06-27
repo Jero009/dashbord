@@ -22,13 +22,11 @@
                 @click="selectTheme(opt.value)"
               >{{ opt.label }}</button>
             </div>
-            <p class="hint-text">System follows your device's light/dark setting.</p>
           </div>
 
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Currency</span>
-              <span class="set-row__sub">Applies to all finance amounts</span>
             </div>
             <ion-select
               v-model="currency"
@@ -51,7 +49,6 @@
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Sleep goal</span>
-              <span class="set-row__sub">Hours per night</span>
             </div>
             <input v-model.number="sleepGoal" type="number" step="0.5" min="4" max="14" class="form-input form-input--compact" />
           </div>
@@ -59,7 +56,6 @@
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Daily steps</span>
-              <span class="set-row__sub">Step target</span>
             </div>
             <input v-model.number="stepGoal" type="number" step="500" min="1000" max="30000" class="form-input form-input--compact" />
           </div>
@@ -67,7 +63,6 @@
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Goal weight</span>
-              <span class="set-row__sub">Kilograms</span>
             </div>
             <input v-model="goalWeight" type="number" step="0.1" min="30" max="300" class="form-input form-input--compact" />
           </div>
@@ -75,7 +70,6 @@
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Weekly workouts</span>
-              <span class="set-row__sub">Training target</span>
             </div>
             <ion-select
               v-model="weeklyWorkoutGoal"
@@ -90,7 +84,7 @@
             </ion-select>
           </div>
 
-          <button class="btn-primary set-action" @click="saveTargets">Save targets</button>
+          <button class="btn-primary set-action" @click="saveTargets">Save</button>
 
           <button class="nav-row" @click="goToGoals">
             <span class="set-row__title">Manage goals</span>
@@ -105,7 +99,6 @@
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">System permission</span>
-              <span class="set-row__sub">Required for reminders</span>
             </div>
             <button class="btn-chip" @click="requestPermission">Allow</button>
           </div>
@@ -114,7 +107,6 @@
           <div class="notif-row">
             <div class="notif-row__label">
               <span class="notif-title">Weight reminder</span>
-              <span class="notif-sub">Daily log reminder</span>
             </div>
             <div class="notif-row__controls">
               <input v-if="notifWeightEnabled" v-model="notifWeightTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifWeight" />
@@ -198,7 +190,7 @@
           <div class="notif-row">
             <div class="notif-row__label">
               <span class="notif-title">Morning summary</span>
-              <span class="notif-sub">Daily readiness + agenda</span>
+              <span class="notif-sub">Readiness + agenda</span>
             </div>
             <div class="notif-row__controls">
               <input v-if="notifMorningEnabled" v-model="notifMorningTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifMorning" />
@@ -213,7 +205,6 @@
           <div class="notif-row">
             <div class="notif-row__label">
               <span class="notif-title">Weekly digest</span>
-              <span class="notif-sub">Week-in-review recap</span>
             </div>
             <div class="notif-row__controls">
               <select v-if="notifWeeklyEnabled" v-model.number="notifWeeklyWeekday" class="form-select notif-select" @change="saveNotifWeekly">
@@ -237,7 +228,7 @@
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Health Connect</span>
-              <span class="set-row__sub">{{ lastSyncTime ? `Last sync ${lastSyncTime}` : 'Steps, sleep, heart rate' }}</span>
+              <span class="set-row__sub">{{ lastSyncTime ? `Last sync ${lastSyncTime}` : 'Not synced' }}</span>
             </div>
             <button class="btn-chip" :disabled="syncing" @click="syncNow">{{ syncing ? 'Syncing…' : 'Sync now' }}</button>
           </div>
@@ -255,7 +246,7 @@
           <button class="nav-row" :disabled="aiExporting" @click="handleAiExport">
             <div class="set-row__label">
               <span class="set-row__title">{{ aiExporting ? 'Preparing…' : 'Export for AI analysis' }}</span>
-              <span class="set-row__sub">Plain-text summary to paste into an AI</span>
+              <span class="set-row__sub">Plain-text for an AI</span>
             </div>
             <ion-icon :icon="sparklesOutline" class="nav-row__icon" />
           </button>
