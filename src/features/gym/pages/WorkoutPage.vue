@@ -48,6 +48,13 @@
                     @click="openExerciseStats(ex)">
                     <ion-icon :icon="statsChartOutline"></ion-icon>
                   </ion-button>
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    class="delete-exercise-btn"
+                    @click="handleRemoveExercise(ex)">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
                   <p v-if="overloadHint(ex)" class="overload-hint">{{ overloadHint(ex) }}</p>
                 </div>
                     <div class="rest-settings" @click="editRestTime(ex)">
@@ -445,6 +452,18 @@
   color: rgba(var(--nt-ink), 0.5);
 }
 
+.delete-exercise-btn {
+  --padding-start: 4px;
+  --padding-end: 4px;
+  margin: 0;
+  height: 28px;
+}
+
+.delete-exercise-btn ion-icon {
+  font-size: 18px;
+  color: var(--ion-color-accent-red);
+}
+
 ion-toast.pr-toast {
   --background: var(--nt-surface-2);
   --color: var(--nt-fg);
@@ -464,7 +483,7 @@ ion-toast.pr-toast::part(header) {
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
 import { ref, onUnmounted, computed } from 'vue';
 import { useRouter,useRoute } from 'vue-router';
-import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline } from 'ionicons/icons';
+import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline, trashOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import RpePickerModal from '@/features/gym/components/RpePickerModal.vue';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
@@ -758,6 +777,32 @@ const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
               sets: updatedSets
             };
           });
+        }
+      }
+    ]
+  });
+
+  await alert.present();
+};
+
+// Remove an entire exercise (and all its sets) from the workout.
+const handleRemoveExercise = async (exercise: any) => {
+  const alert = await alertController.create({
+    header: 'Remove Exercise?',
+    message: `Removes "${exercise.name}" and all of its sets.`,
+    cssClass: 'app-confirm-alert',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Remove',
+        role: 'destructive',
+        handler: async () => {
+          hapticHeavy();
+          // workout_exercise_sets cascade-deletes (PRAGMA foreign_keys = ON).
+          await deleteWorkoutExercise(Number(exercise.id));
+          workoutExercises.value = workoutExercises.value.filter(
+            (ex) => Number(ex.id) !== Number(exercise.id)
+          );
         }
       }
     ]
