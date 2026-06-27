@@ -188,4 +188,50 @@ describe('computeAcwrSeries', () => {
   test('empty input yields empty series', () => {
     expect(computeAcwrSeries([])).toEqual([])
   })
+
+  test('defaults to EWMA and stays sensitive to an acute spike', () => {
+    const base = Array.from({ length: 27 }, (_, i) => day(addDays('2026-06-01', i), 200))
+    base.push(day(addDays('2026-06-01', 27), 5000))
+    const ewma = computeAcwrSeries(base, { minChronicDays: 14 })
+    const rolling = computeAcwrSeries(base, { minChronicDays: 14, method: 'rolling' })
+    const lastEwma = ewma[ewma.length - 1]
+    // EWMA flags the spike as high risk (sensitivity, Williams 2017)...
+    expect(lastEwma.acwr! > 1.5).toBe(true)
+    expect(lastEwma.flag).toBe('high_risk')
+    // ...and the method option genuinely changes the maths.
+    expect(lastEwma.acwr).not.toBe(rolling[rolling.length - 1].acwr)
+  })
+
+  test('EWMA acute load decays faster than chronic during a rest streak', () => {
+    const loads = Array.from({ length: 28 }, (_, i) => day(addDays('2026-06-01', i), 1000))
+    const restEnd = addDays(addDays('2026-06-01', 27), 10)
+    const last = computeAcwrSeries(loads, { endDate: restEnd })[
+      computeAcwrSeries(loads, { endDate: restEnd }).length - 1
+    ]
+    // Short acute time-constant collapses toward zero faster than the chronic one.
+    expect(last.acute).toBeLessThan(last.chronic)
+    expect(last.flag).toBe('detraining')
+  })
+
+  test('EWMA steady state still sits at ACWR ~1.0', () => {
+    const loads = Array.from({ length: 40 }, (_, i) => day(addDays('2026-06-01', i), 1500))
+    const last = computeAcwrSeries(loads)[39]
+    expect(last.acwr).toBeCloseTo(1.0, 1)
+    expect(last.flag).toBe('optimal')
+  })
+
+  test('rolling uncoupled chronic excludes the acute window', () => {
+    // 21 light days then 7 heavy days. Coupled chronic includes the heavy week
+    // (raising the denominator); uncoupled chronic uses only the prior light
+    // weeks, so the same acute load reads as a larger ratio.
+    const loads = [
+      ...Array.from({ length: 21 }, (_, i) => day(addDays('2026-06-01', i), 100)),
+      ...Array.from({ length: 7 }, (_, i) => day(addDays('2026-06-22', i), 1000)),
+    ]
+    const coupled = computeAcwrSeries(loads, { method: 'rolling', coupling: 'coupled' })
+    const uncoupled = computeAcwrSeries(loads, { method: 'rolling', coupling: 'uncoupled' })
+    const lc = coupled[coupled.length - 1]
+    const lu = uncoupled[uncoupled.length - 1]
+    expect(lu.acwr!).toBeGreaterThan(lc.acwr!)
+  })
 })
