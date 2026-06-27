@@ -43,7 +43,7 @@
               <small class="tile__detail">&nbsp;</small>
             </div>
           </div>
-          <p v-else class="empty-copy">No record yet.</p>
+          <p v-else class="empty-copy">No record</p>
         </div>
 
         <!-- Strength chart -->
@@ -71,7 +71,7 @@
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Est. 1RM</span>
             </div>
           </template>
-          <p v-else class="empty-copy">No sessions in this window.</p>
+          <p v-else class="empty-copy">No sessions</p>
         </div>
 
         <!-- Volume chart -->
@@ -127,7 +127,7 @@
 
         <!-- Global empty state -->
         <div v-if="!hasAnyData" class="card">
-          <p class="empty-copy">No history yet.</p>
+          <p class="empty-copy">No history</p>
         </div>
       </div>
     </ion-content>

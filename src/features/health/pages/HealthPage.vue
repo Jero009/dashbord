@@ -152,7 +152,7 @@
               <span>{{ restingHrHistory[restingHrHistory.length - 1]?.dateLabel }}</span>
             </div>
           </div>
-          <p v-else class="empty-hint">Not enough heart rate data yet — sync Health Connect to populate</p>
+          <p v-else class="empty-hint">No heart-rate data yet</p>
         </div>
 
         <!-- 5. Today's plan events -->
@@ -193,7 +193,7 @@
               <span>{{ readinessHistory[readinessHistory.length - 1]?.dateLabel }}</span>
             </div>
           </div>
-          <p v-else class="empty-hint">No readiness data yet — sync Health Connect to populate</p>
+          <p v-else class="empty-hint">No readiness data yet</p>
         </div>
 
         <!-- 7. Recent activities -->
@@ -220,7 +220,7 @@
           <p class="section-kicker">Health Connect</p>
           <p class="sync-status">{{ healthConnectStatus }}</p>
           <button class="sync-btn" :disabled="syncing" @click="handleConnect">
-            {{ syncing ? 'Syncing...' : 'Sync now' }}
+            {{ syncing ? 'Syncing…' : 'Sync now' }}
           </button>
         </div>
 
@@ -346,19 +346,19 @@ const sleepInsight = computed((): string => {
   const hrs = sleepHours.value;
   const sc  = sleepScore.value;
   const rr  = respRate.value;
-  if (rr !== null && rr > 17) return 'Respiratory rate elevated — monitor for illness';
-  if (eff !== null && eff < 80) return 'Efficiency below target — aim for 85%+';
-  if (hrs !== null && hrs < 7)  return 'Sleep under 7 h — recovery may be limited';
-  if (sc !== null && sc >= 85)  return 'Strong sleep — recovery looks good';
+  if (rr !== null && rr > 17) return 'Resp. rate high — watch for illness';
+  if (eff !== null && eff < 80) return 'Low efficiency — aim for 85%+';
+  if (hrs !== null && hrs < 7)  return 'Recovery may be limited';
+  if (sc !== null && sc >= 85)  return 'Strong sleep';
   if (hrs === null && sc === null && eff === null) return '';
-  return 'Sleep looks solid';
+  return 'Sleep solid';
 });
 
 // --- Health Connect status ---
 const healthConnectStatus = computed(() =>
   isHealthConnectAvailable()
-    ? 'Sync latest data from Android Health Connect'
-    : 'Health Connect unavailable on web'
+    ? 'Sync from Health Connect'
+    : 'Unavailable on web'
 );
 
 // --- Formatters ---
@@ -559,23 +559,23 @@ const handleConnect = async () => {
     const result = await requestHealthConnectPermissions();
     if (!result.available) {
       if (isHealthConnectAvailable()) await openHealthConnectSettings();
-      const t = await toastController.create({ message: result.reason ?? 'Health Connect unavailable.', duration: 2200, color: 'warning' });
+      const t = await toastController.create({ message: result.reason ?? 'health connect unavailable', duration: 2200, color: 'warning' });
       await t.present();
       return;
     }
     if (!result.granted) {
-      const t = await toastController.create({ message: 'Permissions not granted yet.', duration: 2200, color: 'warning' });
+      const t = await toastController.create({ message: 'permission needed', duration: 2200, color: 'warning' });
       await t.present();
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
     await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
     await loadReadiness();
-    const t = await toastController.create({ message: `Synced ${syncResult.synced} records.`, duration: 2200, color: 'success' });
+    const t = await toastController.create({ message: `synced ${syncResult.synced} records`, duration: 2200, color: 'success' });
     await t.present();
   } catch (error) {
     const t = await toastController.create({
-      message: error instanceof Error ? error.message : 'Health Connect unavailable.',
+      message: error instanceof Error ? error.message : 'health connect unavailable',
       duration: 2200, color: 'danger',
     });
     await t.present();

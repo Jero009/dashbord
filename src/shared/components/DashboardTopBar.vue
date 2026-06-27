@@ -23,7 +23,7 @@
       </ion-segment>
     </div>
     <div slot="end" class="toolbar-end">
-      <button class="settings-btn" :class="{ 'settings-btn--active': isSettings }" @click="goToSettings">
+      <button class="settings-btn" :class="{ 'settings-btn--active': isSettings }" aria-label="Settings" @click="goToSettings">
         <ion-icon :icon="settingsOutline" />
       </button>
     </div>

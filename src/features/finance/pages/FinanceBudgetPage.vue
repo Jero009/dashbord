@@ -50,7 +50,7 @@
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Budgets</p>
-            <span class="card-count">{{ budgets.length }} categories</span>
+            <span class="card-count">{{ budgets.length }}</span>
           </div>
           <div v-if="budgetRows.length" class="budget-list">
             <div v-for="row in budgetRows" :key="row.id" class="budget-row">
@@ -77,7 +77,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No budgets yet.</p>
+          <p v-else class="empty-state">No budgets</p>
 
           <div class="form-fields form-fields--inline">
             <div class="field-group">
@@ -89,11 +89,11 @@
               </ion-select>
             </div>
             <div class="field-group">
-              <label class="field-label">Monthly limit</label>
+              <label class="field-label">Limit</label>
               <ion-input v-model="budgetLimit" type="number" inputmode="decimal" class="styled-input"></ion-input>
             </div>
           </div>
-          <ion-button expand="block" class="outline-btn" @click="saveBudget">Set budget</ion-button>
+          <ion-button expand="block" class="outline-btn" @click="saveBudget">Set</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
@@ -136,13 +136,13 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveTransaction">Add transaction</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveTransaction">Add</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Transactions</p>
-            <span class="card-count">{{ transactions.length }} this month</span>
+            <span class="card-count">{{ transactions.length }}</span>
           </div>
           <div v-if="transactions.length" class="item-list">
             <div v-for="transaction in transactions" :key="transaction.id" class="list-item">
@@ -162,7 +162,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No transactions logged for {{ monthLabel }}.</p>
+          <p v-else class="empty-state">No transactions</p>
         </ion-card>
       </div>
     </ion-content>
@@ -310,16 +310,16 @@ const showToast = async (message: string, color: 'warning' | 'success') => {
 
 const saveTransaction = async () => {
   if (!transactionName.value.trim()) {
-    await showToast('Transaction name is required.', 'warning');
+    await showToast('name required', 'warning');
     return;
   }
   const amount = Number(transactionAmount.value);
   if (!Number.isFinite(amount) || amount <= 0) {
-    await showToast('Amount must be a positive number.', 'warning');
+    await showToast('invalid amount', 'warning');
     return;
   }
   if (!transactionDate.value) {
-    await showToast('Date is required.', 'warning');
+    await showToast('date required', 'warning');
     return;
   }
 
@@ -333,14 +333,14 @@ const saveTransaction = async () => {
       transactionType.value
     );
   } catch {
-    await showToast('Could not save transaction. Please try again.', 'warning');
+    await showToast('save failed', 'warning');
     return;
   }
   transactionName.value = '';
   transactionAmount.value = '';
   await loadBudgetData();
   hapticSuccess();
-  await showToast('Transaction added.', 'success');
+  await showToast('added', 'success');
 };
 
 const removeTransaction = async (id: number) => {
@@ -348,7 +348,7 @@ const removeTransaction = async (id: number) => {
   try {
     await deleteFinanceTransaction(Number(id));
   } catch {
-    await showToast('Could not delete transaction. Please try again.', 'warning');
+    await showToast('delete failed', 'warning');
     return;
   }
   await loadBudgetData();
@@ -357,7 +357,7 @@ const removeTransaction = async (id: number) => {
 const saveBudget = async () => {
   const limit = Number(budgetLimit.value);
   if (!Number.isFinite(limit) || limit <= 0) {
-    await showToast('Monthly limit must be a positive number.', 'warning');
+    await showToast('invalid limit', 'warning');
     return;
   }
 
@@ -365,13 +365,13 @@ const saveBudget = async () => {
   try {
     await upsertFinanceBudget(budgetCategory.value, limit);
   } catch {
-    await showToast('Could not save budget. Please try again.', 'warning');
+    await showToast('save failed', 'warning');
     return;
   }
   budgetLimit.value = '';
   await loadBudgetData();
   hapticSuccess();
-  await showToast('Budget saved.', 'success');
+  await showToast('saved', 'success');
 };
 
 const removeBudget = async (id: number) => {
@@ -379,7 +379,7 @@ const removeBudget = async (id: number) => {
   try {
     await deleteFinanceBudget(Number(id));
   } catch {
-    await showToast('Could not delete budget. Please try again.', 'warning');
+    await showToast('delete failed', 'warning');
     return;
   }
   await loadBudgetData();

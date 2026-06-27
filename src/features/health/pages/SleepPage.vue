@@ -13,9 +13,9 @@
           <div class="card-topline">
             <p class="section-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
-              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
+              <button class="date-nav__btn" aria-label="Previous day" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
-              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
+              <button class="date-nav__btn" aria-label="Next day" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
             </div>
           </div>
 
@@ -64,7 +64,7 @@
           </div>
 
           <button class="sync-btn" :disabled="syncing" @click="handleSync">
-            {{ syncing ? 'Syncing…' : 'Sync Health Connect' }}
+            {{ syncing ? 'Syncing…' : 'Sync' }}
           </button>
         </ion-card>
 
@@ -101,7 +101,7 @@
               <span v-for="(t, i) in hypTimeAxis" :key="i">{{ t }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No stage timeline yet</p>
+          <p v-else class="empty-state">No stages</p>
         </ion-card>
 
         <!-- Stage breakdown + consistency row -->
@@ -116,7 +116,7 @@
                 <small>{{ Math.round(stage.share * 100) }}%</small>
               </div>
             </div>
-            <p v-else class="empty-state">No stage data</p>
+            <p v-else class="empty-state">No stages</p>
           </ion-card>
 
           <ion-card class="sleep-card">
@@ -164,7 +164,7 @@
               <span>{{ wakeTimeClock }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No HR data yet</p>
+          <p v-else class="empty-state">No HR data</p>
         </ion-card>
 
         <!-- Score history -->
@@ -195,7 +195,7 @@
               </span>
             </div>
           </div>
-          <p v-else class="empty-state">No history yet</p>
+          <p v-else class="empty-state">No history</p>
         </ion-card>
 
       </div>
@@ -351,7 +351,7 @@ const handleSync = async () => {
     const auth = await requestHealthConnectPermissions();
     if (!auth.available) {
       const toast = await toastController.create({
-        message: auth.reason ?? 'Health Connect unavailable.',
+        message: auth.reason ?? 'health connect unavailable',
         duration: 2200,
         color: 'warning',
       });
@@ -361,7 +361,7 @@ const handleSync = async () => {
 
     if (!auth.granted) {
       const toast = await toastController.create({
-        message: 'Grant Health Connect access to read sleep data.',
+        message: 'grant health connect access',
         duration: 2200,
         color: 'warning',
       });
@@ -374,14 +374,14 @@ const handleSync = async () => {
     await loadSleep();
 
     const toast = await toastController.create({
-      message: `Synced ${result.synced} health records.`,
+      message: `synced ${result.synced} records`,
       duration: 2000,
       color: 'success',
     });
     await toast.present();
   } catch (error) {
     const toast = await toastController.create({
-      message: error instanceof Error ? error.message : 'Unable to sync sleep data.',
+      message: error instanceof Error ? error.message : 'sync failed',
       duration: 2200,
       color: 'danger',
     });

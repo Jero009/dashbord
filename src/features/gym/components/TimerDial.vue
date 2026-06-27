@@ -1,7 +1,7 @@
 <template>
   <div class="timer-dial-container">
     <div class="dial-header">
-      <h2>Set Rest Time</h2>
+      <h2>Rest time</h2>
       <p class="current-value">{{ value }}s</p>
     </div>
 
@@ -53,16 +53,17 @@
 
       <!-- Number pad -->
       <div class="number-pad">
-        <input 
-          v-model.number="inputValue" 
-          type="number" 
-          min="1" 
+        <input
+          v-model.number="inputValue"
+          type="number"
+          min="1"
           max="240"
           class="time-input"
+          aria-label="Rest seconds"
           @change="updateFromInput"
           @keydown.enter="handleConfirm"
         >
-        <span class="input-label">seconds</span>
+        <span class="input-label">s</span>
       </div>
     </div>
 

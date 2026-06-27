@@ -26,6 +26,7 @@
                     <ion-button
                       fill="clear"
                       size="small"
+                      aria-label="Move up"
                       @click="moveExerciseUp(index)"
                       :disabled="index === 0"
                       class="reorder-btn">
@@ -34,6 +35,7 @@
                     <ion-button
                       fill="clear"
                       size="small"
+                      aria-label="Move down"
                       @click="moveExerciseDown(index)"
                       :disabled="index === workoutExercises.length - 1"
                       class="reorder-btn">
@@ -45,6 +47,7 @@
                     fill="clear"
                     size="small"
                     class="stats-btn"
+                    aria-label="Exercise stats"
                     @click="openExerciseStats(ex)">
                     <ion-icon :icon="statsChartOutline"></ion-icon>
                   </ion-button>
@@ -52,6 +55,7 @@
                     fill="clear"
                     size="small"
                     class="delete-exercise-btn"
+                    aria-label="Remove exercise"
                     @click="handleRemoveExercise(ex)">
                     <ion-icon :icon="trashOutline"></ion-icon>
                   </ion-button>
@@ -89,7 +93,7 @@
                   <!-- Add Set Button -->
                   <ion-button  expand="block" fill="outline" @click="addNewSet(ex)" class="add-set-btn">
                     <ion-icon class="add-set-icon" :icon="addOutline"></ion-icon>
-                    Add Set
+                    Add set
                   </ion-button>
                 </ion-card-content>
           </ion-card>
@@ -100,12 +104,12 @@
       <div class="add-exercise-container">
         <ion-button expand="block" @click="addNewExercise" class="add-exercise-btn">
           <ion-icon slot="start" :icon="addCircleOutline"></ion-icon>
-          Add Exercise
+          Add exercise
         </ion-button>
       </div>
 
       <div class="cancel-container">
-        <ion-button class="button-red" expand="block" fill="outline" @click="handleCancelWorkout">Cancel Workout</ion-button>
+        <ion-button class="button-red" expand="block" fill="outline" @click="handleCancelWorkout">Cancel</ion-button>
       </div>
 
     </ion-content>
@@ -641,7 +645,7 @@ const promptSessionRpe = async (): Promise<number | null> => {
   const result = new Promise<number | null>((resolve) => { resolveRpe = resolve; });
   const alert = await alertController.create({
     header: 'Session RPE',
-    message: 'How hard was this session? (1–10, optional)',
+    message: '1–10, optional',
     cssClass: 'app-confirm-alert',
     inputs: [
       { name: 'rpe', type: 'number', min: 1, max: 10, placeholder: 'RPE 1–10' },
@@ -665,13 +669,12 @@ const promptSessionRpe = async (): Promise<number | null> => {
 const saveWorkout = async () => {
   hapticHeavy();
   const alert = await alertController.create({
-    header: 'End Workout?',
-    message: 'Saves the workout and returns home.',
+    header: 'End workout?',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
       {
-        text: 'End Workout',
+        text: 'End',
         role: 'destructive',
         handler: async () => {
           hapticSuccess();
@@ -715,13 +718,13 @@ const saveWorkout = async () => {
 
 const handleCancelWorkout = async () => {
   const alert = await alertController.create({
-    header: 'Cancel Workout?',
-    message: "This workout won't be saved.",
+    header: 'Discard workout?',
+    message: "won't be saved",
     cssClass: 'app-confirm-alert',
     buttons: [
-      { text: 'No', role: 'cancel' },
+      { text: 'Keep', role: 'cancel' },
       {
-        text: 'Yes, Cancel',
+        text: 'Discard',
         role: 'confirm',
         handler: async () => {
           await cancelWorkout(workoutId);
@@ -741,8 +744,7 @@ const handleCancelWorkout = async () => {
 
 const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
   const alert = await alertController.create({
-    header: 'Remove Set?',
-    message: 'Removes only this set.',
+    header: 'Remove set?',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
@@ -790,8 +792,8 @@ const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
 // Remove an entire exercise (and all its sets) from the workout.
 const handleRemoveExercise = async (exercise: any) => {
   const alert = await alertController.create({
-    header: 'Remove Exercise?',
-    message: `Removes "${exercise.name}" and all of its sets.`,
+    header: 'Remove exercise?',
+    message: `removes "${exercise.name}" and its sets`,
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },

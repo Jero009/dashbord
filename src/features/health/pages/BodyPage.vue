@@ -60,7 +60,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Notes</label>
-              <input v-model="form.notes" type="text" placeholder="Optional" class="form-input" />
+              <input v-model="form.notes" type="text" class="form-input" />
             </div>
             <div class="photo-row">
               <button class="photo-source-btn" @click="takePhoto">
@@ -119,7 +119,7 @@
                   <span class="entry-weight">{{ entry.weight_kg }} kg</span>
                   <span v-if="entry.notes" class="entry-notes">{{ entry.notes }}</span>
                 </div>
-                <button class="delete-btn" @click="removeEntry(entry)"><ion-icon :icon="close" /></button>
+                <button class="delete-btn" aria-label="Delete entry" @click="removeEntry(entry)"><ion-icon :icon="close" /></button>
               </div>
               <img
                 v-if="photoUrls[entry.id]"
@@ -132,7 +132,7 @@
         </div>
 
         <div v-else class="card empty-card">
-          <p class="empty-text">No entries yet. Log your first weight above.</p>
+          <p class="empty-text">No entries yet</p>
         </div>
 
       </div>
@@ -368,14 +368,14 @@ const saveEntry = async () => {
   hapticMedium();
   const weight = parseFloat(form.value.weight)
   if (!weight || weight <= 0) {
-    const t = await toastController.create({ message: 'Enter a valid weight.', duration: 1800, color: 'warning' })
+    const t = await toastController.create({ message: 'invalid weight', duration: 1800, color: 'warning' })
     await t.present()
     return
   }
 
   const existing = entries.value.find(e => e.date === form.value.date)
   if (existing) {
-    const t = await toastController.create({ message: 'Already logged for this date.', duration: 1800, color: 'warning' })
+    const t = await toastController.create({ message: 'already logged', duration: 1800, color: 'warning' })
     await t.present()
     return
   }
@@ -423,10 +423,10 @@ const saveEntry = async () => {
     await loadEntries()
 
     hapticSuccess();
-    const t = await toastController.create({ message: 'Saved!', duration: 1500, color: 'success' })
+    const t = await toastController.create({ message: 'saved', duration: 1500, color: 'success' })
     await t.present()
   } catch (err) {
-    const t = await toastController.create({ message: 'Failed to save. Try again.', duration: 2000, color: 'danger' })
+    const t = await toastController.create({ message: 'save failed', duration: 2000, color: 'danger' })
     await t.present()
   }
 }

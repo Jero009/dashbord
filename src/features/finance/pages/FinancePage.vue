@@ -9,7 +9,6 @@
         <ion-card class="summary-card net-worth-card">
           <div class="card-topline">
             <p class="section-kicker">Net worth</p>
-            <span class="card-sub">Accounts + investments</span>
           </div>
           <div class="net-worth-value">{{ netWorthDisplay }}</div>
           <div class="card-metrics">
@@ -22,7 +21,7 @@
               <strong>{{ investmentsTotalDisplay }}</strong>
             </div>
             <div class="card-metric">
-              <span>Subscriptions / mo</span>
+              <span>Subs/mo</span>
               <strong>{{ subscriptionsTotalDisplay }}</strong>
             </div>
             <div class="card-metric">
@@ -30,11 +29,11 @@
               <strong>{{ investments.length }}</strong>
             </div>
             <div class="card-metric">
-              <span>Spent this month</span>
+              <span>Spent</span>
               <strong>{{ monthSpentDisplay }}</strong>
             </div>
             <div class="card-metric">
-              <span>Budget left</span>
+              <span>Left</span>
               <strong :class="{ 'metric-over': budgetLeft < 0 }">{{ budgetLeftDisplay }}</strong>
             </div>
           </div>

@@ -17,7 +17,7 @@
       <div class="exercise-list-container">
         <ion-select
           v-model="selectedMuscleGroup"
-          placeholder="Filter by muscle group"
+          placeholder="Muscle group"
           interface="action-sheet"
           :interface-options="{ cssClass: 'app-action-sheet' }"
           class="muscle-group-select app-select"

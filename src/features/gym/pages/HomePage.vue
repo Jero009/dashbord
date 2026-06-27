@@ -91,7 +91,6 @@
                 <ion-icon :icon="barbellSharp"></ion-icon>
               </div>
               <div class="workout-tile__copy">
-                <span>Workout</span>
                 <strong>{{ template.name }}</strong>
                 <small>{{ template.created_at }}</small>
               </div>
@@ -120,7 +119,7 @@
 
         <ion-card class="graph-card">
           <div class="graph-card__header">
-            <ion-select placeholder="Select template" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" v-model="selectedTemplateId" class="app-select">
+            <ion-select placeholder="Template" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" v-model="selectedTemplateId" class="app-select">
               <ion-select-option v-for="t in templates" :key="t.id" :value="t.id">
                 {{ t.name }}
               </ion-select-option>

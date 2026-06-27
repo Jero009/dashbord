@@ -9,11 +9,11 @@
       <div class="finance-shell">
         <!-- Month nav -->
         <div class="month-nav">
-          <button class="month-nav__btn" @click="changeMonth(-1)">
+          <button class="month-nav__btn" aria-label="Previous month" @click="changeMonth(-1)">
             <ion-icon :icon="chevronBackOutline" />
           </button>
           <span class="month-nav__label">{{ monthLabel }}</span>
-          <button class="month-nav__btn" :disabled="isCurrentMonth" @click="changeMonth(1)">
+          <button class="month-nav__btn" :disabled="isCurrentMonth" aria-label="Next month" @click="changeMonth(1)">
             <ion-icon :icon="chevronForwardOutline" />
           </button>
         </div>
@@ -37,7 +37,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">No expenses recorded this month.</p>
+          <p v-else class="empty-copy">No expenses</p>
         </div>
 
         <!-- Budget vs actual -->
@@ -63,7 +63,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">Set monthly budgets to track them here.</p>
+          <p v-else class="empty-copy">No budgets set</p>
         </div>
 
         <!-- Monthly trend -->
@@ -78,7 +78,7 @@
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Income</span>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough history for a trend yet.</p>
+          <p v-else class="empty-copy">Not enough history</p>
         </div>
       </div>
     </ion-content>

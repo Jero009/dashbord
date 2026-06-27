@@ -11,7 +11,7 @@
         <!-- Loading state -->
         <div v-if="loading" class="loading-state">
           <ion-spinner name="crescent" class="loading-spinner" />
-          <span class="loading-text">Loading circadian data...</span>
+          <span class="loading-text">Loading…</span>
         </div>
 
         <template v-else>
@@ -28,19 +28,17 @@
                 v-if="profile?.dataQuality"
                 class="quality-badge"
                 :class="`quality-badge--${profile.dataQuality}`"
-              >{{ profile.dataQuality }} quality</span>
+              >{{ profile.dataQuality }}</span>
             </div>
 
             <div class="metric-grid">
               <div class="card-metric">
                 <span class="metric-label">Avg bedtime</span>
                 <strong class="metric-value">{{ profile?.avgSleepOnset != null ? formatHour(profile.avgSleepOnset) : '—' }}</strong>
-                <span class="metric-sub">7-night average</span>
               </div>
               <div class="card-metric">
                 <span class="metric-label">Avg wake</span>
                 <strong class="metric-value">{{ profile?.avgWakeTime != null ? formatHour(profile.avgWakeTime) : '—' }}</strong>
-                <span class="metric-sub">7-night average</span>
               </div>
               <div class="card-metric">
                 <span class="metric-label">Melatonin onset</span>
@@ -76,14 +74,14 @@
           <!-- 2+3. Alertness curve + timeline — single unified scrollable card -->
           <div class="card">
             <div class="curve-header">
-              <p class="section-kicker">Today — scroll to explore</p>
+              <p class="section-kicker">Today</p>
               <div v-if="alertnessCurve.length" class="curve-now-badge">
                 <span class="curve-now-label">Now</span>
                 <span class="curve-now-value">{{ currentAlertnessLabel }}</span>
               </div>
             </div>
 
-            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough sleep data yet</div>
+            <div v-if="!alertnessCurve.length" class="curve-empty">Not enough data</div>
 
             <div v-else class="unified-scroll-wrap">
               <!-- Fixed Y-axis (does not scroll) -->
@@ -194,7 +192,7 @@
 
             <!-- What's happening now -->
             <div class="now-activity">
-              <span class="now-activity-label">Right now:</span>
+              <span class="now-activity-label">Now</span>
               <span class="now-activity-value">{{ nowActivityLabel }}</span>
             </div>
 
@@ -212,7 +210,7 @@
 
           <!-- 4. Circadian Health Score card -->
           <div class="card">
-            <p class="section-kicker">Circadian health score</p>
+            <p class="section-kicker">Health score</p>
             <div class="score-hero">
               <span class="score-number" :class="scoreColorClass">{{ score?.total ?? '—' }}</span>
               <div class="score-bar-track">
@@ -303,7 +301,7 @@
             </div>
 
             <div v-else-if="!todayLog && !showLogForm" class="empty-log">
-              <span class="empty-text">No entry for today.</span>
+              <span class="empty-text">No entry</span>
             </div>
 
             <div v-if="showLogForm" class="log-form">
@@ -348,7 +346,7 @@
               </div>
 
               <div class="form-section">
-                <span class="form-label">Got outdoor light before 9 AM</span>
+                <span class="form-label">Morning light</span>
                 <button class="light-toggle" :class="{ 'light-toggle--yes': formMorningLight }" @click="formMorningLight = !formMorningLight">
                   {{ formMorningLight ? 'Yes' : 'No' }}
                 </button>
@@ -477,12 +475,12 @@ const nowActivityLabel = computed(() => {
   const w = windows.value;
   if (!w) return '—';
   if (h < avgWakeHour.value) return 'Sleep';
-  if (w.exerciseMorning && h >= w.exerciseMorning.start && h < w.exerciseMorning.end) return 'Morning exercise window';
-  if (h >= w.cognitiveStart && h < w.cognitiveEnd) return 'Cognitive peak — deep work time';
-  if (w.exerciseAfternoon && h >= w.exerciseAfternoon.start && h < w.exerciseAfternoon.end) return 'Afternoon exercise window';
-  if (h >= w.lastMealBy - 0.1 && h < w.bedtimeTarget) return 'Wind down — no more eating';
+  if (w.exerciseMorning && h >= w.exerciseMorning.start && h < w.exerciseMorning.end) return 'Morning exercise';
+  if (h >= w.cognitiveStart && h < w.cognitiveEnd) return 'Deep work';
+  if (w.exerciseAfternoon && h >= w.exerciseAfternoon.start && h < w.exerciseAfternoon.end) return 'Afternoon exercise';
+  if (h >= w.lastMealBy - 0.1 && h < w.bedtimeTarget) return 'Wind down — stop eating';
   if (h >= w.bedtimeTarget) return 'Bedtime';
-  return 'Rest / low-intensity time';
+  return 'Rest';
 });
 
 // Timeline positions read directly from melatoninWindows so any model change auto-propagates.
@@ -658,7 +656,7 @@ const saveLog = async () => {
   showLogForm.value = false;
   await loadData();
   hapticSuccess();
-  const t = await toastController.create({ message: 'Day logged.', duration: 1600, color: 'success' });
+  const t = await toastController.create({ message: 'logged', duration: 1600, color: 'success' });
   await t.present();
 };
 </script>

@@ -12,7 +12,7 @@
           </div>
           <div class="form-fields">
             <div class="field-group">
-              <label class="field-label">Account name</label>
+              <label class="field-label">Name</label>
               <ion-input v-model="accountName" class="styled-input"></ion-input>
             </div>
             <div class="field-group">
@@ -33,24 +33,24 @@
               <ion-input v-model="accountBalance" type="number" inputmode="decimal" class="styled-input"></ion-input>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveAccount">Add account</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveAccount">Add</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Accounts</p>
-            <span class="card-count">{{ accounts.length }} total</span>
+            <span class="card-count">{{ accounts.length }}</span>
           </div>
           <div v-if="accounts.length" class="account-list">
             <div v-for="account in accounts" :key="account.id" class="account-item">
               <div class="account-item__info">
                 <strong class="account-item__name">{{ account.name }}</strong>
-                <span class="account-item__meta">{{ account.type }} · {{ account.institution || 'No institution' }}</span>
+                <span class="account-item__meta">{{ account.type }}<template v-if="account.institution"> · {{ account.institution }}</template></span>
               </div>
               <span class="account-item__balance">{{ formatCurrency(Number(account.balance) || 0) }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No accounts yet.</p>
+          <p v-else class="empty-state">No accounts</p>
         </ion-card>
       </div>
     </ion-content>
@@ -89,7 +89,7 @@ const loadAccounts = async () => {
 const saveAccount = async () => {
   if (!accountName.value.trim()) {
     const toast = await toastController.create({
-      message: 'Account name is required.',
+      message: 'name required',
       duration: 2000,
       color: 'warning',
     });
@@ -100,7 +100,7 @@ const saveAccount = async () => {
   const balance = Number(accountBalance.value);
   if (!Number.isFinite(balance)) {
     const toast = await toastController.create({
-      message: 'Enter a valid balance.',
+      message: 'invalid balance',
       duration: 2000,
       color: 'warning',
     });
@@ -112,7 +112,7 @@ const saveAccount = async () => {
     await addFinanceAccount(accountName.value.trim(), accountType.value, accountInstitution.value.trim() || null, balance);
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save account.',
+      message: 'save failed',
       duration: 2000,
       color: 'warning',
     });
@@ -125,7 +125,7 @@ const saveAccount = async () => {
   await loadAccounts();
 
   const toast = await toastController.create({
-    message: 'Account added.',
+    message: 'added',
     duration: 1800,
     color: 'success',
   });

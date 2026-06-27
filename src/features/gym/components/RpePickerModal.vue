@@ -1,7 +1,7 @@
 <template>
   <div class="rpe-sheet">
     <div class="rpe-sheet__header">
-      <p class="rpe-sheet__kicker">Rate of Perceived Exertion</p>
+      <p class="rpe-sheet__kicker">RPE</p>
       <button v-if="current != null" class="rpe-clear" @click="select(null)">Clear</button>
     </div>
     <div class="rpe-list">

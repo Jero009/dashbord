@@ -34,7 +34,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Funded from</label>
-              <ion-select v-model="investmentAccountId" class="styled-select" interface="action-sheet" placeholder="Select account" :disabled="!accounts.length">
+              <ion-select v-model="investmentAccountId" class="styled-select" interface="action-sheet" placeholder="Account" :disabled="!accounts.length">
                 <ion-select-option :value="null">No account</ion-select-option>
                 <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
                   {{ account.name }}
@@ -42,13 +42,13 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveInvestment">Add investment</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveInvestment">Add</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Investments</p>
-            <span class="card-count">{{ investments.length }} holdings</span>
+            <span class="card-count">{{ investments.length }}</span>
           </div>
           <div v-if="investments.length" class="item-list">
             <div v-for="investment in investments" :key="investment.id" class="list-item">
@@ -59,7 +59,7 @@
               <span class="list-item__value">{{ formatCurrency(Number(investment.value) || 0) }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No investments yet.</p>
+          <p v-else class="empty-state">No investments</p>
         </ion-card>
       </div>
     </ion-content>
@@ -104,7 +104,7 @@ const loadAccounts = async () => {
 const saveInvestment = async () => {
   if (!investmentName.value.trim()) {
     const toast = await toastController.create({
-      message: 'Investment name is required.',
+      message: 'name required',
       duration: 2000,
       color: 'warning',
     });
@@ -116,7 +116,7 @@ const saveInvestment = async () => {
   const value = Number(investmentValue.value);
   if (!Number.isFinite(quantity) || !Number.isFinite(value) || quantity < 0 || value < 0) {
     const toast = await toastController.create({
-      message: 'Enter valid amounts.',
+      message: 'invalid amount',
       duration: 2000,
       color: 'warning',
     });
@@ -128,7 +128,7 @@ const saveInvestment = async () => {
     await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value, investmentAccountId.value);
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save investment.',
+      message: 'save failed',
       duration: 2000,
       color: 'warning',
     });
@@ -142,7 +142,7 @@ const saveInvestment = async () => {
   await loadInvestments();
 
   const toast = await toastController.create({
-    message: 'Investment added.',
+    message: 'added',
     duration: 1800,
     color: 'success',
   });

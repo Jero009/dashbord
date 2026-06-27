@@ -9,7 +9,7 @@
       <div class="analytics-shell">
         <!-- Period header + compact switch (a filter control, not a nav-style bar) -->
         <div class="review-head">
-          <p class="section-kicker">Your review</p>
+          <p class="section-kicker">Review</p>
           <div class="period-switch" role="group" aria-label="Review period">
             <button
               type="button"

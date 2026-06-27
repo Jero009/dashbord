@@ -21,7 +21,7 @@
         <!-- ============ SEARCH ============ -->
         <div class="cal-search">
           <ion-icon :icon="searchOutline" class="cal-search__icon" />
-          <input v-model="searchQuery" class="cal-search__input" placeholder="Search events" />
+          <input v-model="searchQuery" class="cal-search__input" placeholder="Search" />
           <button v-if="searchQuery" class="cal-search__clear" aria-label="Clear search" @click="searchQuery = ''">
             <ion-icon :icon="closeOutline" />
           </button>
@@ -40,16 +40,16 @@
               </div>
             </li>
           </ul>
-          <p v-else class="empty-hint">No events match "{{ searchQuery }}"</p>
+          <p v-else class="empty-hint">No matches</p>
         </div>
 
         <!-- ============ VIEWS (hidden while searching) ============ -->
         <template v-if="!searchQuery">
           <!-- period nav -->
           <div class="month-nav">
-            <button class="month-nav__btn" @click="goPrev"><ion-icon :icon="chevronBackOutline" /></button>
+            <button class="month-nav__btn" aria-label="Previous" @click="goPrev"><ion-icon :icon="chevronBackOutline" /></button>
             <span class="month-nav__label">{{ periodLabel }}</span>
-            <button class="month-nav__btn" @click="goNext"><ion-icon :icon="chevronForwardOutline" /></button>
+            <button class="month-nav__btn" aria-label="Next" @click="goNext"><ion-icon :icon="chevronForwardOutline" /></button>
           </div>
 
           <!-- MONTH GRID -->
@@ -108,7 +108,7 @@
           <!-- AGENDA VIEW -->
           <div v-else-if="viewMode === 'agenda'" class="agenda-view">
             <div v-if="!agendaGroups.length" class="detail-card">
-              <p class="empty-hint">Nothing scheduled in the next 45 days</p>
+              <p class="empty-hint">Nothing scheduled</p>
             </div>
             <div v-for="grp in agendaGroups" :key="grp.date" class="agenda-group">
               <div class="agenda-group__date" :class="{ 'agenda-group__date--today': grp.date === todayStr }">
@@ -158,8 +158,8 @@
               </div>
 
               <div v-if="showAddEvent" class="add-form">
-                <div v-if="editingEventId !== null" class="edit-banner">Editing event</div>
-                <input v-model="newTitle" class="form-input" placeholder="Event title" />
+                <div v-if="editingEventId !== null" class="edit-banner">Editing</div>
+                <input v-model="newTitle" class="form-input" placeholder="Title" />
 
                 <label class="allday-row">
                   <input type="checkbox" v-model="newAllDay" />
@@ -248,7 +248,7 @@
                   </button>
                 </div>
 
-                <input v-model="newNotes" class="form-input" placeholder="Notes (optional)" />
+                <input v-model="newNotes" class="form-input" placeholder="Notes" />
                 <div class="form-row form-row--end">
                   <button v-if="editingEventId !== null" class="delete-text-btn" @click="deleteEditingEvent">Delete</button>
                   <button class="save-btn" @click="saveEvent">{{ editingEventId !== null ? 'Update' : 'Save' }}</button>
@@ -268,7 +268,7 @@
                   <button class="delete-btn" aria-label="Delete event" @click="removeEvent(ev)"><ion-icon :icon="closeOutline" /></button>
                 </li>
               </ul>
-              <p v-else-if="viewMode !== 'day'" class="empty-hint">No events on this day</p>
+              <p v-else-if="viewMode !== 'day'" class="empty-hint">No events</p>
             </div>
 
             <!-- DAY VIEW: HomePage-style schedule timeline -->
@@ -317,7 +317,7 @@
                   </div>
                 </div>
               </div>
-              <p v-else-if="!dayAllDayEvents.length" class="empty-hint">Nothing scheduled this day</p>
+              <p v-else-if="!dayAllDayEvents.length" class="empty-hint">Nothing scheduled</p>
             </div>
 
             <!-- Habits for the selected day -->
@@ -346,7 +346,7 @@
                   </div>
                 </li>
               </ul>
-              <p v-else class="empty-hint">No habits scheduled this day</p>
+              <p v-else class="empty-hint">No habits</p>
             </div>
           </template>
         </template>
