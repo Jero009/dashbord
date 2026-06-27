@@ -472,6 +472,7 @@ import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
+import { showRestGlyph, hideRestGlyph, releaseRestGlyph } from '@/shared/utils/restTimerGlyph';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe } from '@/shared/db/app_db';
@@ -935,6 +936,7 @@ const clearTimerState = () => {
   localStorage.removeItem(REST_TIMER_KEY);
   void cancelRestTimerDing();
   void clearRestNotification();
+  void hideRestGlyph();
 };
 
 // (Re)post the ongoing countdown notification for the time remaining.
@@ -946,6 +948,10 @@ const showRestCountdown = () => {
 const tickRestTimer = () => {
   const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
   restTimer.value.remaining = remaining;
+  if (remaining > 0) {
+    // Foreground-only: render the countdown on the Glyph back display.
+    void showRestGlyph(remaining, restTimer.value.total);
+  }
   if (remaining <= 0) {
     // App is alive at the end: ding in-app and cancel the scheduled notification
     // so it doesn't also fire.
@@ -985,6 +991,7 @@ const resumeRestTimer = (endTime: number, remaining: number, total?: number) => 
   restTimer.value.remaining = remaining;
   restTimer.value.isActive = true;
   showRestCountdown();
+  void showRestGlyph(remaining, restTimer.value.total);
   restInterval = setInterval(tickRestTimer, 1000);
 };
 
@@ -1004,6 +1011,7 @@ const startRestTimer = (seconds: number, exerciseName = '') => {
   persistTimerState();
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
+  void showRestGlyph(restSeconds, restSeconds);
 
   restInterval = setInterval(tickRestTimer, 1000);
 };
@@ -1035,6 +1043,7 @@ const adjustRestTimer = (seconds: number) => {
   // Reschedule the OS ding and refresh the countdown notification.
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
+  void showRestGlyph(restTimer.value.remaining, restTimer.value.total);
 };
 
 const formatRestTime = (seconds: number) => {
@@ -1068,6 +1077,7 @@ onUnmounted(() => {
     void audioContext.close().catch(() => undefined);
     audioContext = null;
   }
+  void releaseRestGlyph();
 });
 
 </script>
