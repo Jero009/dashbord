@@ -7,13 +7,24 @@
 
     <ion-content :fullscreen="true">
       <div class="analytics-shell">
-        <!-- Period toggle -->
-        <div class="period-toggle">
-          <div class="seg-pill">
-            <ion-segment :value="period" @ionChange="onPeriodChange">
-              <ion-segment-button value="week"><ion-label>This week</ion-label></ion-segment-button>
-              <ion-segment-button value="month"><ion-label>This month</ion-label></ion-segment-button>
-            </ion-segment>
+        <!-- Period header + compact switch (a filter control, not a nav-style bar) -->
+        <div class="review-head">
+          <p class="section-kicker">Your review</p>
+          <div class="period-switch" role="group" aria-label="Review period">
+            <button
+              type="button"
+              class="period-switch__btn"
+              :class="{ 'is-active': period === 'week' }"
+              :aria-pressed="period === 'week'"
+              @click="setPeriod('week')"
+            >Week</button>
+            <button
+              type="button"
+              class="period-switch__btn"
+              :class="{ 'is-active': period === 'month' }"
+              :aria-pressed="period === 'month'"
+              @click="setPeriod('month')"
+            >Month</button>
           </div>
         </div>
 
@@ -85,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent, IonSegment, IonSegmentButton, IonLabel, onIonViewWillEnter } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, onIonViewWillEnter } from '@ionic/vue';
 import { ref, computed } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSectionTabs.vue';
@@ -122,9 +133,8 @@ const load = async () => {
   digest.value = await getReviewDigest(period.value).catch(() => digest.value);
 };
 
-const onPeriodChange = (e: CustomEvent) => {
-  const value = (e.detail as { value?: string }).value;
-  if (value !== 'week' && value !== 'month') return;
+const setPeriod = (value: 'week' | 'month') => {
+  if (period.value === value) return;
   hapticLight();
   period.value = value;
   load();
@@ -160,26 +170,48 @@ onIonViewWillEnter(load);
   color: var(--nt-text-dim);
 }
 
-.period-toggle .seg-pill {
-  background: rgba(var(--nt-ink), 0.08);
-  border-radius: 999px;
-  padding: 6px;
-  overflow: hidden;
+/* Period control: a small content-width switch, distinct from the red-underline
+   nav pills (top bar / section tabs) — active = filled chip, not an indicator. */
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px;
 }
 
-.period-toggle ion-segment {
-  --background: transparent;
+.period-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(var(--nt-ink), 0.05);
+  border-radius: var(--nt-radius-pill);
 }
 
-.period-toggle ion-segment-button {
-  --background: transparent;
-  --background-checked: transparent;
-  --color: rgba(var(--nt-ink), 0.5);
-  --color-checked: var(--ion-color-accent-red);
-  --indicator-color: var(--ion-color-accent-red);
-  min-height: 34px;
-  border-radius: 999px;
+.period-switch__btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: var(--nt-radius-pill);
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   font-weight: 600;
+  color: var(--nt-text-dim);
+  transition: background var(--nt-dur-micro) var(--nt-ease-decel),
+    color var(--nt-dur-micro) var(--nt-ease-decel);
+}
+
+.period-switch__btn.is-active {
+  background: var(--nt-surface-2);
+  color: var(--nt-fg);
+}
+
+.period-switch__btn:active {
+  opacity: 0.7;
 }
 
 .tile-grid {
