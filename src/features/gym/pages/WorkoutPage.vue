@@ -489,6 +489,8 @@ import RpePickerModal from '@/features/gym/components/RpePickerModal.vue';
 import { normalizeDateInput } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
 import { showRestGlyph, hideRestGlyph, releaseRestGlyph } from '@/shared/utils/restTimerGlyph';
@@ -937,6 +939,10 @@ let restInterval: any = null;
 let restEndTime = 0;
 let restExerciseName = '';
 let audioContext: AudioContext | null = null;
+// Tracks foreground state so we never try to draw the (foreground-only) Glyph
+// while backgrounded, and so we can re-render on return.
+let appForeground = true;
+let appStateListener: { remove: () => void } | null = null;
 
 // Web-only fallback ding (dev). On native, duckAndDing() handles the sound.
 const playBeep = () => {
@@ -993,7 +999,7 @@ const showRestCountdown = () => {
 const tickRestTimer = () => {
   const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
   restTimer.value.remaining = remaining;
-  if (remaining > 0) {
+  if (remaining > 0 && appForeground) {
     // Foreground-only: render the countdown on the Glyph back display.
     void showRestGlyph(remaining, restTimer.value.total);
   }
@@ -1103,10 +1109,25 @@ const restProgress = computed(() => {
 });
 
 
+// When the app is backgrounded/closed, blank the Glyph immediately. App-matrix
+// mode is foreground-only, so otherwise the last countdown frame freezes on the
+// back display ("the timer gets stuck"). Re-render on return if still running.
+const handleAppStateChange = ({ isActive }: { isActive: boolean }) => {
+  appForeground = isActive;
+  if (!isActive) {
+    void hideRestGlyph();
+  } else if (restTimer.value.isActive && restTimer.value.remaining > 0) {
+    void showRestGlyph(restTimer.value.remaining, restTimer.value.total);
+  }
+};
+
 onIonViewWillEnter(async () => {
   await loadWorkout();
   startTimer();
   restoreTimerState();
+  if (Capacitor.isNativePlatform() && !appStateListener) {
+    appStateListener = await App.addListener('appStateChange', handleAppStateChange);
+  }
 });
 
 onUnmounted(() => {
@@ -1121,6 +1142,10 @@ onUnmounted(() => {
   if (audioContext) {
     void audioContext.close().catch(() => undefined);
     audioContext = null;
+  }
+  if (appStateListener) {
+    void appStateListener.remove();
+    appStateListener = null;
   }
   void releaseRestGlyph();
 });
