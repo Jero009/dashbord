@@ -251,6 +251,14 @@
             <span class="set-row__title">Import backup</span>
             <ion-icon :icon="cloudUploadOutline" class="nav-row__icon" />
           </button>
+
+          <button class="nav-row" :disabled="aiExporting" @click="handleAiExport">
+            <div class="set-row__label">
+              <span class="set-row__title">{{ aiExporting ? 'Preparing…' : 'Export for AI analysis' }}</span>
+              <span class="set-row__sub">Plain-text summary to paste into an AI</span>
+            </div>
+            <ion-icon :icon="sparklesOutline" class="nav-row__icon" />
+          </button>
         </div>
 
       </div>
@@ -261,7 +269,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, toastController, alertController } from '@ionic/vue'
-import { chevronForwardOutline, downloadOutline, cloudUploadOutline } from 'ionicons/icons'
+import { chevronForwardOutline, downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import { useRouter } from 'vue-router'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
@@ -293,6 +301,7 @@ import type { ThemeMode } from '@/shared/composables/useTheme'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
+import { buildAiExport } from '@/shared/utils/aiExport'
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -553,6 +562,54 @@ const handleExport = async () => {
   }
 }
 
+const aiExporting = ref(false)
+
+const handleAiExport = async () => {
+  if (aiExporting.value) return
+  hapticMedium()
+  aiExporting.value = true
+  try {
+    const text = await buildAiExport()
+    const stamp = localDateISO()
+    const fileName = `ai-insights-${stamp}.txt`
+
+    if (Capacitor.getPlatform() === 'web') {
+      const blob = new Blob([text], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } else {
+      const writeResult = await Filesystem.writeFile({
+        path: fileName,
+        data: text,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8,
+        recursive: true,
+      })
+      await Share.share({
+        title: 'AI insights export',
+        text: 'Tracking data for AI analysis',
+        url: writeResult.uri,
+        dialogTitle: 'Share data for AI analysis',
+      })
+    }
+
+    hapticSuccess()
+    showToast(`Export ready: ${fileName}`, 'success', 3000)
+  } catch (error) {
+    console.error('AI export failed:', error)
+    hapticError()
+    showToast('Export failed. Please try again.', 'danger')
+  } finally {
+    aiExporting.value = false
+  }
+}
+
 const triggerImport = () => {
   hapticMedium()
   if (Capacitor.getPlatform() === 'web') {
@@ -749,6 +806,11 @@ const handleImportFile = async (event: Event) => {
 
 .nav-row:active {
   opacity: 0.6;
+}
+
+.nav-row:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .nav-row__icon {

@@ -106,6 +106,10 @@ Three pure-TS services in `src/shared/health/` (no DB/Vue deps, unit-tested in `
 - `end_date TEXT`: also set by `stopCalendarEventAt(id, lastDate)` to end a recurring event from a date forward without deleting history.
 - New event types must pass the allowlist. New event types need a drain rate in `calculateBattery`. New `calendar_event` columns are auto-handled by export/import (PRAGMA + `SELECT *`), but must be added to the migration block in `initDB`.
 
+### AI Data Export
+
+`src/shared/utils/aiExport.ts` — `buildAiExport({days=120})` assembles all tracked domains into one plain-text report meant to be pasted into an external LLM to find cross-domain / lagged patterns the app doesn't surface. Centrepiece is a date-aligned **daily timeline CSV** (readiness, sleep h/eff/score/stages, RHR, resp, steps, weight, trained/volume/RPE, ACWR + zone, recovery z, habits done/scheduled, day type, energy, morning light), built by merging the per-domain queries by date. Followed by summary sections: profile/targets, circadian profile (chronotype/MSFsc/DLMO/CTmin/social jetlag/score), training-load & recovery latest, PRs, habits (streaks via `habitStats`), goals, body (latest + window change), finance (accounts/investments/monthly income-expense/budgets vs spend/subscriptions). Pure aggregation over `app_db` + the health compute modules; degrades gracefully on empty domains. Surfaced in Settings → Data & sync as "Export for AI analysis" (`.txt`, web download / native Share). Unit-tested in `tests/unit/aiExport.spec.ts`.
+
 ### Body Log
 
 - `body_log` table: `id, date, weight_kg, notes, photo_path`
