@@ -28,16 +28,16 @@
             <ion-input
               class="input"
               v-model="name"
-              placeholder="Enter exercise name"
+              placeholder="Name"
             ></ion-input>
 
-            <ion-select v-model="muscleGroup" placeholder="Select muscle group" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="app-select">
+            <ion-select v-model="muscleGroup" placeholder="Muscle group" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="app-select">
               <ion-select-option v-for="mg in muscleGroups" :key="mg.id" :value="mg.id">
                 {{ mg.name }}
               </ion-select-option>
             </ion-select>
 
-            <ion-select v-model="equipment" placeholder="Select equipment" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="app-select">
+            <ion-select v-model="equipment" placeholder="Equipment" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="app-select">
               <ion-select-option v-for="eq in equipmentList" :key="eq.id" :value="eq.id">
                 {{ eq.name }}
               </ion-select-option>
@@ -63,7 +63,7 @@
                 </section>
 
                 <div class="exercise-panel">
-                  <ion-select v-model="selectedMuscleGroup" placeholder="Filter by muscle group" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="muscle-group-select app-select">
+                  <ion-select v-model="selectedMuscleGroup" placeholder="Muscle group" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="muscle-group-select app-select">
                     <ion-select-option value="">All</ion-select-option>
                     <ion-select-option v-for="mg in muscleGroups" :key="mg.id" :value="mg.name">
                       {{ mg.name }}

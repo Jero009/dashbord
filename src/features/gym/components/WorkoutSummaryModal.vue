@@ -2,7 +2,7 @@
   <ion-page>
     <ion-content>
       <div class="summary-shell">
-        <p class="summary-kicker">Workout complete</p>
+        <p class="summary-kicker">Complete</p>
 
         <div class="tile-grid">
           <div class="tile">
@@ -12,20 +12,19 @@
           <div class="tile">
             <span class="tile__label">Volume</span>
             <strong class="tile__value tile__value--display">{{ formattedVolume }}</strong>
-            <small class="tile__detail">kg lifted</small>
           </div>
           <div class="tile">
             <span class="tile__label">Exercises</span>
             <strong class="tile__value tile__value--display">{{ exerciseCount }}</strong>
           </div>
           <div class="tile">
-            <span class="tile__label">Sets done</span>
+            <span class="tile__label">Sets</span>
             <strong class="tile__value tile__value--display">{{ setCount }}</strong>
           </div>
         </div>
 
         <div v-if="prs.length > 0" class="pr-card">
-          <p class="pr-kicker">{{ prs.length === 1 ? 'Personal record' : `${prs.length} personal records` }}</p>
+          <p class="pr-kicker">{{ prs.length === 1 ? 'PR' : `${prs.length} PRs` }}</p>
           <div class="pr-list">
             <div v-for="pr in prs" :key="pr.exercise_id" class="pr-row">
               <div class="pr-row__info">

@@ -17,7 +17,7 @@
             <ion-item class="template-top">
               <ion-input
                 v-model="TemplateName"
-                placeholder="Template name"
+                placeholder="Name"
                 :clear-on-edit="true"
               />
             </ion-item>
@@ -34,21 +34,19 @@
                           {{ ex.name }}
                         </div>
                         <ion-input
-                        label="Sets"  label-placement="floating" 
+                        label="Sets"  label-placement="floating"
                         :clear-on-edit="true"
                           type="number"
                           v-model.number="ex.set_number"
                           style="width: 60px"
-                          placeholder="Sets"
                         ></ion-input>
-                        
+
                         <ion-input
                         label="Reps" label-placement="floating"
                         :clear-on-edit="true"
                           type="number"
                           v-model.number="ex.rep_number"
                           style="width: 60px"
-                          placeholder="Reps"
                         ></ion-input>
                         <ion-select
                           label="RPE"

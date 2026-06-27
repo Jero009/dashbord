@@ -89,7 +89,7 @@
                   <!-- Add Set Button -->
                   <ion-button  expand="block" fill="outline" @click="addNewSet(ex)" class="add-set-btn">
                     <ion-icon class="add-set-icon" :icon="addOutline"></ion-icon>
-                    Add Set
+                    Add set
                   </ion-button>
                 </ion-card-content>
           </ion-card>
@@ -100,12 +100,12 @@
       <div class="add-exercise-container">
         <ion-button expand="block" @click="addNewExercise" class="add-exercise-btn">
           <ion-icon slot="start" :icon="addCircleOutline"></ion-icon>
-          Add Exercise
+          Add exercise
         </ion-button>
       </div>
 
       <div class="cancel-container">
-        <ion-button class="button-red" expand="block" fill="outline" @click="handleCancelWorkout">Cancel Workout</ion-button>
+        <ion-button class="button-red" expand="block" fill="outline" @click="handleCancelWorkout">Cancel</ion-button>
       </div>
 
     </ion-content>
