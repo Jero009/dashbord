@@ -16,28 +16,27 @@
         </div>
 
         <div v-if="showAddGoal" class="detail-card add-form">
-          <input v-model="goalName" class="form-input" placeholder="Goal name" />
+          <input v-model="goalName" class="form-input" placeholder="Name" />
           <div class="form-row">
-            <input v-model="goalTarget" class="form-input" type="number" inputmode="decimal" placeholder="Target value" />
+            <input v-model="goalTarget" class="form-input" type="number" inputmode="decimal" placeholder="Target" />
             <input v-model="goalDueDate" class="form-input form-input--time" type="date" title="Due date" />
           </div>
           <select v-model="goalLinkType" class="form-input form-select">
-            <option value="">Manual progress</option>
-            <option value="weight">Track body weight</option>
-            <option value="lift_pr">Track lift PR (est. 1RM)</option>
-            <option value="savings">Track account balance</option>
+            <option value="">Manual</option>
+            <option value="weight">Body weight</option>
+            <option value="lift_pr">Lift PR</option>
+            <option value="savings">Account balance</option>
           </select>
           <select v-if="goalLinkType === 'lift_pr'" v-model="goalLinkRef" class="form-input form-select">
-            <option value="">Select exercise…</option>
+            <option value="">Exercise…</option>
             <option v-for="ex in linkExerciseOptions" :key="ex.id" :value="String(ex.id)">{{ ex.name }}</option>
           </select>
           <select v-if="goalLinkType === 'savings'" v-model="goalLinkRef" class="form-input form-select">
-            <option value="">Select account…</option>
+            <option value="">Account…</option>
             <option v-for="a in linkAccountOptions" :key="a.id" :value="String(a.id)">{{ a.name }}</option>
           </select>
-          <p v-if="goalLinkType" class="link-hint">Progress updates automatically from your data.</p>
           <div class="form-row form-row--end">
-            <button class="save-btn" @click="saveGoal">Add goal</button>
+            <button class="save-btn" @click="saveGoal">Add</button>
           </div>
         </div>
 
@@ -73,7 +72,7 @@
             </div>
           </div>
         </div>
-        <p v-else-if="!completedGoals.length" class="empty-hint empty-hint--pad">No goals yet.</p>
+        <p v-else-if="!completedGoals.length" class="empty-hint empty-hint--pad">No goals</p>
 
         <div v-if="completedGoals.length" class="detail-card completed-card">
           <div class="detail-card__header">

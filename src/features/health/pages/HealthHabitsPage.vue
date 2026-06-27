@@ -9,14 +9,14 @@
 
         <!-- ============ HABIT BOARD ============ -->
         <div class="day-head day-head--section">
-          <p class="eyebrow">Habit board · last 7 days</p>
+          <p class="eyebrow">Habits · 7 days</p>
           <button class="icon-btn" @click="showAddHabit ? (resetHabitForm(), showAddHabit = false) : (showAddHabit = true)">
             <ion-icon :icon="showAddHabit ? closeOutline : addOutline" />
           </button>
         </div>
 
         <div v-if="showAddHabit" class="detail-card add-form">
-          <input v-model="habitName" class="form-input" placeholder="Habit name" />
+          <input v-model="habitName" class="form-input" placeholder="Name" />
           <div class="dow-picker">
             <button
               v-for="(label, i) in DOW"
@@ -29,13 +29,12 @@
           <div class="form-row">
             <input v-model="habitTime" class="form-input form-input--time" type="time" title="Reminder time" />
             <select v-model="habitGoalId" class="form-select">
-              <option :value="null">No linked goal</option>
+              <option :value="null">No goal</option>
               <option v-for="g in activeGoals" :key="g.id" :value="g.id">→ {{ g.name }}</option>
             </select>
           </div>
-          <p class="form-hint">Linking a goal adds +1 progress each time the habit is completed.</p>
           <div class="form-row form-row--end">
-            <button class="save-btn" @click="saveHabit">Add habit</button>
+            <button class="save-btn" @click="saveHabit">Add</button>
           </div>
         </div>
 
@@ -94,7 +93,7 @@
                   />
                 </div>
                 <div class="edit-form">
-                  <input v-model="editName" class="form-input" placeholder="Habit name" />
+                  <input v-model="editName" class="form-input" placeholder="Name" />
                   <div class="dow-picker">
                     <button
                       v-for="(label, i) in DOW"
@@ -107,7 +106,7 @@
                   <div class="form-row">
                     <input v-model="editTime" class="form-input form-input--time" type="time" title="Reminder time" />
                     <select v-model="editGoalId" class="form-select">
-                      <option :value="null">No linked goal</option>
+                      <option :value="null">No goal</option>
                       <option v-for="g in activeGoals" :key="g.id" :value="g.id">→ {{ g.name }}</option>
                     </select>
                   </div>
@@ -120,12 +119,12 @@
             </template>
           </div>
         </div>
-        <p v-else class="empty-hint empty-hint--pad">No habits yet.</p>
+        <p v-else class="empty-hint empty-hint--pad">No habits</p>
 
         <!-- ============ CONSISTENCY HEATMAP ============ -->
         <template v-if="allHabits.length">
           <div class="day-head day-head--section">
-            <p class="eyebrow">Consistency · last 10 weeks</p>
+            <p class="eyebrow">Consistency · 10 weeks</p>
           </div>
           <div class="detail-card heat-card">
             <div class="heat-grid">

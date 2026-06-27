@@ -61,7 +61,7 @@
             <ion-icon :icon="checkboxOutline" class="nav-tile__icon" />
             <div class="nav-tile__text">
               <span class="nav-tile__label">Habits</span>
-              <span class="nav-tile__hint">{{ habitsDone }}/{{ habitsTotal }} done today</span>
+              <span class="nav-tile__hint">{{ habitsDone }}/{{ habitsTotal }} done</span>
             </div>
             <ion-icon :icon="chevronForwardOutline" class="nav-tile__arrow" />
           </button>
@@ -70,7 +70,7 @@
             <ion-icon :icon="calendarOutline" class="nav-tile__icon" />
             <div class="nav-tile__text">
               <span class="nav-tile__label">Calendar</span>
-              <span class="nav-tile__hint">{{ upcomingEvents.length ? `${upcomingEvents.length} event${upcomingEvents.length > 1 ? 's' : ''} today` : 'No events today' }}</span>
+              <span class="nav-tile__hint">{{ upcomingEvents.length ? `${upcomingEvents.length} today` : '—' }}</span>
             </div>
             <ion-icon :icon="chevronForwardOutline" class="nav-tile__arrow" />
           </button>
