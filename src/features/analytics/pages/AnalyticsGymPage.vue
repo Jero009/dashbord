@@ -53,7 +53,7 @@
               <canvas ref="muscleChartRef"></canvas>
             </div>
           </template>
-          <p v-else class="empty-copy">No completed sets in this window.</p>
+          <p v-else class="empty-copy">No sets</p>
         </div>
 
         <!-- Muscle balance -->
@@ -83,7 +83,7 @@
               <canvas ref="tonnageChartRef"></canvas>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough history yet.</p>
+          <p v-else class="empty-copy">Not enough history</p>
         </div>
 
         <!-- Frequency heatmap -->
@@ -108,7 +108,7 @@
               <span class="freq-legend__label">More</span>
             </div>
           </template>
-          <p v-else class="empty-copy">No workouts logged yet.</p>
+          <p v-else class="empty-copy">No workouts</p>
         </div>
       </div>
     </ion-content>

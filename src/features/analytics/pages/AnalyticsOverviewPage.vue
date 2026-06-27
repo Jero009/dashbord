@@ -39,7 +39,7 @@
             </div>
             <p class="load-note">{{ loadNote }}</p>
           </template>
-          <p v-else class="empty-copy">Log a few more weeks of workouts to track acute vs chronic load.</p>
+          <p v-else class="empty-copy">Need more workout history</p>
         </div>
 
         <!-- Insights -->
@@ -53,9 +53,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">
-            Insights appear once there's enough overlapping sleep, heart-rate and training history.
-          </p>
+          <p v-else class="empty-copy">Not enough data yet</p>
         </div>
       </div>
     </ion-content>
@@ -101,10 +99,10 @@ const acwrClass = computed(() => ({
 
 const loadNote = computed(() => {
   switch (load.value.status) {
-    case 'high': return 'Load is spiking above your recent baseline — injury risk rises here.';
-    case 'undertraining': return 'Below your usual load — room to add volume.';
-    case 'detraining': return 'No recent training — ease back in gradually.';
-    default: return 'Load is in the sustainable range.';
+    case 'high': return 'Load spiking — injury risk rises';
+    case 'undertraining': return 'Below usual — room to add volume';
+    case 'detraining': return 'No recent training — ease back in';
+    default: return 'Sustainable range';
   }
 });
 

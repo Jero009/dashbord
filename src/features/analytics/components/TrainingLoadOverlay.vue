@@ -129,14 +129,10 @@
         <span class="legend__item"><i class="legend__swatch" :style="{ background: zoneColor('high_risk') }"></i>High risk</span>
         <span class="legend__item"><i class="legend__line"></i>{{ signalLabel }} deviation</span>
       </div>
-      <p class="lag-note">
-        Each recovery point sits one day right of the load it responds to — read a low
-        dip just after a tall red bar as fatigue catching up.
-      </p>
     </template>
 
     <p v-else class="empty-copy">
-      Log a few workouts (and let recovery sync) to build the overlay.
+      Log workouts to build the overlay
     </p>
   </div>
 </template>
@@ -405,9 +401,9 @@ const statusReason = computed(() => {
   if (!hasRecoverySignal.value) {
     const zoneNote =
       latest.value?.flag === 'caution' || latest.value?.flag === 'high_risk'
-        ? ` Load is ${acwrZone.value.toLowerCase()}.`
+        ? ` ${acwrZone.value} load.`
         : '';
-    return `No recovery data yet — add RHR/HRV to enable the overreaching check.${zoneNote}`;
+    return `No recovery data — add RHR/HRV.${zoneNote}`;
   }
   return overtraining.value.reasons[0];
 });
