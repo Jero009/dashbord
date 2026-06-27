@@ -504,7 +504,7 @@ const logQuickWeight = async () => {
   quickWeightInput.value = '';
   await loadTodayWeight();
   hapticSuccess();
-  const t = await toastController.create({ message: 'Logged', duration: 1500, color: 'success' });
+  const t = await toastController.create({ message: 'logged', duration: 1500, color: 'success' });
   await t.present();
 };
 

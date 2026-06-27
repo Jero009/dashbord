@@ -641,7 +641,7 @@ const promptSessionRpe = async (): Promise<number | null> => {
   const result = new Promise<number | null>((resolve) => { resolveRpe = resolve; });
   const alert = await alertController.create({
     header: 'Session RPE',
-    message: 'How hard was this session? (1–10, optional)',
+    message: '1–10, optional',
     cssClass: 'app-confirm-alert',
     inputs: [
       { name: 'rpe', type: 'number', min: 1, max: 10, placeholder: 'RPE 1–10' },
@@ -665,13 +665,12 @@ const promptSessionRpe = async (): Promise<number | null> => {
 const saveWorkout = async () => {
   hapticHeavy();
   const alert = await alertController.create({
-    header: 'End Workout?',
-    message: 'Saves the workout and returns home.',
+    header: 'End workout?',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
       {
-        text: 'End Workout',
+        text: 'End',
         role: 'destructive',
         handler: async () => {
           hapticSuccess();
@@ -715,13 +714,13 @@ const saveWorkout = async () => {
 
 const handleCancelWorkout = async () => {
   const alert = await alertController.create({
-    header: 'Cancel Workout?',
-    message: "This workout won't be saved.",
+    header: 'Discard workout?',
+    message: "won't be saved",
     cssClass: 'app-confirm-alert',
     buttons: [
-      { text: 'No', role: 'cancel' },
+      { text: 'Keep', role: 'cancel' },
       {
-        text: 'Yes, Cancel',
+        text: 'Discard',
         role: 'confirm',
         handler: async () => {
           await cancelWorkout(workoutId);
@@ -741,8 +740,7 @@ const handleCancelWorkout = async () => {
 
 const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
   const alert = await alertController.create({
-    header: 'Remove Set?',
-    message: 'Removes only this set.',
+    header: 'Remove set?',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
@@ -790,8 +788,8 @@ const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
 // Remove an entire exercise (and all its sets) from the workout.
 const handleRemoveExercise = async (exercise: any) => {
   const alert = await alertController.create({
-    header: 'Remove Exercise?',
-    message: `Removes "${exercise.name}" and all of its sets.`,
+    header: 'Remove exercise?',
+    message: `removes "${exercise.name}" and its sets`,
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },

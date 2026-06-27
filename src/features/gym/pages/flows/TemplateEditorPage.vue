@@ -152,13 +152,13 @@ const removeExercise = (index: number) => {
 const validateTemplate = (): boolean => {
   // Check template name
   if (!TemplateName.value || !TemplateName.value.trim()) {
-    showToast('Please enter a template name');
+    showToast('name required');
     return false;
   }
 
   // Check if exercises exist
   if (exercises.value.length === 0) {
-    showToast('Please add at least one exercise');
+    showToast('add an exercise');
     return false;
   }
 
@@ -167,7 +167,7 @@ const validateTemplate = (): boolean => {
   for (const ex of exercises.value) {
     // Check for duplicate exercises
     if (exerciseIds.has(ex.id_exercise)) {
-      showToast(`Exercise "${ex.name}" is added multiple times. Please remove duplicates.`);
+      showToast(`"${ex.name}" is duplicated`);
       return false;
     }
     exerciseIds.add(ex.id_exercise);
@@ -175,14 +175,14 @@ const validateTemplate = (): boolean => {
     // Check sets > 0
     const sets = Number(ex.set_number);
     if (isNaN(sets) || sets <= 0) {
-      showToast(`"${ex.name}": Sets must be greater than 0`);
+      showToast(`"${ex.name}": sets must be > 0`);
       return false;
     }
 
     // Check reps > 0
     const reps = Number(ex.rep_number);
     if (isNaN(reps) || reps <= 0) {
-      showToast(`"${ex.name}": Reps must be greater than 0`);
+      showToast(`"${ex.name}": reps must be > 0`);
       return false;
     }
   }
@@ -232,7 +232,7 @@ const confirm = async () => {
     }
   }
 
-  showToast('Template updated successfully!', 'success');
+  showToast('updated', 'success');
   exercises.value = [];
   removedExerciseRowIds.value = [];
   TemplateName.value = '';

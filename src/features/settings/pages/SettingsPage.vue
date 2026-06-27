@@ -336,7 +336,7 @@ const saveTargets = async () => {
     setGoalWeightKg(Number(goalWeight.value))
   }
   hapticSuccess()
-  const t = await toastController.create({ message: 'Saved', duration: 1500, color: 'success' })
+  const t = await toastController.create({ message: 'saved', duration: 1500, color: 'success' })
   await t.present()
 }
 
@@ -361,15 +361,15 @@ const syncNow = async () => {
       hapticSuccess()
     }
     const msg = ok
-      ? `Synced ${result.synced} records`
+      ? `synced ${result.synced} records`
       : result.available
-        ? 'Health Connect permission not granted'
-        : 'Health Connect not available'
+        ? 'permission needed'
+        : 'health connect unavailable'
     const t = await toastController.create({ message: msg, duration: 2000, color: ok ? 'success' : 'warning' })
     await t.present()
   } catch {
     hapticError()
-    const t = await toastController.create({ message: 'Sync failed', duration: 2000, color: 'danger' })
+    const t = await toastController.create({ message: 'sync failed', duration: 2000, color: 'danger' })
     await t.present()
   } finally {
     syncing.value = false
@@ -423,7 +423,7 @@ const requestPermission = async () => {
   hapticMedium()
   const granted = await requestNotificationPermission()
   const t = await toastController.create({
-    message: granted ? 'Notifications allowed' : 'Permission denied or not available',
+    message: granted ? 'notifications on' : 'permission denied',
     duration: 2000,
     color: granted ? 'success' : 'warning',
   })
@@ -521,7 +521,7 @@ const handleExport = async () => {
   const backup = await exportDatabaseToSQL()
 
   if (!backup) {
-    showToast('Database not initialized yet', 'warning')
+    showToast('database not ready', 'warning')
     return
   }
 
@@ -554,11 +554,11 @@ const handleExport = async () => {
     }
 
     hapticSuccess()
-    showToast(`Backup ready: ${backup.fileName}`, 'success', 3000)
+    showToast(`backup ready · ${backup.fileName}`, 'success', 3000)
   } catch (error) {
     console.error('Export failed:', error)
     hapticError()
-    showToast('Export failed. Please try again.', 'danger')
+    showToast('export failed', 'danger')
   }
 }
 
@@ -600,11 +600,11 @@ const handleAiExport = async () => {
     }
 
     hapticSuccess()
-    showToast(`Export ready: ${fileName}`, 'success', 3000)
+    showToast(`export ready · ${fileName}`, 'success', 3000)
   } catch (error) {
     console.error('AI export failed:', error)
     hapticError()
-    showToast('Export failed. Please try again.', 'danger')
+    showToast('export failed', 'danger')
   } finally {
     aiExporting.value = false
   }
@@ -635,8 +635,8 @@ const parseBase64Text = (base64Data: string) => {
 
 const runImportWithConfirm = async (sqlContent: string) => {
   const confirmAlert = await alertController.create({
-    header: 'Import SQL Backup?',
-    message: 'This replaces all current data.',
+    header: 'Import backup?',
+    message: 'replaces all data',
     cssClass: 'app-confirm-alert',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
@@ -647,13 +647,13 @@ const runImportWithConfirm = async (sqlContent: string) => {
             const result = await importDatabaseFromSQL(sqlContent)
 
             if (result.success) {
-              showToast('Import successful!', 'success', 3000)
+              showToast('imported', 'success', 3000)
             } else {
-              showToast(`Import failed: ${result.message}`, 'danger')
+              showToast(`import failed · ${result.message}`, 'danger')
             }
           } catch (error) {
             console.error('Import error:', error)
-            showToast('Import failed. Please try again.', 'danger')
+            showToast('import failed', 'danger')
           }
         }
       }
@@ -675,8 +675,8 @@ const pickNativeImportFile = async () => {
 
     if (!data) {
       const alert = await alertController.create({
-        header: 'Import Failed',
-        message: 'Could not read the file.',
+        header: 'Import failed',
+        message: "couldn't read file",
         cssClass: 'app-confirm-alert',
         buttons: ['OK']
       })
@@ -693,8 +693,8 @@ const pickNativeImportFile = async () => {
     if (isCancel) return
 
     const alert = await alertController.create({
-      header: 'Import Failed',
-      message: 'Could not open file picker.',
+      header: 'Import failed',
+      message: "couldn't open picker",
       cssClass: 'app-confirm-alert',
       buttons: ['OK']
     })

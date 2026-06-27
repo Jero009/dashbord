@@ -89,7 +89,7 @@ const loadAccounts = async () => {
 const saveAccount = async () => {
   if (!accountName.value.trim()) {
     const toast = await toastController.create({
-      message: 'Account name is required.',
+      message: 'name required',
       duration: 2000,
       color: 'warning',
     });
@@ -100,7 +100,7 @@ const saveAccount = async () => {
   const balance = Number(accountBalance.value);
   if (!Number.isFinite(balance)) {
     const toast = await toastController.create({
-      message: 'Enter a valid balance.',
+      message: 'invalid balance',
       duration: 2000,
       color: 'warning',
     });
@@ -112,7 +112,7 @@ const saveAccount = async () => {
     await addFinanceAccount(accountName.value.trim(), accountType.value, accountInstitution.value.trim() || null, balance);
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save account.',
+      message: 'save failed',
       duration: 2000,
       color: 'warning',
     });
@@ -125,7 +125,7 @@ const saveAccount = async () => {
   await loadAccounts();
 
   const toast = await toastController.create({
-    message: 'Account added.',
+    message: 'added',
     duration: 1800,
     color: 'success',
   });

@@ -351,7 +351,7 @@ const handleSync = async () => {
     const auth = await requestHealthConnectPermissions();
     if (!auth.available) {
       const toast = await toastController.create({
-        message: auth.reason ?? 'Health Connect unavailable.',
+        message: auth.reason ?? 'health connect unavailable',
         duration: 2200,
         color: 'warning',
       });
@@ -361,7 +361,7 @@ const handleSync = async () => {
 
     if (!auth.granted) {
       const toast = await toastController.create({
-        message: 'Grant Health Connect access to read sleep data.',
+        message: 'grant health connect access',
         duration: 2200,
         color: 'warning',
       });
@@ -374,14 +374,14 @@ const handleSync = async () => {
     await loadSleep();
 
     const toast = await toastController.create({
-      message: `Synced ${result.synced} health records.`,
+      message: `synced ${result.synced} records`,
       duration: 2000,
       color: 'success',
     });
     await toast.present();
   } catch (error) {
     const toast = await toastController.create({
-      message: error instanceof Error ? error.message : 'Unable to sync sleep data.',
+      message: error instanceof Error ? error.message : 'sync failed',
       duration: 2200,
       color: 'danger',
     });

@@ -658,7 +658,7 @@ const saveLog = async () => {
   showLogForm.value = false;
   await loadData();
   hapticSuccess();
-  const t = await toastController.create({ message: 'Day logged.', duration: 1600, color: 'success' });
+  const t = await toastController.create({ message: 'logged', duration: 1600, color: 'success' });
   await t.present();
 };
 </script>

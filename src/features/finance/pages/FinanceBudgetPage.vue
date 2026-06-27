@@ -310,16 +310,16 @@ const showToast = async (message: string, color: 'warning' | 'success') => {
 
 const saveTransaction = async () => {
   if (!transactionName.value.trim()) {
-    await showToast('Transaction name is required.', 'warning');
+    await showToast('name required', 'warning');
     return;
   }
   const amount = Number(transactionAmount.value);
   if (!Number.isFinite(amount) || amount <= 0) {
-    await showToast('Amount must be a positive number.', 'warning');
+    await showToast('invalid amount', 'warning');
     return;
   }
   if (!transactionDate.value) {
-    await showToast('Date is required.', 'warning');
+    await showToast('date required', 'warning');
     return;
   }
 
@@ -333,14 +333,14 @@ const saveTransaction = async () => {
       transactionType.value
     );
   } catch {
-    await showToast('Could not save transaction. Please try again.', 'warning');
+    await showToast('save failed', 'warning');
     return;
   }
   transactionName.value = '';
   transactionAmount.value = '';
   await loadBudgetData();
   hapticSuccess();
-  await showToast('Transaction added.', 'success');
+  await showToast('added', 'success');
 };
 
 const removeTransaction = async (id: number) => {
@@ -348,7 +348,7 @@ const removeTransaction = async (id: number) => {
   try {
     await deleteFinanceTransaction(Number(id));
   } catch {
-    await showToast('Could not delete transaction. Please try again.', 'warning');
+    await showToast('delete failed', 'warning');
     return;
   }
   await loadBudgetData();
@@ -357,7 +357,7 @@ const removeTransaction = async (id: number) => {
 const saveBudget = async () => {
   const limit = Number(budgetLimit.value);
   if (!Number.isFinite(limit) || limit <= 0) {
-    await showToast('Monthly limit must be a positive number.', 'warning');
+    await showToast('invalid limit', 'warning');
     return;
   }
 
@@ -365,13 +365,13 @@ const saveBudget = async () => {
   try {
     await upsertFinanceBudget(budgetCategory.value, limit);
   } catch {
-    await showToast('Could not save budget. Please try again.', 'warning');
+    await showToast('save failed', 'warning');
     return;
   }
   budgetLimit.value = '';
   await loadBudgetData();
   hapticSuccess();
-  await showToast('Budget saved.', 'success');
+  await showToast('saved', 'success');
 };
 
 const removeBudget = async (id: number) => {
@@ -379,7 +379,7 @@ const removeBudget = async (id: number) => {
   try {
     await deleteFinanceBudget(Number(id));
   } catch {
-    await showToast('Could not delete budget. Please try again.', 'warning');
+    await showToast('delete failed', 'warning');
     return;
   }
   await loadBudgetData();

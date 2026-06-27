@@ -141,7 +141,7 @@ const loadAccounts = async () => {
 const saveSubscription = async () => {
   if (!subscriptionName.value.trim()) {
     const toast = await toastController.create({
-      message: 'Subscription name is required.',
+      message: 'name required',
       duration: 2000,
       color: 'warning',
     });
@@ -152,7 +152,7 @@ const saveSubscription = async () => {
   const amount = Number(subscriptionAmount.value);
   if (!Number.isFinite(amount) || amount <= 0) {
     const toast = await toastController.create({
-      message: 'Enter an amount above zero.',
+      message: 'amount required',
       duration: 2000,
       color: 'warning',
     });
@@ -171,7 +171,7 @@ const saveSubscription = async () => {
     );
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save subscription.',
+      message: 'save failed',
       duration: 2000,
       color: 'warning',
     });
@@ -186,7 +186,7 @@ const saveSubscription = async () => {
   await loadSubscriptions();
 
   const toast = await toastController.create({
-    message: 'Recurring item added.',
+    message: 'added',
     duration: 1800,
     color: 'success',
   });

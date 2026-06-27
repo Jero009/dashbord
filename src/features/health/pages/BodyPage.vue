@@ -368,14 +368,14 @@ const saveEntry = async () => {
   hapticMedium();
   const weight = parseFloat(form.value.weight)
   if (!weight || weight <= 0) {
-    const t = await toastController.create({ message: 'Enter a valid weight.', duration: 1800, color: 'warning' })
+    const t = await toastController.create({ message: 'invalid weight', duration: 1800, color: 'warning' })
     await t.present()
     return
   }
 
   const existing = entries.value.find(e => e.date === form.value.date)
   if (existing) {
-    const t = await toastController.create({ message: 'Already logged for this date.', duration: 1800, color: 'warning' })
+    const t = await toastController.create({ message: 'already logged', duration: 1800, color: 'warning' })
     await t.present()
     return
   }
@@ -423,10 +423,10 @@ const saveEntry = async () => {
     await loadEntries()
 
     hapticSuccess();
-    const t = await toastController.create({ message: 'Saved!', duration: 1500, color: 'success' })
+    const t = await toastController.create({ message: 'saved', duration: 1500, color: 'success' })
     await t.present()
   } catch (err) {
-    const t = await toastController.create({ message: 'Failed to save. Try again.', duration: 2000, color: 'danger' })
+    const t = await toastController.create({ message: 'save failed', duration: 2000, color: 'danger' })
     await t.present()
   }
 }

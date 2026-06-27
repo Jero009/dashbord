@@ -104,7 +104,7 @@ const loadAccounts = async () => {
 const saveInvestment = async () => {
   if (!investmentName.value.trim()) {
     const toast = await toastController.create({
-      message: 'Investment name is required.',
+      message: 'name required',
       duration: 2000,
       color: 'warning',
     });
@@ -116,7 +116,7 @@ const saveInvestment = async () => {
   const value = Number(investmentValue.value);
   if (!Number.isFinite(quantity) || !Number.isFinite(value) || quantity < 0 || value < 0) {
     const toast = await toastController.create({
-      message: 'Enter valid amounts.',
+      message: 'invalid amount',
       duration: 2000,
       color: 'warning',
     });
@@ -128,7 +128,7 @@ const saveInvestment = async () => {
     await addFinanceInvestment(investmentName.value.trim(), investmentType.value, quantity, value, investmentAccountId.value);
   } catch {
     const toast = await toastController.create({
-      message: 'Could not save investment.',
+      message: 'save failed',
       duration: 2000,
       color: 'warning',
     });
@@ -142,7 +142,7 @@ const saveInvestment = async () => {
   await loadInvestments();
 
   const toast = await toastController.create({
-    message: 'Investment added.',
+    message: 'added',
     duration: 1800,
     color: 'success',
   });

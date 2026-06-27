@@ -559,23 +559,23 @@ const handleConnect = async () => {
     const result = await requestHealthConnectPermissions();
     if (!result.available) {
       if (isHealthConnectAvailable()) await openHealthConnectSettings();
-      const t = await toastController.create({ message: result.reason ?? 'Health Connect unavailable.', duration: 2200, color: 'warning' });
+      const t = await toastController.create({ message: result.reason ?? 'health connect unavailable', duration: 2200, color: 'warning' });
       await t.present();
       return;
     }
     if (!result.granted) {
-      const t = await toastController.create({ message: 'Permissions not granted yet.', duration: 2200, color: 'warning' });
+      const t = await toastController.create({ message: 'permission needed', duration: 2200, color: 'warning' });
       await t.present();
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
     await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
     await loadReadiness();
-    const t = await toastController.create({ message: `Synced ${syncResult.synced} records.`, duration: 2200, color: 'success' });
+    const t = await toastController.create({ message: `synced ${syncResult.synced} records`, duration: 2200, color: 'success' });
     await t.present();
   } catch (error) {
     const t = await toastController.create({
-      message: error instanceof Error ? error.message : 'Health Connect unavailable.',
+      message: error instanceof Error ? error.message : 'health connect unavailable',
       duration: 2200, color: 'danger',
     });
     await t.present();

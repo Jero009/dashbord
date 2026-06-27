@@ -345,7 +345,7 @@ const viewExerciseDetail = (exerciseId: number) => {
 //rename exercise
 const renameEx = async (ex: Exercise) => {
   const alert = await alertController.create({
-    header: 'Rename Exercise',
+    header: 'Rename',
     cssClass: 'rename-exercise-alert',
 
     inputs: [
