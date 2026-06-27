@@ -386,7 +386,8 @@ async function doInitDB() {
     ('legs'),
     ('shoulders'),
     ('arms'),
-    ('core');
+    ('core'),
+    ('triceps');
 
   INSERT OR IGNORE INTO equipment (name) VALUES
     ('barbell'),
@@ -535,6 +536,50 @@ async function doInitDB() {
   INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
   SELECT 'Shoulder Press Machine', 4, 3, 90
   WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Shoulder Press Machine'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Barbell Curl', 5, 1, 60
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Barbell Curl'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Preacher Curl Barbell', 5, 1, 60
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Preacher Curl Barbell'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Skull Crusher Dumbbell', 7, 2, 90
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Skull Crusher Dumbbell'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Close Grip Dumbbell Press', 7, 2, 90
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Close Grip Dumbbell Press'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Overhead Barbell Extension', 7, 1, 60
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Overhead Barbell Extension'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Reverse Curl Dumbbell', 5, 2, 60
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Reverse Curl Dumbbell'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Wrist Curl Barbell', 5, 1, 45
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Wrist Curl Barbell'));
+
+  INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
+  SELECT 'Wrist Curl Dumbbell', 5, 2, 45
+  WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Wrist Curl Dumbbell'));
+
+  UPDATE exercise
+  SET id_muscle_group = 7
+  WHERE id_muscle_group = 5
+    AND lower(name) IN (
+      'tricep pushdown',
+      'dips',
+      'skull crusher',
+      'close grip bench press',
+      'overhead dumbbell extension',
+      'triceps extension cable'
+    );
 
   WITH canonical AS (
     SELECT lower(name) AS normalized_name, MIN(id) AS keep_id
