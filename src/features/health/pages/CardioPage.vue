@@ -60,11 +60,10 @@
             </div>
           </template>
 
-          <p v-else-if="loading" class="empty-copy">Loading...</p>
+          <p v-else-if="loading" class="empty-copy">Loading…</p>
 
           <p v-else class="empty-copy">
-            No activities found for the past {{ daysBack }} days.
-            Make sure Exercise permission is granted in Health Connect settings.
+            No activities. Check Exercise permission in Health Connect.
           </p>
         </div>
       </div>

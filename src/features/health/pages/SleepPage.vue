@@ -64,7 +64,7 @@
           </div>
 
           <button class="sync-btn" :disabled="syncing" @click="handleSync">
-            {{ syncing ? 'Syncing…' : 'Sync Health Connect' }}
+            {{ syncing ? 'Syncing…' : 'Sync' }}
           </button>
         </ion-card>
 
@@ -101,7 +101,7 @@
               <span v-for="(t, i) in hypTimeAxis" :key="i">{{ t }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No stage timeline yet</p>
+          <p v-else class="empty-state">No stages</p>
         </ion-card>
 
         <!-- Stage breakdown + consistency row -->
@@ -116,7 +116,7 @@
                 <small>{{ Math.round(stage.share * 100) }}%</small>
               </div>
             </div>
-            <p v-else class="empty-state">No stage data</p>
+            <p v-else class="empty-state">No stages</p>
           </ion-card>
 
           <ion-card class="sleep-card">
@@ -164,7 +164,7 @@
               <span>{{ wakeTimeClock }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No HR data yet</p>
+          <p v-else class="empty-state">No HR data</p>
         </ion-card>
 
         <!-- Score history -->
@@ -195,7 +195,7 @@
               </span>
             </div>
           </div>
-          <p v-else class="empty-state">No history yet</p>
+          <p v-else class="empty-state">No history</p>
         </ion-card>
 
       </div>

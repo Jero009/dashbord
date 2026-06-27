@@ -60,7 +60,7 @@
             </div>
             <div class="field-group">
               <label class="field-label">Notes</label>
-              <input v-model="form.notes" type="text" placeholder="Optional" class="form-input" />
+              <input v-model="form.notes" type="text" class="form-input" />
             </div>
             <div class="photo-row">
               <button class="photo-source-btn" @click="takePhoto">
@@ -132,7 +132,7 @@
         </div>
 
         <div v-else class="card empty-card">
-          <p class="empty-text">No entries yet. Log your first weight above.</p>
+          <p class="empty-text">No entries yet</p>
         </div>
 
       </div>
