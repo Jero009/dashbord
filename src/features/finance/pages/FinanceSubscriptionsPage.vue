@@ -35,12 +35,12 @@
               </ion-select>
             </div>
             <div class="field-group">
-              <label class="field-label">Next due date</label>
+              <label class="field-label">Next due</label>
               <ion-input v-model="subscriptionNextDue" type="date" class="styled-input"></ion-input>
             </div>
             <div class="field-group">
               <label class="field-label">{{ subscriptionDirection === 'income' ? 'Deposited to' : 'Paid from' }}</label>
-              <ion-select v-model="subscriptionAccountId" class="styled-select" interface="action-sheet" placeholder="Select account" :disabled="!accounts.length">
+              <ion-select v-model="subscriptionAccountId" class="styled-select" interface="action-sheet" placeholder="Account" :disabled="!accounts.length">
                 <ion-select-option :value="null">No account</ion-select-option>
                 <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
                   {{ account.name }}
@@ -48,13 +48,13 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveSubscription">Add recurring</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveSubscription">Add</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Recurring</p>
-            <span class="card-count">{{ subscriptions.length }} active</span>
+            <span class="card-count">{{ subscriptions.length }}</span>
           </div>
           <div v-if="subscriptions.length" class="item-list">
             <div v-for="subscription in subscriptions" :key="subscription.id" class="list-item" :class="{ 'list-item--due-soon': isDueSoon(subscription.next_due_date), 'list-item--overdue': isOverdue(subscription.next_due_date) }">
@@ -71,7 +71,7 @@
               </span>
             </div>
           </div>
-          <p v-else class="empty-state">No recurring items yet.</p>
+          <p v-else class="empty-state">No recurring items</p>
         </ion-card>
       </div>
     </ion-content>

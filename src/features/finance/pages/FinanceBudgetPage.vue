@@ -50,7 +50,7 @@
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Budgets</p>
-            <span class="card-count">{{ budgets.length }} categories</span>
+            <span class="card-count">{{ budgets.length }}</span>
           </div>
           <div v-if="budgetRows.length" class="budget-list">
             <div v-for="row in budgetRows" :key="row.id" class="budget-row">
@@ -77,7 +77,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No budgets yet.</p>
+          <p v-else class="empty-state">No budgets</p>
 
           <div class="form-fields form-fields--inline">
             <div class="field-group">
@@ -89,11 +89,11 @@
               </ion-select>
             </div>
             <div class="field-group">
-              <label class="field-label">Monthly limit</label>
+              <label class="field-label">Limit</label>
               <ion-input v-model="budgetLimit" type="number" inputmode="decimal" class="styled-input"></ion-input>
             </div>
           </div>
-          <ion-button expand="block" class="outline-btn" @click="saveBudget">Set budget</ion-button>
+          <ion-button expand="block" class="outline-btn" @click="saveBudget">Set</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
@@ -136,13 +136,13 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveTransaction">Add transaction</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveTransaction">Add</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Transactions</p>
-            <span class="card-count">{{ transactions.length }} this month</span>
+            <span class="card-count">{{ transactions.length }}</span>
           </div>
           <div v-if="transactions.length" class="item-list">
             <div v-for="transaction in transactions" :key="transaction.id" class="list-item">
@@ -162,7 +162,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No transactions logged for {{ monthLabel }}.</p>
+          <p v-else class="empty-state">No transactions</p>
         </ion-card>
       </div>
     </ion-content>

@@ -37,7 +37,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">No expenses recorded this month.</p>
+          <p v-else class="empty-copy">No expenses</p>
         </div>
 
         <!-- Budget vs actual -->
@@ -63,7 +63,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">Set monthly budgets to track them here.</p>
+          <p v-else class="empty-copy">No budgets set</p>
         </div>
 
         <!-- Monthly trend -->
@@ -78,7 +78,7 @@
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Income</span>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough history for a trend yet.</p>
+          <p v-else class="empty-copy">Not enough history</p>
         </div>
       </div>
     </ion-content>
