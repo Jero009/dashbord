@@ -6,102 +6,30 @@
     <ion-content class="settings-content">
       <div class="settings-shell">
 
-        <!-- APPEARANCE -->
+        <!-- PREFERENCES -->
         <div class="card">
-          <p class="section-kicker">Appearance</p>
-          <div class="theme-seg">
-            <button
-              v-for="opt in themeOptions"
-              :key="opt.value"
-              type="button"
-              class="theme-seg__btn"
-              :class="{ 'theme-seg__btn--active': themeMode === opt.value }"
-              @click="selectTheme(opt.value)"
-            >{{ opt.label }}</button>
-          </div>
-          <p class="hint-text">System follows your device's light/dark setting.</p>
-        </div>
+          <p class="section-kicker">Preferences</p>
 
-        <!-- HEALTH TARGETS -->
-        <div class="card">
-          <p class="section-kicker">Health Targets</p>
-          <div class="fields">
-            <div class="field-group">
-              <label class="field-label">Sleep goal (hours)</label>
-              <input
-                v-model.number="sleepGoal"
-                type="number"
-                step="0.5"
-                min="4"
-                max="14"
-                class="form-input"
-              />
+          <div class="set-stack">
+            <span class="set-row__title">Theme</span>
+            <div class="theme-seg">
+              <button
+                v-for="opt in themeOptions"
+                :key="opt.value"
+                type="button"
+                class="theme-seg__btn"
+                :class="{ 'theme-seg__btn--active': themeMode === opt.value }"
+                @click="selectTheme(opt.value)"
+              >{{ opt.label }}</button>
             </div>
-            <div class="field-group">
-              <label class="field-label">Daily step goal</label>
-              <input
-                v-model.number="stepGoal"
-                type="number"
-                step="500"
-                min="1000"
-                max="30000"
-                class="form-input"
-              />
-            </div>
-            <div class="field-group">
-              <label class="field-label">Goal weight (kg)</label>
-              <input
-                v-model="goalWeight"
-                type="number"
-                step="0.1"
-                min="30"
-                max="300"
-                class="form-input"
-              />
-            </div>
+            <p class="hint-text">System follows your device's light/dark setting.</p>
           </div>
-          <button class="btn-primary" @click="saveTargets">Save targets</button>
-        </div>
 
-        <!-- HEALTH CONNECT SYNC -->
-        <div class="card">
-          <p class="section-kicker">Health Connect</p>
-          <button class="btn-primary" :disabled="syncing" @click="syncNow">
-            {{ syncing ? 'Syncing...' : 'Sync now' }}
-          </button>
-          <p v-if="lastSyncTime" class="hint-text">Last sync: {{ lastSyncTime }}</p>
-        </div>
-
-        <!-- GOALS -->
-        <div class="card">
-          <p class="section-kicker">Goals</p>
-          <button class="btn-secondary" @click="goToGoals">Manage goals</button>
-        </div>
-
-        <!-- GYM -->
-        <div class="card">
-          <p class="section-kicker">Gym</p>
-          <div class="field-row">
-            <label class="field-label">Weekly workout goal</label>
-            <ion-select
-              v-model="weeklyWorkoutGoal"
-              interface="action-sheet"
-              :interface-options="{ cssClass: 'app-action-sheet' }"
-              class="settings-select"
-              @ionChange="hapticSelect()"
-            >
-              <ion-select-option v-for="goal in weeklyGoalOptions" :key="goal" :value="goal">
-                {{ goal }} / week
-              </ion-select-option>
-            </ion-select>
-          </div>
-        </div>
-
-        <!-- FINANCE -->
-        <div class="card">
-          <p class="section-kicker">Finance</p>
-          <div class="field-row">
-            <label class="field-label">Currency</label>
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Currency</span>
+              <span class="set-row__sub">Applies to all finance amounts</span>
+            </div>
             <ion-select
               v-model="currency"
               interface="action-sheet"
@@ -114,13 +42,73 @@
               </ion-select-option>
             </ion-select>
           </div>
-          <p class="hint-text">Applies to all finance amounts.</p>
+        </div>
+
+        <!-- GOALS & TARGETS -->
+        <div class="card">
+          <p class="section-kicker">Goals &amp; targets</p>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Sleep goal</span>
+              <span class="set-row__sub">Hours per night</span>
+            </div>
+            <input v-model.number="sleepGoal" type="number" step="0.5" min="4" max="14" class="form-input form-input--compact" />
+          </div>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Daily steps</span>
+              <span class="set-row__sub">Step target</span>
+            </div>
+            <input v-model.number="stepGoal" type="number" step="500" min="1000" max="30000" class="form-input form-input--compact" />
+          </div>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Goal weight</span>
+              <span class="set-row__sub">Kilograms</span>
+            </div>
+            <input v-model="goalWeight" type="number" step="0.1" min="30" max="300" class="form-input form-input--compact" />
+          </div>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Weekly workouts</span>
+              <span class="set-row__sub">Training target</span>
+            </div>
+            <ion-select
+              v-model="weeklyWorkoutGoal"
+              interface="action-sheet"
+              :interface-options="{ cssClass: 'app-action-sheet' }"
+              class="settings-select"
+              @ionChange="hapticSelect()"
+            >
+              <ion-select-option v-for="goal in weeklyGoalOptions" :key="goal" :value="goal">
+                {{ goal }} / week
+              </ion-select-option>
+            </ion-select>
+          </div>
+
+          <button class="btn-primary set-action" @click="saveTargets">Save targets</button>
+
+          <button class="nav-row" @click="goToGoals">
+            <span class="set-row__title">Manage goals</span>
+            <ion-icon :icon="chevronForwardOutline" class="nav-row__icon" />
+          </button>
         </div>
 
         <!-- NOTIFICATIONS -->
         <div class="card">
           <p class="section-kicker">Notifications</p>
-          <button class="save-btn notif-perm-btn" @click="requestPermission">Allow notifications</button>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">System permission</span>
+              <span class="set-row__sub">Required for reminders</span>
+            </div>
+            <button class="btn-chip" @click="requestPermission">Allow</button>
+          </div>
 
           <!-- Weight -->
           <div class="notif-row">
@@ -240,14 +228,37 @@
           </div>
         </div>
 
-        <!-- BACKUP -->
+        <!-- DATA & SYNC -->
         <div class="card">
-          <p class="section-kicker">Backup</p>
-          <div class="db-actions">
-            <button class="btn-secondary" @click="handleExport">Export backup file</button>
-            <button class="btn-secondary" @click="triggerImport">Import backup file</button>
-          </div>
+          <p class="section-kicker">Data &amp; sync</p>
+
           <input ref="importFileInput" type="file" accept=".sql,text/plain" style="display:none" @change="handleImportFile" />
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Health Connect</span>
+              <span class="set-row__sub">{{ lastSyncTime ? `Last sync ${lastSyncTime}` : 'Steps, sleep, heart rate' }}</span>
+            </div>
+            <button class="btn-chip" :disabled="syncing" @click="syncNow">{{ syncing ? 'Syncing…' : 'Sync now' }}</button>
+          </div>
+
+          <button class="nav-row" @click="handleExport">
+            <span class="set-row__title">Export backup</span>
+            <ion-icon :icon="downloadOutline" class="nav-row__icon" />
+          </button>
+
+          <button class="nav-row" @click="triggerImport">
+            <span class="set-row__title">Import backup</span>
+            <ion-icon :icon="cloudUploadOutline" class="nav-row__icon" />
+          </button>
+
+          <button class="nav-row" :disabled="aiExporting" @click="handleAiExport">
+            <div class="set-row__label">
+              <span class="set-row__title">{{ aiExporting ? 'Preparing…' : 'Export for AI analysis' }}</span>
+              <span class="set-row__sub">Plain-text summary to paste into an AI</span>
+            </div>
+            <ion-icon :icon="sparklesOutline" class="nav-row__icon" />
+          </button>
         </div>
 
       </div>
@@ -257,7 +268,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, toastController, alertController } from '@ionic/vue'
+import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, toastController, alertController } from '@ionic/vue'
+import { chevronForwardOutline, downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import { useRouter } from 'vue-router'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
@@ -289,6 +301,7 @@ import type { ThemeMode } from '@/shared/composables/useTheme'
 import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
+import { buildAiExport } from '@/shared/utils/aiExport'
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -549,6 +562,54 @@ const handleExport = async () => {
   }
 }
 
+const aiExporting = ref(false)
+
+const handleAiExport = async () => {
+  if (aiExporting.value) return
+  hapticMedium()
+  aiExporting.value = true
+  try {
+    const text = await buildAiExport()
+    const stamp = localDateISO()
+    const fileName = `ai-insights-${stamp}.txt`
+
+    if (Capacitor.getPlatform() === 'web') {
+      const blob = new Blob([text], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } else {
+      const writeResult = await Filesystem.writeFile({
+        path: fileName,
+        data: text,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8,
+        recursive: true,
+      })
+      await Share.share({
+        title: 'AI insights export',
+        text: 'Tracking data for AI analysis',
+        url: writeResult.uri,
+        dialogTitle: 'Share data for AI analysis',
+      })
+    }
+
+    hapticSuccess()
+    showToast(`Export ready: ${fileName}`, 'success', 3000)
+  } catch (error) {
+    console.error('AI export failed:', error)
+    hapticError()
+    showToast('Export failed. Please try again.', 'danger')
+  } finally {
+    aiExporting.value = false
+  }
+}
+
 const triggerImport = () => {
   hapticMedium()
   if (Capacitor.getPlatform() === 'web') {
@@ -675,31 +736,113 @@ const handleImportFile = async (event: Event) => {
 }
 
 .section-kicker {
-  margin: 0 0 14px;
+  margin: 0 0 6px;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: rgba(var(--nt-ink), 0.5);
 }
 
-.fields {
+/* Unified setting row: label block on the left, control on the right. */
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
+}
+
+.set-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.set-row__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.set-row__title {
+  font-size: 0.9rem;
+  color: rgba(var(--nt-ink), 0.85);
+}
+
+.set-row__sub {
+  font-size: 0.72rem;
+  color: rgba(var(--nt-ink), 0.5);
+}
+
+/* Stacked control (label above a full-width control, e.g. the theme switch). */
+.set-stack {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
 }
 
-.field-group {
+/* Tappable navigation / action row (Manage goals, Export, Import). */
+.nav-row {
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(var(--nt-ink), 0.08);
+  cursor: pointer;
+  text-align: left;
 }
 
-.field-label {
+.nav-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.nav-row:active {
+  opacity: 0.6;
+}
+
+.nav-row:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.nav-row__icon {
+  font-size: 1.1rem;
+  color: rgba(var(--nt-ink), 0.4);
+  flex-shrink: 0;
+}
+
+/* Compact pill action button sitting at the right of a setting row. */
+.btn-chip {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(var(--nt-ink), 0.14);
+  border-radius: var(--nt-radius-pill);
+  color: rgba(var(--nt-ink), 0.85);
+  font-family: var(--nt-font-head);
   font-size: 0.72rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.5);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 150ms ease, opacity 150ms ease;
+}
+
+.btn-chip:active {
+  opacity: 0.7;
+}
+
+.btn-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .form-input {
@@ -721,6 +864,16 @@ const handleImportFile = async (event: Event) => {
 
 .form-input::placeholder {
   color: rgba(var(--nt-ink), 0.35);
+}
+
+.form-input--compact {
+  width: 104px;
+  padding: 8px 10px;
+  text-align: right;
+}
+
+.set-action {
+  margin-top: 16px;
 }
 
 .btn-primary {
@@ -745,34 +898,10 @@ const handleImportFile = async (event: Event) => {
   cursor: default;
 }
 
-.btn-secondary {
-  width: 100%;
-  padding: 12px;
-  background: transparent;
-  border: 1px solid rgba(var(--nt-ink), 0.1);
-  border-radius: 8px;
-  color: rgba(var(--nt-ink), 0.85);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 150ms ease;
-}
-
-.btn-secondary:hover {
-  border-color: rgba(var(--nt-ink), 0.12);
-}
-
 .hint-text {
   margin: 10px 0 0;
   font-size: 0.72rem;
   color: rgba(var(--nt-ink), 0.5);
-}
-
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
 }
 
 .settings-select {
@@ -783,30 +912,6 @@ const handleImportFile = async (event: Event) => {
   min-width: 140px;
   --color: var(--nt-fg);
   --placeholder-color: rgba(var(--nt-ink), 0.35);
-}
-
-.db-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.notif-perm-btn {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 16px;
-  background: transparent;
-  border: 1px solid rgba(var(--nt-ink), 0.1);
-  border-radius: 8px;
-  color: rgba(var(--nt-ink), 0.85);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 150ms ease;
-}
-
-.notif-perm-btn:hover {
-  border-color: rgba(var(--nt-ink), 0.12);
 }
 
 .notif-row {

@@ -44,7 +44,7 @@ describe('TrainingLoadOverlay — no data', () => {
 describe('TrainingLoadOverlay — workouts but no recovery signal', () => {
   test('shows the chart with a neutral "unknown" status, no recovery line', async () => {
     vi.mocked(getSessionLoads).mockResolvedValue([
-      { workout_id: 1, date: todayKey, duration_minutes: 60, session_rpe: null, volume: 5000 },
+      { workout_id: 1, date: todayKey, time_end: `${todayKey}T10:00:00.000Z`, duration_minutes: 60, session_rpe: null, volume: 5000 },
     ])
     // recovery (rhr + hrv) stays empty.
 
@@ -59,5 +59,8 @@ describe('TrainingLoadOverlay — workouts but no recovery signal', () => {
     expect(wrapper.text()).toContain('Load tracked')
     // No recovery readings → no plotted recovery points.
     expect(wrapper.findAll('circle').length).toBe(0)
+    // A logged session still yields a recovery-time estimate (no recovery/sleep
+    // modifiers needed — it degrades to the load-only base).
+    expect(wrapper.text()).toContain('Recovery time')
   })
 })

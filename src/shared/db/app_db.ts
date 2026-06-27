@@ -3292,6 +3292,7 @@ export async function setWorkoutSessionRpe(workoutId: number, rpe: number | null
 export interface SessionLoadRow {
   workout_id: number;
   date: string;            // local YYYY-MM-DD
+  time_end: string | null; // ISO end timestamp (for recovery-time countdown)
   duration_minutes: number | null;
   session_rpe: number | null;
   volume: number;          // Σ(weight × reps) over completed sets
@@ -3335,6 +3336,7 @@ export async function getSessionLoads(days = 120): Promise<SessionLoadRow[]> {
     return {
       workout_id: Number(r.workout_id),
       date: String(r.date),
+      time_end: r.time_end ? String(r.time_end) : null,
       duration_minutes: duration,
       session_rpe: rpe != null && Number.isFinite(rpe) ? rpe : null,
       volume: Number(r.volume) || 0,

@@ -52,6 +52,11 @@
           <strong class="tile__value" :style="{ color: recoveryColor }">{{ recoveryDisplay }}</strong>
           <small class="tile__detail">vs 28d base</small>
         </div>
+        <div v-if="recoveryTime" class="tile tile--wide">
+          <span class="tile__label">Recovery time</span>
+          <strong class="tile__value" :style="{ color: recoveryTimeColor }">{{ recoveryTime.label }}</strong>
+          <small class="tile__detail">{{ recoveryReadyLabel }}</small>
+        </div>
       </div>
 
       <!-- Dual-axis chart -->
@@ -157,6 +162,7 @@ import type { AcwrFlag, AcwrPoint } from '@/shared/health/trainingLoad';
 import { computeRecoverySeries } from '@/shared/health/recoveryBaseline';
 import type { RecoveryMetric } from '@/shared/health/recoveryBaseline';
 import { evaluateOvertraining, acwrZoneLabel } from '@/shared/health/overtraining';
+import { recoveryTimeStatus, aggregateLatestTrainingDay } from '@/shared/health/recoveryTime';
 import { hapticSelect } from '@/shared/utils/haptics';
 
 const SLOT = 16;       // px per day column
@@ -175,6 +181,7 @@ const windowDays = ref(28);
 const sessions = ref<SessionLoadRow[]>([]);
 const rhr = ref<{ date: string; value: number }[]>([]);
 const hrv = ref<{ date: string; value: number }[]>([]);
+const sleepScores = ref<{ date: string; value: number }[]>([]);
 
 const todayKey = (() => {
   const d = new Date();
@@ -328,6 +335,45 @@ const recoveryColor = computed(() => {
   return 'var(--nt-fg)';
 });
 
+// ── recovery time (Garmin-style countdown from the last session) ───────────────
+// Driven by the most recent training day's load, lengthened/shortened by the
+// recovery signal (RHR/HRV vs baseline) and last night's sleep score.
+const latestSleepScore = computed(() =>
+  sleepScores.value.length ? sleepScores.value[sleepScores.value.length - 1].value : null
+);
+const recoveryTime = computed(() => {
+  const day = aggregateLatestTrainingDay(sessions.value);
+  if (!day) return null;
+  return recoveryTimeStatus(
+    {
+      rpeLoad: day.rpeLoad,
+      volumeLoad: day.volumeLoad,
+      recoveryZ: latestRecovery.value,
+      sleepScore: latestSleepScore.value,
+    },
+    day.sessionEndIso
+  );
+});
+const recoveryTimeColor = computed(() => {
+  const rt = recoveryTime.value;
+  if (!rt || rt.recovered) return 'rgb(34, 197, 94)';
+  if (rt.remainingHours >= 48) return 'rgb(215, 26, 33)';
+  if (rt.remainingHours >= 24) return 'rgb(255, 215, 0)';
+  return 'var(--nt-fg)';
+});
+const recoveryReadyLabel = computed(() => {
+  const rt = recoveryTime.value;
+  if (!rt || rt.recovered || !rt.readyAt) return rt?.recovered ? 'Ready to train' : 'from last session';
+  const d = new Date(rt.readyAt);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const tomorrow = new Date(now.getTime() + 86400000).toDateString() === d.toDateString();
+  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (sameDay) return `ready ~${hhmm}`;
+  if (tomorrow) return `ready tomorrow ~${hhmm}`;
+  return `ready ${d.getMonth() + 1}/${d.getDate()}`;
+});
+
 // Overreaching can only be judged with a recovery signal. Without one, show a
 // neutral "unknown" state rather than a falsely confident green.
 const hasRecoverySignal = computed(() =>
@@ -422,15 +468,17 @@ const load = async () => {
   // can't overwrite a newer window's data.
   const token = ++loadToken;
   const span = Math.max(120, windowDays.value + 28);
-  const [s, r, h] = await Promise.all([
+  const [s, r, h, sl] = await Promise.all([
     getSessionLoads(span).catch(() => []),
     getHealthMetricDailySeries('resting_heart_rate', span).catch(() => []),
     getHealthMetricDailySeries('hrv', span).catch(() => []),
+    getHealthMetricDailySeries('sleep_score', span).catch(() => []),
   ]);
   if (token !== loadToken) return;
   sessions.value = s;
   rhr.value = r;
   hrv.value = h;
+  sleepScores.value = sl;
 };
 
 watch(windowDays, () => {
@@ -538,6 +586,8 @@ onIonViewWillEnter(load);
   line-height: 1;
 }
 .tile__detail { font-size: 0.62rem; color: rgba(var(--nt-ink), 0.4); }
+/* Recovery-time tile spans the full row so it reads as the headline metric. */
+.tile--wide { grid-column: 1 / -1; }
 
 /* Chart */
 .chart-wrap {
