@@ -13,9 +13,9 @@
           <div class="card-topline">
             <p class="section-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
-              <button class="date-nav__btn" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
+              <button class="date-nav__btn" aria-label="Previous day" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
-              <button class="date-nav__btn" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
+              <button class="date-nav__btn" aria-label="Next day" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
             </div>
           </div>
 

@@ -119,7 +119,7 @@
                   <span class="entry-weight">{{ entry.weight_kg }} kg</span>
                   <span v-if="entry.notes" class="entry-notes">{{ entry.notes }}</span>
                 </div>
-                <button class="delete-btn" @click="removeEntry(entry)"><ion-icon :icon="close" /></button>
+                <button class="delete-btn" aria-label="Delete entry" @click="removeEntry(entry)"><ion-icon :icon="close" /></button>
               </div>
               <img
                 v-if="photoUrls[entry.id]"

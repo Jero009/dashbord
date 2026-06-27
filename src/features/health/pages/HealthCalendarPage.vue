@@ -47,9 +47,9 @@
         <template v-if="!searchQuery">
           <!-- period nav -->
           <div class="month-nav">
-            <button class="month-nav__btn" @click="goPrev"><ion-icon :icon="chevronBackOutline" /></button>
+            <button class="month-nav__btn" aria-label="Previous" @click="goPrev"><ion-icon :icon="chevronBackOutline" /></button>
             <span class="month-nav__label">{{ periodLabel }}</span>
-            <button class="month-nav__btn" @click="goNext"><ion-icon :icon="chevronForwardOutline" /></button>
+            <button class="month-nav__btn" aria-label="Next" @click="goNext"><ion-icon :icon="chevronForwardOutline" /></button>
           </div>
 
           <!-- MONTH GRID -->

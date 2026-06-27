@@ -9,11 +9,11 @@
       <div class="finance-shell">
         <!-- Month nav -->
         <div class="month-nav">
-          <button class="month-nav__btn" @click="changeMonth(-1)">
+          <button class="month-nav__btn" aria-label="Previous month" @click="changeMonth(-1)">
             <ion-icon :icon="chevronBackOutline" />
           </button>
           <span class="month-nav__label">{{ monthLabel }}</span>
-          <button class="month-nav__btn" :disabled="isCurrentMonth" @click="changeMonth(1)">
+          <button class="month-nav__btn" :disabled="isCurrentMonth" aria-label="Next month" @click="changeMonth(1)">
             <ion-icon :icon="chevronForwardOutline" />
           </button>
         </div>

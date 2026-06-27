@@ -26,6 +26,7 @@
                     <ion-button
                       fill="clear"
                       size="small"
+                      aria-label="Move up"
                       @click="moveExerciseUp(index)"
                       :disabled="index === 0"
                       class="reorder-btn">
@@ -34,6 +35,7 @@
                     <ion-button
                       fill="clear"
                       size="small"
+                      aria-label="Move down"
                       @click="moveExerciseDown(index)"
                       :disabled="index === workoutExercises.length - 1"
                       class="reorder-btn">
@@ -45,6 +47,7 @@
                     fill="clear"
                     size="small"
                     class="stats-btn"
+                    aria-label="Exercise stats"
                     @click="openExerciseStats(ex)">
                     <ion-icon :icon="statsChartOutline"></ion-icon>
                   </ion-button>
@@ -52,6 +55,7 @@
                     fill="clear"
                     size="small"
                     class="delete-exercise-btn"
+                    aria-label="Remove exercise"
                     @click="handleRemoveExercise(ex)">
                     <ion-icon :icon="trashOutline"></ion-icon>
                   </ion-button>
