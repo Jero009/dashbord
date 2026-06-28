@@ -112,7 +112,8 @@ describe('buildAiExport', () => {
     expect(text).toContain('Bench Press: 85')
     expect(text).toContain('Read (daily): current streak')
     expect(text).toContain('Bench 100kg: 85/100 (85%)')
-    expect(text).toContain('Accounts balance: $2500')
+    expect(text).toContain('accounts $2500 + investments $10000')
+    expect(text).toContain('Net worth: $12500')
     expect(text).toContain('food: $450 / $400 (OVER)')
   })
 

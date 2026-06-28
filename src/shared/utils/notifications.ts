@@ -221,17 +221,22 @@ export async function scheduleCalendarReminders(
 }
 
 export async function scheduleSubscriptionReminders(
-  subs: { id: number; name: string; amount: number; next_due_date: string | null }[],
+  subs: { id: number; name: string; amount: number; next_due_date: string | null; status?: string; direction?: string }[],
   daysBefore: number
 ): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
+  // Cancel reminders for every passed item first, so paused/income/deleted ones
+  // shed any stale notification. Then (re)schedule only active expense items —
+  // paused subscriptions and incoming payments never get a "renews soon" alert.
   const prevIds = subs.map(s => ({ id: ID_SUB_BASE + s.id }))
   if (prevIds.length) await LocalNotifications.cancel({ notifications: prevIds })
 
   const toSchedule = []
   const today = new Date()
   for (const sub of subs) {
+    if ((sub.status ?? 'active') !== 'active') continue
+    if (sub.direction === 'income') continue
     if (!sub.next_due_date) continue
     const fireAt = new Date(sub.next_due_date + 'T09:00:00')
     fireAt.setDate(fireAt.getDate() - daysBefore)

@@ -197,23 +197,7 @@ import {
   getFinanceBudgets,
   deleteFinanceBudget,
 } from '@/shared/db/app_db';
-
-const expenseCategories = [
-  { value: 'food', label: 'Food & Drink' },
-  { value: 'groceries', label: 'Groceries' },
-  { value: 'transport', label: 'Transport' },
-  { value: 'housing', label: 'Housing' },
-  { value: 'utilities', label: 'Utilities' },
-  { value: 'subscriptions', label: 'Subscriptions' },
-  { value: 'entertainment', label: 'Entertainment' },
-  { value: 'health', label: 'Health & Fitness' },
-  { value: 'shopping', label: 'Shopping' },
-  { value: 'education', label: 'Education' },
-  { value: 'other', label: 'Other' },
-];
-
-const categoryLabel = (value: string) =>
-  expenseCategories.find((cat) => cat.value === value)?.label ?? 'Other';
+import { EXPENSE_CATEGORIES as expenseCategories, categoryLabel } from '@/features/finance/finance';
 
 // Local-date keys: toISOString would shift the month near midnight in UTC+ timezones.
 const toLocalDateKey = (d: Date) =>

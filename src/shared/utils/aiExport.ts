@@ -42,6 +42,13 @@ import {
   type SleepRecord,
   type DayType,
 } from '@/shared/health/circadian';
+import {
+  accountAssetsTotal,
+  accountLiabilitiesTotal,
+  investmentsTotal,
+  computeNetWorth,
+  subscriptionsMonthlyOutflow,
+} from '@/features/finance/finance';
 import { currentStreak, bestStreak, completionRate, isScheduledOn, shiftDate } from '@/shared/utils/habitStats';
 import {
   getSleepGoalHours,
@@ -472,9 +479,12 @@ export async function buildAiExport(options: AiExportOptions = {}): Promise<stri
 
   // Finance
   push('=== FINANCE ===');
-  const accountTotal = (accounts as Array<Record<string, unknown>>).reduce((s, a) => s + (Number(a.balance) || 0), 0);
-  const investTotal = (investments as Array<Record<string, unknown>>).reduce((s, i) => s + (Number(i.value) || 0), 0);
-  push(`Accounts balance: ${formatCurrency(accountTotal)} · Investments: ${formatCurrency(investTotal)} · Net: ${formatCurrency(accountTotal + investTotal)}`);
+  const acctRows = accounts as Array<Record<string, unknown>>;
+  const invRows = investments as Array<Record<string, unknown>>;
+  const assetTotal = accountAssetsTotal(acctRows);
+  const liabilityTotal = accountLiabilitiesTotal(acctRows);
+  const investTotal = investmentsTotal(invRows);
+  push(`Assets: ${formatCurrency(assetTotal + investTotal)} (accounts ${formatCurrency(assetTotal)} + investments ${formatCurrency(investTotal)}) · Liabilities: ${formatCurrency(liabilityTotal)} · Net worth: ${formatCurrency(computeNetWorth(acctRows, invRows))}`);
   if (monthly.length) {
     push('Monthly income / expense (last 6 months):');
     for (const m of monthly) push(`  ${m.month}: income ${formatCurrency(m.income)}, expense ${formatCurrency(m.expense)}, net ${formatCurrency(m.income - m.expense)}`);
@@ -493,14 +503,10 @@ export async function buildAiExport(options: AiExportOptions = {}): Promise<stri
       push(`  ${cat}: ${formatCurrency(spent)} / ${formatCurrency(limit)}${spent > limit ? ' (OVER)' : ''}`);
     }
   }
-  const activeSubs = (subscriptions as Array<Record<string, unknown>>).filter((s) => String(s.status ?? 'active') === 'active');
+  const subRows = subscriptions as Array<Record<string, unknown>>;
+  const activeSubs = subRows.filter((s) => String(s.status ?? 'active') === 'active');
   if (activeSubs.length) {
-    const monthlySubs = activeSubs.reduce((s, sub) => {
-      const amt = Number(sub.amount) || 0;
-      const cadence = String(sub.cadence ?? 'monthly');
-      const monthlyAmt = cadence === 'yearly' ? amt / 12 : cadence === 'weekly' ? amt * 4.33 : amt;
-      return s + (String(sub.direction ?? 'expense') === 'expense' ? monthlyAmt : 0);
-    }, 0);
+    const monthlySubs = subscriptionsMonthlyOutflow(subRows);
     push(`Active subscriptions: ${activeSubs.length} (~${formatCurrency(monthlySubs)}/mo recurring expense)`);
   }
   push('');
