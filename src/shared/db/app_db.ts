@@ -329,6 +329,7 @@ async function doInitDB() {
     type TEXT DEFAULT 'stock',
     quantity REAL DEFAULT 0,
     value REAL DEFAULT 0,
+    cost_basis REAL DEFAULT 0,
     account_id INTEGER,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
@@ -903,11 +904,17 @@ async function doInitDB() {
     if (!subColNames.has('direction')) {
       await db.execute(`ALTER TABLE finance_subscription ADD COLUMN direction TEXT DEFAULT 'expense';`);
     }
+    if (!subColNames.has('status')) {
+      await db.execute(`ALTER TABLE finance_subscription ADD COLUMN status TEXT DEFAULT 'active';`);
+    }
 
     const invColumns = await db.query(`PRAGMA table_info("finance_investment");`);
     const invColNames = new Set((invColumns.values || []).map((c: any) => String(c.name)));
     if (!invColNames.has('account_id')) {
       await db.execute(`ALTER TABLE finance_investment ADD COLUMN account_id INTEGER;`);
+    }
+    if (!invColNames.has('cost_basis')) {
+      await db.execute(`ALTER TABLE finance_investment ADD COLUMN cost_basis REAL DEFAULT 0;`);
     }
 
     const bodyColumns = await db.query(`PRAGMA table_info("body_log");`);
@@ -2576,23 +2583,92 @@ export async function getFinanceAccounts() {
   return result.values || [];
 }
 
+export async function updateFinanceAccount(
+  id: number,
+  name: string,
+  type: string,
+  institution: string | null,
+  balance: number
+) {
+  if (!db) return;
+  try {
+    await db.run(
+      `UPDATE finance_account
+       SET name = ?, type = ?, institution = ?, balance = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?;`,
+      [name, type, institution, balance, id]
+    );
+  } catch (error) {
+    console.error('Error updating finance account:', error);
+    throw error;
+  }
+}
+
+// Deleting an account leaves its linked investments/subscriptions intact; their
+// account_id is cleared so the LEFT JOINs simply show "no account".
+export async function deleteFinanceAccount(id: number) {
+  if (!db) return;
+  try {
+    await db.run(`UPDATE finance_investment SET account_id = NULL WHERE account_id = ?;`, [id]);
+    await db.run(`UPDATE finance_subscription SET account_id = NULL WHERE account_id = ?;`, [id]);
+    await db.run(`DELETE FROM finance_account WHERE id = ?;`, [id]);
+  } catch (error) {
+    console.error('Error deleting finance account:', error);
+    throw error;
+  }
+}
+
 export async function addFinanceInvestment(
   name: string,
   type: string,
   quantity: number,
   value: number,
-  accountId?: number | null
+  accountId?: number | null,
+  costBasis = 0
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_investment (name, type, quantity, value, account_id)
-       VALUES (?, ?, ?, ?, ?);`,
-      [name, type, quantity, value, accountId ?? null]
+      `INSERT INTO finance_investment (name, type, quantity, value, cost_basis, account_id)
+       VALUES (?, ?, ?, ?, ?, ?);`,
+      [name, type, quantity, value, costBasis, accountId ?? null]
     );
     return result;
   } catch (error) {
     console.error('Error adding investment:', error);
+    throw error;
+  }
+}
+
+export async function updateFinanceInvestment(
+  id: number,
+  name: string,
+  type: string,
+  quantity: number,
+  value: number,
+  accountId?: number | null,
+  costBasis = 0
+) {
+  if (!db) return;
+  try {
+    await db.run(
+      `UPDATE finance_investment
+       SET name = ?, type = ?, quantity = ?, value = ?, cost_basis = ?, account_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?;`,
+      [name, type, quantity, value, costBasis, accountId ?? null, id]
+    );
+  } catch (error) {
+    console.error('Error updating investment:', error);
+    throw error;
+  }
+}
+
+export async function deleteFinanceInvestment(id: number) {
+  if (!db) return;
+  try {
+    await db.run(`DELETE FROM finance_investment WHERE id = ?;`, [id]);
+  } catch (error) {
+    console.error('Error deleting investment:', error);
     throw error;
   }
 }
@@ -2641,6 +2717,51 @@ export async function getFinanceSubscriptions() {
   return result.values || [];
 }
 
+export async function updateFinanceSubscription(
+  id: number,
+  name: string,
+  amount: number,
+  cadence: string,
+  nextDueDate?: string | null,
+  accountId?: number | null,
+  direction: 'expense' | 'income' = 'expense'
+) {
+  if (!db) return;
+  try {
+    await db.run(
+      `UPDATE finance_subscription
+       SET name = ?, amount = ?, cadence = ?, next_due_date = ?, account_id = ?, direction = ?
+       WHERE id = ?;`,
+      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction, id]
+    );
+  } catch (error) {
+    console.error('Error updating subscription:', error);
+    throw error;
+  }
+}
+
+// Toggle a recurring item between 'active' and 'paused' (kept for history but
+// excluded from monthly totals / reminders).
+export async function setFinanceSubscriptionStatus(id: number, status: 'active' | 'paused') {
+  if (!db) return;
+  try {
+    await db.run(`UPDATE finance_subscription SET status = ? WHERE id = ?;`, [status, id]);
+  } catch (error) {
+    console.error('Error updating subscription status:', error);
+    throw error;
+  }
+}
+
+export async function deleteFinanceSubscription(id: number) {
+  if (!db) return;
+  try {
+    await db.run(`DELETE FROM finance_subscription WHERE id = ?;`, [id]);
+  } catch (error) {
+    console.error('Error deleting subscription:', error);
+    throw error;
+  }
+}
+
 export async function addFinanceTransaction(
   date: string,
   name: string,
@@ -2670,6 +2791,16 @@ export async function getFinanceTransactionsForMonth(monthKey: string) {
      WHERE strftime('%Y-%m', date) = ?
      ORDER BY date DESC, id DESC;`,
     [monthKey]
+  );
+  return result.values || [];
+}
+
+// Most recent transactions across all months (for the overview feed).
+export async function getRecentFinanceTransactions(limit = 5) {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT * FROM finance_transaction ORDER BY date DESC, id DESC LIMIT ?;`,
+    [limit]
   );
   return result.values || [];
 }
@@ -2733,16 +2864,48 @@ export async function recordNetWorthSnapshot() {
   if (!db) return;
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const a = await db.query(`SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account;`);
-  const i = await db.query(`SELECT COALESCE(SUM(value), 0) AS v FROM finance_investment;`);
-  const net = (Number(a.values?.[0]?.v) || 0) + (Number(i.values?.[0]?.v) || 0);
-  const assets = net >= 0 ? net : 0;
-  const liabilities = net < 0 ? -net : 0;
+  // Credit/loan accounts are liabilities (money owed); everything else plus the
+  // value of investments is an asset. Net worth = assets − liabilities.
+  const assetsRow = await db.query(
+    `SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account WHERE type NOT IN ('credit', 'loan');`
+  );
+  const liabRow = await db.query(
+    `SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account WHERE type IN ('credit', 'loan');`
+  );
+  const invRow = await db.query(`SELECT COALESCE(SUM(value), 0) AS v FROM finance_investment;`);
+  const assets = (Number(assetsRow.values?.[0]?.v) || 0) + (Number(invRow.values?.[0]?.v) || 0);
+  const liabilities = Number(liabRow.values?.[0]?.v) || 0;
   await db.run(
     `INSERT INTO net_worth_snapshot (date, total_assets, total_liabilities)
      VALUES (?, ?, ?)
      ON CONFLICT(date) DO UPDATE SET total_assets = excluded.total_assets, total_liabilities = excluded.total_liabilities;`,
     [today, assets, liabilities]
+  );
+}
+
+export interface NetWorthPoint {
+  date: string;       // YYYY-MM-DD
+  assets: number;
+  liabilities: number;
+  net: number;
+}
+
+// Daily net-worth snapshots over the last N days (oldest first) for the trend chart.
+export async function getNetWorthHistory(days = 90): Promise<NetWorthPoint[]> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT date, total_assets, total_liabilities
+     FROM net_worth_snapshot
+     WHERE date >= date('now', ?)
+     ORDER BY date ASC;`,
+    [`-${days} days`]
+  );
+  return ((result.values ?? []) as { date: string; total_assets: number; total_liabilities: number }[]).map(
+    (r) => {
+      const assets = Number(r.total_assets) || 0;
+      const liabilities = Number(r.total_liabilities) || 0;
+      return { date: r.date, assets, liabilities, net: assets - liabilities };
+    }
   );
 }
 

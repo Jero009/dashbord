@@ -128,6 +128,16 @@ Three pure-TS services in `src/shared/health/` (no DB/Vue deps, unit-tested in `
 
 **Tab order** in `DashboardTopBar.vue`: Home / Finance / Health / Plan / Gym. Active-tab check tests `/plan` before `/health`.
 
+### Finance Feature Module
+
+`src/features/finance/` — routes `/finance` (Overview), `/finance/budget`, `/finance/analytics`, `/finance/accounts`, `/finance/investments`, `/finance/subscriptions`. Section tabs in `FinanceSectionTabs.vue` (Overview / Budget / Analytics / Accounts / Investments / Subscriptions).
+
+- **Shared math** lives in `src/features/finance/finance.ts` (pure TS, no DB/Vue): `computeNetWorth`/`computeTotalAssets`, `accountAssetsTotal`/`accountLiabilitiesTotal` (`LIABILITY_ACCOUNT_TYPES = ['credit','loan']` — these balances are entered positive and **subtracted** from net worth), `investmentsTotal`/`investmentsCostBasis`, `monthlyCostOf`/`yearlyCostOf` (cadence-normalised), `subscriptionsMonthlyOutflow`/`subscriptionsMonthlyInflow` (active-only), `upcomingBills(subs, days)`, `savingsRate`, `EXPENSE_CATEGORIES`/`categoryLabel`, `dueLabel`. **All pages and `recordNetWorthSnapshot` must use these** so net-worth/liability math stays identical everywhere.
+- **Overview (`FinancePage`)** — dashboard: net-worth hero (Doto) + 30-day delta chip, net-worth **trend SVG area chart** (sourced from `net_worth_snapshot` via `getNetWorthHistory(days)`), assets-vs-liabilities split bar, this-month cash flow + savings-rate bar, upcoming bills (14d), top categories, recent activity. Cards link to their tabs.
+- **CRUD**: accounts/investments/subscriptions all have add + **edit (inline form, `editingId`) + delete (`alertController` confirm)**. `updateFinanceAccount`/`deleteFinanceAccount` (clears `account_id` on linked rows), `updateFinanceInvestment`/`deleteFinanceInvestment`, `updateFinanceSubscription`/`deleteFinanceSubscription`/`setFinanceSubscriptionStatus(id,'active'|'paused')`.
+- **Accounts** — grouped Assets / Liabilities, net-worth summary. **Investments** — `cost_basis` column → gain/loss amount + % per holding and portfolio total. **Subscriptions** — pause/resume (`status` excluded from totals + reminders), monthly + annualised totals, income vs expense.
+- **DB**: liability-aware `recordNetWorthSnapshot` (credit/loan = `total_liabilities`, rest + investments = `total_assets`). New columns `finance_investment.cost_basis` and `finance_subscription.status` are in the `initDB` migration block + auto-handled by export/import (PRAGMA + `SELECT *`). `getRecentFinanceTransactions(limit)` feeds the overview feed.
+
 ### Sleep Hypnogram
 
 `SleepPage.vue` — single SVG hypnogram. Fixed vertical bands (top→bottom): Awake (yellow), REM (teal), Light (blue), Deep (dark blue). Connector lines between stage transitions. Right-side labels: Aw/RE/Li/De. Stage name aliases handle Health Connect variants (`sleeping`, `out_of_bed`, `unknown`). `wakeHour` clamped to `[4, 13]` to guard UTC offset errors.
