@@ -3,7 +3,7 @@
 // null/empty means the habit is scheduled every day. Unscheduled days never
 // break a streak — they are skipped when walking backwards.
 
-import { localDateISO } from '@/shared/utils/timeFormat';
+import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat';
 
 export interface HabitLike {
   days_of_week?: string | null;
@@ -13,12 +13,12 @@ export interface HabitLike {
 export function isScheduledOn(habit: HabitLike, dateStr: string): boolean {
   const dow = habit.days_of_week;
   if (!dow) return true;
-  const day = String(new Date(dateStr + 'T12:00:00').getDay());
+  const day = String(parseLocalDate(dateStr).getDay());
   return dow.split(',').includes(day);
 }
 
 export function shiftDate(dateStr: string, deltaDays: number): string {
-  const d = new Date(dateStr + 'T12:00:00');
+  const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + deltaDays);
   // Read back the local calendar date. `toISOString().slice(0, 10)` would
   // re-introduce the UTC off-by-one the noon anchor exists to avoid.

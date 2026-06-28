@@ -490,7 +490,7 @@ import { useRouter,useRoute } from 'vue-router';
 import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline, trashOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
 import RpePickerModal from '@/features/gym/components/RpePickerModal.vue';
-import { normalizeDateInput } from '@/shared/utils/timeFormat';
+import { normalizeDateInput, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { App } from '@capacitor/app';
@@ -910,12 +910,7 @@ const startTimer = () => {
     seconds.value = Math.max(0, Math.floor((now - start) / 1000));
   }, 1000);
 };
-const formatTime = () => {
-  const hrs = Math.floor(seconds.value / 3600);
-  const mins = Math.floor((seconds.value % 3600) / 60);
-  const secs = seconds.value % 60;
-  return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-};
+const formatTime = () => formatElapsed(seconds.value);
 
 // Rest Timer
 //

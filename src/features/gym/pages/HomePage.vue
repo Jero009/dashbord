@@ -143,7 +143,7 @@ import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
-import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate } from '@/shared/utils/timeFormat';
+import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 
@@ -333,12 +333,7 @@ const clearTimer = () => {
   }
 };
 
-const formatWorkoutTimer = () => {
-  const hrs = Math.floor(seconds.value / 3600);
-  const mins = Math.floor((seconds.value % 3600) / 60);
-  const secs = seconds.value % 60;
-  return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-};
+const formatWorkoutTimer = () => formatElapsed(seconds.value);
 
 // chart 
 

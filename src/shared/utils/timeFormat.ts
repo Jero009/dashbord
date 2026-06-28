@@ -48,6 +48,12 @@ export const localDateISO = (date: Date = new Date()): string => {
 export const localMonthISO = (date: Date = new Date()): string =>
   localDateISO(date).slice(0, 7);
 
+// Parse a YYYY-MM-DD calendar date into a Date at LOCAL noon. The noon anchor
+// keeps `.getDay()`/`.getDate()`/display on the intended day regardless of
+// timezone — `new Date('2026-06-28')` is UTC midnight and reads as the previous
+// day west of UTC. Inverse of localDateISO for the round-trip.
+export const parseLocalDate = (dateStr: string): Date => new Date(`${dateStr}T12:00:00`);
+
 export const formatDuration = (start: string | undefined, end: string | undefined) => {
   if (!start || !end) return '0h 0m 0s';
 

@@ -431,7 +431,7 @@ import { getRecentCircadianLogs, getCircadianLog, upsertCircadianLog, getRecentS
 import { computeTrainingLoad, computeRecoveryRecommendation, mean, type RecoveryRecommendation } from '@/shared/health/insights';
 import { formatCurrency } from '@/shared/utils/currency';
 import { scheduleCircadianNudges } from '@/shared/utils/notifications';
-import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput } from '@/shared/utils/timeFormat';
+import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess, hapticSelect } from '@/shared/utils/haptics';
@@ -538,12 +538,7 @@ const clearRestTimer = () => {
 const formatRestTime = (s: number) =>
   `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-const formatWorkoutTimer = () => {
-  const h = Math.floor(workoutSeconds.value / 3600);
-  const m = Math.floor((workoutSeconds.value % 3600) / 60);
-  const s = workoutSeconds.value % 60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-};
+const formatWorkoutTimer = () => formatElapsed(workoutSeconds.value);
 
 const restoreRestTimer = () => {
   // Read from localStorage to match WorkoutPage's canonical rest-timer storage

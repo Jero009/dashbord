@@ -90,7 +90,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import PlanSectionTabs from '@/features/plan/components/PlanSectionTabs.vue'
 import { getHabitsWithStatus, getGoals, getCalendarEventsForDate } from '@/shared/db/app_db'
 import { hapticLight } from '@/shared/utils/haptics'
-import { localDateISO } from '@/shared/utils/timeFormat'
+import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat'
 
 const router = useRouter()
 
@@ -100,7 +100,7 @@ const navTo = (path: string) => {
 };
 
 const today = localDateISO()
-const todayLabel = new Date(today + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+const todayLabel = parseLocalDate(today).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
 const habits = ref<Record<string, any>[]>([])
 const goals  = ref<Record<string, any>[]>([])
