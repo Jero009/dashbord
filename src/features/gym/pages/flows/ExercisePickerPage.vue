@@ -15,6 +15,14 @@
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
       <div class="exercise-list-container">
+        <ion-searchbar
+          v-model="searchQuery"
+          class="exercise-search"
+          placeholder="Search"
+          :debounce="120"
+          inputmode="search"
+          show-clear-button="focus"
+        ></ion-searchbar>
         <ion-select
           v-model="selectedMuscleGroup"
           placeholder="Muscle group"
@@ -27,6 +35,7 @@
             {{ mg.name }}
           </ion-select-option>
         </ion-select>
+        <p v-if="!filteredExercises.length" class="picker-empty">No exercises</p>
         <ion-list class="exercise-list" lines="none">
           <ion-item
             class="exercise-item"
@@ -93,6 +102,24 @@
   margin: auto;
   width: 100%;
 }
+
+.exercise-search {
+  --background: rgba(255, 255, 255, 0.06);
+  --color: #fff;
+  --placeholder-color: rgba(255, 255, 255, 0.4);
+  --icon-color: rgba(255, 255, 255, 0.4);
+  --border-radius: var(--nt-radius-sm);
+  --box-shadow: none;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.picker-empty {
+  margin: 16px auto;
+  text-align: center;
+  color: var(--nt-text-dim);
+  font-size: 0.9rem;
+}
 </style>
 
 <script setup lang="ts">
@@ -106,6 +133,7 @@ import {
   IonItem,
   IonSelect,
   IonSelectOption,
+  IonSearchbar,
   IonRefresher,
   IonRefresherContent,
   onIonViewWillEnter
@@ -134,12 +162,15 @@ type exercise = {
 
 const exercises = ref<exercise[]>([]);
 const selectedMuscleGroup = ref('');
+const searchQuery = ref('');
 const muscleGroups = ref<MuscleGroup[]>([]);
 
-// exercise sort
+// Filter by muscle group + free-text name search, then sort by muscle group.
 const filteredExercises = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
   return exercises.value
     .filter((ex) => !selectedMuscleGroup.value || ex.muscle_group === selectedMuscleGroup.value)
+    .filter((ex) => !q || ex.name.toLowerCase().includes(q))
     .sort((a, b) => a.muscle_group.localeCompare(b.muscle_group));
 });
 

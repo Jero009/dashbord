@@ -2437,36 +2437,6 @@ export async function queryReadinessHistory(days = 14): Promise<{ date: string; 
   return ((result.values ?? []) as { date: string; score: number }[]);
 }
 
-export async function getWeeklyDigest(): Promise<{
-  avgSleep: number | null;
-  avgSteps: number | null;
-  avgReadiness: number | null;
-  workoutCount: number;
-  readinessTrend: number | null;
-}> {
-  if (!db) return { avgSleep: null, avgSteps: null, avgReadiness: null, workoutCount: 0, readinessTrend: null };
-
-  const [sleepR, stepsR, readinessR, prevReadinessR, workoutsR] = await Promise.all([
-    db.query(`SELECT AVG(value) AS v FROM health_metric WHERE type = 'sleep_duration' AND date >= date('now','-7 days');`),
-    db.query(`SELECT AVG(value) AS v FROM health_metric WHERE type = 'steps' AND date >= date('now','-7 days');`),
-    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now','-7 days');`),
-    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now','-14 days') AND date < date('now','-7 days');`),
-    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start) >= date('now','-7 days');`),
-  ]);
-
-  const avg = (r: any) => { const v = r.values?.[0]?.v; return v !== null && v !== undefined ? Number(v) : null; };
-  const thisReadiness = avg(readinessR);
-  const prevReadiness = avg(prevReadinessR);
-
-  return {
-    avgSleep: avg(sleepR),
-    avgSteps: avg(stepsR),
-    avgReadiness: thisReadiness,
-    workoutCount: Number(workoutsR.values?.[0]?.v ?? 0),
-    readinessTrend: thisReadiness !== null && prevReadiness !== null ? Math.round(thisReadiness - prevReadiness) : null,
-  };
-}
-
 export interface ReviewDigest {
   period: 'week' | 'month';
   workoutCount: number;
@@ -2808,6 +2778,29 @@ export async function addFinanceTransaction(
     return result;
   } catch (error) {
     console.error('Error adding finance transaction:', error);
+    throw error;
+  }
+}
+
+export async function updateFinanceTransaction(
+  id: number,
+  date: string,
+  name: string,
+  category: string,
+  amount: number,
+  type: 'expense' | 'income',
+  notes?: string
+) {
+  if (!db) return;
+  try {
+    await db.run(
+      `UPDATE finance_transaction
+       SET date = ?, name = ?, category = ?, amount = ?, type = ?, notes = ?
+       WHERE id = ?;`,
+      [date, name, category, amount, type, notes ?? null, id]
+    );
+  } catch (error) {
+    console.error('Error updating finance transaction:', error);
     throw error;
   }
 }

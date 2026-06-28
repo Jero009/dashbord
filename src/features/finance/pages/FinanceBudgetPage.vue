@@ -98,7 +98,8 @@
 
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Add transaction</p>
+            <p class="section-kicker">{{ editingTransactionId ? 'Edit transaction' : 'Add transaction' }}</p>
+            <button v-if="editingTransactionId" class="link-btn" @click="resetTransactionForm">Cancel</button>
           </div>
           <div class="type-toggle">
             <button
@@ -136,7 +137,7 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" class="add-btn" @click="saveTransaction">Add</ion-button>
+          <ion-button expand="block" class="add-btn" @click="saveTransaction">{{ editingTransactionId ? 'Save' : 'Add' }}</ion-button>
         </ion-card>
 
         <ion-card class="finance-card">
@@ -156,6 +157,9 @@
                 <span class="list-item__value" :class="{ 'metric-positive': transaction.type === 'income' }">
                   {{ transaction.type === 'income' ? '+' : '−' }}{{ formatCurrency(Number(transaction.amount) || 0) }}
                 </span>
+                <button class="row-icon" aria-label="Edit transaction" @click="beginEditTransaction(transaction)">
+                  <ion-icon :icon="createOutline" />
+                </button>
                 <button class="row-delete" aria-label="Delete transaction" @click="removeTransaction(transaction.id)">
                   <ion-icon :icon="closeOutline" />
                 </button>
@@ -183,7 +187,7 @@ import {
   onIonViewWillEnter,
   toastController,
 } from '@ionic/vue';
-import { chevronBackOutline, chevronForwardOutline, closeOutline } from 'ionicons/icons';
+import { chevronBackOutline, chevronForwardOutline, closeOutline, createOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
@@ -192,6 +196,7 @@ import { formatCurrency } from '@/shared/utils/currency';
 import { localDateISO } from '@/shared/utils/timeFormat';
 import {
   addFinanceTransaction,
+  updateFinanceTransaction,
   getFinanceTransactionsForMonth,
   deleteFinanceTransaction,
   upsertFinanceBudget,
@@ -220,6 +225,7 @@ const transactionAmount = ref('');
 const transactionDate = ref(toLocalDateKey(new Date()));
 const transactionCategory = ref('food');
 const transactionType = ref<'expense' | 'income'>('expense');
+const editingTransactionId = ref<number | null>(null);
 
 const budgetCategory = ref('food');
 const budgetLimit = ref('');
@@ -287,6 +293,25 @@ const setType = (type: 'expense' | 'income') => {
   transactionType.value = type;
 };
 
+const resetTransactionForm = () => {
+  editingTransactionId.value = null;
+  transactionName.value = '';
+  transactionAmount.value = '';
+  transactionDate.value = toLocalDateKey(new Date());
+  transactionCategory.value = 'food';
+  transactionType.value = 'expense';
+};
+
+const beginEditTransaction = (transaction: Record<string, any>) => {
+  hapticLight();
+  editingTransactionId.value = Number(transaction.id);
+  transactionName.value = String(transaction.name ?? '');
+  transactionAmount.value = String(transaction.amount ?? '');
+  transactionDate.value = String(transaction.date ?? toLocalDateKey(new Date()));
+  transactionType.value = transaction.type === 'income' ? 'income' : 'expense';
+  transactionCategory.value = transaction.type === 'income' ? 'food' : String(transaction.category || 'food');
+};
+
 const showToast = async (message: string, color: 'warning' | 'success') => {
   const toast = await toastController.create({ message, duration: 1800, color });
   await toast.present();
@@ -308,23 +333,35 @@ const saveTransaction = async () => {
   }
 
   hapticMedium();
+  const category = transactionType.value === 'income' ? 'income' : transactionCategory.value;
   try {
-    await addFinanceTransaction(
-      transactionDate.value,
-      transactionName.value.trim(),
-      transactionType.value === 'income' ? 'income' : transactionCategory.value,
-      amount,
-      transactionType.value
-    );
+    if (editingTransactionId.value) {
+      await updateFinanceTransaction(
+        editingTransactionId.value,
+        transactionDate.value,
+        transactionName.value.trim(),
+        category,
+        amount,
+        transactionType.value
+      );
+    } else {
+      await addFinanceTransaction(
+        transactionDate.value,
+        transactionName.value.trim(),
+        category,
+        amount,
+        transactionType.value
+      );
+    }
   } catch {
     await showToast('save failed', 'warning');
     return;
   }
-  transactionName.value = '';
-  transactionAmount.value = '';
+  const wasEditing = editingTransactionId.value !== null;
+  resetTransactionForm();
   await loadBudgetData();
   hapticSuccess();
-  await showToast('added', 'success');
+  await showToast(wasEditing ? 'saved' : 'added', 'success');
 };
 
 const removeTransaction = async (id: number) => {
@@ -335,6 +372,7 @@ const removeTransaction = async (id: number) => {
     await showToast('delete failed', 'warning');
     return;
   }
+  if (editingTransactionId.value === Number(id)) resetTransactionForm();
   await loadBudgetData();
 };
 
@@ -721,7 +759,8 @@ onIonViewWillEnter(async () => {
   white-space: nowrap;
 }
 
-.row-delete {
+.row-delete,
+.row-icon {
   display: grid;
   place-items: center;
   width: 26px;
@@ -731,6 +770,16 @@ onIonViewWillEnter(async () => {
   background: rgba(var(--nt-ink), 0.05);
   color: var(--nt-text-dim);
   font-size: 0.9rem;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: rgba(var(--nt-ink), 0.6);
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .empty-state {

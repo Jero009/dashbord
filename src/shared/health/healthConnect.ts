@@ -408,6 +408,39 @@ export async function canAutoSyncHealthConnectMetrics() {
   }
 }
 
+export interface HealthConnectExerciseAccess {
+  available: boolean;
+  coreGranted: boolean;
+  exerciseGranted: boolean;
+}
+
+// The @capgo/capacitor-health plugin declares READ_EXERCISE and reads
+// ExerciseSessionRecord internally. After any Health Connect permission reset
+// this 'workouts' permission is often ungranted, which can trigger a native
+// SecurityException that kills the process during a read. We can't stop the
+// plugin's internal read, but we CAN detect the missing grant and prompt the
+// user to fix it before it bites. Returns coreGranted so callers can avoid
+// nagging users who haven't connected Health Connect at all yet.
+export async function checkHealthConnectExerciseAccess(): Promise<HealthConnectExerciseAccess> {
+  const fallback: HealthConnectExerciseAccess = { available: false, coreGranted: false, exerciseGranted: false };
+  if (!isHealthConnectAvailable()) return fallback;
+
+  try {
+    const availability = await ensureAvailability();
+    if (!availability.available) return fallback;
+
+    const auth = await Health.checkAuthorization({ read: HEALTH_CONNECT_READ_TYPES });
+    return {
+      available: true,
+      coreGranted: hasCoreReadAccess(auth.readAuthorized),
+      exerciseGranted: auth.readAuthorized.includes('workouts'),
+    };
+  } catch (error) {
+    console.error('Health Connect exercise authorization check failed:', error);
+    return fallback;
+  }
+}
+
 export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummaryResult> {
   if (!isHealthConnectAvailable()) {
     return {

@@ -218,6 +218,13 @@
         <!-- 8. Sync -->
         <div class="card sync-card">
           <p class="section-kicker">Health Connect</p>
+          <div v-if="exerciseAccessMissing" class="hc-warning">
+            <p class="hc-warning__title">Exercise permission missing</p>
+            <p class="hc-warning__body">
+              Health Connect needs the Exercise permission granted or syncing can crash. Open settings and allow Exercise for this app.
+            </p>
+            <button class="hc-warning__btn" @click="openExerciseSettings">Open Health Connect</button>
+          </div>
           <p class="sync-status">{{ healthConnectStatus }}</p>
           <button class="sync-btn" :disabled="syncing" @click="handleConnect">
             {{ syncing ? 'Syncing…' : 'Sync now' }}
@@ -253,6 +260,7 @@ import {
   openHealthConnectSettings,
   requestHealthConnectPermissions,
   syncHealthConnectMetrics,
+  checkHealthConnectExerciseAccess,
   getRecentActivities,
   calculateReadinessScore,
   calculateBattery,
@@ -284,6 +292,9 @@ const todayEvents     = ref<{ id?: number; type: string; title?: string; date: s
 const latestBodyLog   = ref<BodyLogEntry | null>(null);
 const activities      = ref<ActivitySummary[]>([]);
 const syncing         = ref(false);
+// True when Health Connect is connected (core metrics granted) but the optional
+// Exercise permission is missing — that gap can crash the plugin on sync.
+const exerciseAccessMissing = ref(false);
 const readinessHistory = ref<RhPoint[]>([]);
 const selectedRhPoint  = ref<RhPoint | null>(null);
 const restingHrHistory = ref<HrPoint[]>([]);
@@ -536,8 +547,19 @@ const loadCircadianScore = async () => {
   } catch { circScore.value = null; }
 };
 
+// Flag the missing-Exercise-permission case so we can warn before it crashes a sync.
+// Only nag once Health Connect is actually connected (core metrics granted).
+const checkExerciseAccess = async () => {
+  const access = await checkHealthConnectExerciseAccess();
+  exerciseAccessMissing.value = access.available && access.coreGranted && !access.exerciseGranted;
+};
+
+const openExerciseSettings = async () => {
+  if (isHealthConnectAvailable()) await openHealthConnectSettings();
+};
+
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore(), checkExerciseAccess()]);
   await loadReadiness();
 });
 
@@ -569,7 +591,7 @@ const handleConnect = async () => {
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore(), checkExerciseAccess()]);
     await loadReadiness();
     const t = await toastController.create({ message: `synced ${syncResult.synced} records`, duration: 2200, color: 'success' });
     await t.present();
@@ -942,6 +964,48 @@ const handleConnect = async () => {
   margin: 0 0 14px;
   font-size: 0.9rem;
   color: rgba(var(--nt-ink), 0.5);
+}
+
+.hc-warning {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(215, 26, 33, 0.1);
+  border: 1px solid var(--ion-color-accent-red);
+  display: grid;
+  gap: 8px;
+}
+
+.hc-warning__title {
+  margin: 0;
+  font-family: var(--nt-font-head);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--nt-tracking-label);
+  color: var(--ion-color-accent-red);
+}
+
+.hc-warning__body {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba(var(--nt-ink), 0.7);
+}
+
+.hc-warning__btn {
+  justify-self: start;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--ion-color-accent-red);
+  border-radius: 8px;
+  color: var(--ion-color-accent-red);
+  font-family: var(--nt-font-head);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--nt-tracking-label);
+  cursor: pointer;
 }
 
 .sync-btn {
