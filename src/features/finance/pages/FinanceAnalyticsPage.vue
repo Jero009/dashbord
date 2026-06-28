@@ -107,6 +107,7 @@ import {
 } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid, chartInk } from '@/shared/utils/chartStyle';
 import { hapticLight } from '@/shared/utils/haptics';
+import { localMonthISO } from '@/shared/utils/timeFormat';
 
 Chart.register(LineController, LineElement, PointElement, DoughnutController, ArcElement, LinearScale, CategoryScale, Filler, Tooltip);
 
@@ -124,11 +125,7 @@ const palette = () => [
   chartInk(0.14),
 ];
 
-const localMonthKey = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-};
+const localMonthKey = localMonthISO;
 
 const viewedMonth = ref(localMonthKey(new Date()));
 const categories = ref<CategorySpending[]>([]);

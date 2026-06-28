@@ -23,6 +23,8 @@
  * model, and the whole thing is clamped to a sane 0–96 h band.
  */
 
+import { clamp } from '@/shared/utils/math';
+
 export type RecoveryBasis = 'rpe' | 'volume' | 'none';
 
 export interface RecoveryTimeInput {
@@ -60,8 +62,6 @@ export interface RecoveryTimeOptions {
   sleepReference?: number;
 }
 
-const clamp = (v: number, lo: number, hi: number) =>
-  Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo;
 
 /**
  * Estimate total recovery time for one session/day's load, modulated by the

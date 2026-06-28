@@ -142,6 +142,7 @@ import {
 } from 'chart.js';
 import { chartLineDataset, chartTooltip, chartTicks, chartGrid, chartColors } from '@/shared/utils/chartStyle';
 import { hapticSelect } from '@/shared/utils/haptics';
+import { localDateISO } from '@/shared/utils/timeFormat';
 
 Chart.register(LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip);
 
@@ -219,10 +220,7 @@ const heatCells = computed(() => {
 });
 
 function toKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return localDateISO(d);
 }
 
 function withinWindow(dateKey: string): boolean {

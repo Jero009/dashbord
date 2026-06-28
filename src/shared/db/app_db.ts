@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { goalReached, goalProgressFraction } from '@/shared/utils/goalProgress';
 import { expandOccurrencesInRange, type RecurringEventLike } from '@/shared/utils/recurrence';
 import { shiftDate } from '@/shared/utils/habitStats';
+import { localDateISO } from '@/shared/utils/timeFormat';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
 let db: SQLiteDBConnection | null = null;
@@ -1568,7 +1569,7 @@ export async function getTodayCompletedWorkouts() {
   // time_end is stored as UTC ISO; compare both sides in the device timezone
   // so a workout finished late in the evening still counts as "today".
   const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = localDateISO(now);
   const result = await db.query(
     `SELECT id, name, time_start, time_end, total_kg FROM workout
      WHERE time_end IS NOT NULL AND date(time_end, 'localtime') = ?;`,
@@ -2890,7 +2891,7 @@ export interface MonthlySpending {
 export async function recordNetWorthSnapshot() {
   if (!db) return;
   const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = localDateISO(d);
   // Credit/loan accounts are liabilities (money owed); everything else plus the
   // value of investments is an asset. Net worth = assets − liabilities.
   const assetsRow = await db.query(
@@ -3591,10 +3592,7 @@ export async function getHealthMetricDailySeries(
 
   const daysAgo = new Date();
   daysAgo.setDate(daysAgo.getDate() - days);
-  const y = daysAgo.getFullYear();
-  const m = String(daysAgo.getMonth() + 1).padStart(2, '0');
-  const d = String(daysAgo.getDate()).padStart(2, '0');
-  const dateLimit = `${y}-${m}-${d}`;
+  const dateLimit = localDateISO(daysAgo);
 
   const result = await db.query(`
     SELECT date AS date, AVG(value) AS value

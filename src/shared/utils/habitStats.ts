@@ -3,6 +3,8 @@
 // null/empty means the habit is scheduled every day. Unscheduled days never
 // break a streak — they are skipped when walking backwards.
 
+import { localDateISO } from '@/shared/utils/timeFormat';
+
 export interface HabitLike {
   days_of_week?: string | null;
   created_at?: string | null;
@@ -20,10 +22,7 @@ export function shiftDate(dateStr: string, deltaDays: number): string {
   d.setDate(d.getDate() + deltaDays);
   // Read back the local calendar date. `toISOString().slice(0, 10)` would
   // re-introduce the UTC off-by-one the noon anchor exists to avoid.
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return localDateISO(d);
 }
 
 export function currentStreak(

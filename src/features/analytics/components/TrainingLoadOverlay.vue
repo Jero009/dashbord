@@ -160,6 +160,7 @@ import type { RecoveryMetric } from '@/shared/health/recoveryBaseline';
 import { evaluateOvertraining, acwrZoneLabel } from '@/shared/health/overtraining';
 import { recoveryTimeStatus, aggregateLatestTrainingDay } from '@/shared/health/recoveryTime';
 import { hapticSelect } from '@/shared/utils/haptics';
+import { localDateISO } from '@/shared/utils/timeFormat';
 
 const SLOT = 16;       // px per day column
 const PAD_TOP = 14;
@@ -179,10 +180,7 @@ const rhr = ref<{ date: string; value: number }[]>([]);
 const hrv = ref<{ date: string; value: number }[]>([]);
 const sleepScores = ref<{ date: string; value: number }[]>([]);
 
-const todayKey = (() => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-})();
+const todayKey = localDateISO();
 
 // ── derived series ───────────────────────────────────────────────────────────
 

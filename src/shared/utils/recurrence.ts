@@ -17,6 +17,8 @@ export const RECURRENCE_TYPES = [
   'yearly',
 ] as const;
 
+import { localDateISO } from '@/shared/utils/timeFormat';
+
 export type RecurrenceType = (typeof RECURRENCE_TYPES)[number];
 
 export interface RecurringEventLike {
@@ -29,12 +31,7 @@ export interface RecurringEventLike {
 }
 
 // --- local date helpers (no UTC, to stay off-by-one-free like toDateKey) ---
-function ymd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+const ymd = localDateISO;
 function parseYMD(s: string): Date {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);

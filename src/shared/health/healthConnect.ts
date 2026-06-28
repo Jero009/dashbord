@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Health, type AuthorizationStatus, type HealthSample, type AggregatedSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
+import { clamp } from '@/shared/utils/math';
 
 type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'workouts';
 
@@ -139,10 +140,6 @@ export function applyReadinessDrain(baseScore: number, currentDate = new Date())
   return Math.max(0, Math.round(baseScore - drain));
 }
 
-function clamp(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
 
 function average(values: number[]) {
   if (!values.length) return null;

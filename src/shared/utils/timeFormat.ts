@@ -44,6 +44,10 @@ export const localDateISO = (date: Date = new Date()): string => {
   return `${y}-${m}-${d}`;
 };
 
+// Local-timezone month key (YYYY-MM). Same UTC-safety rationale as localDateISO.
+export const localMonthISO = (date: Date = new Date()): string =>
+  localDateISO(date).slice(0, 7);
+
 export const formatDuration = (start: string | undefined, end: string | undefined) => {
   if (!start || !end) return '0h 0m 0s';
 

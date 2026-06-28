@@ -189,6 +189,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import { hapticLight, hapticMedium, hapticHeavy, hapticSuccess } from '@/shared/utils/haptics';
 import { formatCurrency } from '@/shared/utils/currency';
+import { localDateISO } from '@/shared/utils/timeFormat';
 import {
   addFinanceTransaction,
   getFinanceTransactionsForMonth,
@@ -200,8 +201,7 @@ import {
 import { EXPENSE_CATEGORIES as expenseCategories, categoryLabel } from '@/features/finance/finance';
 
 // Local-date keys: toISOString would shift the month near midnight in UTC+ timezones.
-const toLocalDateKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const toLocalDateKey = localDateISO;
 
 const viewedMonth = ref(toLocalDateKey(new Date()).slice(0, 7));
 
