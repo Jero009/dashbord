@@ -155,7 +155,7 @@ import { Directory, Filesystem } from '@capacitor/filesystem'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
-import { localDateISO } from '@/shared/utils/timeFormat'
+import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat'
 import { chartLineDataset, chartDimDataset, chartColors, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
@@ -210,7 +210,7 @@ const buildChart = () => {
   }
 
   const labels = filtered.map(e => {
-    const d = new Date(e.date + 'T12:00:00')
+    const d = parseLocalDate(e.date)
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   })
   const data = filtered.map(e => Number((e as Record<string, unknown>)[metric.key]))
@@ -309,7 +309,7 @@ const trendClass = computed(() => {
 })
 
 const formatDate = (d: string) =>
-  new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  parseLocalDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 const loadEntries = async () => {
   entries.value = await getBodyLogs()

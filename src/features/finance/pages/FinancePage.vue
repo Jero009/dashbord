@@ -182,6 +182,7 @@ import {
 } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
 import { hapticLight } from '@/shared/utils/haptics';
+import { localMonthISO } from '@/shared/utils/timeFormat';
 import {
   computeNetWorth,
   computeTotalAssets,
@@ -296,8 +297,7 @@ const go = (path: string) => {
 const loadFinance = async () => {
   // Persist today's snapshot first so the trend includes the latest point.
   await recordNetWorthSnapshot().catch(() => {});
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthKey = localMonthISO();
   const [acc, inv, subs, txns, hist, rec, cats] = await Promise.all([
     getFinanceAccounts().catch(() => []),
     getFinanceInvestments().catch(() => []),

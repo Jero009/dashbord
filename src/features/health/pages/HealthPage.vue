@@ -145,7 +145,7 @@
             </svg>
             <div v-if="selectedHrPoint" class="rh-tooltip">
               <strong>{{ selectedHrPoint.value }}</strong>
-              <small>{{ new Date(selectedHrPoint.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) }} · bpm</small>
+              <small>{{ parseLocalDate(selectedHrPoint.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) }} · bpm</small>
             </div>
             <div class="rh-axis">
               <span>{{ restingHrHistory[0]?.dateLabel }}</span>
@@ -186,7 +186,7 @@
             </svg>
             <div v-if="selectedRhPoint" class="rh-tooltip">
               <strong>{{ selectedRhPoint.score }}</strong>
-              <small>{{ new Date(selectedRhPoint.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
+              <small>{{ parseLocalDate(selectedRhPoint.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
             </div>
             <div class="rh-axis">
               <span>{{ readinessHistory[0]?.dateLabel }}</span>
@@ -236,7 +236,7 @@ import {
 } from '@ionic/vue';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
-import { localDateISO } from '@/shared/utils/timeFormat';
+import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {
   getLatestHealthMetric,
@@ -441,7 +441,7 @@ const loadReadinessHistory = async () => {
     score: Math.round(r.score),
     x: (i / (raw.length - 1)) * 96 + 2,
     y: 36 - ((r.score - minS) / range) * 32 + 2,
-    dateLabel: new Date(r.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    dateLabel: parseLocalDate(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
   }));
 };
 
@@ -468,7 +468,7 @@ const loadHrHistory = async () => {
     value: Math.round(r.value),
     x: (i / (rows.length - 1)) * 96 + 2,
     y: 36 - ((r.value - minV) / range) * 32 + 2,
-    dateLabel: new Date(r.date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    dateLabel: parseLocalDate(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
   }));
 };
 

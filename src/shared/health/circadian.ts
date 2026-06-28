@@ -1,6 +1,8 @@
 // Circadian rhythm computation engine
 // Based on: two-process model, MSFsc chronotype, IS/IV/RA nonparametric actigraphy
 
+import { clamp } from '@/shared/utils/math';
+
 export interface SleepRecord {
   date: string;           // YYYY-MM-DD
   bedtime: string;        // ISO timestamp
@@ -86,10 +88,6 @@ function circularSD(angles: number[]): number {
     return d;
   });
   return Math.sqrt(diffs.reduce((s, d) => s + d * d, 0) / diffs.length);
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, v));
 }
 
 // ── Chronotype & Phase Estimator ────────────────────────────────────────────

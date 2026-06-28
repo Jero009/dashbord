@@ -1,6 +1,6 @@
 import { ref, computed, reactive, watch } from 'vue';
 import { onIonViewWillEnter, toastController, actionSheetController } from '@ionic/vue';
-import { localDateISO } from '@/shared/utils/timeFormat';
+import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat';
 import {
   addCalendarEvent,
   updateCalendarEvent,
@@ -113,7 +113,7 @@ export function usePlanner() {
   });
 
   const selectedDateLabel = computed(() =>
-    new Date(selectedDate.value + 'T12:00:00').toLocaleDateString('en-US', {
+    parseLocalDate(selectedDate.value).toLocaleDateString('en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -136,14 +136,14 @@ export function usePlanner() {
 
   // The 7 dates (Sun→Sat) of the week containing the selected date.
   const calWeekDates = computed(() => {
-    const dow = new Date(selectedDate.value + 'T12:00:00').getDay();
+    const dow = parseLocalDate(selectedDate.value).getDay();
     const start = shiftDate(selectedDate.value, -dow);
     return Array.from({ length: 7 }, (_, i) => shiftDate(start, i));
   });
 
   const weekRangeLabel = computed(() => {
-    const a = new Date(calWeekDates.value[0] + 'T12:00:00');
-    const b = new Date(calWeekDates.value[6] + 'T12:00:00');
+    const a = parseLocalDate(calWeekDates.value[0]);
+    const b = parseLocalDate(calWeekDates.value[6]);
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `${fmt(a)} – ${fmt(b)}`;
   });
@@ -153,7 +153,7 @@ export function usePlanner() {
     calWeekDates.value.map((date) => ({
       date,
       day: Number(date.slice(8, 10)),
-      dow: DOW[new Date(date + 'T12:00:00').getDay()],
+      dow: DOW[parseLocalDate(date).getDay()],
       isToday: date === todayStr,
       events: rangeEvents.value.filter((e) => e.date === date),
     }))
@@ -170,7 +170,7 @@ export function usePlanner() {
     for (const date of [...byDate.keys()].sort()) {
       groups.push({
         date,
-        label: new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+        label: parseLocalDate(date).toLocaleDateString('en-US', {
           weekday: 'short', month: 'short', day: 'numeric',
         }),
         events: byDate.get(date)!,
@@ -214,7 +214,7 @@ export function usePlanner() {
   const goalDueLabel = (g: Record<string, any>) => {
     if (!g.due_date) return 'No due date';
     const diff = Math.round(
-      (new Date(g.due_date + 'T12:00:00').getTime() - new Date(todayStr + 'T12:00:00').getTime()) / 86400000
+      (parseLocalDate(g.due_date).getTime() - parseLocalDate(todayStr).getTime()) / 86400000
     );
     if (diff < 0) return `Overdue by ${-diff}d`;
     if (diff === 0) return 'Due today';
@@ -256,7 +256,7 @@ export function usePlanner() {
     for (let i = 27; i >= 0; i--) dates.push(shiftDate(todayStr, -i));
     return dates;
   });
-  const dowShort = (date: string) => DOW[new Date(date + 'T12:00:00').getDay()];
+  const dowShort = (date: string) => DOW[parseLocalDate(date).getDay()];
 
   const dayDoneCount = computed(() => dayHabits.value.filter((h) => h.completed === 1).length);
   const dayProgressPct = computed(() =>
@@ -265,7 +265,7 @@ export function usePlanner() {
 
   // ---- consistency heatmap (10 weeks, GitHub style: columns = weeks, rows = weekdays) ----
   const heatCells = computed(() => {
-    const todayDow = new Date(todayStr + 'T12:00:00').getDay();
+    const todayDow = parseLocalDate(todayStr).getDay();
     const weekStart = shiftDate(todayStr, -todayDow); // this week's Sunday
     const gridStart = shiftDate(weekStart, -7 * 9);
     const cells: { date: string; color: string; label: string; future: boolean }[] = [];

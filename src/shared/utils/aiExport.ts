@@ -57,13 +57,9 @@ import {
   getCurrency,
 } from '@/shared/utils/userSettings';
 import { formatCurrency } from '@/shared/utils/currency';
+import { localDateISO } from '@/shared/utils/timeFormat';
 
 // ── small formatting helpers ──────────────────────────────────────────────────
-
-const todayKey = (): string => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 
 /** Local HH:MM from an ISO timestamp, '' when unparseable. */
 function hm(iso: string | null | undefined): string {
@@ -127,7 +123,7 @@ export interface AiExportOptions {
 /** Build the full plain-text export. */
 export async function buildAiExport(options: AiExportOptions = {}): Promise<string> {
   const days = options.days ?? 120;
-  const today = todayKey();
+  const today = localDateISO();
   const windowStart = shiftDate(today, -(days - 1));
 
   // Pull every domain in parallel. Each call already tolerates an empty DB.

@@ -221,6 +221,7 @@ import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepS
 import { requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
 import { getSleepSession, getRecentSleepSessions } from '@/shared/db/app_db';
 import type { SleepSessionRecord } from '@/shared/db/app_db';
+import { clamp as clampVal } from '@/shared/utils/math';
 
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
@@ -230,7 +231,6 @@ const selectedScorePoint = ref<{ date: string; score: number | null } | null>(nu
 const sessionDates = ref<string[]>([]);
 const selectedDate = ref<string | null>(null);
 
-function clampVal(val: number, min: number, max: number) { return Math.min(max, Math.max(min, val)); }
 
 // A corrupted timeline blob shouldn't take down the whole page.
 function parseJsonArray<T>(raw: string | null): T[] {

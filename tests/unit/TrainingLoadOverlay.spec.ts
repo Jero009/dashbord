@@ -34,7 +34,7 @@ describe('TrainingLoadOverlay — no data', () => {
     const wrapper = mount(TrainingLoadOverlay)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Log a few workouts')
+    expect(wrapper.text()).toContain('Log workouts to build the overlay')
     expect(wrapper.find('.status').exists()).toBe(false)
     expect(wrapper.find('svg').exists()).toBe(false)
     expect(wrapper.findAll('.tile').length).toBe(0)

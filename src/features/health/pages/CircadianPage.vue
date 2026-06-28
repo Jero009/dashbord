@@ -396,6 +396,7 @@ import {
   type CircadianLogEntry,
 } from '@/shared/db/app_db';
 import { hapticMedium, hapticSelect, hapticSuccess } from '@/shared/utils/haptics';
+import { localDateISO } from '@/shared/utils/timeFormat';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -518,7 +519,7 @@ const formatHour = (h: number): string => {
 const loadData = async () => {
   loading.value = true;
   const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = localDateISO(now);
   try {
     const sessions = await getRecentSleepSessions(30);
     const sleepRecords: SleepRecord[] = sessions.map(s => ({
@@ -640,8 +641,7 @@ const selectEnergy = (field: 'wake' | 'noon' | 'evening', value: number) => {
 
 const saveLog = async () => {
   hapticMedium();
-  const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = localDateISO();
   await upsertCircadianLog({
     date: today,
     day_type: formDayType.value,
