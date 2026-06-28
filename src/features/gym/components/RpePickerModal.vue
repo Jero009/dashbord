@@ -27,7 +27,7 @@
 import { modalController } from '@ionic/vue';
 import { RPE_OPTIONS } from '@/features/gym/types/rpe';
 
-const props = defineProps<{ current: number | null }>();
+defineProps<{ current: number | null }>();
 
 const select = (value: number | null) => {
   modalController.dismiss(value, 'confirm');
