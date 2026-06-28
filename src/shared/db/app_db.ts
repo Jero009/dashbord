@@ -2739,7 +2739,7 @@ export async function getFinanceSubscriptions() {
     `SELECT s.*, a.name AS account_name
      FROM finance_subscription s
      LEFT JOIN finance_account a ON a.id = s.account_id
-     ORDER BY s.status DESC, s.next_due_date ASC;`
+     ORDER BY (s.status = 'active') DESC, s.next_due_date ASC;`
   );
   return result.values || [];
 }

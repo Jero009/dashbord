@@ -177,6 +177,10 @@ const accounts = ref<Array<Record<string, any>>>([]);
 const dayChange = ref<Map<number, number | null>>(new Map());
 const refreshing = ref(false);
 const lastUpdated = ref('');
+// Throttle auto (silent) refreshes so navigating in/out doesn't hammer the free
+// price APIs (rate-limited). Manual refresh always runs.
+let lastRefreshAt = 0;
+const AUTO_REFRESH_COOLDOWN_MS = 120000;
 
 const hasSymbols = computed(() => investments.value.some((i) => String(i.symbol ?? '').trim()));
 
@@ -230,12 +234,15 @@ const loadAll = async () => {
 
 const refreshPrices = async (silent: boolean) => {
   if (refreshing.value) return;
+  // Skip auto-refresh if we fetched recently; a manual tap always goes through.
+  if (silent && Date.now() - lastRefreshAt < AUTO_REFRESH_COOLDOWN_MS) return;
   const priceable = investments.value
     .filter((i) => String(i.symbol ?? '').trim())
     .map((i) => ({ id: Number(i.id), type: String(i.type), symbol: String(i.symbol) }));
   if (!priceable.length) return;
 
   refreshing.value = true;
+  lastRefreshAt = Date.now();
   if (!silent) hapticLight();
   let quotes: Map<number, PriceQuote>;
   try {

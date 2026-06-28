@@ -13,7 +13,7 @@
             <span v-if="netDelta !== null" class="delta-chip" :class="netDelta >= 0 ? 'delta-chip--up' : 'delta-chip--down'">
               <ion-icon :icon="netDelta >= 0 ? trendingUpOutline : trendingDownOutline" />
               {{ netDelta >= 0 ? '+' : '−' }}{{ formatCurrency(Math.abs(netDelta)) }}
-              <span class="delta-chip__win">{{ rangeDays }}d</span>
+              <span class="delta-chip__win">{{ deltaDays }}d</span>
             </span>
           </div>
           <div class="hero-value">{{ formatCurrency(netWorth) }}</div>
@@ -222,6 +222,15 @@ const netDelta = computed(() => {
   return netWorth.value - history.value[0].net;
 });
 
+// Actual age of the comparison snapshot (≤ rangeDays), so the chip shows "5d"
+// when the app only has 5 days of history rather than a misleading "30d".
+const deltaDays = computed(() => {
+  if (history.value.length < 2) return rangeDays;
+  const first = new Date(history.value[0].date).getTime();
+  const days = Math.round((Date.now() - first) / 86400000);
+  return Math.max(1, Math.min(rangeDays, days));
+});
+
 const monthIncome = computed(() =>
   monthTransactions.value.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0)
 );
@@ -231,10 +240,9 @@ const monthExpense = computed(() =>
 const monthNet = computed(() => monthIncome.value - monthExpense.value);
 const savingsPct = computed(() => savingsRate(monthIncome.value, monthExpense.value));
 
-const bills = computed(() => upcomingBills(subscriptions.value, rangeBillsDays).slice(0, 4));
-const billsTotal = computed(() =>
-  upcomingBills(subscriptions.value, rangeBillsDays).reduce((s, b) => s + (Number(b.amount) || 0), 0)
-);
+const allBills = computed(() => upcomingBills(subscriptions.value, rangeBillsDays));
+const bills = computed(() => allBills.value.slice(0, 4));
+const billsTotal = computed(() => allBills.value.reduce((s, b) => s + (Number(b.amount) || 0), 0));
 
 const topCategoryMax = computed(() => topCategories.value[0]?.amount || 1);
 
@@ -245,12 +253,14 @@ const trendPoints = computed(() => {
   const nets = pts.map((p) => p.net);
   const min = Math.min(...nets);
   const max = Math.max(...nets);
-  const span = max - min || 1;
+  const range = max - min;
   const stepX = CHART_W / (pts.length - 1);
   const pad = 6;
   return pts.map((p, i) => ({
     x: i * stepX,
-    y: pad + (1 - (p.net - min) / span) * (CHART_H - pad * 2),
+    // Centre the line vertically when net worth is flat (range 0) instead of
+    // pinning it to the bottom edge.
+    y: pad + (1 - (range > 0 ? (p.net - min) / range : 0.5)) * (CHART_H - pad * 2),
   }));
 });
 
@@ -285,7 +295,7 @@ const go = (path: string) => {
 
 const loadFinance = async () => {
   // Persist today's snapshot first so the trend includes the latest point.
-  await recordNetWorthSnapshot();
+  await recordNetWorthSnapshot().catch(() => {});
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [acc, inv, subs, txns, hist, rec, cats] = await Promise.all([

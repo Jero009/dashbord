@@ -187,15 +187,17 @@ const isOverdue = (dateStr: string | null): boolean => {
 const loadSubscriptions = async () => {
   subscriptions.value = await getFinanceSubscriptions();
   if (getNotifSubscriptionEnabled()) {
+    // Pass the full list (incl. paused/income) so the scheduler can shed their
+    // stale reminders; it internally schedules only active expense items.
     await scheduleSubscriptionReminders(
-      subscriptions.value
-        .filter((s) => isActive(s) && s.direction !== 'income')
-        .map((s) => ({
-          id: Number(s.id),
-          name: String(s.name),
-          amount: Number(s.amount),
-          next_due_date: s.next_due_date ?? null,
-        })),
+      subscriptions.value.map((s) => ({
+        id: Number(s.id),
+        name: String(s.name),
+        amount: Number(s.amount),
+        next_due_date: s.next_due_date ?? null,
+        status: String(s.status ?? 'active'),
+        direction: String(s.direction ?? 'expense'),
+      })),
       getNotifSubscriptionDaysBefore()
     );
   }
