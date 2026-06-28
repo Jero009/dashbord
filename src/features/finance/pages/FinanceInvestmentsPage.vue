@@ -53,6 +53,11 @@
                 <ion-input v-model="investmentQuantity" type="number" inputmode="decimal" class="styled-input"></ion-input>
               </div>
             </div>
+            <div class="field-group">
+              <label class="field-label">Ticker / symbol</label>
+              <ion-input v-model="investmentSymbol" class="styled-input" :placeholder="symbolPlaceholder" autocapitalize="characters"></ion-input>
+              <span class="field-hint">{{ investmentSymbol.trim() ? 'Value auto-updates from live prices' : 'Optional — enables live price tracking' }}</span>
+            </div>
             <div class="form-fields--inline">
               <div class="field-group">
                 <label class="field-label">Cost basis</label>
@@ -80,13 +85,26 @@
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="section-kicker">Holdings</p>
-            <span class="card-count">{{ investments.length }}</span>
+            <button v-if="hasSymbols" class="refresh-btn" :disabled="refreshing" @click="refreshPrices(false)">
+              <ion-icon :icon="refreshOutline" :class="{ spinning: refreshing }" />
+              {{ refreshing ? 'Updating' : 'Refresh' }}
+            </button>
+            <span v-else class="card-count">{{ investments.length }}</span>
           </div>
+          <p v-if="lastUpdated" class="updated-line">Live prices · updated {{ lastUpdated }}</p>
           <div v-if="investments.length" class="item-list">
             <div v-for="inv in holdingRows" :key="inv.id" class="list-item">
               <div class="list-item__info">
-                <strong class="list-item__name">{{ inv.name }}</strong>
-                <span class="list-item__meta">{{ inv.type }} · {{ inv.quantity }} units<template v-if="inv.account_name"> · {{ inv.account_name }}</template></span>
+                <div class="list-item__name-row">
+                  <strong class="list-item__name">{{ inv.name }}</strong>
+                  <span v-if="inv.symbol" class="ticker">{{ inv.symbol }}</span>
+                  <span v-if="inv.changePct !== null" class="day-chip" :class="inv.changePct >= 0 ? 'metric-positive' : 'metric-negative'">
+                    {{ inv.changePct >= 0 ? '+' : '−' }}{{ Math.abs(inv.changePct).toFixed(2) }}%
+                  </span>
+                </div>
+                <span class="list-item__meta">
+                  {{ inv.type }} · {{ inv.quantity }} units<template v-if="inv.unitPrice"> @ {{ formatCurrency(inv.unitPrice) }}</template><template v-if="inv.account_name"> · {{ inv.account_name }}</template>
+                </span>
               </div>
               <div class="list-item__end">
                 <div class="list-item__figs">
@@ -126,7 +144,7 @@ import {
   toastController,
   alertController,
 } from '@ionic/vue';
-import { createOutline, trashOutline } from 'ionicons/icons';
+import { createOutline, trashOutline, refreshOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
@@ -134,23 +152,37 @@ import {
   addFinanceInvestment,
   updateFinanceInvestment,
   deleteFinanceInvestment,
+  updateInvestmentPrice,
   getFinanceInvestments,
   getFinanceAccounts,
 } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
-import { hapticMedium, hapticHeavy, hapticSuccess } from '@/shared/utils/haptics';
+import { hapticMedium, hapticHeavy, hapticSuccess, hapticLight } from '@/shared/utils/haptics';
 import { investmentsTotal, investmentsCostBasis } from '@/features/finance/finance';
+import { fetchInvestmentPrices, type PriceQuote } from '@/features/finance/prices';
 
 const investmentName = ref('');
 const investmentType = ref('stock');
 const investmentQuantity = ref('');
 const investmentCost = ref('');
 const investmentValue = ref('');
+const investmentSymbol = ref('');
 const investmentAccountId = ref<number | null>(null);
 const editingId = ref<number | null>(null);
 
 const investments = ref<Array<Record<string, any>>>([]);
 const accounts = ref<Array<Record<string, any>>>([]);
+
+// 24h change % keyed by holding id, populated by the last live-price refresh.
+const dayChange = ref<Map<number, number | null>>(new Map());
+const refreshing = ref(false);
+const lastUpdated = ref('');
+
+const hasSymbols = computed(() => investments.value.some((i) => String(i.symbol ?? '').trim()));
+
+const symbolPlaceholder = computed(() =>
+  investmentType.value === 'crypto' ? 'BTC, ETH, SOL…' : 'AAPL, MSFT, VOO…'
+);
 
 const totalValue = computed(() => investmentsTotal(investments.value));
 const totalCost = computed(() => investmentsCostBasis(investments.value));
@@ -160,19 +192,26 @@ const gainClass = computed(() => (totalGain.value >= 0 ? 'metric-positive' : 'me
 
 const holdingRows = computed(() =>
   investments.value.map((i) => {
+    const id = Number(i.id);
     const value = Number(i.value) || 0;
     const cost = Number(i.cost_basis) || 0;
     const gain = value - cost;
+    const qty = Number(i.quantity) || 0;
+    const unitPrice = Number(i.last_price) || (qty > 0 ? value / qty : 0);
+    const change = dayChange.value.get(id);
     return {
-      id: Number(i.id),
+      id,
       name: String(i.name),
       type: String(i.type),
       quantity: i.quantity,
+      symbol: i.symbol ? String(i.symbol).toUpperCase() : '',
       account_name: i.account_name,
       value,
       cost,
       gain,
       gainPct: cost > 0 ? (gain / cost) * 100 : 0,
+      unitPrice,
+      changePct: change === undefined ? null : change,
       raw: i,
     };
   })
@@ -185,6 +224,56 @@ const loadAll = async () => {
   ]);
   investments.value = inv;
   accounts.value = acc;
+  // Auto-refresh quietly on entry when any holding has a symbol, so values feel live.
+  if (hasSymbols.value) refreshPrices(true);
+};
+
+const refreshPrices = async (silent: boolean) => {
+  if (refreshing.value) return;
+  const priceable = investments.value
+    .filter((i) => String(i.symbol ?? '').trim())
+    .map((i) => ({ id: Number(i.id), type: String(i.type), symbol: String(i.symbol) }));
+  if (!priceable.length) return;
+
+  refreshing.value = true;
+  if (!silent) hapticLight();
+  let quotes: Map<number, PriceQuote>;
+  try {
+    quotes = await fetchInvestmentPrices(priceable);
+  } catch {
+    refreshing.value = false;
+    if (!silent) await showToast('price fetch failed', 'warning');
+    return;
+  }
+
+  if (quotes.size === 0) {
+    refreshing.value = false;
+    if (!silent) await showToast('no prices found', 'warning');
+    return;
+  }
+
+  const nextChange = new Map<number, number | null>();
+  for (const inv of investments.value) {
+    const id = Number(inv.id);
+    const quote = quotes.get(id);
+    if (!quote) continue;
+    const qty = Number(inv.quantity) || 0;
+    const value = qty * quote.price;
+    nextChange.set(id, quote.changePct);
+    try {
+      await updateInvestmentPrice(id, value, quote.price);
+    } catch {
+      /* keep going; one failed write shouldn't abort the batch */
+    }
+  }
+  dayChange.value = nextChange;
+  lastUpdated.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  investments.value = await getFinanceInvestments().catch(() => investments.value);
+  refreshing.value = false;
+  if (!silent) {
+    hapticSuccess();
+    await showToast(`updated ${quotes.size} price${quotes.size === 1 ? '' : 's'}`, 'success');
+  }
 };
 
 const showToast = async (message: string, color: 'warning' | 'success') => {
@@ -199,6 +288,7 @@ const resetForm = () => {
   investmentQuantity.value = '';
   investmentCost.value = '';
   investmentValue.value = '';
+  investmentSymbol.value = '';
   investmentAccountId.value = null;
 };
 
@@ -210,6 +300,7 @@ const beginEdit = (inv: Record<string, any>) => {
   investmentQuantity.value = String(inv.quantity ?? '');
   investmentCost.value = String(inv.cost_basis ?? '');
   investmentValue.value = String(inv.value ?? '');
+  investmentSymbol.value = inv.symbol ? String(inv.symbol) : '';
   investmentAccountId.value = inv.account_id != null ? Number(inv.account_id) : null;
 };
 
@@ -221,8 +312,13 @@ const saveInvestment = async () => {
   const quantity = Number(investmentQuantity.value);
   const value = Number(investmentValue.value);
   const cost = Number(investmentCost.value || 0);
+  const symbol = investmentSymbol.value.trim() || null;
   if (!Number.isFinite(quantity) || !Number.isFinite(value) || quantity < 0 || value < 0) {
     await showToast('invalid amount', 'warning');
+    return;
+  }
+  if (!symbol && value <= 0) {
+    await showToast('add a value or a ticker', 'warning');
     return;
   }
 
@@ -236,7 +332,8 @@ const saveInvestment = async () => {
         quantity,
         value,
         investmentAccountId.value,
-        Number.isFinite(cost) ? cost : 0
+        Number.isFinite(cost) ? cost : 0,
+        symbol
       );
     } else {
       await addFinanceInvestment(
@@ -245,7 +342,8 @@ const saveInvestment = async () => {
         quantity,
         value,
         investmentAccountId.value,
-        Number.isFinite(cost) ? cost : 0
+        Number.isFinite(cost) ? cost : 0,
+        symbol
       );
     }
   } catch {
@@ -253,6 +351,8 @@ const saveInvestment = async () => {
     return;
   }
   resetForm();
+  // loadAll auto-refreshes live prices when any holding has a ticker, so a
+  // newly-added symbol's value populates without an extra call here.
   await loadAll();
   hapticSuccess();
   await showToast('saved', 'success');
@@ -509,6 +609,75 @@ onIonViewWillEnter(loadAll);
   background: rgba(var(--nt-ink), 0.05);
   color: rgba(var(--nt-ink), 0.6);
   font-size: 0.95rem;
+}
+
+.field-hint {
+  font-size: 0.68rem;
+  color: rgba(var(--nt-ink), 0.4);
+}
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(var(--nt-ink), 0.06);
+  border: none;
+  border-radius: var(--nt-radius-pill);
+  padding: 5px 12px;
+  color: rgba(var(--nt-ink), 0.85);
+  font-family: var(--nt-font-head);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+}
+
+.refresh-btn ion-icon {
+  font-size: 0.9rem;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.updated-line {
+  margin: -8px 0 0;
+  font-size: 0.68rem;
+  color: rgba(var(--nt-ink), 0.4);
+}
+
+.list-item__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ticker {
+  font-family: var(--nt-font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(var(--nt-ink), 0.6);
+  background: rgba(var(--nt-ink), 0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.day-chip {
+  font-family: var(--nt-font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
 }
 
 .empty-state {

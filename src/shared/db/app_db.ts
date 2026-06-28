@@ -330,6 +330,8 @@ async function doInitDB() {
     quantity REAL DEFAULT 0,
     value REAL DEFAULT 0,
     cost_basis REAL DEFAULT 0,
+    symbol TEXT,
+    last_price REAL,
     account_id INTEGER,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
@@ -915,6 +917,12 @@ async function doInitDB() {
     }
     if (!invColNames.has('cost_basis')) {
       await db.execute(`ALTER TABLE finance_investment ADD COLUMN cost_basis REAL DEFAULT 0;`);
+    }
+    if (!invColNames.has('symbol')) {
+      await db.execute(`ALTER TABLE finance_investment ADD COLUMN symbol TEXT;`);
+    }
+    if (!invColNames.has('last_price')) {
+      await db.execute(`ALTER TABLE finance_investment ADD COLUMN last_price REAL;`);
     }
 
     const bodyColumns = await db.query(`PRAGMA table_info("body_log");`);
@@ -2624,14 +2632,15 @@ export async function addFinanceInvestment(
   quantity: number,
   value: number,
   accountId?: number | null,
-  costBasis = 0
+  costBasis = 0,
+  symbol: string | null = null
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_investment (name, type, quantity, value, cost_basis, account_id)
-       VALUES (?, ?, ?, ?, ?, ?);`,
-      [name, type, quantity, value, costBasis, accountId ?? null]
+      `INSERT INTO finance_investment (name, type, quantity, value, cost_basis, account_id, symbol)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [name, type, quantity, value, costBasis, accountId ?? null, symbol]
     );
     return result;
   } catch (error) {
@@ -2647,18 +2656,36 @@ export async function updateFinanceInvestment(
   quantity: number,
   value: number,
   accountId?: number | null,
-  costBasis = 0
+  costBasis = 0,
+  symbol: string | null = null
 ) {
   if (!db) return;
   try {
     await db.run(
       `UPDATE finance_investment
-       SET name = ?, type = ?, quantity = ?, value = ?, cost_basis = ?, account_id = ?, updated_at = CURRENT_TIMESTAMP
+       SET name = ?, type = ?, quantity = ?, value = ?, cost_basis = ?, account_id = ?, symbol = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?;`,
-      [name, type, quantity, value, costBasis, accountId ?? null, id]
+      [name, type, quantity, value, costBasis, accountId ?? null, symbol, id]
     );
   } catch (error) {
     console.error('Error updating investment:', error);
+    throw error;
+  }
+}
+
+// Lightweight updater used by the live-price refresh: recompute the holding's
+// market value (quantity × live price) without touching its other fields.
+export async function updateInvestmentPrice(id: number, value: number, lastPrice: number) {
+  if (!db) return;
+  try {
+    await db.run(
+      `UPDATE finance_investment
+       SET value = ?, last_price = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?;`,
+      [value, lastPrice, id]
+    );
+  } catch (error) {
+    console.error('Error updating investment price:', error);
     throw error;
   }
 }
