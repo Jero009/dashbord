@@ -1379,7 +1379,7 @@ export async function getLatestCompletedSetsForExercise(exerciseId: number, excl
   if (!latestWorkoutId) return [];
 
   const result = await db.query(
-    `SELECT wes.set_number, wes.reps, wes.weight
+    `SELECT wes.set_number, wes.reps, wes.weight, wes.rpe
      FROM workout_exercise_sets wes
      JOIN workout_exercise we ON we.id = wes.workout_exercise_id
      WHERE we.workout_id = ?

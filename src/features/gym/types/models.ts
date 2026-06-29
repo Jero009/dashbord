@@ -65,6 +65,9 @@ export interface WorkoutExerciseSet {
   completed?: boolean;
   workout_exercise_id?: number;
   rpe?: number | null;
+  previous_weight?: number | null;
+  previous_reps?: number;
+  previous_rpe?: number | null;
 }
 
 export interface LatestCompletedSet {

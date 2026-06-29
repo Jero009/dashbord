@@ -79,8 +79,8 @@
                         <ion-input fill="outline" type="number" :placeholder="getRepsPlaceholder(ex, set)" v-model.number="set.reps" @ionBlur="saveSet(set)" class="input-small"></ion-input>
                         <span class="unit">reps</span>
                       </div>
-                      <button class="rpe-chip" :class="{ 'rpe-chip--set': set.rpe != null }" @click="pickRpe(set)">
-                        <span class="rpe-chip__label">{{ set.rpe != null ? set.rpe : 'RPE' }}</span>
+                      <button class="rpe-chip" :class="{ 'rpe-chip--set': set.rpe != null, 'rpe-chip--prev': set.rpe == null && set.previous_rpe != null }" @click="pickRpe(set)">
+                        <span class="rpe-chip__label">{{ getRpeLabel(set) }}</span>
                       </button>
                     </ion-item>
                     <ion-item-options side="end">
@@ -298,6 +298,10 @@
 
 .rpe-chip--set .rpe-chip__label {
   color: var(--nt-fg);
+  font-size: 1rem;
+}
+
+.rpe-chip--prev .rpe-chip__label {
   font-size: 1rem;
 }
 
@@ -543,6 +547,7 @@ const loadWorkout = async () => {
         weight: storedWeight > 0 ? storedWeight : bw,
         previous_weight: prevWeight > 0 ? prevWeight : bw,
         previous_reps: Number(previousSetByNumber.get(Number(s.set_number))?.reps) || 0,
+        previous_rpe: previousSetByNumber.get(Number(s.set_number))?.rpe ?? null,
         rpe: s.rpe ?? null,
       };
     });
@@ -896,6 +901,12 @@ const getSetPlaceholder = (exercise: any, currentSet: any, field: 'weight' | 're
 
 const getWeightPlaceholder = (exercise: any, currentSet: any) => getSetPlaceholder(exercise, currentSet, 'weight', 'kg');
 const getRepsPlaceholder = (exercise: any, currentSet: any) => getSetPlaceholder(exercise, currentSet, 'reps', 'reps');
+
+const getRpeLabel = (set: any): string => {
+  if (set?.rpe != null) return String(set.rpe);
+  if (set?.previous_rpe != null) return String(set.previous_rpe);
+  return 'RPE';
+};
 
 //timer 
 const startTime = ref<string | null>(null);
