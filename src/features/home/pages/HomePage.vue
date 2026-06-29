@@ -264,6 +264,32 @@
           </div>
         </ion-modal>
 
+        <!-- Daily recommended plan -->
+        <ion-card v-if="dailyPlan.length" class="plan-card">
+          <div class="card-topline">
+            <p class="section-kicker">Today's plan</p>
+            <span class="card-date">Circadian + recovery</span>
+          </div>
+          <div class="plan-list">
+            <div
+              v-for="row in dailyPlan"
+              :key="row.key"
+              class="plan-row"
+              :class="{ 'plan-row--active': row.active }"
+            >
+              <div class="plan-row__icon"><ion-icon :icon="row.icon" /></div>
+              <div class="plan-row__main">
+                <div class="plan-row__head">
+                  <span class="plan-row__label">{{ row.label }}</span>
+                  <span class="plan-row__time">{{ row.time }}</span>
+                </div>
+                <span class="plan-row__note">{{ row.note }}</span>
+              </div>
+              <span v-if="row.active" class="plan-row__now">Now</span>
+            </div>
+          </div>
+        </ion-card>
+
         <!-- Last workout card (big) -->
         <ion-card v-if="!activeWorkout && latestWorkout" class="workout-hero-card">
           <div class="workout-hero__topline">
@@ -420,7 +446,7 @@
 
 <script setup lang="ts">
 import { IonCard, IonContent, IonHeader, IonIcon, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
-import { checkmark, ellipseOutline, chevronUpOutline } from 'ionicons/icons';
+import { checkmark, ellipseOutline, chevronUpOutline, barbellOutline, bulbOutline, restaurantOutline, moonOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
@@ -1048,6 +1074,86 @@ const circNowLabel = computed(() => {
   if (circInWindow(h, sleepOnset - 1, sleepOnset + 1)) return 'Wind down';
   if (h > w.lastMealBy || h < 6) return 'Rest period';
   return 'Light tasks';
+});
+
+// ── Today's recommended plan ──────────────────────────────────────────────────
+// Concrete "do X at this time" rows derived from the circadian timing windows,
+// with the workout row tinted by today's recovery recommendation. Empty until
+// there's enough sleep data to anchor a personalised schedule.
+interface PlanRow {
+  key: string;
+  icon: string;
+  label: string;
+  time: string;
+  note: string;
+  active: boolean;
+}
+
+const dailyPlan = computed<PlanRow[]>(() => {
+  const w = circWindows.value;
+  if (!w || circInsufficient.value) return [];
+
+  const now = circNowX.value;
+  const rows: PlanRow[] = [];
+
+  // Workout — current window, else the next one today, else tomorrow's morning.
+  const exWindows = [w.exerciseMorning, w.exerciseAfternoon].filter(
+    (e): e is { start: number; end: number } => !!e
+  );
+  const exWin =
+    exWindows.find(e => circInWindow(now, e.start, e.end)) ??
+    exWindows.find(e => e.start > now) ??
+    exWindows[0];
+  if (exWin) {
+    const level = recovery.value?.level;
+    const note =
+      level === 'recover' ? 'Recovery is low — keep it easy or rest'
+      : level === 'train' ? 'Recovery looks good — train hard'
+      : level === 'maintain' ? 'Moderate session — train to maintain'
+      : 'Best window for a workout';
+    rows.push({
+      key: 'workout',
+      icon: barbellOutline,
+      label: 'Train',
+      time: `${circFmtHour(exWin.start)}–${circFmtHour(exWin.end)}`,
+      note,
+      active: circInWindow(now, exWin.start, exWin.end),
+    });
+  }
+
+  // Study / work — circadian cognitive peak.
+  rows.push({
+    key: 'focus',
+    icon: bulbOutline,
+    label: 'Study / work',
+    time: `${circFmtHour(w.cognitiveStart)}–${circFmtHour(w.cognitiveEnd)}`,
+    note: 'Peak alertness for deep, focused work',
+    active: circInWindow(now, w.cognitiveStart, w.cognitiveEnd),
+  });
+
+  // Eat — first meal ~1h after wake through the last-meal cutoff.
+  const firstMeal = (circWakeHour.value + 1) % 24;
+  rows.push({
+    key: 'eat',
+    icon: restaurantOutline,
+    label: 'Eat',
+    time: `${circFmtHour(firstMeal)}–${circFmtHour(w.lastMealBy)}`,
+    note: `Finish your last meal by ${circFmtHour(w.lastMealBy)} to protect sleep`,
+    active: circInWindow(now, firstMeal, w.lastMealBy),
+  });
+
+  // Sleep — bedtime target with a wind-down lead-in.
+  const windDown = (w.bedtimeTarget - 1 + 24) % 24;
+  rows.push({
+    key: 'sleep',
+    icon: moonOutline,
+    label: 'Sleep',
+    time: `Bed by ${circFmtHour(w.bedtimeTarget)}`,
+    note: `Start winding down around ${circFmtHour(windDown)}`,
+    active: circInWindow(now, windDown, w.bedtimeTarget),
+  });
+
+  return rows;
 });
 
 const loadCircadian = async () => {
@@ -1961,6 +2067,107 @@ onMounted(() => {
 }
 
 /* ── Circadian card ─────────────────────────────────────────────── */
+/* Daily recommended plan */
+.plan-card {
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--nt-radius-md);
+  background: var(--ion-color-primary);
+}
+
+.plan-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(var(--nt-ink), 0.05);
+  border: 1px solid transparent;
+}
+
+.plan-row--active {
+  background: rgba(215, 26, 33, 0.1);
+  border-color: rgba(215, 26, 33, 0.35);
+}
+
+.plan-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: rgba(var(--nt-ink), 0.06);
+  color: rgba(var(--nt-ink), 0.7);
+  font-size: 18px;
+}
+
+.plan-row--active .plan-row__icon {
+  background: rgba(215, 26, 33, 0.15);
+  color: rgb(215, 26, 33);
+}
+
+.plan-row__main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.plan-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan-row__label {
+  font-family: var(--nt-font-head);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nt-fg);
+}
+
+.plan-row__time {
+  font-family: var(--nt-font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(var(--nt-ink), 0.85);
+  white-space: nowrap;
+}
+
+.plan-row--active .plan-row__time {
+  color: rgb(215, 26, 33);
+}
+
+.plan-row__note {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: rgba(var(--nt-ink), 0.55);
+}
+
+.plan-row__now {
+  flex-shrink: 0;
+  font-family: var(--nt-font-head);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgb(215, 26, 33);
+  background: rgba(215, 26, 33, 0.12);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
 .circ-card {
   margin: 0;
   padding: 18px;
