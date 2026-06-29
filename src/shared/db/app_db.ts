@@ -146,7 +146,13 @@ async function doInitDB() {
 
     await db.execute(`PRAGMA foreign_keys = ON;`);
 
-    await db.execute(`
+    // Schema / seed / migrations below are BEST-EFFORT and isolated from each
+    // other. A failure in any one of them must never propagate out and discard
+    // the open connection — otherwise a single bad statement (e.g. a migration
+    // meeting an unexpected existing schema) makes the whole app render as if
+    // every record was deleted, when the data is in fact intact on disk.
+    try {
+      await db.execute(`
   CREATE TABLE IF NOT EXISTS workout_template (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -383,7 +389,15 @@ async function doInitDB() {
     thigh_cm REAL,
     body_fat_pct REAL
   );
-  
+  `);
+    } catch (error) {
+      console.error('initDB: schema step failed (continuing with existing data):', error);
+    }
+
+    // Seed reference data + one-time de-duplication. Data-dependent, so isolated
+    // from the schema and migration phases.
+    try {
+      await db.execute(`
   INSERT OR IGNORE INTO muscle_group (name) VALUES
     ('chest'),
     ('back'),
@@ -786,7 +800,13 @@ async function doInitDB() {
     AND NOT EXISTS (SELECT 1 FROM workout_template_exercise wte WHERE wte.id_workout_template = wt.id AND wte.id_exercise = e.id);
 
   `);
+    } catch (error) {
+      console.error('initDB: seed step failed (continuing with existing data):', error);
+    }
 
+    // Column migrations + de-dup. Isolated so a single failed migration can't
+    // hide the user's data or block the remaining steps.
+    try {
     const workoutColumns = await db.query(`PRAGMA table_info("workout");`);
     const hasWorkoutNameColumn = (workoutColumns.values || []).some(
       (column: any) => String(column.name) === 'name'
@@ -983,12 +1003,19 @@ async function doInitDB() {
         SELECT MAX(id) FROM health_metric GROUP BY date, type, source
       );
     `);
+    } catch (error) {
+      console.error('initDB: migration step failed (continuing with existing data):', error);
+    }
 
     return db;
   } catch (error) {
+    // The connection itself failed to open (or an unexpected error occurred
+    // before it was usable). Return whatever connection we have: if one is open,
+    // existing data still loads; only when we truly have none is this null. We
+    // never force `db = null` on an open connection — that was what made a failed
+    // setup step look like total data loss.
     console.error('initDB failed:', error);
-    db = null;
-    return null;
+    return db;
   }
 }
 // get muscle groups and equpment
