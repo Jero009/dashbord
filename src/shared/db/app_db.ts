@@ -139,10 +139,22 @@ export async function initDB() {
 
 async function doInitDB() {
   try {
-    // @ts-expect-error - SQLite connection type mismatch
-    db = await sqlite.createConnection('workout_db', false, 'no-encryption', 1);
+    // The native CapacitorSQLite plugin keeps its connection pool alive across
+    // WebView reloads / app resumes, but the JS `db` ref is reset to null on
+    // each fresh script load. Calling createConnection again then throws
+    // "Connection workout_db already exists" and init fails. Reuse the existing
+    // native connection when present instead of recreating it.
+    const isConn = (await sqlite.isConnection('workout_db', false)).result;
+    if (isConn) {
+      db = await sqlite.retrieveConnection('workout_db', false);
+    } else {
+      // @ts-expect-error - SQLite connection type mismatch
+      db = await sqlite.createConnection('workout_db', false, 'no-encryption', 1);
+    }
 
-    await db.open();
+    if (!(await db.isDBOpen()).result) {
+      await db.open();
+    }
 
     await db.execute(`PRAGMA foreign_keys = ON;`);
 
@@ -550,15 +562,15 @@ async function doInitDB() {
   WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Preacher Curl Barbell'));
 
   INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
-  SELECT 'Skull Crusher Dumbbell', 7, 2, 90
+  SELECT 'Skull Crusher Dumbbell', (SELECT id FROM muscle_group WHERE name = 'triceps'), 2, 90
   WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Skull Crusher Dumbbell'));
 
   INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
-  SELECT 'Close Grip Dumbbell Press', 7, 2, 90
+  SELECT 'Close Grip Dumbbell Press', (SELECT id FROM muscle_group WHERE name = 'triceps'), 2, 90
   WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Close Grip Dumbbell Press'));
 
   INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
-  SELECT 'Overhead Barbell Extension', 7, 1, 60
+  SELECT 'Overhead Barbell Extension', (SELECT id FROM muscle_group WHERE name = 'triceps'), 1, 60
   WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Overhead Barbell Extension'));
 
   INSERT INTO exercise (name, id_muscle_group, id_equipment, rest_seconds)
@@ -574,8 +586,8 @@ async function doInitDB() {
   WHERE NOT EXISTS (SELECT 1 FROM exercise WHERE lower(name) = lower('Wrist Curl Dumbbell'));
 
   UPDATE exercise
-  SET id_muscle_group = 7
-  WHERE id_muscle_group = 5
+  SET id_muscle_group = (SELECT id FROM muscle_group WHERE name = 'triceps')
+  WHERE id_muscle_group = (SELECT id FROM muscle_group WHERE name = 'arms')
     AND lower(name) IN (
       'tricep pushdown',
       'dips',
