@@ -12,6 +12,12 @@ import { restRingFrame, fullFrame, blankFrame } from './glyphFrames'
 let initPromise: Promise<boolean> | null = null
 let ready: boolean | null = null
 
+// Bumped by every entry point that wants to drive the matrix. The end-flash loop
+// (and any awaiting draw) captures the current value and bails if it's been
+// superseded — so a back-to-back set's fresh dial isn't blanked by the previous
+// rest's trailing end-flash + clear.
+let drawGen = 0
+
 async function ensureReady(): Promise<boolean> {
   if (ready !== null) return ready
   if (!initPromise) initPromise = glyphInit()
@@ -26,7 +32,9 @@ function sleep(ms: number): Promise<void> {
 // Draw the depleting dial for `fraction` of rest remaining (0..1). Safe to call
 // every tick — binding happens once, later calls are a single draw.
 export async function glyphRestDraw(fraction: number): Promise<void> {
+  const gen = ++drawGen
   if (!(await ensureReady())) return
+  if (gen !== drawGen) return // a newer draw started while we were binding
   await glyphDraw(restRingFrame(fraction))
 }
 
@@ -34,17 +42,22 @@ export async function glyphRestDraw(fraction: number): Promise<void> {
 // ding), then hand the matrix back to the system.
 export async function glyphRestEnd(): Promise<void> {
   if (ready !== true) return
+  const gen = ++drawGen
   for (let i = 0; i < 2; i++) {
+    if (gen !== drawGen) return // a new rest dial superseded us — abandon the flash
     await glyphDraw(fullFrame())
     await sleep(140)
+    if (gen !== drawGen) return
     await glyphDraw(blankFrame())
     await sleep(120)
   }
+  if (gen !== drawGen) return
   await glyphClear()
 }
 
 // Stop drawing immediately (skip/stop) and hand the matrix back.
 export async function glyphRestStop(): Promise<void> {
+  drawGen++ // abort any in-flight end-flash
   if (ready !== true) return
   await glyphClear()
 }

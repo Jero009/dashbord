@@ -485,7 +485,9 @@ ion-toast.pr-toast::part(header) {
 </style>
 <script setup lang="ts">
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
-import { ref, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { useRouter,useRoute } from 'vue-router';
 import { addCircleOutline, addOutline, timerOutline, chevronUpOutline, chevronDownOutline, statsChartOutline, trashOutline } from 'ionicons/icons';
 import type { WorkoutExercise } from '@/features/gym/types/models';
@@ -933,6 +935,9 @@ const restTimer = ref({
 let restInterval: any = null;
 let restEndTime = 0;
 let restExerciseName = '';
+let restAppStateListener: { remove: () => Promise<void> } | null = null;
+let restVisibilityHandler: (() => void) | null = null;
+let restListenersTornDown = false;
 let audioContext: AudioContext | null = null;
 
 // Web-only fallback ding (dev). On native, duckAndDing() handles the sound.
@@ -987,6 +992,9 @@ const showRestCountdown = () => {
 };
 
 const tickRestTimer = () => {
+  // A stale tick can fire just after resyncRestTimer() already finalized the timer
+  // on resume — bail so we don't ding/flash twice.
+  if (!restTimer.value.isActive) { stopRestTimer(); return; }
   const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
   restTimer.value.remaining = remaining;
   if (remaining <= 0) {
@@ -998,6 +1006,28 @@ const tickRestTimer = () => {
     clearTimerState();
   } else {
     // Draw the depleting dial on the Nothing back matrix (no-op off-device).
+    void glyphRestDraw(remaining / (restTimer.value.total || remaining));
+  }
+};
+
+// Both the on-screen countdown and the Glyph dial are driven by the JS interval,
+// which Android throttles/suspends while the app is backgrounded or the screen is
+// off — exactly the face-down scenario the Glyph dial is meant for. So both freeze
+// while we're away and the end-of-rest branch never runs. On resume, snap them
+// back to the canonical wall-clock endTime: finish quietly if it already expired
+// (the OS notification already dinged — don't double-ding), else resume ticking.
+const resyncRestTimer = () => {
+  if (!restTimer.value.isActive) return;
+  const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
+  if (remaining <= 0) {
+    restTimer.value.remaining = 0;
+    stopRestTimer();
+    void glyphRestStop(); // hand the matrix back (no stale end-flash)
+    clearTimerState();
+  } else {
+    restTimer.value.remaining = remaining;
+    // The interval may have been killed while backgrounded — make sure it runs.
+    if (!restInterval) restInterval = setInterval(tickRestTimer, 1000);
     void glyphRestDraw(remaining / (restTimer.value.total || remaining));
   }
 };
@@ -1105,7 +1135,35 @@ onIonViewWillEnter(async () => {
   restoreTimerState();
 });
 
+// Re-sync the rest timer when the app returns to the foreground (picked the phone
+// back up) — the interval that drives the countdown + Glyph dial is suspended
+// while backgrounded/screen-off, so both freeze until we snap them to wall-clock.
+onMounted(async () => {
+  if (Capacitor.isNativePlatform()) {
+    restAppStateListener = await App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) resyncRestTimer();
+    });
+    // addListener is async — if we unmounted while awaiting, remove immediately.
+    if (restListenersTornDown) {
+      void restAppStateListener.remove();
+      restAppStateListener = null;
+    }
+  } else if (typeof document !== 'undefined') {
+    restVisibilityHandler = () => { if (!document.hidden) resyncRestTimer(); };
+    document.addEventListener('visibilitychange', restVisibilityHandler);
+  }
+});
+
 onUnmounted(() => {
+  restListenersTornDown = true;
+  if (restAppStateListener) {
+    void restAppStateListener.remove();
+    restAppStateListener = null;
+  }
+  if (restVisibilityHandler && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', restVisibilityHandler);
+    restVisibilityHandler = null;
+  }
   if (interval) {
     clearInterval(interval);
     interval = null;
