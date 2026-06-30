@@ -756,7 +756,7 @@ const saveLog = async () => {
 
 .chronotype-label--early      { color: rgb(34, 197, 94); }
 .chronotype-label--intermediate { color: rgba(var(--nt-ink), 0.85); }
-.chronotype-label--late       { color: rgb(215, 26, 33); }
+.chronotype-label--late       { color: var(--ion-color-accent-red); }
 
 .quality-badge {
   font-size: 0.72rem;
@@ -770,12 +770,12 @@ const saveLog = async () => {
 
 .quality-badge--high   { border-color: rgba(34, 197, 94, 0.4); color: rgb(34, 197, 94); }
 .quality-badge--medium { border-color: rgba(var(--nt-ink), 0.12); color: rgba(var(--nt-ink), 0.85); }
-.quality-badge--low    { border-color: rgba(215, 26, 33, 0.4); color: rgb(215, 26, 33); }
+.quality-badge--low    { border-color: rgba(215, 26, 33, 0.4); color: var(--ion-color-accent-red); }
 
 .warn-flag {
   font-size: 0.72rem;
   font-weight: 400;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -806,7 +806,7 @@ const saveLog = async () => {
 .curve-now-value {
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
 }
 
 .unified-scroll-wrap {
@@ -896,7 +896,7 @@ const saveLog = async () => {
 
 .curve-line {
   fill: none;
-  stroke: rgb(215, 26, 33);
+  stroke: var(--ion-color-accent-red);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -911,7 +911,7 @@ const saveLog = async () => {
 .now-dot  { fill: var(--nt-fg); }
 
 .peak-dot {
-  fill: rgb(215, 26, 33);
+  fill: var(--ion-color-accent-red);
   stroke: var(--nt-fg);
   stroke-width: 1.5;
 }
@@ -964,7 +964,7 @@ const saveLog = async () => {
   flex-shrink: 0;
 }
 
-.legend-dot--red { background: rgb(215, 26, 33); }
+.legend-dot--red { background: var(--ion-color-accent-red); }
 
 .legend-swatch {
   width: 14px;
@@ -1014,7 +1014,7 @@ const saveLog = async () => {
   white-space: nowrap;
 }
 
-.tl-block--focus .tl-block-label { color: rgb(215, 26, 33); }
+.tl-block--focus .tl-block-label { color: var(--ion-color-accent-red); }
 
 .tl-now {
   position: absolute;
@@ -1103,7 +1103,7 @@ const saveLog = async () => {
 
 .score-number.score--green  { color: rgb(34, 197, 94); }
 .score-number.score--yellow { color: rgba(var(--nt-ink), 0.85); }
-.score-number.score--red    { color: rgb(215, 26, 33); }
+.score-number.score--red    { color: var(--ion-color-accent-red); }
 
 .score-bar-track {
   flex: 1;
@@ -1121,7 +1121,7 @@ const saveLog = async () => {
 
 .score-bar-fill.score--green  { background: rgb(34, 197, 94); }
 .score-bar-fill.score--yellow { background: rgba(var(--nt-ink), 0.85); }
-.score-bar-fill.score--red    { background: rgb(215, 26, 33); }
+.score-bar-fill.score--red    { background: var(--ion-color-accent-red); }
 
 .score-grid {
   display: flex;
@@ -1174,7 +1174,7 @@ const saveLog = async () => {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   flex-shrink: 0;
   margin-top: 6px;
 }
@@ -1304,8 +1304,8 @@ const saveLog = async () => {
 }
 
 .type-btn--active {
-  background: rgb(215, 26, 33);
-  border-color: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
   color: var(--nt-on-accent);
   font-weight: 600;
 }
@@ -1339,8 +1339,8 @@ const saveLog = async () => {
 }
 
 .energy-box--active {
-  background: rgb(215, 26, 33);
-  border-color: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
   color: var(--nt-on-accent);
   font-weight: 600;
 }
@@ -1359,7 +1359,7 @@ const saveLog = async () => {
 }
 
 .form-input:focus {
-  border-color: rgb(215, 26, 33);
+  border-color: var(--ion-color-accent-red);
   outline: none;
 }
 
@@ -1385,7 +1385,7 @@ const saveLog = async () => {
 .save-btn {
   width: 100%;
   padding: 12px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   border: none;
   border-radius: 8px;
   color: var(--nt-on-accent);
@@ -1396,7 +1396,7 @@ const saveLog = async () => {
 }
 
 .save-btn:active {
-  background: rgb(178, 19, 25);
+  background: var(--nt-accent-press);
 }
 
 /* ── Tmin timeline row ───────────────────────────────────────────────────────── */
@@ -1467,7 +1467,7 @@ const saveLog = async () => {
   gap: 10px;
 }
 
-.loading-spinner { color: rgb(215, 26, 33); }
+.loading-spinner { color: var(--ion-color-accent-red); }
 
 .loading-text {
   font-size: 0.9rem;

@@ -277,15 +277,10 @@
               class="plan-row"
               :class="{ 'plan-row--active': row.active }"
             >
-              <div class="plan-row__icon"><ion-icon :icon="row.icon" /></div>
-              <div class="plan-row__main">
-                <div class="plan-row__head">
-                  <span class="plan-row__label">{{ row.label }}</span>
-                  <span class="plan-row__time">{{ row.time }}</span>
-                </div>
-                <span class="plan-row__note">{{ row.note }}</span>
-              </div>
-              <span v-if="row.active" class="plan-row__now">Now</span>
+              <ion-icon class="plan-row__icon" :icon="row.icon" />
+              <span class="plan-row__label">{{ row.label }}</span>
+              <span class="plan-row__time">{{ row.time }}</span>
+              <span v-if="row.active" class="plan-row__now" aria-label="Now" />
             </div>
           </div>
         </ion-card>
@@ -1085,7 +1080,6 @@ interface PlanRow {
   icon: string;
   label: string;
   time: string;
-  note: string;
   active: boolean;
 }
 
@@ -1105,18 +1099,11 @@ const dailyPlan = computed<PlanRow[]>(() => {
     exWindows.find(e => e.start > now) ??
     exWindows[0];
   if (exWin) {
-    const level = recovery.value?.level;
-    const note =
-      level === 'recover' ? 'Recovery is low — keep it easy or rest'
-      : level === 'train' ? 'Recovery looks good — train hard'
-      : level === 'maintain' ? 'Moderate session — train to maintain'
-      : 'Best window for a workout';
     rows.push({
       key: 'workout',
       icon: barbellOutline,
       label: 'Train',
       time: `${circFmtHour(exWin.start)}–${circFmtHour(exWin.end)}`,
-      note,
       active: circInWindow(now, exWin.start, exWin.end),
     });
   }
@@ -1127,7 +1114,6 @@ const dailyPlan = computed<PlanRow[]>(() => {
     icon: bulbOutline,
     label: 'Study / work',
     time: `${circFmtHour(w.cognitiveStart)}–${circFmtHour(w.cognitiveEnd)}`,
-    note: 'Peak alertness for deep, focused work',
     active: circInWindow(now, w.cognitiveStart, w.cognitiveEnd),
   });
 
@@ -1138,18 +1124,16 @@ const dailyPlan = computed<PlanRow[]>(() => {
     icon: restaurantOutline,
     label: 'Eat',
     time: `${circFmtHour(firstMeal)}–${circFmtHour(w.lastMealBy)}`,
-    note: `Finish your last meal by ${circFmtHour(w.lastMealBy)} to protect sleep`,
     active: circInWindow(now, firstMeal, w.lastMealBy),
   });
 
-  // Sleep — bedtime target with a wind-down lead-in.
+  // Sleep — bedtime target, active from the wind-down lead-in.
   const windDown = (w.bedtimeTarget - 1 + 24) % 24;
   rows.push({
     key: 'sleep',
     icon: moonOutline,
     label: 'Sleep',
     time: `Bed by ${circFmtHour(w.bedtimeTarget)}`,
-    note: `Start winding down around ${circFmtHour(windDown)}`,
     active: circInWindow(now, windDown, w.bedtimeTarget),
   });
 
@@ -1339,7 +1323,7 @@ onMounted(() => {
 .workout-hero__start {
   width: 100%;
   padding: 12px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   border: none;
   border-radius: 8px;
   color: var(--nt-on-accent);
@@ -1350,7 +1334,7 @@ onMounted(() => {
 }
 
 .workout-hero__start:hover {
-  background: rgb(178, 19, 25);
+  background: var(--nt-accent-press);
 }
 
 .active-card {
@@ -1624,7 +1608,7 @@ onMounted(() => {
   display: block;
   font-size: 1.4rem;
   font-weight: 700;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
   font-family: 'Doto', monospace;
 }
 
@@ -1797,11 +1781,11 @@ onMounted(() => {
   background: rgba(var(--nt-ink), 0.08);
 }
 
-.allday-pill--workout   { background: rgba(215, 26, 33, 0.15);  color: rgb(215, 26, 33); }
+.allday-pill--workout   { background: rgba(215, 26, 33, 0.15);  color: var(--ion-color-accent-red); }
 .allday-pill--recovery  { background: rgba(34, 197, 94, 0.15);  color: rgb(34, 197, 94); }
 .allday-pill--reminder  { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
 .allday-pill--habit     { background: rgba(215, 26, 33, 0.1);   color: rgba(var(--nt-ink), 0.85); }
-.allday-pill--habit-done { background: rgba(215, 26, 33, 0.25); color: rgb(215, 26, 33); }
+.allday-pill--habit-done { background: rgba(215, 26, 33, 0.25); color: var(--ion-color-accent-red); }
 
 .allday-check {
   cursor: pointer;
@@ -1956,7 +1940,7 @@ onMounted(() => {
 .ev-start-btn {
   margin-top: 3px;
   padding: 2px 10px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   border: none;
   border-radius: 8px;
   color: var(--nt-on-accent);
@@ -2021,12 +2005,12 @@ onMounted(() => {
 }
 
 .weight-input:focus {
-  border-color: rgb(215, 26, 33);
+  border-color: var(--ion-color-accent-red);
 }
 
 .log-btn {
   padding: 6px 12px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   border: none;
   border-radius: 8px;
   color: var(--nt-on-accent);
@@ -2038,7 +2022,7 @@ onMounted(() => {
 }
 
 .log-btn:hover {
-  background: rgb(178, 19, 25);
+  background: var(--nt-accent-press);
 }
 
 .weight-card__spark {
@@ -2077,7 +2061,6 @@ onMounted(() => {
 
 .plan-list {
   display: grid;
-  gap: 10px;
   margin-top: 14px;
 }
 
@@ -2085,50 +2068,27 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(var(--nt-ink), 0.05);
-  border: 1px solid transparent;
+  padding: 12px 2px;
+  border-top: 1px solid var(--nt-border);
 }
 
-.plan-row--active {
-  background: rgba(215, 26, 33, 0.1);
-  border-color: rgba(215, 26, 33, 0.35);
+.plan-row:first-child {
+  border-top: none;
 }
 
 .plan-row__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
   flex-shrink: 0;
-  border-radius: 9px;
-  background: rgba(var(--nt-ink), 0.06);
-  color: rgba(var(--nt-ink), 0.7);
-  font-size: 18px;
+  font-size: 17px;
+  color: rgba(var(--nt-ink), 0.4);
 }
 
 .plan-row--active .plan-row__icon {
-  background: rgba(215, 26, 33, 0.15);
-  color: rgb(215, 26, 33);
-}
-
-.plan-row__main {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.plan-row__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  color: var(--ion-color-accent-red);
 }
 
 .plan-row__label {
+  flex: 1;
+  min-width: 0;
   font-family: var(--nt-font-head);
   font-size: 0.8rem;
   font-weight: 600;
@@ -2146,26 +2106,15 @@ onMounted(() => {
 }
 
 .plan-row--active .plan-row__time {
-  color: rgb(215, 26, 33);
-}
-
-.plan-row__note {
-  font-size: 0.75rem;
-  line-height: 1.35;
-  color: rgba(var(--nt-ink), 0.55);
+  color: var(--ion-color-accent-red);
 }
 
 .plan-row__now {
   flex-shrink: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgb(215, 26, 33);
-  background: rgba(215, 26, 33, 0.12);
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
-  padding: 3px 8px;
+  background: var(--ion-color-accent-red);
 }
 
 .circ-card {
@@ -2187,7 +2136,7 @@ onMounted(() => {
 .circ-now-pill {
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
   background: rgba(215, 26, 33, 0.1);
   border-radius: 999px;
   padding: 2px 10px;
@@ -2241,7 +2190,7 @@ onMounted(() => {
 
 .circ-legend-dot--focus    { background: rgba(var(--nt-ink), 0.5); }
 .circ-legend-dot--exercise { background: rgb(34, 197, 94); }
-.circ-legend-dot--curve    { background: rgb(215, 26, 33); }
+.circ-legend-dot--curve    { background: var(--ion-color-accent-red); }
 
 .circ-log-section {
   margin-top: 12px;
@@ -2292,7 +2241,7 @@ onMounted(() => {
   padding: 12px 0;
   border: none;
   border-radius: 8px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   color: var(--nt-on-accent);
   font-size: 0.9rem;
   font-weight: 600;
@@ -2326,8 +2275,8 @@ onMounted(() => {
 }
 
 .circ-type-btn--active {
-  background: rgb(215, 26, 33);
-  border-color: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
   color: var(--nt-on-accent);
 }
 
@@ -2369,8 +2318,8 @@ onMounted(() => {
 }
 
 .circ-energy-btn--active {
-  background: rgb(215, 26, 33);
-  border-color: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
+  border-color: var(--ion-color-accent-red);
   color: var(--nt-on-accent);
 }
 

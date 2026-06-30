@@ -189,7 +189,7 @@ onIonViewWillEnter(async () => {
 
 .snapshot-value--event {
   font-size: 1.1rem;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
 }
 
 .snapshot-value--muted { color: rgba(var(--nt-ink), 0.25); }
@@ -237,7 +237,7 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.dot--workout  { background: rgb(215, 26, 33); }
+.dot--workout  { background: var(--ion-color-accent-red); }
 .dot--school   { background: rgba(var(--nt-ink), 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
 .dot--sleep    { background: rgba(var(--nt-ink), 0.5); }
@@ -263,7 +263,7 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.tag--workout  { background: rgba(215, 26, 33,0.15);  color: rgb(215, 26, 33); }
+.tag--workout  { background: rgba(215, 26, 33,0.15);  color: var(--ion-color-accent-red); }
 .tag--school   { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);  color: rgb(34,197,94); }
 .tag--sleep    { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
@@ -295,7 +295,7 @@ onIonViewWillEnter(async () => {
 
 .nav-tile__icon {
   font-size: 20px;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
   flex-shrink: 0;
 }
 

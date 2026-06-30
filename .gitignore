@@ -45,6 +45,10 @@ android/.idea/
 keystore.properties
 release.keystore
 
+# Agent instruction files — local only
+AGENTS.md
+CLAUDE.md
+
 # graphify-out is tracked (graph.json only); cache + dated snapshots excluded via nested .gitignore
 .claude/worktrees/agent-a661213ae98e94606
 .claude/worktrees/agent-a55eaaa9d111b3eb0

@@ -693,7 +693,7 @@ const handleConnect = async () => {
 
 .label--green  { color: rgb(34, 197, 94); }
 .label--yellow { color: rgba(var(--nt-ink), 0.85); }
-.label--red    { color: rgb(215, 26, 33); }
+.label--red    { color: var(--ion-color-accent-red); }
 .label--muted  { color: rgba(var(--nt-ink), 0.5); }
 
 .ready-badges { display: flex; gap: 6px; }
@@ -725,7 +725,7 @@ const handleConnect = async () => {
 
 .drain-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
-.drain-val { color: rgb(215, 26, 33); }
+.drain-val { color: var(--ion-color-accent-red); }
 .drain-val--positive { color: rgb(34, 197, 94); }
 
 .readiness-mini-grid { grid-template-columns: repeat(3, 1fr); }
@@ -759,7 +759,7 @@ const handleConnect = async () => {
 
 .score--green  { color: rgb(34, 197, 94); }
 .score--yellow { color: rgba(var(--nt-ink), 0.85); }
-.score--red    { color: rgb(215, 26, 33); }
+.score--red    { color: var(--ion-color-accent-red); }
 .score--muted  { color: rgba(var(--nt-ink), 0.25); }
 
 .sleep-score-sub {
@@ -810,7 +810,7 @@ const handleConnect = async () => {
   flex-shrink: 0;
 }
 
-.dot--workout  { background: rgb(215, 26, 33); }
+.dot--workout  { background: var(--ion-color-accent-red); }
 .dot--school   { background: rgba(var(--nt-ink), 0.85); }
 .dot--recovery { background: rgb(34, 197, 94); }
 .dot--sleep    { background: rgba(var(--nt-ink), 0.5); }
@@ -836,7 +836,7 @@ const handleConnect = async () => {
   flex-shrink: 0;
 }
 
-.tag--workout  { background: rgba(215, 26, 33,0.15);   color: rgb(215, 26, 33); }
+.tag--workout  { background: rgba(215, 26, 33,0.15);   color: var(--ion-color-accent-red); }
 .tag--school   { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
 .tag--recovery { background: rgba(34,197,94,0.15);   color: rgb(34,197,94); }
 .tag--sleep    { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
@@ -849,7 +849,7 @@ const handleConnect = async () => {
 
 .rh-line {
   fill: none;
-  stroke: rgb(215, 26, 33);
+  stroke: var(--ion-color-accent-red);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -858,7 +858,7 @@ const handleConnect = async () => {
 .rh-area { fill: rgba(215, 26, 33, 0.15); stroke: none; }
 
 .rh-dot {
-  fill: rgb(215, 26, 33);
+  fill: var(--ion-color-accent-red);
   cursor: pointer;
 }
 
@@ -874,7 +874,7 @@ const handleConnect = async () => {
   border: 1px solid rgba(215, 26, 33, 0.4);
 }
 
-.rh-tooltip strong { font-size: 1.1rem; color: rgb(215, 26, 33); }
+.rh-tooltip strong { font-size: 1.1rem; color: var(--ion-color-accent-red); }
 .rh-tooltip small  { font-size: 0.75rem; color: rgba(215, 26, 33, 0.7); }
 
 .rh-axis {
@@ -938,7 +938,7 @@ const handleConnect = async () => {
   height: 40px;
   border-radius: 10px;
   background: rgba(215, 26, 33, 0.12);
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1011,7 +1011,7 @@ const handleConnect = async () => {
 .sync-btn {
   width: 100%;
   padding: 12px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   color: var(--nt-on-accent);
   border: none;
   border-radius: 8px;
@@ -1022,7 +1022,7 @@ const handleConnect = async () => {
 }
 
 .sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.sync-btn:not(:disabled):active { background: rgb(178, 19, 25); }
+.sync-btn:not(:disabled):active { background: var(--nt-accent-press); }
 
 /* ── Responsive ── */
 @media (min-width: 600px) {

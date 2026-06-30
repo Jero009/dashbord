@@ -119,7 +119,7 @@ const goToExercisePicker = () => {
   router.push({
     name: 'ExercisePicker',
     query: {
-      templateId: route.params.id // ✅ THIS IS REQUIRED
+      templateId: route.params.id // REQUIRED
     }
   });
 };
@@ -209,7 +209,7 @@ const confirm = async () => {
     const ex = exercises.value[i];
 
     if (ex.id === 0) {
-      // 🆕 NEW → INSERT
+      // NEW -> INSERT
       await addExerciseToTemplate(
         templateId,
         ex.id_exercise,
@@ -219,7 +219,7 @@ const confirm = async () => {
         ex.rpe ?? null
       );
     } else {
-      // 🔁 EXISTING → UPDATE
+      // EXISTING -> UPDATE
       await editTemplateExercises(
         ex.id,
         Number(ex.set_number),

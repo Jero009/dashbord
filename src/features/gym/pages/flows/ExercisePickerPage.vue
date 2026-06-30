@@ -69,11 +69,19 @@
 .exercise-item {
   margin: 10px auto;
   width: 100%;
-  background-color: var(--ion-color-medium);
-  border-radius: 10px;
-  padding: 12px 16px;
-  --padding-start: 0;
-  --padding-end: 0;
+  /* Style the ion-item via its own custom props so the rounded surface is a
+     single colour — setting `background-color` on the host leaves the inner
+     `.item-native` background (square corners) showing through as a 2nd tone. */
+  --background: var(--ion-color-primary);
+  --background-activated: var(--nt-surface-2);
+  --background-hover: var(--nt-surface-2);
+  --border-radius: 10px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --inner-padding-end: 0;
+  --min-height: 0;
   cursor: pointer;
 }
 
@@ -95,7 +103,6 @@
   font-size: 16px;
   font-weight: 500;
   color: var(--ion-color-light);
-  font-family: 'Doto', sans-serif;
 }
 
 .muscle-group-select {

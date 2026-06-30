@@ -1295,10 +1295,11 @@ export async function deleteTemplate(id: number) {
 
 export async function startWorkoutFromTemplate(templateId: number) {
   if (!db) return;
+  const conn = db;
 
   try {
     const template = await getTemplateById(templateId);
-    const result = await db.run(
+    const result = await conn.run(
       `INSERT INTO workout (id_workout_template, name) VALUES (?, ?)`,
       [templateId, template?.name || null]
     );
@@ -1312,8 +1313,7 @@ export async function startWorkoutFromTemplate(templateId: number) {
     const templateExercises = await getTemplateExercises(templateId);
 
     for (const ex of templateExercises) {
-      if (!db) continue;
-      const resultWE = await db.run(
+      const resultWE = await conn.run(
         `INSERT INTO workout_exercise (workout_id, exercise_id, order_index) VALUES (?, ?, ?)`,
         [workoutId, ex.id_exercise, ex.order_index]
       );
@@ -1331,7 +1331,7 @@ export async function startWorkoutFromTemplate(templateId: number) {
           weight = prevSet.weight;
         }
 
-        await db.run(
+        await conn.run(
           'INSERT INTO workout_exercise_sets (workout_exercise_id,set_number,reps,weight) values(?, ?, ?, ?)',
           [workoutExerciseId, i + 1, reps, weight]
         );
@@ -1600,10 +1600,11 @@ export async function addExerciseToWorkout(
   defaultWeight: number = 0
 ) {
   if (!db) return;
+  const conn = db;
 
   try {
     // Insert the exercise into workout_exercise
-    const resultWE = await db.run(
+    const resultWE = await conn.run(
       `INSERT INTO workout_exercise (workout_id, exercise_id, order_index) VALUES (?, ?, ?)`,
       [workoutId, exerciseId, orderIndex]
     );
@@ -1613,7 +1614,7 @@ export async function addExerciseToWorkout(
 
     if (previousSets.length > 0) {
       for (let i = 0; i < previousSets.length; i++) {
-        await db.run(
+        await conn.run(
           'INSERT INTO workout_exercise_sets (workout_exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?)',
           [workoutExerciseId, i + 1, previousSets[i].reps, previousSets[i].weight]
         );
@@ -1621,7 +1622,7 @@ export async function addExerciseToWorkout(
     } else {
       // Insert the initial set(s) into workout_exercise_sets using defaults
       for (let i = 0; i < defaultSetNumber; i++) {
-        await db.run(
+        await conn.run(
           'INSERT INTO workout_exercise_sets (workout_exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?)',
           [workoutExerciseId, i + 1, defaultRepNumber, defaultWeight]
         );
@@ -2326,10 +2327,11 @@ function sortDayEvents(a: any, b: any): number {
   return (b.id ?? 0) - (a.id ?? 0);
 }
 
-// An event is "overnight" when its end time is at/before its start (e.g.
-// 19:00→05:00): the end belongs to the next day.
+// An event is "overnight" when its end time is strictly before its start (e.g.
+// 19:00→05:00): the end belongs to the next day. A zero-duration event
+// (end == start) is a point event, not overnight.
 function isOvernightRow(r: any): boolean {
-  return !r.all_day && !!r.time_start && !!r.time_end && r.time_end <= r.time_start;
+  return !r.all_day && !!r.time_start && !!r.time_end && r.time_end < r.time_start;
 }
 
 // Expand one event row into dated segments within [start, end]. A normal
@@ -2481,8 +2483,8 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
     workoutsR, volumeR, sleepR, readinessR, prevReadinessR, habitR,
     spentR, budgetR, goalsR, netNowR, netThenR,
   ] = await Promise.all([
-    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start) >= date('now', ?);`, [since]),
-    db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at) >= date('now', ?);`, [since]),
+    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start, 'localtime') >= date('now', ?, 'localtime');`, [since]),
+    db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at, 'localtime') >= date('now', ?, 'localtime');`, [since]),
     db.query(`SELECT AVG(score) AS v FROM sleep_session WHERE score IS NOT NULL AND date >= date('now', ?);`, [since]),
     db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?);`, [since]),
     db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?) AND date < date('now', ?);`, [prevSince, since]),
@@ -2900,7 +2902,7 @@ export async function recordNetWorthSnapshot() {
   // Credit/loan accounts are liabilities (money owed); everything else plus the
   // value of investments is an asset. Net worth = assets − liabilities.
   const assetsRow = await db.query(
-    `SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account WHERE type NOT IN ('credit', 'loan');`
+    `SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account WHERE COALESCE(type, 'cash') NOT IN ('credit', 'loan');`
   );
   const liabRow = await db.query(
     `SELECT COALESCE(SUM(balance), 0) AS v FROM finance_account WHERE type IN ('credit', 'loan');`
@@ -3220,10 +3222,11 @@ export async function updateExercisePRs(workoutId: number): Promise<AchievedPR[]
         we.exercise_id,
         e.name as exercise_name,
         MAX(wes.weight) as max_weight,
-        (SELECT wes2.reps FROM workout_exercise_sets wes2 
-         WHERE wes2.workout_exercise_id = we.id 
-         AND wes2.weight = MAX(wes.weight) 
-         AND wes2.completed = 1 
+        (SELECT wes2.reps FROM workout_exercise_sets wes2
+         WHERE wes2.workout_exercise_id = we.id
+         AND wes2.weight = MAX(wes.weight)
+         AND wes2.completed = 1
+         ORDER BY wes2.reps DESC
          LIMIT 1) as reps_at_max_weight
       FROM workout_exercise we
       JOIN exercise e ON e.id = we.exercise_id

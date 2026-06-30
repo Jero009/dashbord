@@ -535,12 +535,12 @@ onIonViewWillEnter(loadAll);
 
 .styled-input:focus-within,
 .styled-select:focus-within {
-  border-color: rgb(215, 26, 33);
+  border-color: var(--ion-color-accent-red);
 }
 
 .add-btn {
   --background: var(--ion-color-accent-red);
-  --background-activated: rgb(178, 19, 25);
+  --background-activated: var(--nt-accent-press);
   --border-radius: 8px;
   --box-shadow: none;
   font-weight: 600;

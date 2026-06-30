@@ -13,7 +13,7 @@
   --nt-white: #FFFFFF;
 
   /* ---- Surfaces (dark default) ---- */
-  --nt-bg: #0A0A0A;                  /* app background, near-black */
+  --nt-bg: #000000;                  /* app background, true OLED black (Nothing OS) */
   --nt-surface: #1A1A1A;             /* cards: grey, not black */
   --nt-surface-2: #242424;           /* elevated / pressed */
   --nt-border: rgba(var(--nt-ink), 0.08);
@@ -40,7 +40,7 @@
   /* ---- Typography ---- */
   --nt-font-display: 'Doto', 'Space Grotesk', monospace; /* dot-matrix face */
   --nt-font-head: 'Space Grotesk', system-ui, sans-serif;
-  --nt-font-body: 'Inter', system-ui, sans-serif;
+  --nt-font-body: 'Space Grotesk', system-ui, sans-serif;
   --nt-font-mono: 'Space Mono', ui-monospace, monospace;
   --nt-tracking-label: 0.12em;
   --nt-tracking-kicker: 0.18em;
@@ -187,6 +187,10 @@ ion-alert {
 }
 
 ion-alert .alert-wrapper {
+  /* Ionic's scoped selectors (.sc-ion-alert-*) outrank a bare `ion-alert`
+     host override, so set the surface directly here (and !important the text
+     colours below) or the alert falls back to Ionic's grey-bg / black-text. */
+  background: var(--nt-surface) !important;
   border: 1px solid var(--nt-border);
 }
 
@@ -200,11 +204,11 @@ ion-alert .alert-title {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--nt-fg);
+  color: var(--nt-fg) !important;
 }
 
 ion-alert .alert-sub-title {
-  color: var(--nt-text-dim);
+  color: var(--nt-text-dim) !important;
 }
 
 ion-alert .alert-message {
@@ -212,7 +216,7 @@ ion-alert .alert-message {
   font-family: var(--nt-font-body);
   font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--nt-text-dim);
+  color: var(--nt-text-dim) !important;
 }
 
 /* prompt input */
@@ -423,6 +427,7 @@ ion-action-sheet {
 }
 
 ion-action-sheet::part(content) {
+  background: var(--nt-surface);
   border-radius: var(--nt-radius-lg) var(--nt-radius-lg) 0 0;
   border-top: 1px solid var(--nt-border);
 }

@@ -734,7 +734,7 @@ onIonViewWillEnter(async () => {
 .sleep-ring__track { stroke: rgba(var(--nt-ink), 0.08); }
 
 .sleep-ring__progress {
-  stroke: rgb(215, 26, 33);
+  stroke: var(--ion-color-accent-red);
   stroke-linecap: round;
   stroke-dasharray: 289;
   stroke-dashoffset: calc(289 - (289 * var(--score)));
@@ -874,7 +874,7 @@ onIonViewWillEnter(async () => {
 
 .chart-line {
   fill: none;
-  stroke: rgb(215, 26, 33);
+  stroke: var(--ion-color-accent-red);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -883,7 +883,7 @@ onIonViewWillEnter(async () => {
 .chart-area { fill: rgba(215, 26, 33, 0.12); }
 
 .chart-dot {
-  fill: rgb(215, 26, 33);
+  fill: var(--ion-color-accent-red);
   cursor: pointer;
 }
 
@@ -905,7 +905,7 @@ onIonViewWillEnter(async () => {
 
 .chart-tooltip strong {
   font-size: 1.1rem;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
 }
 
 .chart-tooltip small {

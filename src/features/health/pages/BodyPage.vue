@@ -517,7 +517,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .form-input:focus {
-  border-color: rgb(215, 26, 33);
+  border-color: var(--ion-color-accent-red);
 }
 
 .form-input::placeholder {
@@ -582,7 +582,7 @@ onIonViewWillEnter(loadEntries)
 .save-btn {
   width: 100%;
   padding: 12px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
   border: none;
   border-radius: 8px;
   color: var(--nt-on-accent);
@@ -593,7 +593,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .save-btn:hover {
-  background: rgb(178, 19, 25);
+  background: var(--nt-accent-press);
 }
 
 /* Trend row */

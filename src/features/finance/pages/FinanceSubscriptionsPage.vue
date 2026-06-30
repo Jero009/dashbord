@@ -173,15 +173,25 @@ const monthlyInflow = computed(() => subscriptionsMonthlyInflow(subscriptions.va
 
 const isActive = (sub: SubscriptionRow): boolean => String(sub.status ?? 'active') === 'active';
 
+// Compare on calendar-day granularity in local time, mirroring dueLabel() so the
+// "Due soon"/"Overdue" badges never contradict the relative-date label on the same row.
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const daysUntil = (dateStr: string): number | null => {
+  const target = new Date(String(dateStr));
+  if (!Number.isFinite(target.getTime())) return null;
+  return Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
+};
+
 const isDueSoon = (dateStr: string | null): boolean => {
   if (!dateStr) return false;
-  const days = (new Date(dateStr).getTime() - Date.now()) / 86400000;
-  return days >= 0 && days <= getNotifSubscriptionDaysBefore();
+  const days = daysUntil(dateStr);
+  return days !== null && days >= 0 && days <= getNotifSubscriptionDaysBefore();
 };
 
 const isOverdue = (dateStr: string | null): boolean => {
   if (!dateStr) return false;
-  return new Date(dateStr).getTime() < Date.now();
+  const days = daysUntil(dateStr);
+  return days !== null && days < 0;
 };
 
 const loadSubscriptions = async () => {
@@ -482,12 +492,12 @@ onIonViewWillEnter(async () => {
 
 .styled-input:focus-within,
 .styled-select:focus-within {
-  border-color: rgb(215, 26, 33);
+  border-color: var(--ion-color-accent-red);
 }
 
 .add-btn {
   --background: var(--ion-color-accent-red);
-  --background-activated: rgb(178, 19, 25);
+  --background-activated: var(--nt-accent-press);
   --border-radius: 8px;
   --box-shadow: none;
   font-weight: 600;

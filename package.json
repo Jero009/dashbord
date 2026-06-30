@@ -1,7 +1,7 @@
 {
   "name": "gym",
   "private": true,
-  "version": "0.0.1",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,7 +26,6 @@
     "@capacitor/status-bar": "8.0.1",
     "@capawesome/capacitor-file-picker": "^8.0.2",
     "@capgo/capacitor-health": "^8.6.0",
-    "@fontsource/inter": "^5.2.8",
     "@fontsource/space-grotesk": "^5.2.10",
     "@fontsource/space-mono": "^5.2.9",
     "@ionic/vue": "^8.0.0",

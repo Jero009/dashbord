@@ -144,7 +144,7 @@
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Doto', sans-serif;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
   pointer-events: none;
 }
 .title {
@@ -152,7 +152,7 @@
 }
 .btn-quickstart {
   --background: var(--ion-color-accent-red);
-  --background-activated: rgb(178, 19, 25);
+  --background-activated: var(--nt-accent-press);
   --color: var(--ion-color-light);
   --color-activated: var(--ion-color-light);
   border-radius: 8px;
@@ -341,7 +341,7 @@
 
 .add-exercise-btn {
   --background: var(--ion-color-accent-red) !important;
-  --background-activated: rgb(178, 19, 25) !important;
+  --background-activated: var(--nt-accent-press) !important;
   --color: var(--ion-color-light) !important;
   --color-activated: var(--ion-color-light) !important;
   --border-radius: 8px;
@@ -396,7 +396,7 @@
   font-size: 1.8rem;
   font-weight: 700;
   font-family: 'Doto', sans-serif;
-  color: rgb(215, 26, 33);
+  color: var(--ion-color-accent-red);
 }
 
 .rest-timer-controls {
@@ -421,7 +421,7 @@
   top: 0;
   left: 0;
   height: 4px;
-  background: rgb(215, 26, 33);
+  background: var(--ion-color-accent-red);
 }
 
 .reorder-buttons {
@@ -629,7 +629,7 @@ const editRestTime = async (exercise: any) => {
       initialValue: exercise.rest_seconds || 60
     },
     cssClass: 'timer-dial-modal',
-    breakpoints: [0, 0.5, 1],
+    breakpoints: [0, 0.9, 1],
     initialBreakpoint: 0.9,
   });
 

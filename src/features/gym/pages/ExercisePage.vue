@@ -229,14 +229,12 @@
   background-color: var(--ion-color-primary);
   color: var(--ion-color-light);
   border-radius: 10px;
-  font-family: Doto;
 }
 
 .modal-form ion-select {
   --background: var(--ion-color-primary);
   --color: var(--ion-color-light);
   --border-radius: 10px;
-  font-family: Doto;
 }
 
 @media (max-width: 700px) {
