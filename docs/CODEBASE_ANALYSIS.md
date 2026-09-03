@@ -4,7 +4,7 @@
 > (June 2026, branch `main` @ `97b64a0`, v1.0.0). Intended as the primary onboarding
 > document for AI agents and developers. Where this document and the older files in
 > `docs/` disagree (`ARCHITECTURE.md` still calls this a "single-feature gym app"),
-> **this document and `CLAUDE.md` win**.
+> **this document and `AGENTS.md` win**.
 
 ---
 
@@ -354,7 +354,7 @@ timezone present** — DB CURRENT_TIMESTAMP values are UTC), `normalizeDateInput
 - `npm run test:e2e` — Cypress (needs dev server running; baseUrl :5173). One smoke test asserting the dashboard renders "Readiness" / "How it drains" headings.
 - CI: `.github/workflows/copilot-setup-steps.yml` only (env setup for Copilot agents: Node 20, npm ci, Playwright, sqlite3). **No build/lint/test CI gate exists.**
 - `docs/`: AI_CONTEXT.md, API.md, APP_STATUS.md, ARCHITECTURE.md, DB_SCHEMA.md, DESIGN.md, UI_STRUCTURE.md — **partially stale** (written when only the gym feature existed; DB_SCHEMA.md misses health/finance tables). `database_visual structure/` holds schema PNGs (V1–V3).
-- `CLAUDE.md` is current and binding — especially the **design system** (colors, card specs, typography, no-emoji rule) and DB conventions. It references a `graphify` knowledge graph (`graphify-out/`); that tool/dir is not present in fresh clones — fall back to this document and direct reading.
+- `AGENTS.md` is current and binding — especially the **design system** (colors, card specs, typography, no-emoji rule) and DB conventions. It references a `graphify` knowledge graph (`graphify-out/`); that tool/dir is not present in fresh clones — fall back to this document and direct reading.
 
 ---
 
@@ -368,7 +368,7 @@ timezone present** — DB CURRENT_TIMESTAMP values are UTC), `normalizeDateInput
 6. Chart.js: destroy in `onUnmounted`, `flush: 'post'` watchers, `animation: false`, red line `rgb(239,68,68)`, ticks `rgba(255,255,255,0.4)`, grid `rgba(255,255,255,0.1)`, dark tooltip.
 7. Load data in `onIonViewWillEnter`, not just `onMounted` (Ionic caches pages).
 8. New calendar event types need: allowlist consideration, a `item-tag--<type>` CSS class, and a `drainPerHour` rate in `calculateBattery`.
-9. No emojis in UI. Follow the design tokens in CLAUDE.md (cards `var(--ion-color-primary)`, radius 12/10/8, accent red interactive, yellow = live/active only, Doto font for timers).
+9. No emojis in UI. Follow the design tokens in AGENTS.md (cards `var(--ion-color-primary)`, radius 12/10/8, accent red interactive, yellow = live/active only, Doto font for timers).
 10. Health Connect calls: check availability/authorization first; everything must degrade gracefully on web and on Android devices without HC.
 
 ## 11. Quirks & gotchas (hard-won knowledge)

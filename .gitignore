@@ -45,7 +45,4 @@ android/.idea/
 keystore.properties
 release.keystore
 
-# Agent instruction files — local only
-
-
 # graphify-out is tracked (graph.json only); cache + dated snapshots excluded via nested .gitignore

@@ -1,6 +1,8 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents (Claude Code, OpenCode, Cursor, Aider, etc.) when working with code in this repository.
+
+> **Single source of truth.** A legacy `CLAUDE.md` previously duplicated this file; it has been removed. The content was kept here because `AGENTS.md` is the convention supported across tools.
 
 ## Project Overview
 
@@ -47,7 +49,7 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 
 - Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
 - `HealthConnectAutoSync.vue` — initial sync on mount + 6 s retry for cold-start race condition
-- Readiness score inputs: sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate, steps
+- Readiness score inputs — 6 physiological signals, each present-weighted (the base floor scales by how many are present): sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate. **Steps is synced and stored but NOT scored** (it's passed into `ReadinessInputs` for completeness; `calculateReadinessScore`'s `scoredInputs` array is the 6 above).
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`) — 100-pt model: duration vs target (25), efficiency (15), WASO (10), deep% ≥18% (10), REM% ≥22% (12.5), bedtime timing variance vs 14-night mean (15), respiratory rate vs 14-night baseline (12.5). Returns `number | null` — null when `timeAsleepHours < 1`.
 - User device: Amazfit Active 2 via Zepp Health → Health Connect. Provides sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
 - **`toDateKey` uses local date**: extracts `YYYY-MM-DD` using `getFullYear/getMonth/getDate` (NOT `.toISOString().slice(0,10)`). UTC slice was off-by-one for UTC+ timezones.
@@ -118,13 +120,13 @@ Three pure-TS services in `src/shared/health/` (no DB/Vue deps, unit-tested in `
 
 ### Health Overview Page
 
-`HealthPage.vue` — `<div>` cards only (no `ion-card`). Sections: battery hero (drain breakdown tiles + Train/Study badges), sleep detail (score + 4 metrics + insight), body (resting HR, steps, weight), today's schedule strip, 14-day readiness SVG chart, sync button. `HealthSectionTabs.vue` tabs: **Overview / Sleep / Body / Circadian**.
+`HealthPage.vue` — `<div>` cards only (no `ion-card`). Sections: battery hero (drain breakdown tiles + Train/Study badges), sleep detail (score + 4 metrics + insight), body (resting HR, steps, weight), today's schedule strip, 14-day readiness SVG chart, sync button. `HealthSectionTabs.vue` tabs: **Overview / Sleep / Body / Circadian / Cardio** (Cardio → `/health/cardio` → `CardioPage.vue`).
 
 ### Plan Feature Module
 
 `src/features/plan/` — routes `/plan`, `/plan/goals`, `/plan/habits`, `/plan/calendar`. `PlanPage.vue` shows a live "Today" snapshot card (habits done, next event, active goals). `/plan/goals`, `/plan/habits`, `/plan/calendar` reuse Health page components.
 
-**Conditional sub-nav**: `HealthGoalsPage`, `HealthHabitsPage`, `HealthCalendarPage` render `PlanSectionTabs` under `/plan/*`, `HealthSectionTabs` otherwise — detected via `route.path.startsWith('/plan')`.
+**Sub-nav**: `HealthGoalsPage`, `HealthHabitsPage`, `HealthCalendarPage` now render `PlanSectionTabs` unconditionally (they are mounted only under `/plan/*`; the legacy `/health/{goals,habits,calendar}` routes redirect to `/plan/*`). There is no longer a route-based conditional between Plan/Health section tabs on these pages.
 
 **Tab order** in `DashboardTopBar.vue`: Home / Finance / Health / Plan / Gym. Active-tab check tests `/plan` before `/health`.
 
@@ -137,17 +139,18 @@ Three pure-TS services in `src/shared/health/` (no DB/Vue deps, unit-tested in `
 - **CRUD**: accounts/investments/subscriptions all have add + **edit (inline form, `editingId`) + delete (`alertController` confirm)**. `updateFinanceAccount`/`deleteFinanceAccount` (clears `account_id` on linked rows), `updateFinanceInvestment`/`deleteFinanceInvestment`, `updateFinanceSubscription`/`deleteFinanceSubscription`/`setFinanceSubscriptionStatus(id,'active'|'paused')`.
 - **Accounts** — grouped Assets / Liabilities, net-worth summary. **Investments** — `cost_basis` column → gain/loss amount + % per holding and portfolio total. **Subscriptions** — pause/resume (`status` excluded from totals + reminders), monthly + annualised totals, income vs expense.
 - **Live prices** — `src/features/finance/prices.ts` (`fetchInvestmentPrices(holdings)`) pulls real-time quotes via `CapacitorHttp` (bypasses WebView CORS natively; web dev may CORS-fail, degrades gracefully). Crypto → CoinGecko `simple/price` (ticker→coin-id map `CRYPTO_IDS`, priced in the user's currency, +24h change); stocks/funds → Yahoo Finance `v8/finance/chart/{SYMBOL}` (regular-market price + day change vs prev close). `finance_investment.symbol` holds the ticker; refresh recomputes `value = quantity × price` and persists via `updateInvestmentPrice(id, value, lastPrice)`. The Investments page auto-refreshes on enter when any holding has a symbol, plus a manual Refresh button; 24h change % shown per row (in-memory). Needs `android.permission.INTERNET` (already in the manifest).
+  - **Known limitation (2.0)**: crypto is fetched in the user's currency, but Yahoo stock/fund quotes are in the instrument's native currency (`meta.currency`) and `value = quantity × price` does **no FX conversion** — a non-matching-currency holding stores a value in the quote's currency. Acceptable for single-currency portfolios; a proper fix needs an FX step. Don't "fix" it by silently skipping the update (that makes Refresh a no-op for foreign holdings with no user feedback).
 - **DB**: liability-aware `recordNetWorthSnapshot` (credit/loan = `total_liabilities`, rest + investments = `total_assets`). New columns `finance_investment.cost_basis`/`symbol`/`last_price` and `finance_subscription.status` are in the `initDB` migration block + auto-handled by export/import (PRAGMA + `SELECT *`). `getRecentFinanceTransactions(limit)` feeds the overview feed.
 
 ### Sleep Hypnogram
 
-`SleepPage.vue` — single SVG hypnogram. Fixed vertical bands (top→bottom): Awake (yellow), REM (teal), Light (blue), Deep (dark blue). Connector lines between stage transitions. Right-side labels: Aw/RE/Li/De. Stage name aliases handle Health Connect variants (`sleeping`, `out_of_bed`, `unknown`). `wakeHour` clamped to `[4, 13]` to guard UTC offset errors.
+`SleepPage.vue` — single SVG hypnogram drawn as a **Zepp-style stepped waveform** (NOT fixed horizontal bands): capsule bars per stage segment + step connectors between transitions, with Awake rendered as upward spikes (`HYP_SPIKE_TOP`/`HYP_SPIKE_BOTTOM`) above the band rather than a band of its own, and a **bottom time axis** (`hypTimeAxis`). Geometry/colours come from `hypGeo`/`hypStageMeta`. Stage name aliases handle Health Connect variants (`sleeping`, `out_of_bed`, `unknown`). `wakeHour` clamped to `[4, 13]` to guard UTC offset errors.
 
 ### Circadian Rhythm Module
 
 `src/shared/health/circadian.ts` — pure TS computation, no DB or Vue:
 - `computeCircadianProfile(sessions, dayTypes)` — MSFsc chronotype, DLMO/CTmin estimates, sleep consistency, social jetlag. Needs ≥3 sessions; free-day flag needed for accurate MSFsc. **Phase offsets (corrected to literature)**: `DLMO ≈ MSFsc − 6h` (DLMO is ~2h before sleep onset, onset ~4h before mid-sleep), `CTmin ≈ DLMO + 7h ≈ MSFsc + 1h` (~2–3h before wake, matching the measured HR-nadir branch). Covered by `tests/unit/circadian.spec.ts`.
-- `computeCircadianScore(sessions, rhrToday, rhrBaseline)` — 0–100: consistency 35%, amplitude 25%, efficiency 25%, recovery 15%
+- `computeCircadianScore(sessions, rhrToday, rhrBaseline, morningLightFraction?)` — 0–100: consistency 30%, amplitude 20%, efficiency 20%, recovery 15%, **light 15%** (morning-light exposure is the strongest entrainment signal; `morningLightFraction` null = 50 neutral). `HealthPage.vue`/`CircadianPage.vue` pass the recent morning-light share.
 - `computeAlertnessCurve(profile, wakeHour)` — two-process model. Process C = `0.5 - 0.5*cos(phaseAngle)`, minimum at CTmin, maximum at CTmin+12h. Process S = exponential buildup/decay.
 - `computeCircadianWindows(profile, wakeHour)` — timing windows **anchored to wake time** (not CTmin — too noisy): morning exercise = wake+0.5h→wake+2.5h, afternoon = wake+6h→wake+9h, cognitive peak = CTmin+2h→CTmin+8h.
 - `computeCircadianRecommendations(...)` — text nudges
@@ -214,7 +217,7 @@ Bridge to the dot-matrix LED display on the back of the Nothing Phone (4a) Pro (
 **ALWAYS follow these rules.** Do not invent new patterns — extend existing ones. The system is a Nothing-OS-inspired language: near-monochrome surfaces, ONE red accent used as a signal (not decoration), dot-matrix display type for numerics only, borderless cards (surfaces separate by background contrast), mechanical motion. All tokens live in `src/theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex**, except in Chart.js configs where CSS vars don't resolve.
 
 ### Colors
-- Page background: `var(--nt-bg)` (`#0A0A0A`, near-black). Cards: `var(--nt-surface)` (`#1A1A1A` — grey, not black) via `var(--ion-color-primary)`. Elevated/pressed: `var(--nt-surface-2)` (`#242424`).
+- Page background: `var(--nt-bg)` (`#000000`, true OLED black — Nothing OS fidelity). Cards: `var(--nt-surface)` (`#1A1A1A` — grey, not black) via `var(--ion-color-primary)`. Elevated/pressed: `var(--nt-surface-2)` (`#242424`).
 - **Nothing red** `#D71A21` / `rgb(215, 26, 33)` — `var(--nt-accent)` = `var(--ion-color-accent-red)`. The ONLY accent. Used as a *signal*: live/recording states (rest timer, active workout), destructive actions, active tab, key highlights. Pressed shade: `var(--nt-accent-press)` (`#B21319` / `rgb(178, 19, 25)`).
 - **No yellow in UI chrome.** Live/active states are red (Glyph logic: red LED = recording). Gold `#FFD700` (`var(--nt-data-goal)`) survives ONLY as a data-encoding color: calendar goal dots, planner goal tags, BodyPage goal line, hypnogram Awake band.
 - Success green `rgb(34, 197, 94)` (`var(--nt-data-positive)`) — data semantics only (scores, positive deltas), never buttons/chrome.
@@ -223,7 +226,7 @@ Bridge to the dot-matrix LED display on the back of the Nothing Phone (4a) Pro (
 - Monochrome glow, never colored neon: active emphasis uses `.nt-glow-active` (white `box-shadow` bloom, `var(--nt-glow)`).
 
 ### Typography
-- Body/UI text: `Inter` (`var(--nt-font-body)`, default via `--ion-font-family`)
+- Body/UI text: `Space Grotesk` (`var(--nt-font-body)`, default via `--ion-font-family`) — Colophon-foundry grotesque, closest open font to Nothing's NType 82
 - Headings, labels, kickers, buttons, chips: `Space Grotesk` (`var(--nt-font-head)`), usually UPPERCASE with `letter-spacing: var(--nt-tracking-label)` (0.12em)
 - **Dot-matrix face `Doto` (`var(--nt-font-display)`) is seasoning, not body**: big numerics, timers, metric readouts, clock-like displays ONLY. Never body or long text.
 - Tabular/mono numerics: `Space Mono` (`var(--nt-font-mono)`)
