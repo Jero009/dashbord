@@ -174,8 +174,8 @@ const workoutsPerWeek = computed(() => {
   return weeks > 0 ? Math.round((totalWorkouts.value / weeks) * 10) / 10 : 0;
 });
 
-// Push = chest/shoulders/arms, Pull = back, Legs = legs, Core = core.
-const PUSH = new Set(['chest', 'shoulders', 'arms']);
+// Push = chest/shoulders/arms/triceps, Pull = back, Legs = legs, Core = core.
+const PUSH = new Set(['chest', 'shoulders', 'arms', 'triceps']);
 const balanceSegments = computed(() => {
   let push = 0, pull = 0, legs = 0, core = 0;
   for (const m of muscleVolume.value) {
