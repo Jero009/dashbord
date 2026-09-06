@@ -303,6 +303,23 @@ function toDateKey(date: string): string {
   return `${y}-${m}-${day}`;
 }
 
+// Steps: per-day windows anchored at device-local midnight (Europe/Ljubljana on
+// the target device). The plugin's bucket:'day' buckets by UTC, shifting steps
+// across midnight for UTC+1/+2 users. Each window is [localMidnight, +1d) and
+// the result is keyed by the local date, so a 23:50 walk lands on the right day.
+function localDayWindow(daysAgo: number): { startISO: string; endISO: string; dateKey: string } {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - daysAgo);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return {
+    startISO: start.toISOString(),
+    endISO: end.toISOString(),
+    dateKey: toDateKey(start.toISOString()),
+  };
+}
+
 // When a day bucket holds multiple sleep samples (naps / split sessions), the
 // main overnight sleep is the one with the most time asleep — not necessarily the
 // last-recorded one. Picking by duration avoids a short nap overriding it.
@@ -572,18 +589,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   // Use a 7-day window newest-first so recent days are always in the result set.
   const recentStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [stepsResult, sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
-    // queryAggregated returns one pre-summed total per day — avoids overcounting
-    // that happens when per-minute delta samples are manually summed.
-    // .catch guards against native bridge errors on APKs built before queryAggregated
-    // was available — a missing native method bypasses JS try/catch on Capacitor Android.
-    Health.queryAggregated({
-      dataType: 'steps',
-      startDate: recentStartDate,
-      endDate,
-      bucket: 'day',
-      aggregation: 'sum',
-    }).catch(() => ({ samples: [] as import('@capgo/capacitor-health').AggregatedSample[] })),
+  const [sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
     Health.readSamples({
       dataType: 'sleep',
       startDate,
@@ -615,11 +621,31 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     }),
   ]);
 
+  // Steps: one query per local day instead of one rolling bucket:'day' query.
+  // The plugin buckets aggregated queries by UTC day, which shifts late-evening
+  // steps to the wrong date for UTC+1/+2 (Europe/Ljubljana) users. Per-day
+  // windows anchored at device-local midnight keep each day's total on its own
+  // local date. Sequential awaits keep native-bridge traffic ordered.
   const stepsByDate = new Map<string, number>();
-  for (const sample of (stepsResult as { samples: AggregatedSample[] }).samples) {
-    if (!Number.isFinite(sample.value) || sample.value <= 0) continue;
-    const key = toDateKey(sample.startDate);
-    stepsByDate.set(key, sample.value);
+  for (let daysAgo = daysBack - 1; daysAgo >= 0; daysAgo--) {
+    const window = localDayWindow(daysAgo);
+    if (!window.dateKey) continue;
+    try {
+      const dayResult = await Health.queryAggregated({
+        dataType: 'steps',
+        startDate: window.startISO,
+        endDate: window.endISO,
+        bucket: 'day',
+        aggregation: 'sum',
+      }).catch(() => ({ samples: [] as AggregatedSample[] }));
+      let dayTotal = 0;
+      for (const sample of (dayResult as { samples: AggregatedSample[] }).samples) {
+        if (Number.isFinite(sample.value) && sample.value > 0) dayTotal += sample.value;
+      }
+      if (dayTotal > 0) stepsByDate.set(window.dateKey, dayTotal);
+    } catch (e) {
+      console.error(`[healthConnect] Steps aggregation failed for ${window.dateKey}:`, e);
+    }
   }
 
   const sleepByDate = new Map<string, { samples: HealthSample[] }>();
