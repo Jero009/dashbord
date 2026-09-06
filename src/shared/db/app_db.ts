@@ -1704,6 +1704,7 @@ export async function getTemplateExercisesByTemplateId(templateId: number) {
     FROM workout_template_exercise wte
     JOIN exercise e ON e.id = wte.id_exercise
     WHERE wte.id_workout_template = ?
+    ORDER BY wte.order_index ASC
   `, [templateId]);
   return result.values || [];
 }
