@@ -2680,9 +2680,9 @@ export async function updateExercisePRs(workoutId: number): Promise<AchievedPR[]
 
       if (existingPR.values && existingPR.values.length > 0) {
         const existing = existingPR.values[0];
-        // Update if new weight is heavier OR same weight but more reps
-        if (weight > existing.pr_weight || 
-            (weight === existing.pr_weight && reps > existing.pr_reps)) {
+        // Update only when the candidate set's estimated 1RM (Epley) beats
+        // the stored one — store the best weight/reps of that set.
+        if (oneRepMax > Number(existing.one_rep_max || 0)) {
           await db.run(
             `UPDATE exercise_pr SET pr_weight = ?, pr_reps = ?, one_rep_max = ?,
              date_achieved = CURRENT_TIMESTAMP, workout_id = ? WHERE exercise_id = ?`,
