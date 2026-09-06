@@ -158,21 +158,29 @@ let activeRestInterval: ReturnType<typeof setInterval> | null = null;
 // routing
 const router = useRouter();
 
+// Guard against double-tap starting two workouts.
+let startingWorkout = false;
+
 
 const startWorkout = async (templateId: number) => {
-  if (activeWorkout.value) {
+  if (startingWorkout || activeWorkout.value) {
     return;
   }
-  hapticHeavy();
+  startingWorkout = true;
+  try {
+    hapticHeavy();
 
-  const workoutId = await startWorkoutFromTemplate(templateId);
+    const workoutId = await startWorkoutFromTemplate(templateId);
 
-  if (!workoutId) {
-    console.error('Failed to start workout');
-    return;
+    if (!workoutId) {
+      console.error('Failed to start workout');
+      return;
+    }
+
+    router.push(`/workout/${workoutId}`);
+  } finally {
+    startingWorkout = false;
   }
-
-  router.push(`/workout/${workoutId}`);
 };
 // active workout id
 const backToWorkout = async () => {
@@ -350,7 +358,7 @@ const chartData = computed(() => {
   return workouts.value
     .filter(w => !!w.time_start)
     .map(w => ({
-      date: new Date(w.time_start.replace(' ', 'T')).toLocaleDateString(),
+      date: new Date(normalizeDateInput(w.time_start) || w.time_start).toLocaleDateString(),
       kg: w.total_kg || 0
     }))
     .reverse(); // oldest → newest
