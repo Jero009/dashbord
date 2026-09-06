@@ -504,7 +504,7 @@ import { duckAndDing, showRestNotification, clearRestNotification } from '@/shar
 import { glyphRestDraw, glyphRestEnd, glyphRestStop, glyphRestRelease } from '@/shared/utils/restTimerGlyph';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
-import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe } from '@/shared/db/app_db';
+import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 
 const router = useRouter();
 // id from route
@@ -758,6 +758,7 @@ const handleRemoveSet = async (workoutExerciseId: number, setId: number) => {
         role: 'destructive',
         handler: async () => {
           await deleteWorkoutSet(Number(setId));
+          await resequenceWorkoutSetNumbers(Number(workoutExerciseId));
 
           const currentExercise = workoutExercises.value.find(
             (ex) => Number(ex.id) === Number(workoutExerciseId)
@@ -835,26 +836,30 @@ const addNewExercise = async () => {
 };
 
 // Add new set to existing exercise
+let addingSetInFlight = false;
 const addNewSet = async (exercise: any) => {
-  hapticLight();
-  const nextSetNum = await getNextSetNumber(exercise.id);
-  const previousSets = await getLatestCompletedSetsForExercise(exercise.exercise_id, workoutId);
-  
-  let defaultReps = 10;
-  let defaultWeight = 0;
+  if (addingSetInFlight) return;
+  addingSetInFlight = true;
+  try {
+    hapticLight();
+    const nextSetNum = await getNextSetNumber(exercise.id);
+    const previousSets = await getLatestCompletedSetsForExercise(exercise.exercise_id, workoutId);
 
-  if (previousSets.length > 0) {
-    const prevSet = previousSets.find((s: any) => Number(s.set_number) === nextSetNum) || previousSets[previousSets.length - 1];
-    defaultReps = prevSet.reps;
-    defaultWeight = prevSet.weight;
-  }
+    let defaultReps = 10;
+    let defaultWeight = 0;
 
-  const newSetId = await addSetToWorkoutExercise(
-    exercise.id,
-    nextSetNum,
-    defaultReps,
-    defaultWeight
-  );
+    if (previousSets.length > 0) {
+      const prevSet = previousSets.find((s: any) => Number(s.set_number) === nextSetNum) || previousSets[previousSets.length - 1];
+      defaultReps = prevSet.reps;
+      defaultWeight = prevSet.weight;
+    }
+
+    const newSetId = await addSetToWorkoutExercise(
+      exercise.id,
+      nextSetNum,
+      defaultReps,
+      defaultWeight
+    );
 
   if (newSetId) {
     // Add the new set directly to the exercise's sets array
@@ -870,6 +875,9 @@ const addNewSet = async (exercise: any) => {
         rpe: null,
       });
     }
+  }
+  } finally {
+    addingSetInFlight = false;
   }
 };
 

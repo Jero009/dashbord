@@ -1378,6 +1378,24 @@ export async function deleteWorkoutSet(setId: number) {
   return result;
 }
 
+// Recompute set_number sequentially (by row id) for all sets of a workout
+// exercise, after deletions leave gaps or duplicate numbers behind.
+export async function resequenceWorkoutSetNumbers(workoutExerciseId: number) {
+  if (!db) return;
+
+  const result = await db.query(
+    'SELECT id FROM workout_exercise_sets WHERE workout_exercise_id = ? ORDER BY id',
+    [workoutExerciseId]
+  );
+  const ids = result.values || [];
+  for (let i = 0; i < ids.length; i++) {
+    await db.run(
+      'UPDATE workout_exercise_sets SET set_number = ? WHERE id = ?',
+      [i + 1, ids[i].id]
+    );
+  }
+}
+
 export async function getWorkoutById(id: number) {
   if (!db) return null;
 
