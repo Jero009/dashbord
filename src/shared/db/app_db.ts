@@ -766,6 +766,42 @@ async function doInitDB() {
       await db.execute(`ALTER TABLE workout_template ADD COLUMN archived INTEGER DEFAULT 0;`);
     }
 
+    // Enforce case-insensitive unique template names. SQLite only applies UNIQUE
+    // at table creation, so rebuild the table if the constraint is missing,
+    // renaming existing duplicates to 'Name (2)' before copying.
+    {
+      const tplIndexes = await db.query(`PRAGMA index_list('workout_template');`);
+      const hasUniqueName = (tplIndexes.values || []).some((idx: any) => {
+        if (!idx.unique) return false;
+        // idx.origin 'u' = UNIQUE constraint, 'c' = CREATE INDEX
+        return true;
+      });
+      if (!hasUniqueName) {
+        // Rename duplicate names (case-insensitive) keeping the oldest row's name.
+        await db.execute(`
+          UPDATE workout_template
+          SET name = name || ' (' || id || ')'
+          WHERE id NOT IN (
+            SELECT MIN(id) FROM workout_template GROUP BY lower(name)
+          );
+        `);
+        await db.execute(`
+          CREATE TABLE workout_template_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE COLLATE NOCASE,
+            archived INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        await db.execute(`
+          INSERT INTO workout_template_new (id, name, archived, created_at)
+          SELECT id, name, archived, created_at FROM workout_template;
+        `);
+        await db.execute(`DROP TABLE workout_template;`);
+        await db.execute(`ALTER TABLE workout_template_new RENAME TO workout_template;`);
+      }
+    }
+
     // Seed the 4-day PPL split (Push/Pull A heavy, Push/Pull B hypertrophy/volume).
     await seedPplSplitTemplates();
 
@@ -997,6 +1033,14 @@ export async function createTemplate(name: string) {
   if (!db) return;
 
   try {
+    const dup = await db.query(
+      `SELECT id FROM workout_template WHERE lower(name) = lower(?) LIMIT 1;`,
+      [name]
+    );
+    if (dup.values && dup.values.length > 0) {
+      throw new Error('A template with this name already exists');
+    }
+
     const result = await db.run(`
       INSERT INTO workout_template (name) VALUES (?);
     `, [name]);
