@@ -461,9 +461,13 @@ const loadWeeklyData = async () => {
   const weekStartStr = localDateISO(weekStart)
 
   const all = await getWorkouts()
-  weeklyCompletedWorkouts.value = all.filter((w: any) =>
-    w.time_end && w.time_end.slice(0, 10) >= weekStartStr
-  ).length
+  weeklyCompletedWorkouts.value = all.filter((w: any) => {
+    if (!w.time_end) return false
+    const normalized = normalizeDateInput(w.time_end)
+    const ts = normalized ? Date.parse(normalized) : NaN
+    if (Number.isNaN(ts)) return false
+    return localDateISO(new Date(ts)) >= weekStartStr
+  }).length
 }
 
 onMounted(async () => {
