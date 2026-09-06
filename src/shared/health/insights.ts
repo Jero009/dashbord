@@ -102,13 +102,43 @@ function recentValues(series: DatedValue[], n: number): number[] {
 
 // ── training load ────────────────────────────────────────────────────────────
 
+// Inclusive list of YYYY-MM-DD keys from start to end (same pattern as
+// trainingLoad.ts, kept local so this module stays dependency-free).
+function enumerateDates(start: string, end: string): string[] {
+  const out: string[] = [];
+  let cur = start;
+  for (let guard = 0; cur <= end && guard < 1500; guard++) {
+    out.push(cur);
+    const [y, m, d] = cur.split('-').map(Number);
+    const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+    dt.setDate(dt.getDate() + 1);
+    cur = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  }
+  return out;
+}
+
 export function computeTrainingLoad(dailyVolume: DatedValue[]): TrainingLoad {
-  const acute = recentValues(dailyVolume, 7);
-  const chronic = recentValues(dailyVolume, 28);
+  // Gap-fill missing calendar days with zero volume: rest days are real
+  // training-load zeros, not missing data. Without this, a sparse series makes
+  // `recentValues(..., 7)` read 7 *entries* (possibly weeks apart) as "acute"
+  // and divides chronic by trained-days instead of elapsed weeks.
+  const sorted = [...dailyVolume]
+    .filter((p) => Number.isFinite(p.value))
+    .sort((p, q) => p.date.localeCompare(q.date));
+
+  let filled: DatedValue[] = sorted;
+  if (sorted.length > 1) {
+    const byDate = new Map(sorted.map((p) => [p.date, p.value]));
+    const dates = enumerateDates(sorted[0].date, sorted[sorted.length - 1].date);
+    filled = dates.map((date) => ({ date, value: byDate.get(date) ?? 0 }));
+  }
+
+  const acute = filled.slice(-7).map((p) => p.value);
+  const chronic = filled.slice(-28).map((p) => p.value);
 
   const acuteTotal = acute.reduce((a, b) => a + b, 0);
   const chronicTotal = chronic.reduce((a, b) => a + b, 0);
-  // Divide by the actual span present (in weeks), not a fixed 4, so a partial
+  // Divide by the actual elapsed span (in weeks), not a fixed 4, so a partial
   // history (14–27 days) doesn't understate the chronic baseline and inflate ACWR.
   const chronicWeeklyAvg = chronicTotal / (chronic.length / 7);
 
