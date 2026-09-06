@@ -62,18 +62,6 @@
               <label class="field-label">Notes</label>
               <input v-model="form.notes" type="text" class="form-input" />
             </div>
-            <div class="photo-row">
-              <button class="photo-source-btn" @click="takePhoto">
-                <span class="photo-btn__label">Camera</span>
-              </button>
-              <button class="photo-source-btn" @click="pickPhoto">
-                <span class="photo-btn__label">Gallery</span>
-              </button>
-            </div>
-            <div v-if="form.photoPreview" class="photo-preview-wrap">
-              <img :src="form.photoPreview" class="photo-preview-img" />
-              <button class="photo-remove-btn" @click="clearPhoto">Remove</button>
-            </div>
           </div>
           <button class="save-btn" @click="saveEntry">Save</button>
         </div>
@@ -121,12 +109,6 @@
                 </div>
                 <button class="delete-btn" aria-label="Delete entry" @click="removeEntry(entry)"><ion-icon :icon="close" /></button>
               </div>
-              <img
-                v-if="photoUrls[entry.id]"
-                :src="photoUrls[entry.id]"
-                class="entry-photo"
-                @click="viewingPhoto = photoUrls[entry.id]"
-              />
             </div>
           </div>
         </div>
@@ -135,11 +117,6 @@
           <p class="empty-text">No entries yet</p>
         </div>
 
-      </div>
-
-      <!-- Full-screen photo viewer -->
-      <div v-if="viewingPhoto" class="photo-viewer" @click="viewingPhoto = null">
-        <img :src="viewingPhoto" class="photo-viewer__img" />
       </div>
     </ion-content>
   </ion-page>
@@ -151,9 +128,6 @@ import { IonPage, IonHeader, IonContent, IonIcon, IonSelect, IonSelectOption, on
 import { close } from 'ionicons/icons'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler)
-import { Directory, Filesystem } from '@capacitor/filesystem'
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
-import { FilePicker } from '@capawesome/capacitor-file-picker'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat'
 import { chartLineDataset, chartDimDataset, chartColors, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle'
@@ -165,8 +139,6 @@ import type { BodyLogEntry } from '@/shared/db/app_db'
 import { getGoalWeightKg } from '@/shared/utils/userSettings'
 
 const entries = ref<BodyLogEntry[]>([])
-const photoUrls = ref<Record<number, string>>({})
-const viewingPhoto = ref<string | null>(null)
 
 // Chart
 const chartRef = ref<HTMLCanvasElement>()
@@ -279,9 +251,6 @@ const form = ref({
   thigh: '',
   bodyFat: '',
   notes: '',
-  photoBase64: '',
-  photoMime: '',
-  photoPreview: '',
 })
 
 // Parse an optional measurement field: blank/invalid -> null.
@@ -313,55 +282,7 @@ const formatDate = (d: string) =>
 
 const loadEntries = async () => {
   entries.value = await getBodyLogs()
-  photoUrls.value = {}
-  await Promise.all(entries.value.map(async (entry) => {
-    if (!entry.photo_path) return
-    try {
-      const file = await Filesystem.readFile({ path: entry.photo_path, directory: Directory.Data })
-      const mime = entry.photo_path.endsWith('.png') ? 'image/png' : 'image/jpeg'
-      photoUrls.value[entry.id] = `data:${mime};base64,${file.data}`
-    } catch {
-      // file missing on disk, skip thumbnail
-    }
-  }))
   buildChart()
-}
-
-const applyPhoto = (base64: string, mime: string) => {
-  form.value.photoBase64 = base64
-  form.value.photoMime = mime
-  form.value.photoPreview = `data:${mime};base64,${base64}`
-}
-
-const clearPhoto = () => {
-  form.value.photoBase64 = ''
-  form.value.photoMime = ''
-  form.value.photoPreview = ''
-}
-
-const takePhoto = async () => {
-  try {
-    const photo = await Camera.getPhoto({
-      resultType: CameraResultType.Base64,
-      source: CameraSource.Camera,
-      quality: 80,
-    })
-    if (!photo.base64String) return
-    applyPhoto(photo.base64String, photo.format === 'png' ? 'image/png' : 'image/jpeg')
-  } catch {
-    // user cancelled or camera unavailable
-  }
-}
-
-const pickPhoto = async () => {
-  try {
-    const result = await FilePicker.pickFiles({ types: ['image/jpeg', 'image/png'], readData: true, limit: 1 })
-    const file = result.files?.[0]
-    if (!file?.data) return
-    applyPhoto(file.data as string, file.mimeType ?? 'image/jpeg')
-  } catch {
-    // user cancelled
-  }
 }
 
 const saveEntry = async () => {
@@ -381,24 +302,10 @@ const saveEntry = async () => {
   }
 
   try {
-    let photoPath: string | undefined
-    if (form.value.photoBase64) {
-      const ext = form.value.photoMime === 'image/png' ? 'png' : 'jpg'
-      const filename = `body_photos/${Date.now()}.${ext}`
-      try {
-        await Filesystem.mkdir({ path: 'body_photos', directory: Directory.Data, recursive: true })
-      } catch {
-        // directory already exists
-      }
-      await Filesystem.writeFile({ path: filename, data: form.value.photoBase64, directory: Directory.Data })
-      photoPath = filename
-    }
-
     await insertBodyLog({
       date: form.value.date,
       weight_kg: weight,
       notes: form.value.notes.trim() || undefined,
-      photo_path: photoPath,
       waist_cm: optionalNum(form.value.waist),
       chest_cm: optionalNum(form.value.chest),
       hips_cm: optionalNum(form.value.hips),
@@ -417,7 +324,6 @@ const saveEntry = async () => {
     form.value.thigh = ''
     form.value.bodyFat = ''
     form.value.notes = ''
-    clearPhoto()
     form.value.date = localDateISO()
 
     await loadEntries()
@@ -433,13 +339,6 @@ const saveEntry = async () => {
 
 const removeEntry = async (entry: BodyLogEntry) => {
   hapticHeavy();
-  if (entry.photo_path) {
-    try {
-      await Filesystem.deleteFile({ path: entry.photo_path, directory: Directory.Data })
-    } catch {
-      // file may already be missing
-    }
-  }
   await deleteBodyLog(entry.id)
   await loadEntries()
 }
@@ -529,56 +428,6 @@ onIonViewWillEnter(loadEntries)
 }
 
 /* Photo source row */
-.photo-row {
-  display: flex;
-  gap: 10px;
-}
-
-.photo-source-btn {
-  flex: 1;
-  padding: 10px 12px;
-  background: transparent;
-  border: 1px solid rgba(var(--nt-ink), 0.1);
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 150ms ease;
-}
-
-.photo-source-btn:hover {
-  border-color: rgba(var(--nt-ink), 0.12);
-}
-
-.photo-btn__label {
-  font-size: 0.9rem;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.photo-preview-wrap {
-  position: relative;
-}
-
-.photo-preview-img {
-  width: 100%;
-  max-height: 180px;
-  object-fit: cover;
-  border-radius: 8px;
-  display: block;
-}
-
-.photo-remove-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.6);
-  border: none;
-  border-radius: 8px;
-  color: rgba(var(--nt-ink), 0.85);
-  font-size: 0.72rem;
-  cursor: pointer;
-}
-
 .save-btn {
   width: 100%;
   padding: 12px;
@@ -668,14 +517,6 @@ onIonViewWillEnter(loadEntries)
 .entry-notes {
   font-size: 0.72rem;
   color: rgba(var(--nt-ink), 0.5);
-}
-
-.entry-photo {
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: 8px;
-  cursor: pointer;
 }
 
 .delete-btn {
@@ -768,24 +609,5 @@ onIonViewWillEnter(loadEntries)
   background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
   padding: 10px 6px 6px;
-}
-
-/* Full-screen photo viewer */
-.photo-viewer {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  cursor: pointer;
-}
-
-.photo-viewer__img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: 8px;
 }
 </style>

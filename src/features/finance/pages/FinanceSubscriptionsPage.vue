@@ -154,8 +154,6 @@ import {
   dueLabel,
   type SubscriptionRow,
 } from '@/features/finance/finance';
-import { scheduleSubscriptionReminders } from '@/shared/utils/notifications';
-import { getNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore } from '@/shared/utils/userSettings';
 
 const subscriptionName = ref('');
 const subscriptionAmount = ref('');
@@ -182,10 +180,12 @@ const daysUntil = (dateStr: string): number | null => {
   return Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
 };
 
+const DUE_SOON_DAYS = 3;
+
 const isDueSoon = (dateStr: string | null): boolean => {
   if (!dateStr) return false;
   const days = daysUntil(dateStr);
-  return days !== null && days >= 0 && days <= getNotifSubscriptionDaysBefore();
+  return days !== null && days >= 0 && days <= DUE_SOON_DAYS;
 };
 
 const isOverdue = (dateStr: string | null): boolean => {
@@ -196,21 +196,6 @@ const isOverdue = (dateStr: string | null): boolean => {
 
 const loadSubscriptions = async () => {
   subscriptions.value = await getFinanceSubscriptions();
-  if (getNotifSubscriptionEnabled()) {
-    // Pass the full list (incl. paused/income) so the scheduler can shed their
-    // stale reminders; it internally schedules only active expense items.
-    await scheduleSubscriptionReminders(
-      subscriptions.value.map((s) => ({
-        id: Number(s.id),
-        name: String(s.name),
-        amount: Number(s.amount),
-        next_due_date: s.next_due_date ?? null,
-        status: String(s.status ?? 'active'),
-        direction: String(s.direction ?? 'expense'),
-      })),
-      getNotifSubscriptionDaysBefore()
-    );
-  }
 };
 
 const loadAccounts = async () => {

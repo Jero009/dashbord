@@ -11,23 +11,9 @@ import { IonApp, IonRouterOutlet, createAnimation } from '@ionic/vue';
 import type { AnimationBuilder } from '@ionic/vue';
 import HealthConnectAutoSync from '@/shared/health/HealthConnectAutoSync.vue';
 import { Capacitor } from '@capacitor/core'
-import {
-  scheduleWeightReminder, scheduleHabitReminder, scheduleSleepReminder,
-  scheduleCalendarReminders, scheduleSubscriptionReminders,
-  scheduleMorningSummary, scheduleWeeklyDigest
-} from '@/shared/utils/notifications'
-import {
-  getNotifWeightEnabled, getNotifWeightTime,
-  getNotifHabitEnabled, getNotifHabitTime,
-  getNotifSleepEnabled, getNotifSleepTime,
-  getNotifCalendarEnabled, getNotifCalendarMinsBefore,
-  getNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore,
-  getNotifMorningEnabled, getNotifMorningTime,
-  getNotifWeeklyEnabled, getNotifWeeklyTime, getNotifWeeklyWeekday,
-} from '@/shared/utils/userSettings'
-import { initDB, getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
-import { buildMorningBody, buildWeeklyBody } from '@/shared/utils/notificationDigests'
-import { localDateISO } from '@/shared/utils/timeFormat'
+import { scheduleWeightReminder, scheduleSleepReminder } from '@/shared/utils/notifications'
+import { getNotifWeightEnabled, getNotifWeightTime, getNotifSleepEnabled, getNotifSleepTime } from '@/shared/utils/userSettings'
+import { initDB } from '@/shared/db/app_db'
 
 onMounted(async () => {
   if (!Capacitor.isNativePlatform()) return
@@ -36,37 +22,10 @@ onMounted(async () => {
   // an unhandled rejection.
   try {
     await initDB()
-    const today = localDateISO()
 
     if (getNotifWeightEnabled()) await scheduleWeightReminder(getNotifWeightTime())
 
-    if (getNotifHabitEnabled()) {
-      const habits = await getHabitsWithStatus(today)
-      const incomplete = habits.filter((h: any) => h.completed !== 1).map((h: any) => h.name as string)
-      await scheduleHabitReminder(getNotifHabitTime(), incomplete)
-    }
-
     if (getNotifSleepEnabled()) await scheduleSleepReminder(getNotifSleepTime())
-
-    if (getNotifCalendarEnabled()) {
-      const events = await getCalendarEventsForDate(today)
-      await scheduleCalendarReminders(events, getNotifCalendarMinsBefore())
-    }
-
-    if (getNotifSubscriptionEnabled()) {
-      const subs = await getFinanceSubscriptions()
-      await scheduleSubscriptionReminders(subs, getNotifSubscriptionDaysBefore())
-    }
-
-    // Recompose + reschedule the digests on every app open so their bodies
-    // reflect the latest data (local notifications fire with the body last set).
-    if (getNotifMorningEnabled()) {
-      await scheduleMorningSummary(getNotifMorningTime(), await buildMorningBody(today))
-    }
-
-    if (getNotifWeeklyEnabled()) {
-      await scheduleWeeklyDigest(getNotifWeeklyWeekday(), getNotifWeeklyTime(), await buildWeeklyBody())
-    }
   } catch (error) {
     console.error('Startup notification scheduling failed:', error)
   }

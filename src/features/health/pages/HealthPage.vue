@@ -155,20 +155,7 @@
           <p v-else class="empty-hint">No heart-rate data yet</p>
         </div>
 
-        <!-- 5. Today's plan events -->
-        <div v-if="todayEvents.length" class="card">
-          <p class="section-kicker">Today's schedule</p>
-          <ul class="event-list">
-            <li v-for="ev in todayEvents" :key="ev.id" class="event-row">
-              <span class="event-time">{{ ev.time_start ? ev.time_start.slice(0, 5) : '—' }}</span>
-              <span class="event-dot" :class="`dot--${ev.type}`"></span>
-              <span class="event-title">{{ ev.title }}</span>
-              <span class="event-tag" :class="`tag--${ev.type}`">{{ ev.type }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- 6. Readiness history -->
+        <!-- 5. Readiness history -->
         <div class="card">
           <p class="section-kicker">Readiness · last 14 days</p>
           <div v-if="readinessHistory.length >= 2" class="rh-chart">
@@ -252,7 +239,6 @@ import {
   getBodyLogs,
   queryReadinessHistory,
   getTodayCompletedWorkouts,
-  getCalendarEventsForDate,
 } from '@/shared/db/app_db';
 import type { BodyLogEntry } from '@/shared/db/app_db';
 import {
@@ -267,8 +253,7 @@ import {
   type ActivitySummary,
   type BatteryResult,
 } from '@/shared/health/healthConnect';
-import { computeCircadianScore } from '@/shared/health/circadian';
-import { getRecentCircadianLogs, getRecentSleepSessions, getRecentHealthMetrics } from '@/shared/db/app_db';
+import { getRecentHealthMetrics } from '@/shared/db/app_db';
 
 type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
 type HrPoint = { date: string; value: number; x: number; y: number; dateLabel: string };
@@ -286,9 +271,7 @@ const sleepHrBaseline  = ref<number | null>(null);
 const respRateBaseline = ref<number | null>(null);
 const readinessScore  = ref<number | null>(null);
 const batteryResult   = ref<BatteryResult | null>(null);
-const circScore       = ref<number | null>(null);
 const todayWorkouts   = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
-const todayEvents     = ref<{ id?: number; type: string; title?: string; date: string; time_start: string | null; time_end: string | null }[]>([]);
 const latestBodyLog   = ref<BodyLogEntry | null>(null);
 const activities      = ref<ActivitySummary[]>([]);
 const syncing         = ref(false);
@@ -429,7 +412,7 @@ const loadReadiness = async () => {
         respiratoryRateBaseline:  respRateBaseline.value,
       });
 
-  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, todayEvents.value, circScore.value);
+  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, []);
   batteryResult.value  = result;
   readinessScore.value = result.score;
 };
@@ -508,32 +491,17 @@ const hrAvgLineY = computed(() => {
 });
 
 const loadTodayContext = async () => {
-  const today = localDateISO();
-  const [workouts, events] = await Promise.all([
-    getTodayCompletedWorkouts(),
-    getCalendarEventsForDate(today),
-  ]);
-  todayWorkouts.value = workouts;
-  todayEvents.value   = (events as typeof todayEvents.value).sort(
-    (a, b) => (a.time_start ?? '').localeCompare(b.time_start ?? '')
-  );
+  todayWorkouts.value = await getTodayCompletedWorkouts();
 };
 
-const loadCircadianScore = async () => {
+const loadBaselines = async () => {
+  // Baselines for the readiness model (RHR / sleep HR / respiratory rate).
   try {
-    const [sessions, logs, rhrMetric, rhrHistory, sleepHrHistory, respRateHistory] = await Promise.all([
-      getRecentSleepSessions(14),
-      getRecentCircadianLogs(14),
-      getLatestHealthMetric('resting_heart_rate'),
+    const [rhrHistory, sleepHrHistory, respRateHistory] = await Promise.all([
       getRecentHealthMetrics('resting_heart_rate', 14),
       getRecentHealthMetrics('sleep_heart_rate', 14),
       getRecentHealthMetrics('respiratory_rate', 14),
     ]);
-    const recs = sessions.map(s => ({
-      date: s.date, bedtime: s.bedtime, waketime: s.waketime,
-      timeAsleepHours: s.time_asleep_hours, efficiency: s.efficiency,
-    }));
-    const rhrToday = rhrMetric ? Number(rhrMetric.value) : null;
     const rhrBase  = rhrHistory.length
       ? rhrHistory.reduce((s, m) => s + Number(m.value), 0) / rhrHistory.length
       : null;
@@ -542,9 +510,7 @@ const loadCircadianScore = async () => {
       ? sleepHrHistory.reduce((s, m) => s + Number(m.value), 0) / sleepHrHistory.length : null;
     respRateBaseline.value = respRateHistory.length >= 3
       ? respRateHistory.reduce((s, m) => s + Number(m.value), 0) / respRateHistory.length : null;
-    const lightFraction = logs.length ? logs.filter(l => l.morning_light === 1).length / logs.length : null;
-    circScore.value = computeCircadianScore(recs, rhrToday, rhrBase, lightFraction).total;
-  } catch { circScore.value = null; }
+  } catch { /* baselines stay null */ }
 };
 
 // Flag the missing-Exercise-permission case so we can warn before it crashes a sync.
@@ -559,14 +525,14 @@ const openExerciseSettings = async () => {
 };
 
 onIonViewWillEnter(async () => {
-  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore(), checkExerciseAccess()]);
+  await Promise.all([loadMetrics(), loadBody(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadBaselines(), checkExerciseAccess()]);
   await loadReadiness();
 });
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
   try {
     await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadBaselines()]);
     await loadReadiness();
   } catch {
     // silent — sync unavailable or permissions missing
@@ -591,7 +557,7 @@ const handleConnect = async () => {
       return;
     }
     const syncResult = await syncHealthConnectMetrics();
-    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadCircadianScore(), checkExerciseAccess()]);
+    await Promise.all([loadMetrics(), loadActivities(), loadReadinessHistory(), loadHrHistory(), loadTodayContext(), loadBaselines(), checkExerciseAccess()]);
     await loadReadiness();
     const t = await toastController.create({ message: `synced ${syncResult.synced} records`, duration: 2200, color: 'success' });
     await t.present();

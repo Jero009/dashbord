@@ -4,7 +4,6 @@ import { homeRoutes } from '@/features/home/routes';
 import { financeRoutes } from '@/features/finance/routes';
 import { healthRoutes } from '@/features/health/routes';
 import { settingsRoutes } from '@/features/settings/routes';
-import { planRoutes } from '@/features/plan/routes';
 import { analyticsRoutes } from '@/features/analytics/routes';
 
 const router = createRouter({
@@ -19,7 +18,6 @@ const router = createRouter({
     ...healthRoutes,
     ...gymRoutes,
     ...settingsRoutes,
-    ...planRoutes,
     ...analyticsRoutes,
   ],
 })

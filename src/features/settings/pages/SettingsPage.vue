@@ -85,11 +85,6 @@
           </div>
 
           <button class="btn-primary set-action" @click="saveTargets">Save</button>
-
-          <button class="nav-row" @click="goToGoals">
-            <span class="set-row__title">Manage goals</span>
-            <ion-icon :icon="chevronForwardOutline" class="nav-row__icon" />
-          </button>
         </div>
 
         <!-- NOTIFICATIONS -->
@@ -118,20 +113,6 @@
           </div>
 
           <!-- Habit -->
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Habit reminder</span>
-              <span class="notif-sub">Incomplete habits</span>
-            </div>
-            <div class="notif-row__controls">
-              <input v-if="notifHabitEnabled" v-model="notifHabitTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifHabit" />
-              <label class="notif-toggle">
-                <input type="checkbox" v-model="notifHabitEnabled" @change="saveNotifHabit" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
-
           <!-- Sleep -->
           <div class="notif-row">
             <div class="notif-row__label">
@@ -142,77 +123,6 @@
               <input v-if="notifSleepEnabled" v-model="notifSleepTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifSleep" />
               <label class="notif-toggle">
                 <input type="checkbox" v-model="notifSleepEnabled" @change="saveNotifSleep" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Calendar -->
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Calendar reminder</span>
-              <span class="notif-sub">Before events</span>
-            </div>
-            <div class="notif-row__controls">
-              <select v-if="notifCalendarEnabled" v-model="notifCalendarMins" class="form-select notif-select" @change="saveNotifCalendar">
-                <option :value="0">At event</option>
-                <option :value="15">15 min before</option>
-                <option :value="30">30 min before</option>
-                <option :value="60">1 hr before</option>
-              </select>
-              <label class="notif-toggle">
-                <input type="checkbox" v-model="notifCalendarEnabled" @change="saveNotifCalendar" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Subscription -->
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Subscription reminder</span>
-              <span class="notif-sub">Before renewal</span>
-            </div>
-            <div class="notif-row__controls">
-              <select v-if="notifSubscriptionEnabled" v-model="notifSubDays" class="form-select notif-select" @change="saveNotifSubscription">
-                <option :value="1">1 day before</option>
-                <option :value="3">3 days before</option>
-                <option :value="7">7 days before</option>
-              </select>
-              <label class="notif-toggle">
-                <input type="checkbox" v-model="notifSubscriptionEnabled" @change="saveNotifSubscription" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Morning summary -->
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Morning summary</span>
-              <span class="notif-sub">Readiness + agenda</span>
-            </div>
-            <div class="notif-row__controls">
-              <input v-if="notifMorningEnabled" v-model="notifMorningTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifMorning" />
-              <label class="notif-toggle">
-                <input type="checkbox" v-model="notifMorningEnabled" @change="saveNotifMorning" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Weekly digest -->
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Weekly digest</span>
-            </div>
-            <div class="notif-row__controls">
-              <select v-if="notifWeeklyEnabled" v-model.number="notifWeeklyWeekday" class="form-select notif-select" @change="saveNotifWeekly">
-                <option v-for="(d, i) in weekdayNames" :key="i" :value="i">{{ d }}</option>
-              </select>
-              <input v-if="notifWeeklyEnabled" v-model="notifWeeklyTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifWeekly" />
-              <label class="notif-toggle">
-                <input type="checkbox" v-model="notifWeeklyEnabled" @change="saveNotifWeekly" />
                 <span class="notif-toggle__track"></span>
               </label>
             </div>
@@ -260,36 +170,24 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, toastController, alertController } from '@ionic/vue'
-import { chevronForwardOutline, downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
-import { useRouter } from 'vue-router'
+import { downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
 import {
   getSleepGoalHours, setSleepGoalHours, getStepGoal, setStepGoal, getGoalWeightKg, setGoalWeightKg,
   getCurrency, setCurrency, getLastHcSyncAt, setLastHcSyncAt,
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
-  getNotifHabitEnabled, setNotifHabitEnabled, getNotifHabitTime, setNotifHabitTime,
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
-  getNotifCalendarEnabled, setNotifCalendarEnabled, getNotifCalendarMinsBefore, setNotifCalendarMinsBefore,
-  getNotifSubscriptionEnabled, setNotifSubscriptionEnabled, getNotifSubscriptionDaysBefore, setNotifSubscriptionDaysBefore,
-  getNotifMorningEnabled, setNotifMorningEnabled, getNotifMorningTime, setNotifMorningTime,
-  getNotifWeeklyEnabled, setNotifWeeklyEnabled, getNotifWeeklyTime, setNotifWeeklyTime, getNotifWeeklyWeekday, setNotifWeeklyWeekday,
 } from '@/shared/utils/userSettings'
 import type { CurrencyCode } from '@/shared/utils/userSettings'
 import {
   requestNotificationPermission,
-  scheduleWeightReminder, scheduleHabitReminder, scheduleSleepReminder,
-  scheduleCalendarReminders, scheduleSubscriptionReminders,
-  scheduleMorningSummary, scheduleWeeklyDigest,
-  cancelWeightReminder, cancelHabitReminder, cancelSleepReminder,
-  cancelCalendarReminders, cancelSubscriptionReminders,
-  cancelMorningSummary, cancelWeeklyDigest,
+  scheduleWeightReminder, scheduleSleepReminder,
+  cancelWeightReminder, cancelSleepReminder,
 } from '@/shared/utils/notifications'
-import { buildMorningBody, buildWeeklyBody } from '@/shared/utils/notificationDigests'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
 import { useTheme } from '@/shared/composables/useTheme'
 import type { ThemeMode } from '@/shared/composables/useTheme'
-import { getHabitsWithStatus, getCalendarEventsForDate, getFinanceSubscriptions } from '@/shared/db/app_db'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
 import { buildAiExport } from '@/shared/utils/aiExport'
@@ -297,8 +195,6 @@ import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
-
-const router = useRouter()
 
 // --- Appearance ---
 const { mode: themeMode, setThemeMode } = useTheme()
@@ -372,12 +268,6 @@ const currencyOptions: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'CHF']
 const currency = ref<CurrencyCode>(getCurrency())
 watch(currency, (code) => setCurrency(code))
 
-// --- Goals ---
-const goToGoals = () => {
-  hapticLight()
-  router.push('/plan/goals')
-}
-
 // --- Gym: weekly workout goal ---
 const WEEKLY_GOAL_STORAGE_KEY = 'homeWeeklyGoal'
 const weeklyGoalOptions = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12]
@@ -395,20 +285,8 @@ watch(weeklyWorkoutGoal, (goal) => {
 // --- Notifications ---
 const notifWeightEnabled = ref(getNotifWeightEnabled())
 const notifWeightTime = ref(getNotifWeightTime())
-const notifHabitEnabled = ref(getNotifHabitEnabled())
-const notifHabitTime = ref(getNotifHabitTime())
 const notifSleepEnabled = ref(getNotifSleepEnabled())
 const notifSleepTime = ref(getNotifSleepTime())
-const notifCalendarEnabled = ref(getNotifCalendarEnabled())
-const notifCalendarMins = ref(getNotifCalendarMinsBefore())
-const notifSubscriptionEnabled = ref(getNotifSubscriptionEnabled())
-const notifSubDays = ref(getNotifSubscriptionDaysBefore())
-const notifMorningEnabled = ref(getNotifMorningEnabled())
-const notifMorningTime = ref(getNotifMorningTime())
-const notifWeeklyEnabled = ref(getNotifWeeklyEnabled())
-const notifWeeklyTime = ref(getNotifWeeklyTime())
-const notifWeeklyWeekday = ref(getNotifWeeklyWeekday())
-const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const requestPermission = async () => {
   hapticMedium()
@@ -429,74 +307,12 @@ const saveNotifWeight = async () => {
   else await cancelWeightReminder()
 }
 
-const saveNotifHabit = async () => {
-  hapticLight()
-  setNotifHabitEnabled(notifHabitEnabled.value)
-  setNotifHabitTime(notifHabitTime.value)
-  if (notifHabitEnabled.value) {
-    const today = localDateISO()
-    const habits = await getHabitsWithStatus(today)
-    const incomplete = habits.filter((h: any) => h.completed !== 1).map((h: any) => h.name as string)
-    await scheduleHabitReminder(notifHabitTime.value, incomplete)
-  } else {
-    await cancelHabitReminder()
-  }
-}
-
 const saveNotifSleep = async () => {
   hapticLight()
   setNotifSleepEnabled(notifSleepEnabled.value)
   setNotifSleepTime(notifSleepTime.value)
   if (notifSleepEnabled.value) await scheduleSleepReminder(notifSleepTime.value)
   else await cancelSleepReminder()
-}
-
-const saveNotifCalendar = async () => {
-  hapticLight()
-  setNotifCalendarEnabled(notifCalendarEnabled.value)
-  setNotifCalendarMinsBefore(notifCalendarMins.value)
-  const today = localDateISO()
-  const events = await getCalendarEventsForDate(today)
-  if (notifCalendarEnabled.value) {
-    await scheduleCalendarReminders(events, notifCalendarMins.value)
-  } else {
-    await cancelCalendarReminders(events.map((e: any) => Number(e.id)))
-  }
-}
-
-const saveNotifSubscription = async () => {
-  hapticLight()
-  setNotifSubscriptionEnabled(notifSubscriptionEnabled.value)
-  setNotifSubscriptionDaysBefore(notifSubDays.value)
-  const subs = await getFinanceSubscriptions()
-  if (notifSubscriptionEnabled.value) {
-    await scheduleSubscriptionReminders(subs, notifSubDays.value)
-  } else {
-    await cancelSubscriptionReminders(subs.map((s: any) => Number(s.id)))
-  }
-}
-
-const saveNotifMorning = async () => {
-  hapticLight()
-  setNotifMorningEnabled(notifMorningEnabled.value)
-  setNotifMorningTime(notifMorningTime.value)
-  if (notifMorningEnabled.value) {
-    await scheduleMorningSummary(notifMorningTime.value, await buildMorningBody(localDateISO()))
-  } else {
-    await cancelMorningSummary()
-  }
-}
-
-const saveNotifWeekly = async () => {
-  hapticLight()
-  setNotifWeeklyEnabled(notifWeeklyEnabled.value)
-  setNotifWeeklyTime(notifWeeklyTime.value)
-  setNotifWeeklyWeekday(notifWeeklyWeekday.value)
-  if (notifWeeklyEnabled.value) {
-    await scheduleWeeklyDigest(notifWeeklyWeekday.value, notifWeeklyTime.value, await buildWeeklyBody())
-  } else {
-    await cancelWeeklyDigest()
-  }
 }
 
 // --- Database: export / import ---

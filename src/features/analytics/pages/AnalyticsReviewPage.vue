@@ -54,22 +54,6 @@
           </div>
         </div>
 
-        <!-- Habits & goals -->
-        <div class="card">
-          <p class="section-kicker">Habits &amp; goals</p>
-          <div class="bar-row">
-            <span class="bar-row__label">Habit consistency</span>
-            <span class="bar-row__value">{{ digest.habitRate !== null ? Math.round(digest.habitRate * 100) + '%' : '—' }}</span>
-          </div>
-          <div class="prog-bar"><div class="prog-bar__fill" :style="{ width: pct(digest.habitRate) }"></div></div>
-
-          <div class="bar-row">
-            <span class="bar-row__label">Goal progress ({{ digest.activeGoals }} active)</span>
-            <span class="bar-row__value">{{ digest.avgGoalProgress !== null ? Math.round(digest.avgGoalProgress * 100) + '%' : '—' }}</span>
-          </div>
-          <div class="prog-bar"><div class="prog-bar__fill" :style="{ width: pct(digest.avgGoalProgress) }"></div></div>
-        </div>
-
         <!-- Finance -->
         <div class="card">
           <p class="section-kicker">Finance</p>
@@ -107,8 +91,7 @@ import { hapticLight } from '@/shared/utils/haptics';
 const period = ref<'week' | 'month'>('week');
 const digest = ref<ReviewDigest>({
   period: 'week', workoutCount: 0, totalVolume: 0, avgSleepScore: null, avgReadiness: null,
-  readinessTrend: null, habitRate: null, netWorthDelta: null, spent: 0, budget: null,
-  activeGoals: 0, avgGoalProgress: null,
+  readinessTrend: null, netWorthDelta: null, spent: 0, budget: null,
 });
 
 const trendClass = computed(() => ({

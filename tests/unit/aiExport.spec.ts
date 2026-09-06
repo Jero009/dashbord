@@ -31,40 +31,15 @@ vi.mock('@/shared/db/app_db', () => ({
   getSessionLoads: vi.fn(() => Promise.resolve([
     { workout_id: 1, date: Y, time_end: `${Y}T18:30:00`, duration_minutes: 60, session_rpe: 8, volume: 6000 },
   ])),
-  getAllHabits: vi.fn(() => Promise.resolve([
-    { id: 1, name: 'Read', days_of_week: null, created_at: `${key(-30)} 00:00:00` },
-  ])),
-  getHabitLogsForRange: vi.fn(() => Promise.resolve([
-    { habit_id: 1, date: Y, completed: 1 },
-    { habit_id: 1, date: T, completed: 1 },
-  ])),
-  getGoals: vi.fn(() => Promise.resolve([
-    { id: 1, name: 'Bench 100kg', target_value: 100, current_value: 85, status: 'active', due_date: key(60) },
-  ])),
   getAllExercisePRs: vi.fn(() => Promise.resolve([
     { exercise_id: 1, exercise_name: 'Bench Press', pr_weight: 85, pr_reps: 3, one_rep_max: 93, date_achieved: `${Y}T18:00:00` },
   ])),
-  getRecentCircadianLogs: vi.fn(() => Promise.resolve([
-    { id: 1, date: Y, day_type: 'work', energy_wake: 3, energy_noon: 4, energy_evening: 2, meal_first: '08:00', meal_last: '20:00', morning_light: 1, notes: null },
-    { id: 2, date: T, day_type: 'work', energy_wake: 2, energy_noon: 3, energy_evening: 2, meal_first: '08:30', meal_last: '21:00', morning_light: 0, notes: null },
-  ])),
-  getFinanceAccounts: vi.fn(() => Promise.resolve([{ id: 1, name: 'Checking', balance: 2500 }])),
-  getFinanceInvestments: vi.fn(() => Promise.resolve([{ id: 1, name: 'Index', value: 10000 }])),
-  getFinanceBudgets: vi.fn(() => Promise.resolve([{ id: 1, category: 'food', monthly_limit: 400 }])),
-  getFinanceSubscriptions: vi.fn(() => Promise.resolve([{ id: 1, name: 'Music', amount: 10, cadence: 'monthly', direction: 'expense', status: 'active' }])),
-  queryMonthlySpending: vi.fn(() => Promise.resolve([{ month: T.slice(0, 7), expense: 1200, income: 3000 }])),
-  queryCategorySpending: vi.fn(() => Promise.resolve([{ category: 'food', amount: 450 }])),
 }))
 
 vi.mock('@/shared/utils/userSettings', () => ({
   getSleepGoalHours: () => 8,
   getStepGoal: () => 10000,
   getGoalWeightKg: () => 78,
-  getCurrency: () => 'USD',
-}))
-
-vi.mock('@/shared/utils/currency', () => ({
-  formatCurrency: (v: number) => `$${Math.round(v)}`,
 }))
 
 import { buildAiExport } from '@/shared/utils/aiExport'
@@ -79,18 +54,21 @@ describe('buildAiExport', () => {
     for (const h of [
       'PERSONAL TRACKING DATA EXPORT',
       '=== PROFILE & TARGETS ===',
-      '=== CIRCADIAN PROFILE ===',
       '=== TRAINING LOAD & RECOVERY (latest) ===',
       '=== DAILY TIMELINE (CSV) ===',
       '=== PERSONAL RECORDS (strength) ===',
-      '=== HABITS ===',
-      '=== GOALS ===',
       '=== BODY ===',
-      '=== FINANCE ===',
       '=== END OF EXPORT ===',
     ]) {
       expect(text).toContain(h)
     }
+  })
+
+  test('excludes cut modules (circadian, plan, finance)', () => {
+    expect(text).not.toContain('CIRCADIAN')
+    expect(text).not.toContain('=== HABITS ===')
+    expect(text).not.toContain('=== GOALS ===')
+    expect(text).not.toContain('=== FINANCE ===')
   })
 
   test('daily CSV has the documented header and a today row with merged metrics', () => {
@@ -107,14 +85,9 @@ describe('buildAiExport', () => {
     expect(cells[15]).toBe('79.8') // weight
   })
 
-  test('surfaces profile, targets, PRs, habits, goals and finance', () => {
+  test('surfaces profile, targets and PRs', () => {
     expect(text).toContain('Sleep goal: 8 h/night')
     expect(text).toContain('Bench Press: 85')
-    expect(text).toContain('Read (daily): current streak')
-    expect(text).toContain('Bench 100kg: 85/100 (85%)')
-    expect(text).toContain('accounts $2500 + investments $10000')
-    expect(text).toContain('Net worth: $12500')
-    expect(text).toContain('food: $450 / $400 (OVER)')
   })
 
   test('weight change over the window is reported', () => {

@@ -1,9 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
-import { goalReached, goalProgressFraction } from '@/shared/utils/goalProgress';
-import { expandOccurrencesInRange, type RecurringEventLike } from '@/shared/utils/recurrence';
-import { shiftDate } from '@/shared/utils/habitStats';
 import { localDateISO } from '@/shared/utils/timeFormat';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
@@ -22,10 +19,6 @@ const EXPORT_DELETE_TABLES = [
   'health_metric',
   'readiness_score',
   'sleep_session',
-  'habit_log',
-  'habit',
-  'goal',
-  'calendar_event',
   'body_log',
   'finance_subscription',
   'finance_investment',
@@ -33,7 +26,6 @@ const EXPORT_DELETE_TABLES = [
   'finance_budget',
   'finance_account',
   'net_worth_snapshot',
-  'circadian_log'
 ];
 
 const EXPORT_INSERT_TABLES = [
@@ -49,10 +41,6 @@ const EXPORT_INSERT_TABLES = [
   'health_metric',
   'readiness_score',
   'sleep_session',
-  'habit',
-  'habit_log',
-  'goal',
-  'calendar_event',
   'body_log',
   'finance_account',
   'finance_investment',
@@ -60,7 +48,6 @@ const EXPORT_INSERT_TABLES = [
   'finance_budget',
   'finance_transaction',
   'net_worth_snapshot',
-  'circadian_log'
 ];
 
 function toSqlLiteral(value: unknown) {
@@ -274,58 +261,10 @@ async function doInitDB() {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS habit (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    frequency TEXT DEFAULT 'daily',
-    target INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  );
 
-  CREATE TABLE IF NOT EXISTS habit_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    habit_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    completed INTEGER DEFAULT 0,
-    FOREIGN KEY (habit_id)
-      REFERENCES habit(id)
-      ON DELETE CASCADE,
-    UNIQUE(habit_id, date)
-  );
 
-  CREATE TABLE IF NOT EXISTS goal (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    target_value REAL NOT NULL,
-    current_value REAL DEFAULT 0,
-    due_date TEXT,
-    status TEXT DEFAULT 'active',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    link_type TEXT,
-    link_ref TEXT,
-    start_value REAL
-  );
 
-  CREATE TABLE IF NOT EXISTS calendar_event (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    date TEXT NOT NULL,
-    type TEXT DEFAULT 'general',
-    notes TEXT
-  );
 
-  CREATE TABLE IF NOT EXISTS circadian_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL UNIQUE,
-    day_type TEXT NOT NULL DEFAULT 'work',
-    energy_wake INTEGER,
-    energy_noon INTEGER,
-    energy_evening INTEGER,
-    meal_first TEXT,
-    meal_last TEXT,
-    morning_light INTEGER NOT NULL DEFAULT 0,
-    notes TEXT
-  );
 
   CREATE TABLE IF NOT EXISTS finance_account (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -864,53 +803,6 @@ async function doInitDB() {
       );
     `);
 
-    const habitColumns = await db.query(`PRAGMA table_info("habit");`);
-    const habitColNames = new Set(
-      (habitColumns.values || []).map((col: any) => String(col.name))
-    );
-    if (!habitColNames.has('time')) {
-      await db.execute(`ALTER TABLE habit ADD COLUMN time TEXT;`);
-    }
-    if (!habitColNames.has('days_of_week')) {
-      await db.execute(`ALTER TABLE habit ADD COLUMN days_of_week TEXT;`);
-    }
-    if (!habitColNames.has('goal_id')) {
-      await db.execute(`ALTER TABLE habit ADD COLUMN goal_id INTEGER;`);
-    }
-
-    const calColumns = await db.query(`PRAGMA table_info("calendar_event");`);
-    const calColNames = new Set((calColumns.values || []).map((c: any) => String(c.name)));
-    if (!calColNames.has('time_start')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_start TEXT;`);
-    }
-    if (!calColNames.has('time_end')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN time_end TEXT;`);
-    }
-    if (!calColNames.has('workout_template_id')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN workout_template_id INTEGER;`);
-    }
-    if (!calColNames.has('recurrence')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recurrence TEXT DEFAULT 'none';`);
-    }
-    if (!calColNames.has('end_date')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN end_date TEXT;`);
-    }
-    if (!calColNames.has('all_day')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN all_day INTEGER DEFAULT 0;`);
-    }
-    if (!calColNames.has('color')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN color TEXT;`);
-    }
-    if (!calColNames.has('recur_interval')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recur_interval INTEGER DEFAULT 1;`);
-    }
-    if (!calColNames.has('recur_days')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recur_days TEXT;`);
-    }
-    if (!calColNames.has('recur_count')) {
-      await db.execute(`ALTER TABLE calendar_event ADD COLUMN recur_count INTEGER;`);
-    }
-
     const subColumns = await db.query(`PRAGMA table_info("finance_subscription");`);
     const subColNames = new Set((subColumns.values || []).map((c: any) => String(c.name)));
     if (!subColNames.has('account_id')) {
@@ -944,18 +836,6 @@ async function doInitDB() {
       if (!bodyColNames.has(col)) {
         await db.execute(`ALTER TABLE body_log ADD COLUMN ${col} REAL;`);
       }
-    }
-
-    const goalColumns = await db.query(`PRAGMA table_info("goal");`);
-    const goalColNames = new Set((goalColumns.values || []).map((c: any) => String(c.name)));
-    if (!goalColNames.has('link_type')) {
-      await db.execute(`ALTER TABLE goal ADD COLUMN link_type TEXT;`);
-    }
-    if (!goalColNames.has('link_ref')) {
-      await db.execute(`ALTER TABLE goal ADD COLUMN link_ref TEXT;`);
-    }
-    if (!goalColNames.has('start_value')) {
-      await db.execute(`ALTER TABLE goal ADD COLUMN start_value REAL;`);
     }
 
     const sleepColumns = await db.query(`PRAGMA table_info("sleep_session");`);
@@ -1965,481 +1845,6 @@ export async function getRecentHealthMetrics(type: string, limit: number = 30) {
   return result.values || [];
 }
 
-export async function addHabit(
-  name: string,
-  frequency: string,
-  target: number,
-  time?: string,
-  daysOfWeek?: string,
-  goalId?: number
-) {
-  if (!db) return;
-  try {
-    const result = await db.run(
-      `INSERT INTO habit (name, frequency, target, time, days_of_week, goal_id) VALUES (?, ?, ?, ?, ?, ?);`,
-      [name, frequency, target, time ?? null, daysOfWeek ?? null, goalId ?? null]
-    );
-    return result;
-  } catch (error) {
-    console.error('Error adding habit:', error);
-    throw error;
-  }
-}
-
-export async function updateHabit(
-  id: number,
-  name: string,
-  time?: string,
-  daysOfWeek?: string,
-  goalId?: number
-) {
-  if (!db) return;
-  try {
-    const result = await db.run(
-      `UPDATE habit SET name = ?, time = ?, days_of_week = ?, goal_id = ? WHERE id = ?;`,
-      [name, time ?? null, daysOfWeek ?? null, goalId ?? null, id]
-    );
-    return result;
-  } catch (error) {
-    console.error('Error updating habit:', error);
-    throw error;
-  }
-}
-
-export async function getRecentHabitLogs(habitId: number, days: number) {
-  if (!db) return [] as { date: string; completed: number }[];
-  const result = await db.query(
-    `SELECT date, completed FROM habit_log
-     WHERE habit_id = ? AND date >= date('now', ?)
-     ORDER BY date DESC;`,
-    [habitId, `-${days} days`]
-  );
-  return (result.values ?? []) as { date: string; completed: number }[];
-}
-
-// Habits scheduled on specific weekdays (days_of_week = comma-separated 0-6,
-// Sunday = 0) are only returned for matching dates; NULL/empty = every day.
-export async function getHabitsWithStatus(date: string) {
-  if (!db) return [];
-  const result = await db.query(
-    `SELECT h.*, COALESCE(hl.completed, 0) AS completed
-     FROM habit h
-     LEFT JOIN habit_log hl
-       ON hl.habit_id = h.id AND hl.date = ?
-     WHERE h.days_of_week IS NULL
-        OR h.days_of_week = ''
-        OR instr(',' || h.days_of_week || ',', ',' || strftime('%w', ?) || ',') > 0
-     ORDER BY h.created_at DESC;`,
-    [date, date]
-  );
-  return result.values || [];
-}
-
-export async function getAllHabits() {
-  if (!db) return [];
-  const result = await db.query(`SELECT * FROM habit ORDER BY created_at DESC;`);
-  return result.values || [];
-}
-
-export async function toggleHabitCompletion(habitId: number, date: string, completed: boolean) {
-  if (!db) return;
-  try {
-    const prev = await db.query(
-      `SELECT completed FROM habit_log WHERE habit_id = ? AND date = ?;`,
-      [habitId, date]
-    );
-    const prevDone = Number(prev.values?.[0]?.completed ?? 0) === 1;
-
-    const result = await db.run(
-      `INSERT INTO habit_log (habit_id, date, completed)
-       VALUES (?, ?, ?)
-       ON CONFLICT(habit_id, date) DO UPDATE SET completed = excluded.completed;`,
-      [habitId, date, completed ? 1 : 0]
-    );
-
-    // Habit-goal link: a real state change moves the linked goal's progress.
-    if (prevDone !== completed) {
-      const habitRow = await db.query(`SELECT goal_id FROM habit WHERE id = ?;`, [habitId]);
-      const goalId = habitRow.values?.[0]?.goal_id;
-      if (goalId !== null && goalId !== undefined) {
-        await incrementGoalProgressBy(Number(goalId), completed ? 1 : -1);
-      }
-    }
-    return result;
-  } catch (error) {
-    console.error('Error updating habit log:', error);
-    throw error;
-  }
-}
-
-// link_type: null = manual goal (habit/manual progress, the original behavior).
-// 'weight'  -> current_value tracks the latest body_log weight (link_ref unused)
-// 'lift_pr' -> tracks exercise_pr.one_rep_max for exercise id in link_ref
-// 'savings' -> tracks finance_account.balance for account id in link_ref
-export async function addGoal(
-  name: string,
-  targetValue: number,
-  dueDate?: string,
-  linkType?: string | null,
-  linkRef?: string | null,
-) {
-  if (!db) return;
-  try {
-    const result = await db.run(
-      `INSERT INTO goal (name, target_value, due_date, link_type, link_ref) VALUES (?, ?, ?, ?, ?);`,
-      [name, targetValue, dueDate ?? null, linkType ?? null, linkRef ?? null]
-    );
-    // Seed the linked value immediately so the new goal isn't stuck at 0.
-    await recomputeLinkedGoals();
-    return result;
-  } catch (error) {
-    console.error('Error adding goal:', error);
-    throw error;
-  }
-}
-
-// Pull live values into goals that are linked to real data (weight / lift PR /
-// account balance). Manual goals (link_type IS NULL) are left untouched so the
-// habit-completion ±1 behavior keeps working. Call on planner/home load.
-export async function recomputeLinkedGoals() {
-  if (!db) return;
-  const result = await db.query(
-    `SELECT id, link_type, link_ref, target_value, start_value FROM goal WHERE status = 'active' AND link_type IS NOT NULL;`
-  );
-  const goals = (result.values ?? []) as {
-    id: number; link_type: string; link_ref: string | null;
-    target_value: number; start_value: number | null;
-  }[];
-
-  for (const goal of goals) {
-    let value: number | null = null;
-
-    if (goal.link_type === 'weight') {
-      const r = await db.query(`SELECT weight_kg AS v FROM body_log ORDER BY date DESC, id DESC LIMIT 1;`);
-      value = r.values?.[0]?.v != null ? Number(r.values[0].v) : null;
-    } else if (goal.link_type === 'lift_pr' && goal.link_ref) {
-      const r = await db.query(`SELECT one_rep_max AS v FROM exercise_pr WHERE exercise_id = ?;`, [Number(goal.link_ref)]);
-      value = r.values?.[0]?.v != null ? Number(r.values[0].v) : null;
-    } else if (goal.link_type === 'savings' && goal.link_ref) {
-      const r = await db.query(`SELECT balance AS v FROM finance_account WHERE id = ?;`, [Number(goal.link_ref)]);
-      value = r.values?.[0]?.v != null ? Number(r.values[0].v) : null;
-    }
-
-    if (value != null && Number.isFinite(value)) {
-      // Anchor the starting point on the first sync so direction (loss vs gain)
-      // is well-defined; preserve it on later syncs.
-      const startVal = goal.start_value != null ? Number(goal.start_value) : value;
-      const reached = goalReached({
-        target_value: goal.target_value,
-        current_value: value,
-        start_value: startVal,
-        link_type: goal.link_type,
-      });
-      await db.run(
-        `UPDATE goal SET current_value = ?, start_value = ?, status = ? WHERE id = ?;`,
-        [value, startVal, reached ? 'completed' : 'active', goal.id]
-      );
-    }
-  }
-}
-
-export async function getGoals() {
-  if (!db) return [];
-  const result = await db.query(
-    `SELECT * FROM goal ORDER BY COALESCE(due_date, '') DESC, created_at DESC;`
-  );
-  return result.values || [];
-}
-
-export async function updateGoalProgress(goalId: number, currentValue: number, status?: string) {
-  if (!db) return;
-  try {
-    // Capture the starting value on the first manual progress entry so a
-    // count-down goal (e.g. weight loss) infers its direction correctly.
-    const result = await db.run(
-      `UPDATE goal SET current_value = ?, start_value = COALESCE(start_value, ?), status = COALESCE(?, status) WHERE id = ?;`,
-      [currentValue, currentValue, status ?? null, goalId]
-    );
-    return result;
-  } catch (error) {
-    console.error('Error updating goal progress:', error);
-    throw error;
-  }
-}
-
-// Used by habit-goal linking: each completed habit log nudges the linked goal.
-// Reads the goal so it can flip to 'completed' once the (direction-aware) target
-// is reached, and back to 'active' if a later un-toggle drops it below target.
-export async function incrementGoalProgressBy(goalId: number, delta: number) {
-  if (!db) return;
-  try {
-    const r = await db.query(
-      `SELECT target_value, current_value, start_value, link_type, status FROM goal WHERE id = ?;`,
-      [goalId]
-    );
-    const g = r.values?.[0] as
-      | { target_value: number; current_value: number | null; start_value: number | null; link_type: string | null }
-      | undefined;
-    if (!g) return;
-    const next = Math.max(0, (Number(g.current_value) || 0) + delta);
-    const reached = goalReached({
-      target_value: g.target_value,
-      current_value: next,
-      start_value: g.start_value,
-      link_type: g.link_type,
-    });
-    return await db.run(
-      `UPDATE goal SET current_value = ?, status = ? WHERE id = ?;`,
-      [next, reached ? 'completed' : 'active', goalId]
-    );
-  } catch (error) {
-    console.error('Error incrementing goal progress:', error);
-    throw error;
-  }
-}
-
-export async function deleteGoal(id: number) {
-  if (!db) return;
-  try {
-    await db.execute('BEGIN;');
-    await db.run(`UPDATE habit SET goal_id = NULL WHERE goal_id = ?;`, [id]);
-    await db.run(`DELETE FROM goal WHERE id = ?;`, [id]);
-    await db.execute('COMMIT;');
-  } catch (e) {
-    await db.execute('ROLLBACK;').catch(() => undefined);
-    throw e;
-  }
-}
-
-export async function getGoalDueDatesForMonth(yearMonth: string) {
-  if (!db) return [] as string[];
-  const result = await db.query(
-    `SELECT DISTINCT due_date AS date FROM goal
-     WHERE due_date LIKE ? AND status = 'active';`,
-    [`${yearMonth}-%`]
-  );
-  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
-}
-
-export interface CalendarEventInput {
-  title: string;
-  date: string;
-  type: string;
-  notes?: string | null;
-  timeStart?: string | null;
-  timeEnd?: string | null;
-  workoutTemplateId?: number | null;
-  recurrence?: string;
-  endDate?: string | null;
-  allDay?: boolean;
-  color?: string | null;
-  recurInterval?: number | null;
-  recurDays?: string | null;
-  recurCount?: number | null;
-}
-
-const CALENDAR_EVENT_TYPES = ['general', 'workout', 'recovery', 'school', 'sleep', 'reminder'];
-const CALENDAR_RECURRENCE_TYPES = ['none', 'daily', 'weekly', 'weekdays', 'monthly', 'yearly'];
-
-// Normalize an event-input payload into the row tuple the columns expect.
-function calendarEventColumnValues(ev: CalendarEventInput) {
-  // Allowlist event types: each has a defined battery drain rate in calculateBattery.
-  // An unknown type would silently fall through to the default 4/hr drain.
-  const safeType = CALENDAR_EVENT_TYPES.includes(ev.type) ? ev.type : 'general';
-  const safeRecurrence = CALENDAR_RECURRENCE_TYPES.includes(ev.recurrence ?? '') ? ev.recurrence : 'none';
-  return {
-    title: ev.title,
-    date: ev.date,
-    type: safeType,
-    notes: ev.notes ?? null,
-    time_start: ev.allDay ? null : (ev.timeStart ?? null),
-    time_end: ev.allDay ? null : (ev.timeEnd ?? null),
-    workout_template_id: ev.workoutTemplateId ?? null,
-    recurrence: safeRecurrence,
-    end_date: ev.endDate ?? null,
-    all_day: ev.allDay ? 1 : 0,
-    color: ev.color ?? null,
-    recur_interval: ev.recurInterval && ev.recurInterval > 0 ? Math.floor(ev.recurInterval) : 1,
-    recur_days: ev.recurDays ?? null,
-    recur_count: ev.recurCount && ev.recurCount > 0 ? Math.floor(ev.recurCount) : null,
-  };
-}
-
-export async function addCalendarEvent(ev: CalendarEventInput) {
-  if (!db) return;
-  try {
-    const v = calendarEventColumnValues(ev);
-    const result = await db.run(
-      `INSERT INTO calendar_event
-        (title, date, type, notes, time_start, time_end, workout_template_id, recurrence, end_date, all_day, color, recur_interval, recur_days, recur_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [v.title, v.date, v.type, v.notes, v.time_start, v.time_end, v.workout_template_id,
-       v.recurrence, v.end_date, v.all_day, v.color, v.recur_interval, v.recur_days, v.recur_count]
-    );
-    return result;
-  } catch (error) {
-    console.error('Error adding calendar event:', error);
-    throw error;
-  }
-}
-
-export async function updateCalendarEvent(id: number, ev: CalendarEventInput) {
-  if (!db) return;
-  try {
-    const v = calendarEventColumnValues(ev);
-    await db.run(
-      `UPDATE calendar_event SET
-        title = ?, date = ?, type = ?, notes = ?, time_start = ?, time_end = ?,
-        workout_template_id = ?, recurrence = ?, end_date = ?, all_day = ?, color = ?,
-        recur_interval = ?, recur_days = ?, recur_count = ?
-       WHERE id = ?;`,
-      [v.title, v.date, v.type, v.notes, v.time_start, v.time_end, v.workout_template_id,
-       v.recurrence, v.end_date, v.all_day, v.color, v.recur_interval, v.recur_days, v.recur_count, id]
-    );
-  } catch (error) {
-    console.error('Error updating calendar event:', error);
-    throw error;
-  }
-}
-
-// Full-text-ish search over event title and notes, newest first.
-export async function searchCalendarEvents(query: string) {
-  if (!db) return [];
-  const q = query.trim();
-  if (!q) return [];
-  const like = `%${q}%`;
-  const result = await db.query(
-    `SELECT * FROM calendar_event WHERE title LIKE ? OR notes LIKE ? ORDER BY date DESC, time_start ASC;`,
-    [like, like]
-  );
-  return result.values || [];
-}
-
-// Order events for a single day: all-day first, then by start time, then id.
-function sortDayEvents(a: any, b: any): number {
-  const aAll = a.all_day ? 1 : 0;
-  const bAll = b.all_day ? 1 : 0;
-  if (aAll !== bAll) return bAll - aAll;
-  // A tail segment (continuation from the previous day) effectively starts at 00:00.
-  const at = a.continued_from_prev_day ? '00:00' : (a.time_start || '99:99');
-  const bt = b.continued_from_prev_day ? '00:00' : (b.time_start || '99:99');
-  if (at !== bt) return at < bt ? -1 : 1;
-  return (b.id ?? 0) - (a.id ?? 0);
-}
-
-// An event is "overnight" when its end time is strictly before its start (e.g.
-// 19:00→05:00): the end belongs to the next day. A zero-duration event
-// (end == start) is a point event, not overnight.
-function isOvernightRow(r: any): boolean {
-  return !r.all_day && !!r.time_start && !!r.time_end && r.time_end < r.time_start;
-}
-
-// Expand one event row into dated segments within [start, end]. A normal
-// occurrence yields one "start" segment on its day. An overnight occurrence
-// additionally yields a "tail" segment on the following day (00:00→end) so the
-// event visibly spans both days. Each segment carries `base_date` (the original
-// first-occurrence date) plus `seg`/`continues_next_day`/`continued_from_prev_day`.
-function expandEventSegments(r: any, start: string, end: string, includeTails = true): any[] {
-  const overnight = isOvernightRow(r);
-  // Look back one day so an occurrence the day before `start` can spill a tail in.
-  const occStart = shiftDate(start, -1);
-  const occDates = (!r.recurrence || r.recurrence === 'none')
-    ? (r.date >= occStart && r.date <= end ? [r.date] : [])
-    : expandOccurrencesInRange(r as RecurringEventLike, occStart, end);
-  const segs: any[] = [];
-  for (const d of occDates) {
-    if (d >= start && d <= end) {
-      segs.push({ ...r, date: d, base_date: r.date, seg: 'start',
-        continues_next_day: overnight, continued_from_prev_day: false });
-    }
-    if (includeTails && overnight) {
-      const tail = shiftDate(d, 1);
-      if (tail >= start && tail <= end) {
-        segs.push({ ...r, date: tail, base_date: r.date, seg: 'tail',
-          continues_next_day: false, continued_from_prev_day: true });
-      }
-    }
-  }
-  return segs;
-}
-
-// Events occurring on `date`. When `includeOvernightTails` is set, overnight
-// events that started the previous day also appear (as a 00:00→end tail) so the
-// calendar can show them spanning into this day. Default off so battery /
-// reminder / digest consumers keep seeing one row per event on its start day.
-export async function getCalendarEventsForDate(date: string, includeOvernightTails = false) {
-  if (!db) return [];
-  const prev = shiftDate(date, -1);
-  const result = await db.query(
-    `SELECT * FROM calendar_event
-     WHERE date = ? OR date = ?
-        OR (recurrence IS NOT NULL AND recurrence != 'none'
-            AND date < ? AND (end_date IS NULL OR end_date >= ?));`,
-    [date, prev, date, date]
-  );
-  const rows = (result.values || []) as any[];
-  const out: any[] = [];
-  for (const r of rows) out.push(...expandEventSegments(r, date, date, includeOvernightTails));
-  return out.sort(sortDayEvents);
-}
-
-// Expand all events (single + recurring, splitting overnight spans) into concrete
-// dated segments within an inclusive [start, end] range.
-export async function getCalendarEventsInRange(start: string, end: string) {
-  if (!db) return [];
-  const prev = shiftDate(start, -1);
-  const result = await db.query(
-    `SELECT * FROM calendar_event
-     WHERE ((recurrence IS NULL OR recurrence = 'none') AND date BETWEEN ? AND ?)
-        OR (recurrence IS NOT NULL AND recurrence != 'none'
-            AND date <= ? AND (end_date IS NULL OR end_date >= ?));`,
-    [prev, end, end, start]
-  );
-  const rows = (result.values || []) as any[];
-  const out: any[] = [];
-  for (const r of rows) out.push(...expandEventSegments(r, start, end));
-  return out.sort((a, b) => (a.date === b.date ? sortDayEvents(a, b) : a.date < b.date ? -1 : 1));
-}
-
-export async function deleteCalendarEvent(id: number) {
-  if (!db) return;
-  await db.run(`DELETE FROM calendar_event WHERE id = ?;`, [id]);
-}
-
-export async function stopCalendarEventAt(id: number, lastDate: string) {
-  if (!db) return;
-  await db.run(`UPDATE calendar_event SET end_date = ? WHERE id = ?;`, [lastDate, id]);
-}
-
-export async function deleteHabit(id: number) {
-  if (!db) return;
-  await db.run(`DELETE FROM habit WHERE id = ?;`, [id]);
-}
-
-export async function getCalendarEventDatesForMonth(yearMonth: string) {
-  if (!db) return [] as string[];
-  const [year, month] = yearMonth.split('-').map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const monthStart = `${yearMonth}-01`;
-  const monthEnd = `${yearMonth}-${String(daysInMonth).padStart(2, '0')}`;
-  const prev = shiftDate(monthStart, -1);
-
-  // Any event whose occurrence (or overnight tail) could land in the month: a
-  // non-recurring event from the day before the month start onward, or a
-  // recurring event that began on/before month end and hasn't ended.
-  const result = await db.query(
-    `SELECT * FROM calendar_event
-     WHERE ((recurrence IS NULL OR recurrence = 'none') AND date BETWEEN ? AND ?)
-        OR (recurrence IS NOT NULL AND recurrence != 'none' AND date <= ? AND (end_date IS NULL OR end_date >= ?));`,
-    [prev, monthEnd, monthEnd, prev]
-  );
-  const dates = new Set<string>();
-  for (const row of (result.values ?? []) as any[]) {
-    for (const seg of expandEventSegments(row, monthStart, monthEnd)) dates.add(seg.date);
-  }
-  return [...dates];
-}
-
 export async function queryReadinessHistory(days = 14): Promise<{ date: string; score: number }[]> {
   if (!db) return [];
   const result = await db.query(
@@ -2458,12 +1863,9 @@ export interface ReviewDigest {
   avgSleepScore: number | null;
   avgReadiness: number | null;
   readinessTrend: number | null;
-  habitRate: number | null;        // 0–1 completion rate over the period
   netWorthDelta: number | null;
   spent: number;
   budget: number | null;           // monthly budget total, prorated to the period
-  activeGoals: number;
-  avgGoalProgress: number | null;  // 0–1 across active goals
 }
 
 // Cross-domain summary for the Review page (and HomePage "This Week" card).
@@ -2471,8 +1873,7 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
   const days = period === 'month' ? 30 : 7;
   const empty: ReviewDigest = {
     period, workoutCount: 0, totalVolume: 0, avgSleepScore: null, avgReadiness: null,
-    readinessTrend: null, habitRate: null, netWorthDelta: null, spent: 0, budget: null,
-    activeGoals: 0, avgGoalProgress: null,
+    readinessTrend: null, netWorthDelta: null, spent: 0, budget: null,
   };
   if (!db) return empty;
 
@@ -2480,18 +1881,16 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
   const prevSince = `-${days * 2} days`;
 
   const [
-    workoutsR, volumeR, sleepR, readinessR, prevReadinessR, habitR,
-    spentR, budgetR, goalsR, netNowR, netThenR,
+    workoutsR, volumeR, sleepR, readinessR, prevReadinessR,
+    spentR, budgetR, netNowR, netThenR,
   ] = await Promise.all([
     db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start, 'localtime') >= date('now', ?, 'localtime');`, [since]),
     db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at, 'localtime') >= date('now', ?, 'localtime');`, [since]),
     db.query(`SELECT AVG(score) AS v FROM sleep_session WHERE score IS NOT NULL AND date >= date('now', ?);`, [since]),
     db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?);`, [since]),
     db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?) AND date < date('now', ?);`, [prevSince, since]),
-    db.query(`SELECT AVG(completed) AS v FROM habit_log WHERE date >= date('now', ?);`, [since]),
     db.query(`SELECT SUM(amount) AS v FROM finance_transaction WHERE type = 'expense' AND date >= date('now', ?);`, [since]),
     db.query(`SELECT SUM(monthly_limit) AS v FROM finance_budget;`),
-    db.query(`SELECT target_value, current_value, start_value, link_type FROM goal WHERE status = 'active';`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot WHERE date <= date('now', ?) ORDER BY date DESC LIMIT 1;`, [since]),
   ]);
@@ -2507,14 +1906,6 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
   const netThen = num(netThenR);
   const monthlyBudget = num(budgetR);
 
-  const goalRows = (goalsR.values ?? []) as {
-    target_value: number; current_value: number | null;
-    start_value: number | null; link_type: string | null;
-  }[];
-  const avgGoalProgress = goalRows.length
-    ? goalRows.reduce((sum, g) => sum + goalProgressFraction(g), 0) / goalRows.length
-    : null;
-
   return {
     period,
     workoutCount: Number(workoutsR.values?.[0]?.v ?? 0),
@@ -2522,34 +1913,10 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
     avgSleepScore: sleepR.values?.[0]?.v != null ? Math.round(num(sleepR)!) : null,
     avgReadiness: thisReadiness !== null ? Math.round(thisReadiness) : null,
     readinessTrend: thisReadiness !== null && prevReadiness !== null ? Math.round(thisReadiness - prevReadiness) : null,
-    habitRate: num(habitR),
     netWorthDelta: netNow !== null && netThen !== null ? Math.round((netNow - netThen) * 100) / 100 : null,
     spent: Math.round((num(spentR) ?? 0) * 100) / 100,
     budget: monthlyBudget !== null ? Math.round((monthlyBudget * days / 30) * 100) / 100 : null,
-    activeGoals: goalRows.length,
-    avgGoalProgress,
   };
-}
-
-export async function getHabitCompletedDatesForMonth(yearMonth: string) {
-  if (!db) return [] as string[];
-  const result = await db.query(
-    `SELECT DISTINCT date FROM habit_log WHERE date LIKE ? AND completed = 1;`,
-    [`${yearMonth}-%`]
-  );
-  return ((result.values ?? []) as { date: string }[]).map((r) => r.date);
-}
-
-// Single query powering streaks, week strip, and consistency heatmap.
-export async function getHabitLogsForRange(startDate: string, endDate: string) {
-  if (!db) return [] as { habit_id: number; date: string; completed: number }[];
-  const result = await db.query(
-    `SELECT habit_id, date, completed FROM habit_log
-     WHERE date >= ? AND date <= ?
-     ORDER BY date ASC;`,
-    [startDate, endDate]
-  );
-  return (result.values ?? []) as { habit_id: number; date: string; completed: number }[];
 }
 
 // finance functions
@@ -3614,64 +2981,3 @@ export async function getHealthMetricDailySeries(
     .map((r) => ({ date: String(r.date), value: Number(r.value) || 0 }));
 }
 
-// ── Circadian log ────────────────────────────────────────────────────────────
-
-export interface CircadianLogEntry {
-  id?: number;
-  date: string;
-  day_type: string;        // 'work' | 'free'
-  energy_wake: number | null;
-  energy_noon: number | null;
-  energy_evening: number | null;
-  meal_first: string | null;  // HH:MM
-  meal_last: string | null;   // HH:MM
-  morning_light: number;      // 0 | 1
-  notes: string | null;
-}
-
-export async function upsertCircadianLog(entry: Omit<CircadianLogEntry, 'id'>) {
-  if (!db) return;
-  try {
-    await db.run(
-      `INSERT INTO circadian_log
-         (date, day_type, energy_wake, energy_noon, energy_evening,
-          meal_first, meal_last, morning_light, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(date) DO UPDATE SET
-         day_type       = excluded.day_type,
-         energy_wake    = excluded.energy_wake,
-         energy_noon    = excluded.energy_noon,
-         energy_evening = excluded.energy_evening,
-         meal_first     = excluded.meal_first,
-         meal_last      = excluded.meal_last,
-         morning_light  = excluded.morning_light,
-         notes          = excluded.notes;`,
-      [
-        entry.date, entry.day_type,
-        entry.energy_wake ?? null, entry.energy_noon ?? null, entry.energy_evening ?? null,
-        entry.meal_first ?? null, entry.meal_last ?? null,
-        entry.morning_light ? 1 : 0, entry.notes ?? null,
-      ]
-    );
-  } catch (error) {
-    console.error('Error upserting circadian log:', error);
-    throw error;
-  }
-}
-
-export async function getCircadianLog(date: string): Promise<CircadianLogEntry | null> {
-  if (!db) return null;
-  const result = await db.query(
-    `SELECT * FROM circadian_log WHERE date = ?;`, [date]
-  );
-  return ((result.values ?? []) as CircadianLogEntry[])[0] ?? null;
-}
-
-export async function getRecentCircadianLogs(days = 30): Promise<CircadianLogEntry[]> {
-  if (!db) return [];
-  const result = await db.query(
-    `SELECT * FROM circadian_log WHERE date >= date('now', ?) ORDER BY date DESC;`,
-    [`-${days} days`]
-  );
-  return (result.values ?? []) as CircadianLogEntry[];
-}
