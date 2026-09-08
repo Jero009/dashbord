@@ -87,9 +87,18 @@
               >{{ opt === 0 ? 'All' : opt + 'd' }}</button>
             </div>
           </div>
-          <div class="chart-frame chart-frame--short">
-            <canvas ref="chartRef"></canvas>
-          </div>
+          <trend-chart
+            v-if="chartPts.length >= 2"
+            :pts="chartPts"
+            :unit="currentMetric.unit"
+            :goal="chartMetric === 'weight_kg' ? goalWeight : null"
+            :format="(v) => v.toFixed(1)"
+            size="md"
+            :aria-label="`${currentMetric.label} progress`"
+          />
+          <p v-else-if="entries.length >= 2" class="chart-empty">
+            Not enough {{ currentMetric.label.toLowerCase() }} entries in this range
+          </p>
         </div>
 
         <!-- History -->
@@ -123,14 +132,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { IonPage, IonHeader, IonContent, IonIcon, IonSelect, IonSelectOption, onIonViewWillEnter, toastController } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js'
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler)
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
+import TrendChart from '@/shared/components/TrendChart.vue'
 import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat'
-import { chartLineDataset, chartGoalDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
 import { hapticHeavy, hapticMedium, hapticSuccess } from '@/shared/utils/haptics'
@@ -141,9 +148,9 @@ import { getGoalWeightKg } from '@/shared/utils/userSettings'
 const entries = ref<BodyLogEntry[]>([])
 
 // Chart
-const chartRef = ref<HTMLCanvasElement>()
-let chartInstance: Chart | null = null
 const chartRange = ref<30 | 90 | 180 | 0>(90)
+// Computed (not captured at setup) so a goal changed in Settings shows on return.
+const goalWeight = computed(() => getGoalWeightKg())
 
 // Metrics the progress chart can plot. Weight is the default and the only one
 // with a goal line.
@@ -160,83 +167,24 @@ type MetricKey = typeof METRICS[number]['key']
 const chartMetric = ref<MetricKey>('weight_kg')
 const currentMetric = computed(() => METRICS.find(m => m.key === chartMetric.value)!)
 
-const buildChart = () => {
-  if (!chartRef.value || !entries.value.length) return
+// Oldest → newest points for the selected metric inside the selected range.
+// Only entries that actually have a value for the metric are kept.
+const chartPts = computed(() => {
   const metric = currentMetric.value
-  const goal = metric.key === 'weight_kg' ? getGoalWeightKg() : null
-
   const sorted = [...entries.value].reverse()
   const cutoff = chartRange.value === 0
     ? null
     : localDateISO(new Date(Date.now() - chartRange.value * 86400000))
   const ranged = cutoff ? sorted.filter(e => e.date >= cutoff) : sorted
-  // Only keep entries that actually have a value for the selected metric.
-  const filtered = ranged.filter(e => {
-    const v = (e as Record<string, unknown>)[metric.key]
-    return v != null && Number.isFinite(Number(v))
-  })
-
-  if (filtered.length < 2) {
-    if (chartInstance) { chartInstance.destroy(); chartInstance = null }
-    return
-  }
-
-  const labels = filtered.map(e => {
-    const d = parseLocalDate(e.date)
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  })
-  const data = filtered.map(e => Number((e as Record<string, unknown>)[metric.key]))
-  const goalData = goal ? filtered.map(() => goal) : null
-
-  if (chartInstance) chartInstance.destroy()
-  const ctx = chartRef.value.getContext('2d')!
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          ...chartLineDataset,
-          label: metric.label,
-          data,
-          pointRadius: filtered.length > 60 ? 0 : 3,
-        },
-        ...(goalData ? [{
-          ...chartGoalDataset,
-          label: 'Goal',
-          data: goalData,
-        }] : []),
-      ]
-    },
-    options: {
-      responsive: true,
-      animation: false,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...chartTooltip,
-          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)} ${metric.unit}` }
-        }
-      },
-      scales: {
-        x: {
-          ticks: { ...chartTicks, maxTicksLimit: 8 },
-          grid: chartGrid,
-        },
-        y: {
-          ticks: { ...chartTicks, callback: (v) => `${v} ${metric.unit}` },
-          grid: chartGrid,
-        }
-      }
-    }
-  })
-}
-
-watch([chartRange, chartMetric], buildChart, { flush: 'post' })
-
-onUnmounted(() => {
-  if (chartInstance) { chartInstance.destroy(); chartInstance = null }
+  return ranged
+    .filter(e => {
+      const v = (e as Record<string, unknown>)[metric.key]
+      return v != null && Number.isFinite(Number(v))
+    })
+    .map(e => ({
+      label: parseLocalDate(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: Number((e as Record<string, unknown>)[metric.key]),
+    }))
 })
 
 const form = ref({
@@ -280,7 +228,6 @@ const formatDate = (d: string) =>
 
 const loadEntries = async () => {
   entries.value = await getBodyLogs()
-  buildChart()
 }
 
 const saveEntry = async () => {
