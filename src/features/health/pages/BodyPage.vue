@@ -87,7 +87,7 @@
               >{{ opt === 0 ? 'All' : opt + 'd' }}</button>
             </div>
           </div>
-          <div class="chart-wrap">
+          <div class="chart-frame chart-frame--short">
             <canvas ref="chartRef"></canvas>
           </div>
         </div>
@@ -130,7 +130,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Category
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler)
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat'
-import { chartLineDataset, chartDimDataset, chartColors, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle'
+import { chartLineDataset, chartGoalDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
 import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
 import { hapticHeavy, hapticMedium, hapticSuccess } from '@/shared/utils/haptics'
@@ -202,11 +202,9 @@ const buildChart = () => {
           pointRadius: filtered.length > 60 ? 0 : 3,
         },
         ...(goalData ? [{
-          ...chartDimDataset,
+          ...chartGoalDataset,
           label: 'Goal',
           data: goalData,
-          borderColor: chartColors.goal,
-          tension: 0,
         }] : []),
       ]
     },
@@ -603,11 +601,4 @@ onIonViewWillEnter(loadEntries)
   color: var(--nt-on-accent);
 }
 
-.chart-wrap {
-  height: 180px;
-  position: relative;
-  background: rgba(var(--nt-ink), 0.05);
-  border-radius: 10px;
-  padding: 10px 6px 6px;
-}
 </style>

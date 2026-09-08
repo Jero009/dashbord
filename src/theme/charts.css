@@ -1,0 +1,64 @@
+/* ============================================================================
+   charts.css — the app-wide chart standard (Nothing OS / Apple polish).
+
+   Every chart lives in a .chart-frame (canvas or shared TrendChart), every
+   frame gets a height token, every multi-series chart gets a .chart-legend.
+   Import once from main.ts — delete scoped copies from feature pages.
+
+   Heights: --sm 220px (default) · --short 160px · --tall 260px.
+   ========================================================================== */
+
+.chart-frame {
+  position: relative;
+  width: 100%;
+  min-width: 0; /* allow shrink inside grid/flex parents */
+  height: 220px;
+  padding: 8px 4px 4px;
+  background: rgba(var(--nt-ink), 0.03);
+  border-radius: var(--nt-radius-sm, 8px);
+}
+
+.chart-frame--short { height: 160px; }
+.chart-frame--tall { height: 260px; }
+
+/* TrendChart (shared SVG component) renders flush, no frame chrome */
+.chart-frame--flush {
+  padding: 0;
+  background: transparent;
+}
+
+/* Line-style legend for multi-series charts (Chart.js legend is off) */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.chart-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--nt-font-head);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--nt-text-dim);
+}
+
+.chart-legend__swatch {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(var(--nt-ink), 0.35);
+}
+
+.chart-legend__swatch--red { background: var(--ion-color-accent-red); }
+.chart-legend__swatch--dim { background: rgba(var(--nt-ink), 0.35); }
+.chart-legend__swatch--goal { background: var(--nt-data-goal); }
+
+/* Shared empty state for all chart cards */
+.chart-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(var(--nt-ink), 0.5);
+}

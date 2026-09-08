@@ -49,7 +49,7 @@
         <div class="card">
           <p class="section-kicker">Volume by muscle group</p>
           <template v-if="muscleVolume.length > 0">
-            <div class="chart-frame">
+            <div class="chart-frame chart-frame--tall">
               <canvas ref="muscleChartRef"></canvas>
             </div>
           </template>
@@ -140,7 +140,7 @@ import {
   BarController, BarElement,
   LinearScale, CategoryScale, Filler, Tooltip
 } from 'chart.js';
-import { chartLineDataset, chartTooltip, chartTicks, chartGrid, chartColors } from '@/shared/utils/chartStyle';
+import { chartLineDataset, chartBarDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticSelect } from '@/shared/utils/haptics';
 import { localDateISO } from '@/shared/utils/timeFormat';
 
@@ -275,10 +275,7 @@ const renderMuscleChart = () => {
         {
           label: 'Volume',
           data: muscleVolume.value.map((m) => Number(m.volume) || 0),
-          backgroundColor: 'rgba(215, 26, 33, 0.55)',
-          hoverBackgroundColor: chartColors.red,
-          borderRadius: 3,
-          maxBarThickness: 32,
+          ...chartBarDataset,
         },
       ]
     },
@@ -449,19 +446,6 @@ onUnmounted(() => {
   --padding-end: 8px;
   min-height: auto;
   font-size: 12px;
-}
-
-.chart-frame {
-  position: relative;
-  height: 260px;
-  width: 100%;
-  background: rgba(var(--nt-ink), 0.03);
-  border-radius: 8px;
-  padding: 8px 4px 4px;
-}
-
-.chart-frame--short {
-  height: 200px;
 }
 
 /* Balance bar */

@@ -52,6 +52,21 @@ export const chartDimDataset = {
   pointRadius: 0,
 }
 
+// Standard bar look: dim red bars, solid on hover (Nothing data-encoding).
+export const chartBarDataset = {
+  backgroundColor: 'rgba(215, 26, 33, 0.55)',
+  hoverBackgroundColor: chartColors.red,
+  borderRadius: 3,
+  maxBarThickness: 32,
+}
+
+// Goal/budget reference line: gold dashes (data-encoding gold survives).
+export const chartGoalDataset = {
+  ...chartDimDataset,
+  get borderColor() { return chartColors.goal },
+  tension: 0,
+}
+
 // Tooltip is always a dark floating overlay in both themes, so its text
 // stays light regardless of the active theme.
 export const chartTooltip = {
@@ -60,6 +75,19 @@ export const chartTooltip = {
   bodyColor: '#fff',
   padding: 10,
 }
+
+// Data-encoding palette for categorical charts (donut): red shades fading
+// into theme-aware neutral greys. Resolved fresh (function) so it picks up
+// the active theme on each render — the greys flip on light theme.
+export const chartDonutPalette = (): string[] => [
+  'rgb(215, 26, 33)',
+  'rgba(215, 26, 33, 0.72)',
+  'rgba(215, 26, 33, 0.48)',
+  chartInk(0.5),
+  chartInk(0.35),
+  chartInk(0.22),
+  chartInk(0.14),
+]
 
 export const chartTicks = {
   get color() { return chartColors.tick },

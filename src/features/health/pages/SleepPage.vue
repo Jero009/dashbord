@@ -141,60 +141,24 @@
         <!-- Heart rate chart -->
         <ion-card class="sleep-card">
           <p class="section-kicker">Heart rate overnight</p>
-          <div v-if="heartRatePoints.length" class="heart-rate-chart">
-            <svg viewBox="0 0 100 40" class="chart-svg" role="img" aria-label="Sleep heart rate graph">
-              <polyline class="chart-line" :points="heartRateLinePoints" />
-              <circle
-                v-for="point in heartRatePoints"
-                :key="point.time"
-                class="chart-dot"
-                :class="{ 'is-selected': selectedHeartRatePoint?.time === point.time }"
-                :cx="point.offset"
-                :cy="point.y"
-                r="0.8"
-                @click="selectedHeartRatePoint = point"
-              />
-            </svg>
-            <div v-if="selectedHeartRatePoint" class="chart-tooltip">
-              <strong>{{ selectedHeartRatePoint.value }} bpm</strong>
-              <small>{{ new Date(selectedHeartRatePoint.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</small>
-            </div>
-            <div class="axis-row">
-              <span>{{ bedTimeClock }}</span>
-              <span>{{ wakeTimeClock }}</span>
-            </div>
-          </div>
+          <trend-chart
+            v-if="heartRatePts.length"
+            :pts="heartRatePts"
+            unit="bpm"
+            :format="(v) => String(Math.round(v))"
+            aria-label="Sleep heart rate graph"
+          />
           <p v-else class="empty-state">No HR data</p>
         </ion-card>
 
         <!-- Score history -->
         <ion-card class="sleep-card">
           <p class="section-kicker">History · 30 nights</p>
-          <div v-if="sleepScoreHistory.length" class="score-history">
-            <svg viewBox="0 0 100 48" class="chart-svg" role="img" aria-label="Sleep score history">
-              <polygon class="chart-area" :points="scoreHistoryAreaPoints" />
-              <polyline class="chart-line" :points="scoreHistoryLinePoints" />
-              <circle
-                v-for="point in sleepScoreHistory"
-                :key="point.date"
-                class="chart-dot"
-                :class="{ 'is-selected': selectedScorePoint?.date === point.date }"
-                :cx="point.x"
-                :cy="point.y"
-                r="1"
-                @click="selectedScorePoint = { date: point.date, score: point.score }"
-              />
-            </svg>
-            <div v-if="selectedScorePoint" class="chart-tooltip">
-              <strong>{{ selectedScorePoint.score ?? '—' }}</strong>
-              <small>{{ new Date(`${selectedScorePoint.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
-            </div>
-            <div class="score-history__labels">
-              <span v-for="label in scoreHistoryLabels" :key="label.date" :style="{ left: `${label.x}%` }">
-                {{ label.text }}
-              </span>
-            </div>
-          </div>
+          <trend-chart
+            v-if="scoreHistoryPts.length"
+            :pts="scoreHistoryPts"
+            aria-label="Sleep score history"
+          />
           <p v-else class="empty-state">No history</p>
         </ion-card>
 
@@ -216,6 +180,7 @@ import {
 import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import TrendChart from '@/shared/components/TrendChart.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepSummary } from '@/shared/health/healthConnect';
 import { requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
@@ -226,8 +191,6 @@ import { clamp as clampVal } from '@/shared/utils/math';
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
-const selectedHeartRatePoint = ref<{ time: string; value: number; offset: number } | null>(null);
-const selectedScorePoint = ref<{ date: string; score: number | null } | null>(null);
 const sessionDates = ref<string[]>([]);
 const selectedDate = ref<string | null>(null);
 
@@ -325,8 +288,7 @@ const goToPrevDay = async () => {
     selectedDate.value = sessionDates.value[idx + 1];
     const record = await getSleepSession(selectedDate.value);
     summary.value = record ? sessionToSummary(record) : null;
-    selectedHeartRatePoint.value = null;
-  }
+    }
 };
 
 const goToNextDay = async () => {
@@ -335,8 +297,7 @@ const goToNextDay = async () => {
     selectedDate.value = sessionDates.value[idx - 1];
     const record = await getSleepSession(selectedDate.value);
     summary.value = record ? sessionToSummary(record) : null;
-    selectedHeartRatePoint.value = null;
-  }
+    }
 };
 
 const selectedDateLabel = computed(() => {
@@ -412,45 +373,20 @@ const timeInBedDisplay = computed(() =>
 const sleepEfficiencyPercent = computed(() =>
   summary.value ? `${Math.round(summary.value.efficiency * 100)}%` : '—'
 );
-const heartRatePoints = computed(() => {
+// TrendChart pts — overnight HR uses clock labels; score history uses dates.
+const heartRatePts = computed(() => {
   const points = summary.value?.heartRateTimeline ?? [];
-  if (!points.length) return [];
-
-  const values = points.map((point) => point.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const spread = Math.max(1, max - min);
-
-  return points.map((point) => ({
-    ...point,
-    y: 36 - ((point.value - min) / spread) * 28,
+  return points.map((p) => ({
+    label: new Date(p.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    value: p.value,
+    pos: p.offset / 100, // irregular time spacing from the sleep timeline
   }));
 });
-const heartRateLinePoints = computed(() => heartRatePoints.value.map((point) => `${point.offset.toFixed(2)},${point.y.toFixed(2)}`).join(' '));
-const sleepScoreHistory = computed(() => {
-  const rows = [...sleepHistory.value].reverse().filter((r) => r.score !== null);
-  return rows.map((row, index) => {
-    const x = rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100;
-    const score = row.score as number;
-    return { ...row, x, y: 44 - (Math.min(100, Math.max(0, score)) / 100) * 36 };
-  });
-});
-const scoreHistoryLinePoints = computed(() =>
-  sleepScoreHistory.value.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
-);
-const scoreHistoryAreaPoints = computed(() => {
-  if (!sleepScoreHistory.value.length) return '';
-  const last = sleepScoreHistory.value[sleepScoreHistory.value.length - 1];
-  return `0,44 ${scoreHistoryLinePoints.value} ${last.x.toFixed(2)},44`;
-});
-const scoreHistoryLabels = computed(() =>
-  sleepScoreHistory.value
-    .filter((point, index) => index === 0 || index === sleepScoreHistory.value.length - 1 || index % 3 === 0)
-    .map((point) => ({
-      date: point.date,
-      x: point.x,
-      text: new Date(`${point.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
-    }))
+const scoreHistoryPts = computed(() =>
+  [...sleepHistory.value].reverse().filter((r) => r.score !== null).map((row) => ({
+    label: new Date(`${row.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    value: row.score as number,
+  }))
 );
 const consistencyWindow = computed(() => sleepHistory.value.slice(0, 7));
 const goodNightsCount = computed(() =>
@@ -857,72 +793,6 @@ onIonViewWillEnter(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-/* Charts */
-.heart-rate-chart,
-.score-history {
-  display: grid;
-  gap: 10px;
-}
-
-.chart-svg {
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.chart-line {
-  fill: none;
-  stroke: var(--ion-color-accent-red);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.chart-area { fill: rgba(215, 26, 33, 0.12); }
-
-.chart-dot {
-  fill: var(--ion-color-accent-red);
-  cursor: pointer;
-}
-
-.chart-dot:hover,
-.chart-dot.is-selected {
-  filter: brightness(1.3);
-}
-
-.chart-tooltip {
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(215, 26, 33, 0.12);
-  border: 1px solid rgba(215, 26, 33, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.chart-tooltip strong {
-  font-size: 1.1rem;
-  color: var(--ion-color-accent-red);
-}
-
-.chart-tooltip small {
-  font-size: 0.75rem;
-  color: rgba(215, 26, 33, 0.7);
-}
-
-.score-history__labels {
-  position: relative;
-  height: 1.2rem;
-}
-
-.score-history__labels span {
-  position: absolute;
-  transform: translateX(-50%);
-  font-size: 0.72rem;
-  color: rgba(var(--nt-ink), 0.5);
 }
 
 .empty-state {

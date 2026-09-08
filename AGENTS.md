@@ -212,6 +212,16 @@ Bridge to the dot-matrix LED display on the back of the Nothing Phone (4a) Pro (
 - **Haptics**: `src/shared/utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Wire into all interactive elements. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after successful save, Select = picker/option select.
 - **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment AND on the `.section-toolbar` (a grey toolbar background reads as a full-width bar behind the pill).
 
+## Chart Standard
+
+ALL charts follow one standard. Do not hand-roll per-page chart geometry or CSS.
+
+- **`src/shared/components/TrendChart.vue`** — the standard line/area trend chart (SVG). Props: `pts` (`{label, value, pos?}` oldest→newest, `pos` 0..1 for irregular spacing), `unit`, `size` (`xs` bare 48px sparkline / `sm` 118px / `md` 156px), `goal` (gold dashed line), `showAvg` (ink dashed mean line), `format`. Scrub anywhere on the plot to read values (readout row in Doto red, defaults to latest point). `touch-action: pan-y` keeps vertical page scroll working. Use it for every simple single-series trend.
+- **`src/theme/charts.css`** (imported once in `main.ts`) — global `.chart-frame` (+`--short` 160 / `--tall` 260, default 220), `.chart-legend` (+`--red/--dim/--goal` swatches), `.chart-empty`. Never re-declare these in scoped styles.
+- **`src/shared/utils/chartStyle.ts`** — Chart.js dataset presets: `chartLineDataset` (red line+fill), `chartDimDataset` (dashed ink secondary), `chartBarDataset` (dim red bars), `chartGoalDataset` (gold dashed goal), `chartDonutPalette()` (theme-aware categorical palette), `chartTooltip`/`chartTicks`/`chartGrid`. Spread these; don't inline colors.
+- **`src/shared/utils/chartGeom.ts`** — pure geometry helpers (`padExtent`, `smoothPath`, `nearestXIndex`), unit-tested in `tests/unit/chartGeom.spec.ts`.
+- Chart.js stays for: bar charts, donuts, and the battery timeline's past/future split — anything needing axes/tooltips beyond TrendChart. Hypnogram and TrainingLoadOverlay are deliberately custom (specialized designs), keep them.
+
 ## Design System — Nothing OS aesthetic
 
 **ALWAYS follow these rules.** Do not invent new patterns — extend existing ones. The system is a Nothing-OS-inspired language: near-monochrome surfaces, ONE red accent used as a signal (not decoration), dot-matrix display type for numerics only, borderless cards (surfaces separate by background contrast), mechanical motion. All tokens live in `src/theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex**, except in Chart.js configs where CSS vars don't resolve.

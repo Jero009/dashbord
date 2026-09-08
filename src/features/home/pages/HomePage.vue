@@ -181,7 +181,7 @@
             </div>
           </div>
           <div class="weight-card__spark">
-            <canvas ref="sparkRef"></canvas>
+            <trend-chart :pts="weightPts" size="xs" aria-label="Weight, last 7 days" />
           </div>
         </ion-card>
 
@@ -197,12 +197,13 @@ import { chevronUpOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import TrendChart from '@/shared/components/TrendChart.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics, queryReadinessHistory, queryDailyVolume, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
 import { computeTrainingLoad, computeRecoveryRecommendation, mean, type RecoveryRecommendation } from '@/shared/health/insights';
 import { formatCurrency } from '@/shared/utils/currency';
-import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
+import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, parseLocalDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
@@ -216,8 +217,7 @@ const router = useRouter();
 const todayWeight = ref<number | null>(null);
 const goalWeight = ref<number | null>(getGoalWeightKg());
 const quickWeightInput = ref('');
-const sparkRef = ref<HTMLCanvasElement>();
-let sparkChart: Chart | null = null;
+const weekWeights = ref<{ label: string; value: number }[]>([]);
 
 const weightDeltaLabel = computed(() => {
   if (todayWeight.value === null || goalWeight.value === null) return '';
@@ -226,32 +226,7 @@ const weightDeltaLabel = computed(() => {
   return `−${delta.toFixed(1)} kg to go`;
 });
 
-const buildSparkline = (points: number[]) => {
-  if (!sparkRef.value || points.length < 2) return;
-  if (sparkChart) sparkChart.destroy();
-  const ctx = sparkRef.value.getContext('2d')!;
-  sparkChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: points.map(() => ''),
-      datasets: [{
-        ...chartLineDataset,
-        data: points,
-        pointRadius: 0,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: {
-        x: { display: false },
-        y: { display: false },
-      }
-    }
-  });
-};
+const weightPts = computed(() => weekWeights.value);
 
 const loadTodayWeight = async () => {
   const logs = await getBodyLogs();
@@ -261,10 +236,10 @@ const loadTodayWeight = async () => {
   // last 7 days with data, chronological
   const cutoff = localDateISO(new Date(Date.now() - 7 * 86400000));
   const week = [...logs].filter(e => e.date >= cutoff).reverse();
-  if (week.length >= 2) {
-    await new Promise(r => setTimeout(r, 50)); // let canvas render
-    buildSparkline(week.map(e => e.weight_kg));
-  }
+  weekWeights.value = week.map(e => ({
+    label: parseLocalDate(e.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    value: e.weight_kg,
+  }));
 };
 
 const logQuickWeight = async () => {
@@ -633,7 +608,6 @@ onUnmounted(() => {
   if (readinessTimer) { clearInterval(readinessTimer); readinessTimer = null; }
   clearWorkoutTimer();
   clearRestTimer();
-  if (sparkChart) { sparkChart.destroy(); sparkChart = null; }
   if (batteryChartInstance) { batteryChartInstance.destroy(); batteryChartInstance = null; }
 });
 

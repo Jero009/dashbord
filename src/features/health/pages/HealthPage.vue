@@ -125,61 +125,24 @@
               <span class="hr-avg-val">{{ restingHrAvgDisplay }}</span>
             </div>
           </div>
-          <div v-if="restingHrHistory.length >= 2" class="rh-chart">
-            <svg viewBox="0 0 100 40" class="rh-svg" aria-label="Resting heart rate history">
-              <line
-                v-if="hrAvgLineY !== null"
-                class="hr-avg-line"
-                x1="2" :y1="hrAvgLineY" x2="98" :y2="hrAvgLineY"
-              />
-              <polygon class="rh-area" :points="hrAreaPoints" />
-              <polyline class="rh-line" :points="hrLinePoints" />
-              <circle
-                v-for="pt in restingHrHistory"
-                :key="pt.date"
-                class="rh-dot"
-                :class="{ 'rh-dot--selected': selectedHrPoint?.date === pt.date }"
-                :cx="pt.x" :cy="pt.y" r="1.2"
-                @click="selectedHrPoint = pt"
-              />
-            </svg>
-            <div v-if="selectedHrPoint" class="rh-tooltip">
-              <strong>{{ selectedHrPoint.value }}</strong>
-              <small>{{ parseLocalDate(selectedHrPoint.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) }} · bpm</small>
-            </div>
-            <div class="rh-axis">
-              <span>{{ restingHrHistory[0]?.dateLabel }}</span>
-              <span>{{ restingHrHistory[restingHrHistory.length - 1]?.dateLabel }}</span>
-            </div>
-          </div>
+          <trend-chart
+            v-if="restingHrHistory.length >= 2"
+            :pts="hrTrendPts"
+            unit="bpm"
+            :show-avg="true"
+            aria-label="Resting heart rate history"
+          />
           <p v-else class="empty-hint">No heart-rate data yet</p>
         </div>
 
         <!-- 5. Readiness history -->
         <div class="card">
           <p class="section-kicker">Readiness · last 14 days</p>
-          <div v-if="readinessHistory.length >= 2" class="rh-chart">
-            <svg viewBox="0 0 100 40" class="rh-svg" aria-label="Readiness history">
-              <polygon class="rh-area" :points="rhAreaPoints" />
-              <polyline class="rh-line" :points="rhLinePoints" />
-              <circle
-                v-for="pt in readinessHistory"
-                :key="pt.date"
-                class="rh-dot"
-                :class="{ 'rh-dot--selected': selectedRhPoint?.date === pt.date }"
-                :cx="pt.x" :cy="pt.y" r="1.2"
-                @click="selectedRhPoint = pt"
-              />
-            </svg>
-            <div v-if="selectedRhPoint" class="rh-tooltip">
-              <strong>{{ selectedRhPoint.score }}</strong>
-              <small>{{ parseLocalDate(selectedRhPoint.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}</small>
-            </div>
-            <div class="rh-axis">
-              <span>{{ readinessHistory[0]?.dateLabel }}</span>
-              <span>{{ readinessHistory[readinessHistory.length - 1]?.dateLabel }}</span>
-            </div>
-          </div>
+          <trend-chart
+            v-if="readinessHistory.length >= 2"
+            :pts="readinessTrendPts"
+            aria-label="Readiness history"
+          />
           <p v-else class="empty-hint">No readiness data yet</p>
         </div>
 
@@ -230,6 +193,7 @@ import {
 } from '@ionic/vue';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import TrendChart from '@/shared/components/TrendChart.vue';
 import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {
@@ -255,8 +219,8 @@ import {
 } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics } from '@/shared/db/app_db';
 
-type RhPoint = { date: string; score: number; x: number; y: number; dateLabel: string };
-type HrPoint = { date: string; value: number; x: number; y: number; dateLabel: string };
+type RhPoint = { date: string; score: number; dateLabel: string };
+type HrPoint = { date: string; value: number; dateLabel: string }
 
 // --- State ---
 const sleepHours      = ref<number | null>(null);
@@ -279,9 +243,7 @@ const syncing         = ref(false);
 // Exercise permission is missing — that gap can crash the plugin on sync.
 const exerciseAccessMissing = ref(false);
 const readinessHistory = ref<RhPoint[]>([]);
-const selectedRhPoint  = ref<RhPoint | null>(null);
 const restingHrHistory = ref<HrPoint[]>([]);
-const selectedHrPoint  = ref<HrPoint | null>(null);
 
 // --- Displays ---
 const sleepDisplay           = computed(() => sleepHours.value === null      ? '—' : `${sleepHours.value.toFixed(1)} h`);
@@ -426,25 +388,15 @@ const loadActivities = async () => { activities.value = await getRecentActivitie
 
 const loadReadinessHistory = async () => {
   const raw = await queryReadinessHistory(14);
-  if (raw.length < 2) { readinessHistory.value = []; return; }
-  const minS = Math.min(...raw.map(r => r.score));
-  const maxS = Math.max(...raw.map(r => r.score));
-  const range = maxS - minS || 1;
-  readinessHistory.value = raw.map((r, i) => ({
+  readinessHistory.value = raw.map(r => ({
     date: r.date,
     score: Math.round(r.score),
-    x: (i / (raw.length - 1)) * 96 + 2,
-    y: 36 - ((r.score - minS) / range) * 32 + 2,
     dateLabel: parseLocalDate(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
   }));
 };
 
-const rhLinePoints = computed(() => readinessHistory.value.map(p => `${p.x},${p.y}`).join(' '));
-const rhAreaPoints = computed(() => {
-  const pts = readinessHistory.value;
-  if (!pts.length) return '';
-  return `${pts[0].x},40 ${rhLinePoints.value} ${pts[pts.length - 1].x},40`;
-});
+const readinessTrendPts = computed(() =>
+  readinessHistory.value.map(r => ({ label: r.dateLabel, value: r.score })));
 
 // --- Heart rate history (resting HR trend + daily average) ---
 const loadHrHistory = async () => {
@@ -453,15 +405,9 @@ const loadHrHistory = async () => {
     .map(r => ({ date: r.date, value: Number(r.value) }))
     .filter(r => Number.isFinite(r.value))
     .reverse(); // DB returns newest-first; chart reads oldest → newest
-  if (rows.length < 2) { restingHrHistory.value = []; return; }
-  const minV = Math.min(...rows.map(r => r.value));
-  const maxV = Math.max(...rows.map(r => r.value));
-  const range = maxV - minV || 1;
-  restingHrHistory.value = rows.map((r, i) => ({
+  restingHrHistory.value = rows.map(r => ({
     date: r.date,
     value: Math.round(r.value),
-    x: (i / (rows.length - 1)) * 96 + 2,
-    y: 36 - ((r.value - minV) / range) * 32 + 2,
     dateLabel: parseLocalDate(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
   }));
 };
@@ -473,22 +419,8 @@ const restingHrAvg = computed(() => {
 });
 const restingHrAvgDisplay = computed(() => restingHrAvg.value === null ? '—' : `${restingHrAvg.value} bpm`);
 
-const hrLinePoints = computed(() => restingHrHistory.value.map(p => `${p.x},${p.y}`).join(' '));
-const hrAreaPoints = computed(() => {
-  const pts = restingHrHistory.value;
-  if (!pts.length) return '';
-  return `${pts[0].x},40 ${hrLinePoints.value} ${pts[pts.length - 1].x},40`;
-});
-// Average plotted on the same min/max scale as the line so the dashed baseline lines up.
-const hrAvgLineY = computed(() => {
-  const pts = restingHrHistory.value;
-  if (pts.length < 2 || restingHrAvg.value === null) return null;
-  const values = pts.map(p => p.value);
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
-  const range = maxV - minV || 1;
-  return 36 - ((restingHrAvg.value - minV) / range) * 32 + 2;
-});
+const hrTrendPts = computed(() =>
+  restingHrHistory.value.map(p => ({ label: p.dateLabel, value: p.value })));
 
 const loadTodayContext = async () => {
   todayWorkouts.value = await getTodayCompletedWorkouts();
@@ -809,47 +741,6 @@ const handleConnect = async () => {
 .tag--reminder { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
 .tag--general  { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.5); }
 
-/* ── Readiness chart ── */
-.rh-chart { display: grid; gap: 10px; }
-.rh-svg { width: 100%; height: auto; overflow: visible; }
-
-.rh-line {
-  fill: none;
-  stroke: var(--ion-color-accent-red);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.rh-area { fill: rgba(215, 26, 33, 0.15); stroke: none; }
-
-.rh-dot {
-  fill: var(--ion-color-accent-red);
-  cursor: pointer;
-}
-
-.rh-dot--selected { r: 2; filter: brightness(1.3); }
-
-.rh-tooltip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(215, 26, 33, 0.12);
-  border: 1px solid rgba(215, 26, 33, 0.4);
-}
-
-.rh-tooltip strong { font-size: 1.1rem; color: var(--ion-color-accent-red); }
-.rh-tooltip small  { font-size: 0.75rem; color: rgba(215, 26, 33, 0.7); }
-
-.rh-axis {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  color: rgba(var(--nt-ink), 0.4);
-}
-
 .empty-hint { margin: 0; font-size: 0.9rem; color: rgba(var(--nt-ink), 0.5); }
 
 /* ── Heart rate trend ── */
@@ -879,11 +770,6 @@ const handleConnect = async () => {
   font-variant-numeric: tabular-nums;
 }
 
-.hr-avg-line {
-  stroke: rgba(var(--nt-ink), 0.4);
-  stroke-width: 0.8;
-  stroke-dasharray: 3 2;
-}
 
 /* ── Activities ── */
 .activity-list { display: grid; gap: 10px; }

@@ -63,7 +63,7 @@
             </ion-select>
           </div>
           <template v-if="historyData.length > 0">
-            <div class="chart-frame">
+            <div class="chart-frame chart-frame--tall">
               <canvas ref="strengthChartRef"></canvas>
             </div>
             <div class="chart-legend">
@@ -156,7 +156,7 @@ import {
   BarController, BarElement,
   LinearScale, CategoryScale, Filler, Tooltip
 } from 'chart.js';
-import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid, chartColors } from '@/shared/utils/chartStyle';
+import { chartLineDataset, chartDimDataset, chartBarDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { formatWorkoutDate } from '@/shared/utils/timeFormat';
 import { hapticSelect } from '@/shared/utils/haptics';
 import type { ExercisePR, ExerciseHistoryPoint, ExerciseSession } from '@/features/gym/types/models';
@@ -330,10 +330,7 @@ const renderVolumeChart = () => {
         {
           label: 'Volume',
           data: historyData.value.map((item) => Number(item.volume) || 0),
-          backgroundColor: 'rgba(215, 26, 33, 0.55)',
-          hoverBackgroundColor: chartColors.red,
-          borderRadius: 3,
-          maxBarThickness: 28,
+          ...chartBarDataset,
         },
       ]
     },
@@ -474,49 +471,6 @@ onUnmounted(() => {
   --padding-end: 8px;
   min-height: auto;
   font-size: 12px;
-}
-
-.chart-frame {
-  position: relative;
-  height: 260px;
-  width: 100%;
-  background: rgba(var(--nt-ink), 0.03);
-  border-radius: 8px;
-  padding: 8px 4px 4px;
-}
-
-.chart-frame--short {
-  height: 200px;
-}
-
-.chart-legend {
-  display: flex;
-  gap: 16px;
-}
-
-.chart-legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--nt-font-head);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--nt-text-dim);
-}
-
-.chart-legend__swatch {
-  width: 14px;
-  height: 2px;
-  border-radius: 1px;
-}
-
-.chart-legend__swatch--red {
-  background: var(--ion-color-accent-red);
-}
-
-.chart-legend__swatch--dim {
-  background: rgba(var(--nt-ink), 0.35);
 }
 
 .session-list {

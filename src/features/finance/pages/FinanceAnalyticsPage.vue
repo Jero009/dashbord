@@ -105,25 +105,13 @@ import {
   DoughnutController, ArcElement,
   LinearScale, CategoryScale, Filler, Tooltip,
 } from 'chart.js';
-import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid, chartInk } from '@/shared/utils/chartStyle';
+import { chartLineDataset, chartDimDataset, chartDonutPalette, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticLight } from '@/shared/utils/haptics';
 import { localMonthISO } from '@/shared/utils/timeFormat';
 
 Chart.register(LineController, LineElement, PointElement, DoughnutController, ArcElement, LinearScale, CategoryScale, Filler, Tooltip);
 
-// Data-encoding palette: red shades fading into neutral greys (design system
-// allows shades for data, the single red accent stays the lead).
-// Resolved fresh (not a const) so slices/legend pick up the active theme's ink
-// on each render — the neutral greys flip to dark on the light theme.
-const palette = () => [
-  'rgb(215, 26, 33)',
-  'rgba(215, 26, 33, 0.72)',
-  'rgba(215, 26, 33, 0.48)',
-  chartInk(0.5),
-  chartInk(0.35),
-  chartInk(0.22),
-  chartInk(0.14),
-];
+const palette = chartDonutPalette;
 
 const localMonthKey = localMonthISO;
 
@@ -450,45 +438,6 @@ onUnmounted(() => {
 }
 
 /* Trend chart */
-.chart-frame {
-  position: relative;
-  height: 220px;
-  width: 100%;
-  background: rgba(var(--nt-ink), 0.03);
-  border-radius: 8px;
-  padding: 8px 4px 4px;
-}
-
-.chart-legend {
-  display: flex;
-  gap: 16px;
-}
-
-.chart-legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--nt-font-head);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--nt-text-dim);
-}
-
-.chart-legend__swatch {
-  width: 14px;
-  height: 2px;
-  border-radius: 1px;
-}
-
-.chart-legend__swatch--red {
-  background: var(--ion-color-accent-red);
-}
-
-.chart-legend__swatch--dim {
-  background: rgba(var(--nt-ink), 0.35);
-}
-
 .empty-copy {
   margin: 0;
   color: rgba(var(--nt-ink), 0.6);
