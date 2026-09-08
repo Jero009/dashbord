@@ -44,5 +44,6 @@ android/.idea/
 *.p12
 keystore.properties
 release.keystore
+keystore/
 
 # graphify-out is tracked (graph.json only); cache + dated snapshots excluded via nested .gitignore
