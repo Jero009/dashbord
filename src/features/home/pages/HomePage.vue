@@ -207,6 +207,8 @@ import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, pa
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
+import { clearRestNotification } from '@/shared/utils/restTimerAudio';
+import { cancelRestTimerDing } from '@/shared/utils/notifications';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
@@ -275,9 +277,16 @@ let restInterval: ReturnType<typeof setInterval> | null = null;
 const clearWorkoutTimer = () => {
   if (workoutInterval) { clearInterval(workoutInterval); workoutInterval = null; }
 };
-const clearRestTimer = () => {
+const clearRestTimer = (removeStorage = false) => {
   if (restInterval) { clearInterval(restInterval); restInterval = null; }
   activeRestTimer.value = { isActive: false, remaining: 0, total: 0 };
+  if (removeStorage) {
+    localStorage.removeItem('restTimer');
+    // Timer visibly ended/cleared on this page — cancel the OS ding that
+    // WorkoutPage scheduled, so it doesn't fire for a rest that's already over.
+    void cancelRestTimerDing();
+    void clearRestNotification();
+  }
 };
 
 const formatRestTime = (s: number) =>
@@ -299,7 +308,7 @@ const restoreRestTimer = () => {
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
       activeRestTimer.value.remaining = remaining;
-      if (remaining <= 0) { clearRestTimer(); localStorage.removeItem('restTimer'); }
+      if (remaining <= 0) { clearRestTimer(true); }
     };
     tick();
     if (activeRestTimer.value.isActive) restInterval = setInterval(tick, 1000);

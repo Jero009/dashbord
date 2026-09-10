@@ -668,6 +668,7 @@ const promptSessionRpe = async (): Promise<number | null> => {
     ],
   });
   await alert.present();
+  alert.onDidDismiss().then(() => resolveRpe(null));
   return result;
 };
 

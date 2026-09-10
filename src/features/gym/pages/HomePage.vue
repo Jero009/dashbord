@@ -146,6 +146,8 @@ import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/ty
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
+import { clearRestNotification } from '@/shared/utils/restTimerAudio';
+import { cancelRestTimerDing } from '@/shared/utils/notifications';
 
 const activeWorkout = ref(false);
 const activeRestTimer = ref({
@@ -249,6 +251,10 @@ const clearActiveRestTimer = (removeStorage = false) => {
 
   if (removeStorage) {
     localStorage.removeItem('restTimer');
+    // Timer visibly ended/cleared on this page — cancel the OS ding that
+    // WorkoutPage scheduled, so it doesn't fire for a rest that's already over.
+    void cancelRestTimerDing();
+    void clearRestNotification();
   }
 };
 
