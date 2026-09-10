@@ -133,7 +133,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { IonPage, IonHeader, IonContent, IonIcon, IonSelect, IonSelectOption, onIonViewWillEnter, toastController } from '@ionic/vue'
+import { IonPage, IonHeader, IonContent, IonIcon, IonSelect, IonSelectOption, onIonViewWillEnter, toastController, alertController } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import TrendChart from '@/shared/components/TrendChart.vue'
@@ -284,8 +284,22 @@ const saveEntry = async () => {
 
 const removeEntry = async (entry: BodyLogEntry) => {
   hapticHeavy();
-  await deleteBodyLog(entry.id)
-  await loadEntries()
+  const alert = await alertController.create({
+    header: 'Delete entry?',
+    cssClass: 'app-confirm-alert',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Delete',
+        role: 'destructive',
+        handler: async () => {
+          await deleteBodyLog(entry.id)
+          await loadEntries()
+        }
+      }
+    ]
+  });
+  await alert.present();
 }
 
 onIonViewWillEnter(loadEntries)

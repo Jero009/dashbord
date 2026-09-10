@@ -186,6 +186,7 @@ import {
   IonIcon,
   onIonViewWillEnter,
   toastController,
+  alertController,
 } from '@ionic/vue';
 import { chevronBackOutline, chevronForwardOutline, closeOutline, createOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
@@ -398,6 +399,22 @@ const saveBudget = async () => {
 
 const removeBudget = async (id: number) => {
   hapticHeavy();
+  const alert = await alertController.create({
+    header: 'Remove budget?',
+    cssClass: 'app-confirm-alert',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Remove',
+        role: 'destructive',
+        handler: () => doRemoveBudget(id)
+      }
+    ]
+  });
+  await alert.present();
+};
+
+const doRemoveBudget = async (id: number) => {
   try {
     await deleteFinanceBudget(Number(id));
   } catch {
