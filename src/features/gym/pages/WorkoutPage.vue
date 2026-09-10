@@ -613,6 +613,10 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
 
   if (isChecked) {
     startRestTimer(Number(exercise.rest_seconds) || 60, exercise.name || '');
+  } else if (restTimer.value.isActive) {
+    // Unchecking a set means the rest isn't warranted anymore — stop the timer
+    // and cancel the scheduled OS ding instead of letting it ding for nothing.
+    onSkipRestTimer(new Event('skip'));
   }
 
   try {
@@ -1146,7 +1150,9 @@ const formatRestTime = (seconds: number) => {
 
 const restProgress = computed(() => {
   if (restTimer.value.total === 0) return 0;
-  return (restTimer.value.remaining / restTimer.value.total) * 100;
+  // +30s bumps `total` above what's left of the original bar; clamp so the
+  // bar never overflows past full width.
+  return Math.min(100, (restTimer.value.remaining / restTimer.value.total) * 100);
 });
 
 onIonViewWillEnter(async () => {

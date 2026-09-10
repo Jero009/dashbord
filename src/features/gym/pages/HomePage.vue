@@ -138,7 +138,7 @@
 import { IonPage, IonHeader, IonContent, IonCard, onIonViewWillEnter, IonIcon, IonSelect, IonSelectOption } from '@ionic/vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWorkout, getWorkoutsByName, getWorkouts, getRecentPRs } from '@/shared/db/app_db';
-import { ref, onMounted, onUnmounted,computed,watch } from 'vue';
+import { ref, onUnmounted,computed,watch } from 'vue';
 import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
@@ -476,15 +476,8 @@ const loadWeeklyData = async () => {
   }).length
 }
 
-onMounted(async () => {
-  await loadActiveWorkout();
-  await loadTemplates();
-  await loadLatestWorkout();
-  await loadWeeklyData();
-  await loadRecentPRs();
-  renderChart();
-});
-
+// ionViewWillEnter fires on the first entry too, so it covers initial load —
+// a separate onMounted loader ran everything twice on page open.
 onIonViewWillEnter(async () => {
   await loadActiveWorkout();
   await loadTemplates();
