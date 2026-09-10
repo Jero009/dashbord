@@ -12,6 +12,10 @@ export interface PriceQuote {
   price: number; // per-unit price in `currency`
   changePct: number | null; // 24h % change
   currency: string;
+  /** True when the price was FX-converted into the user's currency. */
+  fxConverted?: boolean;
+  /** True when FX conversion was needed but failed (price is in `currency`, not the user's). */
+  fxFailed?: boolean;
 }
 
 export interface PriceableHolding {
@@ -92,6 +96,35 @@ const fetchCrypto = async (items: PriceableHolding[], out: Map<number, PriceQuot
   }
 };
 
+// ── FX conversion ────────────────────────────────────────────────────────────
+// Yahoo quotes arrive in the instrument's native currency; the app stores one
+// value per holding in the user's currency. Convert at fetch time via the
+// free frankfurter.app FX endpoint (ECB reference rates, no key), with a tiny
+// in-memory cache so N holdings sharing a quote currency = 1 request.
+
+const fxCache = new Map<string, number>(); // "EUR->USD" → rate
+const FX_TTL_MS = 60 * 60 * 1000;
+let fxCacheAt = 0;
+
+export async function fxRate(from: string, to: string): Promise<number | null> {
+  const f = from.toUpperCase();
+  const t = to.toUpperCase();
+  if (f === t) return 1;
+  const key = `${f}->${t}`;
+  if (fxCache.has(key) && Date.now() - fxCacheAt < FX_TTL_MS) return fxCache.get(key)!;
+  try {
+    const data = await getJson(`https://api.frankfurter.app/latest?from=${f}&to=${t}`);
+    const rate = typeof data?.rates?.[t] === 'number' ? data.rates[t] : null;
+    if (rate != null) {
+      fxCache.set(key, rate);
+      fxCacheAt = Date.now();
+    }
+    return rate;
+  } catch {
+    return null;
+  }
+}
+
 const fetchOneStock = async (item: PriceableHolding, out: Map<number, PriceQuote>): Promise<void> => {
   const sym = item.symbol.trim().toUpperCase();
   if (!sym) return;
@@ -104,10 +137,25 @@ const fetchOneStock = async (item: PriceableHolding, out: Map<number, PriceQuote
   if (typeof price !== 'number') return;
   const prev = meta?.chartPreviousClose ?? meta?.previousClose;
   const changePct = typeof prev === 'number' && prev !== 0 ? ((price - prev) / prev) * 100 : null;
+  const quoteCurrency = typeof meta?.currency === 'string' ? meta.currency : 'USD';
+  const userCurrency = getCurrency();
+  // Convert to the user's currency at fetch time so stored values are directly
+  // comparable across the portfolio. A failed FX fetch keeps the raw price and
+  // flags the quote's true currency — the caller surfaces it, never silently skips.
+  let priceInUser = price;
+  let fxFailed = false;
+  const rate = await fxRate(quoteCurrency, userCurrency);
+  if (rate != null) {
+    priceInUser = price * rate;
+  } else if (quoteCurrency.toUpperCase() !== userCurrency) {
+    fxFailed = true;
+  }
   out.set(item.id, {
-    price,
+    price: priceInUser,
     changePct,
-    currency: typeof meta?.currency === 'string' ? meta.currency : 'USD',
+    currency: quoteCurrency.toUpperCase() === userCurrency ? userCurrency : quoteCurrency.toUpperCase(),
+    fxConverted: rate != null,
+    fxFailed,
   });
 };
 

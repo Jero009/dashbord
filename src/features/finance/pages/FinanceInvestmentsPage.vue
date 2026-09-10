@@ -242,11 +242,16 @@ const refreshPrices = async (silent: boolean) => {
   if (!priceable.length) return;
 
   refreshing.value = true;
-  lastRefreshAt = Date.now();
   if (!silent) hapticLight();
   let quotes: Map<number, PriceQuote>;
+  let hadError = false;
   try {
-    quotes = await fetchInvestmentPrices(priceable);
+    // Hard timeout so a hung network call can't leave refreshing=true forever.
+    quotes = await Promise.race([
+      fetchInvestmentPrices(priceable),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000)),
+    ]);
+    lastRefreshAt = Date.now();
   } catch {
     refreshing.value = false;
     if (!silent) await showToast('price fetch failed', 'warning');
@@ -260,26 +265,38 @@ const refreshPrices = async (silent: boolean) => {
   }
 
   const nextChange = new Map<number, number | null>();
+  let writesOk = 0;
   for (const inv of investments.value) {
     const id = Number(inv.id);
     const quote = quotes.get(id);
     if (!quote) continue;
+    if (quote.fxFailed) hadError = true;
     const qty = Number(inv.quantity) || 0;
     const value = qty * quote.price;
     nextChange.set(id, quote.changePct);
     try {
       await updateInvestmentPrice(id, value, quote.price);
+      writesOk++;
     } catch {
       /* keep going; one failed write shouldn't abort the batch */
+      hadError = true;
     }
   }
   dayChange.value = nextChange;
-  lastUpdated.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  investments.value = await getFinanceInvestments().catch(() => investments.value);
+  // Only claim "updated HH:MM" when at least one write actually succeeded.
+  if (writesOk > 0) {
+    lastUpdated.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    investments.value = await getFinanceInvestments().catch(() => investments.value);
+  }
   refreshing.value = false;
   if (!silent) {
-    hapticSuccess();
-    await showToast(`updated ${quotes.size} price${quotes.size === 1 ? '' : 's'}`, 'success');
+    if (writesOk === 0) {
+      await showToast('price update failed', 'warning');
+    } else {
+      if (hadError) await showToast('some updates failed', 'warning');
+      hapticSuccess();
+      await showToast(`updated ${writesOk} price${writesOk === 1 ? '' : 's'}`, 'success');
+    }
   }
 };
 
