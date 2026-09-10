@@ -69,10 +69,6 @@ export interface SleepSummary {
   heartRateTimeline: SleepHeartRatePoint[];
 }
 
-export interface SleepSummaryResult extends HealthConnectAccessResult {
-  summary?: SleepSummary | null;
-}
-
 export interface ReadinessInputs {
   sleepHours: number | null;
   sleepEfficiency: number | null;
@@ -456,111 +452,6 @@ export async function checkHealthConnectExerciseAccess(): Promise<HealthConnectE
     console.error('Health Connect exercise authorization check failed:', error);
     return fallback;
   }
-}
-
-export async function getLatestSleepSummary(daysBack = 14): Promise<SleepSummaryResult> {
-  if (!isHealthConnectAvailable()) {
-    return {
-      available: false,
-      granted: false,
-      reason: 'Health Connect is only available on Android builds.',
-      summary: null,
-    };
-  }
-
-  const availability = await ensureAvailability();
-  if (!availability.available) {
-    return {
-      ...availability,
-      summary: null,
-    };
-  }
-
-  const auth = await Health.checkAuthorization({
-    read: HEALTH_CONNECT_READ_TYPES,
-  });
-  const granted = hasCoreReadAccess(auth.readAuthorized);
-
-  if (!granted) {
-    return {
-      available: true,
-      granted: false,
-      summary: null,
-    };
-  }
-
-  const endDate = new Date().toISOString();
-  const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
-
-  const sleepResult = await Health.readSamples({
-    dataType: 'sleep',
-    startDate,
-    endDate,
-    limit: 50,
-    ascending: false,
-  });
-
-  const session = sleepResult.samples[0];
-  if (!session) {
-    return {
-      available: true,
-      granted: true,
-      summary: null,
-    };
-  }
-
-  const [sleepHeartRateResult, respiratoryRateResult] = await Promise.all([
-    Health.readSamples({
-      dataType: 'heartRate',
-      startDate: session.startDate,
-      endDate: session.endDate,
-      limit: 1000,
-      ascending: true,
-    }),
-    Health.readSamples({
-      dataType: 'respiratoryRate',
-      startDate: session.startDate,
-      endDate: session.endDate,
-      limit: 1000,
-      ascending: true,
-    }),
-  ]);
-
-  const sleepHeartRate = average(sleepHeartRateResult.samples.map((sample) => sample.value));
-  const respiratoryRate = average(respiratoryRateResult.samples.map((sample) => sample.value));
-  const sleepWindowStart = new Date(session.startDate).getTime();
-  const sleepWindowEnd = new Date(session.endDate).getTime();
-  const sleepWindowSpan = Math.max(1, sleepWindowEnd - sleepWindowStart);
-  const heartRateTimeline: SleepHeartRatePoint[] = sleepHeartRateResult.samples
-    .map((sample) => {
-      const time = new Date(sample.startDate).getTime();
-      return {
-        time: sample.startDate,
-        value: sample.value,
-        offset: clamp(((time - sleepWindowStart) / sleepWindowSpan) * 100, 0, 100),
-      };
-    })
-    .filter((sample) => Number.isFinite(sample.value))
-    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-  const sleepSummary = buildSleepSummary(
-    session,
-    sleepHeartRate,
-    respiratoryRate
-  );
-  const summary: SleepSummary = {
-    ...sleepSummary,
-    heartRateTimeline,
-    wentToSleepAt: session.startDate,
-    wokeUpAt: session.endDate,
-    sleepHeartRate: sleepHeartRate === null ? null : Math.round(sleepHeartRate),
-    respiratoryRate: respiratoryRate === null ? null : Number(respiratoryRate.toFixed(1)),
-  };
-
-  return {
-    available: true,
-    granted: true,
-    summary,
-  };
 }
 
 export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthConnectSyncResult> {

@@ -2845,28 +2845,6 @@ export async function getExerciseSessions(exerciseId: number, limit = 8) {
   return result.values || [];
 }
 
-// Get exercise stats including PR and recent history
-export async function getExerciseStats(exerciseId: number) {
-  if (!db) return null;
-
-  const pr = await getExercisePR(exerciseId);
-  const history = await getExerciseHistory(exerciseId);
-  
-  const exerciseResult = await db.query(
-    'SELECT name FROM exercise WHERE id = ?',
-    [exerciseId]
-  );
-
-  const exerciseName = exerciseResult.values?.[0]?.name || '';
-
-  return {
-    exercise_id: exerciseId,
-    exercise_name: exerciseName,
-    pr,
-    history
-  };
-}
-
 // ── Gym analytics aggregations ───────────────────────────────────────────────
 
 export interface MuscleVolume {
