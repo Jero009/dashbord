@@ -100,99 +100,13 @@ function recentValues(series: DatedValue[], n: number): number[] {
   return sorted.slice(-n).map((p) => p.value).filter((v) => Number.isFinite(v));
 }
 
-// ── training load ────────────────────────────────────────────────────────────
-
-// Inclusive list of YYYY-MM-DD keys from start to end (same pattern as
-// trainingLoad.ts, kept local so this module stays dependency-free).
-function enumerateDates(start: string, end: string): string[] {
-  const out: string[] = [];
-  let cur = start;
-  for (let guard = 0; cur <= end && guard < 1500; guard++) {
-    out.push(cur);
-    const [y, m, d] = cur.split('-').map(Number);
-    const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
-    dt.setDate(dt.getDate() + 1);
-    cur = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-  }
-  return out;
-}
-
-export function computeTrainingLoad(dailyVolume: DatedValue[]): TrainingLoad {
-  // Gap-fill missing calendar days with zero volume: rest days are real
-  // training-load zeros, not missing data. Without this, a sparse series makes
-  // `recentValues(..., 7)` read 7 *entries* (possibly weeks apart) as "acute"
-  // and divides chronic by trained-days instead of elapsed weeks.
-  const sorted = [...dailyVolume]
-    .filter((p) => Number.isFinite(p.value))
-    .sort((p, q) => p.date.localeCompare(q.date));
-
-  let filled: DatedValue[] = sorted;
-  if (sorted.length > 1) {
-    const byDate = new Map(sorted.map((p) => [p.date, p.value]));
-    const dates = enumerateDates(sorted[0].date, sorted[sorted.length - 1].date);
-    filled = dates.map((date) => ({ date, value: byDate.get(date) ?? 0 }));
-  }
-
-  const acute = filled.slice(-7).map((p) => p.value);
-  const chronic = filled.slice(-28).map((p) => p.value);
-
-  const acuteTotal = acute.reduce((a, b) => a + b, 0);
-  const chronicTotal = chronic.reduce((a, b) => a + b, 0);
-  // Divide by the actual elapsed span (in weeks), not a fixed 4, so a partial
-  // history (14–27 days) doesn't understate the chronic baseline and inflate ACWR.
-  const chronicWeeklyAvg = chronicTotal / (chronic.length / 7);
-
-  if (chronic.length < 14 || chronicWeeklyAvg <= 0) {
-    return { acuteTotal, chronicWeeklyAvg, acwr: 0, status: 'insufficient' };
-  }
-
-  const acwr = acuteTotal / chronicWeeklyAvg;
-  let status: LoadStatus;
-  if (acwr > ACWR_HIGH) status = 'high';
-  else if (acwr < ACWR_LOW) status = acuteTotal === 0 ? 'detraining' : 'undertraining';
-  else status = 'optimal';
-
-  return {
-    acuteTotal: Math.round(acuteTotal),
-    chronicWeeklyAvg: Math.round(chronicWeeklyAvg),
-    acwr: Math.round(acwr * 100) / 100,
-    status,
-  };
-}
-
-// ── recovery recommendation ──────────────────────────────────────────────────
-
-export function computeRecoveryRecommendation(input: RecoveryInput): RecoveryRecommendation {
-  const { rhrToday, rhrBaseline, readinessToday, acwr } = input;
-
-  const rhrRatio =
-    rhrToday && rhrBaseline && rhrBaseline > 0 ? rhrToday / rhrBaseline : null;
-
-  const rhrElevated = rhrRatio !== null && rhrRatio >= RHR_ELEVATED_RATIO;
-  const readinessLow = readinessToday !== null && readinessToday < 45;
-  const readinessMid = readinessToday !== null && readinessToday >= 45 && readinessToday < 60;
-  const loadHigh = acwr !== null && acwr > ACWR_HIGH;
-
-  // Strong stop signals → recover.
-  if (readinessLow || (rhrElevated && loadHigh)) {
-    const reason = readinessLow
-      ? 'Readiness is low — prioritise rest today.'
-      : 'Resting heart rate is up and training load is spiking — back off.';
-    return { level: 'recover', reason };
-  }
-
-  // Mild caution → maintain.
-  if (rhrElevated || loadHigh || readinessMid) {
-    let reason = 'Keep volume steady today.';
-    if (loadHigh) reason = 'Load is climbing fast — hold volume rather than adding.';
-    else if (rhrElevated) reason = 'Resting heart rate is slightly elevated — keep it moderate.';
-    return { level: 'maintain', reason };
-  }
-
-  return { level: 'train', reason: 'Recovery markers look good — green light to push.' };
-}
-
 // ── correlation & trend insights ─────────────────────────────────────────────
+//
+// NOTE: the legacy SMA computeTrainingLoad / computeRecoveryRecommendation pair
+// that lived here was removed — the Home chip and Analytics overview now share
+// `todayRecovery.ts` (EWMA ACWR + recovery z), the same services the
+// TrainingLoadOverlay charts. `TrainingLoad`/`RecoveryRecommendation` types and
+// `LoadStatus`/`RecoveryLevel` remain the shared vocabulary.
 
 export function computeInsights(input: InsightsInput): Insight[] {
   const { sleepHours, rhr, readiness, dailyVolume } = input;

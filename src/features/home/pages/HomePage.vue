@@ -200,8 +200,8 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
-import { getRecentHealthMetrics, queryReadinessHistory, queryDailyVolume, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
-import { computeTrainingLoad, computeRecoveryRecommendation, mean, type RecoveryRecommendation } from '@/shared/health/insights';
+import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
+import { computeTodayRecovery, type RecoveryRecommendation } from '@/shared/health/todayRecovery';
 import { formatCurrency } from '@/shared/utils/currency';
 import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, parseLocalDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
@@ -481,29 +481,28 @@ const recoveryLabel = computed(() => {
 });
 
 const loadRecovery = async () => {
-  const [rhrRows, readinessRows, volume] = await Promise.all([
+  const [rhrRows, readinessRows, sessions] = await Promise.all([
     getRecentHealthMetrics('resting_heart_rate', 28).catch(() => []),
     queryReadinessHistory(28).catch(() => []),
-    queryDailyVolume(28).catch(() => []),
+    getSessionLoads(28).catch(() => []),
   ]);
 
-  const rhrAsc = (rhrRows as { date: string; value: number }[])
-    .map((r) => ({ date: r.date, value: Number(r.value) }))
-    .filter((r) => Number.isFinite(r.value))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((r) => r.value);
-
-  const readinessAsc = readinessRows
-    .map((r) => ({ date: r.date, value: Number(r.score) }))
-    .filter((r) => Number.isFinite(r.value))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  const load = computeTrainingLoad(volume);
-  recovery.value = computeRecoveryRecommendation({
-    rhrToday: rhrAsc.length > 0 ? rhrAsc[rhrAsc.length - 1] : null,
-    rhrBaseline: rhrAsc.length >= 3 ? mean(rhrAsc) : null,
-    readinessToday: readinessAsc.length > 0 ? readinessAsc[readinessAsc.length - 1].value : null,
-    acwr: load.status === 'insufficient' ? null : load.acwr,
+  // Shared with Analytics overview + TrainingLoadOverlay: one EWMA-ACWR /
+  // recovery-z verdict so the Home chip can never contradict Analytics.
+  recovery.value = computeTodayRecovery({
+    sessions: sessions.map((s) => ({
+      date: s.date,
+      volumeLoad: s.volume,
+      durationMinutes: s.duration_minutes,
+      sessionRpe: s.session_rpe,
+    })),
+    rhr: (rhrRows as { date: string; value: number }[])
+      .map((r) => ({ date: r.date, value: Number(r.value) }))
+      .filter((r) => Number.isFinite(r.value)),
+    readiness: readinessRows
+      .map((r) => ({ date: r.date, value: Number(r.score) }))
+      .filter((r) => Number.isFinite(r.value)),
+    today: localDateISO(),
   });
 };
 

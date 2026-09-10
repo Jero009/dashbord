@@ -69,18 +69,12 @@ import {
   getRecentSleepSessions,
   getRecentHealthMetrics,
   queryReadinessHistory,
-  queryDailyVolume,
+  getSessionLoads,
 } from '@/shared/db/app_db';
-import {
-  computeTrainingLoad,
-  computeRecoveryRecommendation,
-  computeInsights,
-  mean,
-  type DatedValue,
-  type TrainingLoad,
-  type RecoveryRecommendation,
-  type Insight,
-} from '@/shared/health/insights';
+import { computeInsights, mean, type DatedValue, type TrainingLoad, type RecoveryRecommendation, type Insight } from '@/shared/health/insights';
+import { computeTodayRecovery } from '@/shared/health/todayRecovery';
+import { computeDailyLoads, computeAcwrSeries, type DailyLoad } from '@/shared/health/trainingLoad';
+import { localDateISO } from '@/shared/utils/timeFormat';
 
 const load = ref<TrainingLoad>({ acuteTotal: 0, chronicWeeklyAvg: 0, acwr: 0, status: 'insufficient' });
 const recovery = ref<RecoveryRecommendation>({ level: 'train', reason: 'Recovery markers look good — green light to push.' });
@@ -109,11 +103,11 @@ const loadNote = computed(() => {
 const formatVolume = (v: number) => (v >= 10000 ? `${Math.round(v / 100) / 10}k` : `${Math.round(v)}`);
 
 const loadAll = async () => {
-  const [sleep, rhrRows, readinessRows, volume] = await Promise.all([
+  const [sleep, rhrRows, readinessRows, sessions] = await Promise.all([
     getRecentSleepSessions(28).catch(() => []),
     getRecentHealthMetrics('resting_heart_rate', 28).catch(() => []),
     queryReadinessHistory(28).catch(() => []),
-    queryDailyVolume(28).catch(() => []),
+    getSessionLoads(28).catch(() => []),
   ]);
 
   const sleepHours: DatedValue[] = sleep
@@ -128,30 +122,56 @@ const loadAll = async () => {
     .map((r) => ({ date: r.date, value: Number(r.score) }))
     .filter((r) => Number.isFinite(r.value));
 
-  const dailyVolume: DatedValue[] = volume;
-
-  // Training load + recovery.
-  const trainingLoad = computeTrainingLoad(dailyVolume);
-  load.value = trainingLoad;
-
-  const rhrAsc = [...rhr].sort((a, b) => a.date.localeCompare(b.date)).map((r) => r.value);
-  const rhrToday = rhrAsc.length > 0 ? rhrAsc[rhrAsc.length - 1] : null;
-  // Baseline excludes today so the elevation ratio isn't diluted by its own value.
-  const rhrBaseline = rhrAsc.length >= 4 ? mean(rhrAsc.slice(0, -1))
-    : (rhrAsc.length >= 3 ? mean(rhrAsc) : null);
-
-  const readinessAsc = [...readiness].sort((a, b) => a.date.localeCompare(b.date));
-  const readinessToday = readinessAsc.length > 0 ? readinessAsc[readinessAsc.length - 1].value : null;
-
-  recovery.value = computeRecoveryRecommendation({
-    rhrToday,
-    rhrBaseline,
-    readinessToday,
-    acwr: trainingLoad.status === 'insufficient' ? null : trainingLoad.acwr,
+  // One shared verdict (same EWMA ACWR + recovery-z services as Home chip and
+  // TrainingLoadOverlay) so the pages can never disagree.
+  const verdict = computeTodayRecovery({
+    sessions: sessions.map((s) => ({
+      date: s.date,
+      volumeLoad: s.volume,
+      durationMinutes: s.duration_minutes,
+      sessionRpe: s.session_rpe,
+    })),
+    rhr,
+    readiness,
+    today: localDateISO(),
   });
+  recovery.value = verdict ?? { level: 'train', reason: 'Recovery markers look good — green light to push.' };
 
-  insights.value = computeInsights({ sleepHours, rhr, readiness, dailyVolume });
+  // Load tiles read off the same ACWR series the verdict used.
+  const dailyLoads = computeDailyLoads(sessions.map((s) => ({
+    date: s.date,
+    volumeLoad: s.volume,
+    durationMinutes: s.duration_minutes,
+    sessionRpe: s.session_rpe,
+  })));
+  load.value = loadFromSeries(dailyLoads);
+
+  insights.value = computeInsights({ sleepHours, rhr, readiness, dailyVolume: dailyVolumeFromLoads(dailyLoads) });
 };
+
+/** Summarise the shared EWMA ACWR series into the tile values. */
+function loadFromSeries(dailyLoads: DailyLoad[]): TrainingLoad {
+  const series = computeAcwrSeries(dailyLoads, { endDate: localDateISO() });
+  const latest = [...series].reverse().find((p) => p.acwr != null);
+  if (!latest) return { acuteTotal: 0, chronicWeeklyAvg: 0, acwr: 0, status: 'insufficient' };
+  const recent = series.slice(-7);
+  const chronicWeekly = latest.chronic * 7;
+  return {
+    acuteTotal: Math.round(recent.reduce((s, p) => s + p.load, 0)),
+    chronicWeeklyAvg: Math.round(chronicWeekly),
+    acwr: latest.acwr ?? 0,
+    status:
+      latest.acwr == null ? 'insufficient'
+        : latest.acwr > 1.5 ? 'high'
+          : latest.acwr < 0.8 ? (recent.every((p) => p.load === 0) ? 'detraining' : 'undertraining')
+            : 'optimal',
+  };
+}
+
+/** Volume-per-day series for computeInsights, from the same daily loads. */
+function dailyVolumeFromLoads(dailyLoads: DailyLoad[]): DatedValue[] {
+  return dailyLoads.map((d) => ({ date: d.date, value: d.volumeLoad }));
+}
 
 onIonViewWillEnter(() => {
   loadAll();
