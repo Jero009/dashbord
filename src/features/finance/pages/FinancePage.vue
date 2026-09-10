@@ -6,10 +6,12 @@
     </ion-header>
     <ion-content :fullscreen="true" class="finance-content">
       <div class="finance-shell">
+        <div v-if="loading" class="page-loading"><span class="nt-loading-dot"></span><span class="nt-loading-dot"></span><span class="nt-loading-dot"></span></div>
         <!-- Net worth hero + trend -->
         <ion-card class="finance-card hero-card">
           <div class="card-topline">
             <p class="section-kicker">Net worth</p>
+            <span v-if="failed['accounts'] || failed['investments']" class="card-error">Couldn't load</span>
             <span v-if="netDelta !== null" class="delta-chip" :class="netDelta >= 0 ? 'delta-chip--up' : 'delta-chip--down'">
               <ion-icon :icon="netDelta >= 0 ? trendingUpOutline : trendingDownOutline" />
               {{ netDelta >= 0 ? '+' : '−' }}{{ formatCurrency(Math.abs(netDelta)) }}
@@ -60,6 +62,7 @@
         <ion-card class="finance-card tappable" button @click="go('/finance/budget')">
           <div class="card-topline">
             <p class="section-kicker">This month</p>
+            <span v-if="failed['month']" class="card-error">Couldn't load</span>
             <ion-icon class="chev" :icon="chevronForwardOutline" />
           </div>
           <div class="flow-grid">
@@ -147,6 +150,7 @@
               </span>
             </div>
           </div>
+          <p v-else-if="failed['recent']" class="empty-state card-error">Couldn't load transactions</p>
           <p v-else class="empty-state">No transactions yet</p>
         </ion-card>
       </div>
@@ -208,6 +212,9 @@ const monthTotals = ref<{ income: number; expense: number }>({ income: 0, expens
 const history = ref<NetWorthPoint[]>([]);
 const recent = ref<Array<Record<string, any>>>([]);
 const topCategories = ref<CategorySpending[]>([]);
+const loading = ref(true);
+// Per-card failure flags: a DB error must not look like "no data".
+const failed = ref<Record<string, boolean>>({});
 
 const netWorth = computed(() => computeNetWorth(accounts.value, investments.value));
 const totalAssets = computed(() => computeTotalAssets(accounts.value, investments.value));
@@ -290,18 +297,30 @@ const go = (path: string) => {
   router.push(path);
 };
 
+const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    const v = await p;
+    failed.value[key] = false;
+    return v;
+  } catch {
+    failed.value[key] = true;
+    return fallback;
+  }
+};
+
 const loadFinance = async () => {
+  loading.value = true;
   // Persist today's snapshot first so the trend includes the latest point.
   await recordNetWorthSnapshot().catch(() => {});
   const monthKey = localMonthISO();
   const [acc, inv, subs, totals, hist, rec, cats] = await Promise.all([
-    getFinanceAccounts().catch(() => []),
-    getFinanceInvestments().catch(() => []),
-    getFinanceSubscriptions().catch(() => []),
-    getFinanceMonthTotals(monthKey).catch(() => ({ income: 0, expense: 0 })),
-    getNetWorthHistory(rangeDays).catch(() => []),
-    getRecentFinanceTransactions(5).catch(() => []),
-    queryCategorySpending(monthKey).catch(() => []),
+    settled('accounts', getFinanceAccounts(), []),
+    settled('investments', getFinanceInvestments(), []),
+    settled('subscriptions', getFinanceSubscriptions(), []),
+    settled('month', getFinanceMonthTotals(monthKey), { income: 0, expense: 0 }),
+    settled('history', getNetWorthHistory(rangeDays), []),
+    settled('recent', getRecentFinanceTransactions(5), []),
+    settled('categories', queryCategorySpending(monthKey), []),
   ]);
   accounts.value = acc;
   investments.value = inv;
@@ -310,6 +329,7 @@ const loadFinance = async () => {
   history.value = hist;
   recent.value = rec;
   topCategories.value = cats.slice(0, 4);
+  loading.value = false;
 };
 
 onIonViewWillEnter(loadFinance);
@@ -327,6 +347,21 @@ onIonViewWillEnter(loadFinance);
   padding: 16px;
   display: grid;
   gap: 16px;
+}
+
+.page-loading {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.card-error {
+  margin-left: auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ion-color-accent-red);
 }
 
 .finance-card {
