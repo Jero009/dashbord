@@ -172,7 +172,7 @@ import {
   getFinanceAccounts,
   getFinanceInvestments,
   getFinanceSubscriptions,
-  getFinanceTransactionsForMonth,
+  getFinanceMonthTotals,
   getRecentFinanceTransactions,
   getNetWorthHistory,
   queryCategorySpending,
@@ -204,7 +204,7 @@ const rangeBillsDays = 14;
 const accounts = ref<Array<Record<string, any>>>([]);
 const investments = ref<Array<Record<string, any>>>([]);
 const subscriptions = ref<SubscriptionRow[]>([]);
-const monthTransactions = ref<Array<Record<string, any>>>([]);
+const monthTotals = ref<{ income: number; expense: number }>({ income: 0, expense: 0 });
 const history = ref<NetWorthPoint[]>([]);
 const recent = ref<Array<Record<string, any>>>([]);
 const topCategories = ref<CategorySpending[]>([]);
@@ -232,12 +232,8 @@ const deltaDays = computed(() => {
   return Math.max(1, Math.min(rangeDays, days));
 });
 
-const monthIncome = computed(() =>
-  monthTransactions.value.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0)
-);
-const monthExpense = computed(() =>
-  monthTransactions.value.filter((t) => t.type !== 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0)
-);
+const monthIncome = computed(() => monthTotals.value.income);
+const monthExpense = computed(() => monthTotals.value.expense);
 const monthNet = computed(() => monthIncome.value - monthExpense.value);
 const savingsPct = computed(() => savingsRate(monthIncome.value, monthExpense.value));
 
@@ -298,11 +294,11 @@ const loadFinance = async () => {
   // Persist today's snapshot first so the trend includes the latest point.
   await recordNetWorthSnapshot().catch(() => {});
   const monthKey = localMonthISO();
-  const [acc, inv, subs, txns, hist, rec, cats] = await Promise.all([
+  const [acc, inv, subs, totals, hist, rec, cats] = await Promise.all([
     getFinanceAccounts().catch(() => []),
     getFinanceInvestments().catch(() => []),
     getFinanceSubscriptions().catch(() => []),
-    getFinanceTransactionsForMonth(monthKey).catch(() => []),
+    getFinanceMonthTotals(monthKey).catch(() => ({ income: 0, expense: 0 })),
     getNetWorthHistory(rangeDays).catch(() => []),
     getRecentFinanceTransactions(5).catch(() => []),
     queryCategorySpending(monthKey).catch(() => []),
@@ -310,7 +306,7 @@ const loadFinance = async () => {
   accounts.value = acc;
   investments.value = inv;
   subscriptions.value = subs;
-  monthTransactions.value = txns;
+  monthTotals.value = totals;
   history.value = hist;
   recent.value = rec;
   topCategories.value = cats.slice(0, 4);

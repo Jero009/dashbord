@@ -1444,7 +1444,7 @@ export async function updateWorkoutExerciseOrder(workoutExerciseId: number, orde
   );
 }
 
-export async function getWorkouts() {
+export async function getWorkouts(limit = 500) {
   if (!db) return [];
 
   const result = await db.query(`
@@ -1460,7 +1460,8 @@ export async function getWorkouts() {
       ON wt.id = w.id_workout_template
     WHERE w.time_end IS NOT NULL
     ORDER BY w.time_start DESC
-  `);
+    LIMIT ?
+  `, [limit]);
 
   return result.values || [];
 }
@@ -1624,7 +1625,7 @@ export async function getNextSetNumber(workoutExerciseId: number) {
   return maxSet + 1;
 }
 
-export async function getWorkoutsByName(id:number) {
+export async function getWorkoutsByName(id:number, limit = 500) {
   if (!db) return [];
 
   const result = await db.query(`
@@ -1639,7 +1640,8 @@ export async function getWorkoutsByName(id:number) {
       ON wt.id = w.id_workout_template
     WHERE wt.id = ?
     ORDER BY w.time_start DESC
-  `, [id]);
+    LIMIT ?
+  `, [id, limit]);
   return result.values || [];
 }
 
@@ -2260,6 +2262,21 @@ export async function getFinanceTransactionsForMonth(monthKey: string) {
   return result.values || [];
 }
 
+// Monthly income/expense totals without loading every transaction row.
+export async function getFinanceMonthTotals(monthKey: string) {
+  if (!db) return { income: 0, expense: 0 };
+  const result = await db.query(
+    `SELECT
+       COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income,
+       COALESCE(SUM(CASE WHEN type != 'income' THEN amount ELSE 0 END), 0) AS expense
+     FROM finance_transaction
+     WHERE strftime('%Y-%m', date) = ?;`,
+    [monthKey]
+  );
+  const row = result.values?.[0];
+  return { income: Number(row?.income) || 0, expense: Number(row?.expense) || 0 };
+}
+
 // Most recent transactions across all months (for the overview feed).
 export async function getRecentFinanceTransactions(limit = 5) {
   if (!db) return [];
@@ -2610,9 +2627,9 @@ export async function insertBodyLog(entry: {
   )
 }
 
-export async function getBodyLogs(): Promise<BodyLogEntry[]> {
+export async function getBodyLogs(limit = 500): Promise<BodyLogEntry[]> {
   if (!db) return []
-  const result = await db.query(`SELECT * FROM body_log ORDER BY date DESC, id DESC`)
+  const result = await db.query(`SELECT * FROM body_log ORDER BY date DESC, id DESC LIMIT ?`, [limit])
   return result.values ?? []
 }
 

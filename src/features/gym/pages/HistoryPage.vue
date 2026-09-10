@@ -40,6 +40,9 @@
                 </ion-card-content>
               </ion-card>
             </div>
+            <ion-infinite-scroll :disabled="!canLoadMore" @ionInfinite="handleInfiniteScroll($event)">
+              <ion-infinite-scroll-content loading-text="Loading…"></ion-infinite-scroll-content>
+            </ion-infinite-scroll>
           </div>
     </ion-content>
   </ion-page>
@@ -169,10 +172,10 @@ ion-content.home-content {
 
 <script setup lang="ts">
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonCard,IonCardHeader,IonCardContent,IonCardSubtitle,IonCardTitle,IonList,IonItem,IonIcon,
-IonRefresher, IonRefresherContent, RefresherCustomEvent, onIonViewWillEnter, IonButton, alertController } from '@ionic/vue';
+IonRefresher, IonRefresherContent, RefresherCustomEvent, InfiniteScrollCustomEvent, IonInfiniteScroll, IonInfiniteScrollContent, onIonViewWillEnter, IonButton, alertController } from '@ionic/vue';
 import { statsChartOutline } from 'ionicons/icons';
 import { getWorkouts,getWorkoutHistoryExercises, cancelWorkout } from '@/shared/db/app_db'
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { hapticLight } from '@/shared/utils/haptics';
 import type { WorkoutHistory, WorkoutHistoryExercise } from '@/features/gym/types/models';
@@ -188,18 +191,41 @@ const openExercise = (exerciseId: number) => {
 
 
 const workouts = ref<(WorkoutHistory & { exercises: WorkoutHistoryExercise[] })[]>([]);
+// Pagination: full-history render does an N+1 exercise query per workout and
+// bloats the DOM; load in windows as the user scrolls.
+const PAGE_SIZE = 20;
+let allWorkouts: (WorkoutHistory & { exercises?: WorkoutHistoryExercise[] })[] = [];
+let nextIndex = 0;
+let loadingMore = false;
 
+const loadMoreWorkouts = async (count = PAGE_SIZE) => {
+  if (loadingMore || nextIndex >= allWorkouts.length) return;
+  loadingMore = true;
+  try {
+    const slice = allWorkouts.slice(nextIndex, nextIndex + count);
+    const withExercises = await Promise.all(
+      slice.map(async (w) => ({ ...w, exercises: await getWorkoutHistoryExercises(w.id) }))
+    );
+    workouts.value = [...workouts.value, ...withExercises];
+    nextIndex += slice.length;
+  } finally {
+    loadingMore = false;
+  }
+};
 
 const LoadHistory = async () => {
-  const data = await getWorkouts();
-  const exercisesPerWorkout = await Promise.all(
-    data.map((workout: any) => getWorkoutHistoryExercises(workout.id))
-  );
-  for (let i = 0; i < data.length; i++) {
-    data[i].exercises = exercisesPerWorkout[i];
-  }
-  workouts.value = data;
+  allWorkouts = await getWorkouts();
+  nextIndex = 0;
+  workouts.value = [];
+  await loadMoreWorkouts();
 };
+
+const handleInfiniteScroll = async (event: InfiniteScrollCustomEvent) => {
+  await loadMoreWorkouts();
+  event.target.complete();
+};
+
+const canLoadMore = computed(() => nextIndex < allWorkouts.length);
 //time calculation
 const toTimestamp = (value: unknown): number => {
   if (value === null || value === undefined) return NaN;
