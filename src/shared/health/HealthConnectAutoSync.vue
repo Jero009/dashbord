@@ -7,9 +7,12 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { onMounted, onUnmounted } from 'vue';
 import { canAutoSyncHealthConnectMetrics, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
+import { setLastHcSyncAt } from '@/shared/utils/userSettings';
+import { toastController } from '@ionic/vue';
 
 const syncIntervalMs = 30 * 60 * 1000;
 const minSyncGapMs = 10 * 60 * 1000;
+let warnedThisSession = false;
 
 let syncing = false;
 let lastSyncAt = 0;
@@ -37,8 +40,20 @@ const syncIfNeeded = async () => {
 
     await syncHealthConnectMetrics();
     lastSyncAt = Date.now();
+    // Update the "last sync" stamp so Settings/Health pages don't show a stale time.
+    setLastHcSyncAt(Date.now());
   } catch (error) {
     console.error('Health Connect auto sync failed:', error);
+    // Surface once per session so a silently failing auto-sync is visible
+    // somewhere other than the console.
+    if (!warnedThisSession) {
+      warnedThisSession = true;
+      const t = await toastController.create({
+        message: 'background health sync failed — open Health and tap sync',
+        duration: 3000, color: 'warning', position: 'top',
+      });
+      await t.present().catch(() => {});
+    }
   } finally {
     syncing = false;
   }
