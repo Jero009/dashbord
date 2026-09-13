@@ -64,7 +64,12 @@
           </div>
 
           <button class="sync-btn nt-press" :disabled="syncing" @click="handleSync">
-            {{ syncing ? 'Syncing…' : 'Sync' }}
+            <span v-if="syncing" class="sync-btn__dots" aria-label="Syncing">
+              <i class="nt-loading-dot" />
+              <i class="nt-loading-dot" />
+              <i class="nt-loading-dot" />
+            </span>
+            <span v-else>Sync</span>
           </button>
         </ion-card>
 
@@ -578,6 +583,19 @@ onIonViewWillEnter(async () => {
 }
 .sync-btn:disabled { opacity: 0.4; }
 .sync-btn:not(:disabled):active { border-color: rgba(var(--nt-ink), 0.12); }
+
+/* Sync-in-progress dot pulse (staggered) */
+.sync-btn__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 8px;
+}
+
+.sync-btn__dots .nt-loading-dot:nth-child(1) { animation-delay: 0ms; }
+.sync-btn__dots .nt-loading-dot:nth-child(2) { animation-delay: 150ms; }
+.sync-btn__dots .nt-loading-dot:nth-child(3) { animation-delay: 300ms; }
 
 /* Date nav */
 .date-nav {
