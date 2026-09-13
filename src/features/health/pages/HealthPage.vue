@@ -99,7 +99,10 @@
 
         <!-- 3. Body + vitals -->
         <div class="card">
-          <p class="nt-kicker">Body</p>
+          <div class="hr-head">
+            <p class="nt-kicker">Body</p>
+            <router-link to="/health/vitals" class="vitals-link">Vitals</router-link>
+          </div>
           <div class="metric-grid metric-grid--3col">
             <div class="nt-metric-tile">
               <span class="metric-label">Resting HR</span>
@@ -112,6 +115,10 @@
             <div class="nt-metric-tile">
               <span class="metric-label">Weight</span>
               <span class="metric-value">{{ weightDisplay }}</span>
+            </div>
+            <div class="nt-metric-tile">
+              <span class="metric-label">HRV</span>
+              <span class="metric-value">{{ hrvTodayDisplay }}</span>
             </div>
           </div>
         </div>
@@ -254,6 +261,7 @@ const sleepEfficiencyDisplay = computed(() => sleepEfficiency.value === null  ? 
 const sleepHrDisplay         = computed(() => sleepHr.value === null          ? '—' : `${Math.round(sleepHr.value)} bpm`);
 const respRateDisplay        = computed(() => respRate.value === null         ? '—' : `${respRate.value.toFixed(1)} /min`);
 const restingHrDisplay       = computed(() => restingHr.value === null        ? '—' : `${Math.round(restingHr.value)} bpm`);
+const hrvTodayDisplay        = computed(() => hrvToday.value === null         ? '—' : `${Math.round(hrvToday.value)} ms`);
 const stepsDisplay           = computed(() => steps.value === null            ? '—' : Math.round(steps.value).toLocaleString());
 const weightDisplay          = computed(() => latestBodyLog.value             ? `${latestBodyLog.value.weight_kg.toFixed(1)} kg` : '—');
 
@@ -680,6 +688,16 @@ const handleConnect = async () => {
 .hr-head .nt-kicker { margin: 0; }
 
 .hr-avg { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+.vitals-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nt-text-dim);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: var(--nt-tracking-label);
+}
+.vitals-link:active { color: var(--nt-fg); }
 
 .hr-avg-label {
   font-size: 0.62rem;
