@@ -1447,6 +1447,21 @@ export async function updateWorkoutExerciseOrder(workoutExerciseId: number, orde
   );
 }
 
+// Reorder all exercises in a workout in one batched transaction instead of
+// N sequential UPDATE round-trips.
+export async function updateWorkoutExerciseOrders(
+  orders: Array<{ id: number; orderIndex: number }>
+) {
+  if (!db) return;
+  if (orders.length === 0) return;
+
+  const set = orders.map((o) => ({
+    statement: 'UPDATE workout_exercise SET order_index = ? WHERE id = ?',
+    values: [o.orderIndex, o.id],
+  }));
+  return await db.executeSet(set);
+}
+
 export async function getWorkouts(limit = 500) {
   if (!db) return [];
 
@@ -2414,6 +2429,12 @@ export async function recordNetWorthSnapshot() {
   if (!db) return;
   const d = new Date();
   const today = localDateISO(d);
+  // Write at most once per day: skip if today's snapshot already exists.
+  const existing = await db.query(
+    `SELECT date FROM net_worth_snapshot WHERE date = ? LIMIT 1;`,
+    [today]
+  );
+  if (existing.values && existing.values.length > 0) return;
   // Credit/loan accounts are liabilities (money owed); everything else plus the
   // value of investments is an asset. Net worth = assets − liabilities.
   const assetsRow = await db.query(

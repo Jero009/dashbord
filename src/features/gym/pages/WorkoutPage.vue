@@ -504,7 +504,7 @@ import { duckAndDing, showRestNotification, clearRestNotification } from '@/shar
 import { glyphRestDraw, glyphRestEnd, glyphRestStop, glyphRestRelease } from '@/shared/utils/restTimerGlyph';
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
-import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrder, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
+import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 
 const router = useRouter();
 // id from route
@@ -571,10 +571,10 @@ const swapExercises = async (index1: number, index2: number) => {
   [workoutExercises.value[index1], workoutExercises.value[index2]] =
   [workoutExercises.value[index2], workoutExercises.value[index1]];
 
-  // Update ALL order_index values to ensure DB consistency
-  for (let i = 0; i < workoutExercises.value.length; i++) {
-    await updateWorkoutExerciseOrder(workoutExercises.value[i].id, i);
-  }
+  // Update ALL order_index values to ensure DB consistency — one batched transaction
+  await updateWorkoutExerciseOrders(
+    workoutExercises.value.map((ex, i) => ({ id: ex.id, orderIndex: i }))
+  );
 };
 
 // saving
