@@ -9,6 +9,7 @@ import {
   rrWithinWindowAverage,
   hrvWithinWindowAverage,
   toChronologicalHrSamples,
+  calculateSpo2Score,
 } from '@/shared/health/sleepJoin';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
 import { averageByDay } from '@/shared/health/vitalsAggregate';
@@ -99,11 +100,14 @@ export interface ReadinessInputs {
   sleepHeartRate: number | null;
   respiratoryRate: number | null;
   hrv: number | null;
+  spo2?: number | null;
   steps: number | null;
   rhrBaseline: number | null;
   sleepHrBaseline: number | null;
   respiratoryRateBaseline: number | null;
   hrvBaseline: number | null;
+  spo2Baseline?: number | null;
+  spo2Readings?: number[] | null;
 }
 
 export function isHealthConnectAvailable() {
@@ -127,13 +131,20 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
     inputs.hrv === null || !inputs.hrvBaseline
       ? 0
       : clamp(5 + ((inputs.hrv - inputs.hrvBaseline) / inputs.hrvBaseline) * 25, 0, 10);
+  // SpO₂ vs personal 28-day baseline: ±3% deviation spans 0–8 pts
+  // (at-baseline = 8). Needs BOTH a reading and a baseline; a reading without
+  // baseline contributes 0. Gate: ≥14 days of spo2 readings AND stable variance (SD ≤ 2.5).
+  const spo2Score =
+    inputs.spo2Readings === null || inputs.spo2 === null || !inputs.spo2Baseline
+      ? 0
+      : calculateSpo2Score(inputs.spo2 ?? null, inputs.spo2Baseline ?? null, inputs.spo2Readings ?? []);
 
-  // Base floor scaled by how many of the 7 scored inputs are present, so a day with
+  // Base floor scaled by how many of the 8 scored inputs are present, so a day with
   // little data doesn't get the same +24 floor as a fully-measured day.
   const scoredInputs = [
     inputs.sleepHours, inputs.sleepEfficiency, inputs.sleepScore,
     inputs.restingHr, inputs.sleepHeartRate, inputs.respiratoryRate,
-    inputs.hrv,
+    inputs.hrv, inputs.spo2,
   ];
   const presentCount = scoredInputs.filter((v) => v !== null).length;
   const base = 24 * (presentCount / scoredInputs.length);
@@ -146,7 +157,8 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
     restingHrScore +
     sleepHeartRateScore +
     respiratoryRateScore +
-    hrvScore;
+    hrvScore +
+    (spo2Score ?? 0);
 
   return Math.max(0, Math.min(100, Math.round(score)));
 }

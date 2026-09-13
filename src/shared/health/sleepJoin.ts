@@ -111,3 +111,45 @@ export function getSleepHours(sample: HealthSample): number | null {
 
   return (end - start) / (1000 * 60 * 60);
 }
+import { standardDeviation } from '@/shared/utils/math';
+
+/**
+ * Determines if the SpO₂ gate is active based on data density and stability.
+ * Gate rules:
+ * 1. Requires ≥14 days of SpO₂ readings
+ * 2. Requires stable variance (SD ≤ 2.5%)
+ *
+ * @param spo2Readings - Array of SpO₂ readings (percent)
+ * @returns boolean - True if the gate is active, false otherwise
+ */
+export function isSpo2GateActive(spo2Readings: number[]): boolean {
+  if (spo2Readings.length < 14) return false;
+  const sd = standardDeviation(spo2Readings);
+  return sd <= 2.5;
+}
+
+/**
+ * Calculates the SpO₂ score for readiness calculation.
+ * Score rules:
+ * 1. 8 pts when at baseline
+ * 2. 4 pts when 1.5% below baseline
+ * 3. 0 pts when ≥3% below baseline
+ * 4. 8 pts when 1.5% above baseline
+ * 5. 0 pts when ≥3% above baseline
+ *
+ * @param spo2 - Current SpO₂ reading (percent)
+ * @param baseline - Personal baseline (mean of prior 28 days)
+ * @param spo2Readings - Array of SpO₂ readings (percent) for gate check
+ * @returns number | null - Score (0-8) or null if gate is inactive
+ */
+export function calculateSpo2Score(spo2: number | null, baseline: number | null, spo2Readings: number[]): number | null {
+  if (!isSpo2GateActive(spo2Readings)) return null;
+  if (spo2 === null || baseline === null) return 0;
+
+  const deviation = spo2 - baseline;
+  const absDeviation = Math.abs(deviation);
+
+  if (absDeviation >= 3) return 0;
+  if (absDeviation >= 1.5) return 4;
+  return 8;
+}
