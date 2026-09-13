@@ -178,10 +178,11 @@ import {
   onIonViewWillEnter,
 } from '@ionic/vue';
 import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
-import { computed, ref } from 'vue';
+import { computed, ref, toRef } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
+import { useCountUp } from '@/shared/composables/useCountUp';
 import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepSummary } from '@/shared/health/healthConnect';
 import { requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
 import { getSleepSession, getRecentSleepSessions } from '@/shared/db/app_db';
@@ -354,7 +355,9 @@ const handleSync = async () => {
 
 const score = computed(() => summary.value?.score ?? null);
 const sleepScoreRatio = computed(() => (score.value === null ? 0 : Math.min(1, score.value / 100)));
-const sleepScoreDisplay = computed(() => (score.value === null ? '—' : `${score.value}`));
+// Count-up drives both the ring's strong readout (dashes for null score)
+const scoreCountUp = useCountUp(toRef(computed(() => (score.value === null ? null : score.value))), 400);
+const sleepScoreDisplay = computed(() => (score.value === null ? '—' : `${scoreCountUp.value}`));
 const sleepSubtitle = computed(() => {
   if (score.value === null && summary.value !== null) return 'Sleep score unavailable';
   if (score.value === null) return 'No sleep session yet';
@@ -639,6 +642,7 @@ onIonViewWillEnter(async () => {
   stroke-linecap: round;
   stroke-dasharray: 289;
   stroke-dashoffset: calc(289 - (289 * var(--score)));
+  transition: stroke-dashoffset var(--nt-dur-emph) var(--nt-ease-decel);
 }
 
 .sleep-ring__content {
