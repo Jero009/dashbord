@@ -81,6 +81,7 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 - Sleep score (`calculateSleepScore` in `healthConnect.ts`, private) — 100-pt model: duration vs `getSleepGoalHours()` target (25), efficiency (15), WASO (10, neutral 5 without stage data), deep% ≥18% (10), REM% ≥22% (12.5), bedtime-timing variance (15, neutral 7.5), respiratory rate vs personal baseline (12.5, neutral 6.25). Returns `number | null` — null when `timeAsleepHours < 1`.
 - User device: Amazfit Active 2 via Zepp Health → Health Connect. Sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
 - **`toDateKey` uses local date**: extracts `YYYY-MM-DD` using `getFullYear/getMonth/getDate` (NOT `.toISOString().slice(0,10)`). UTC slice was off-by-one for UTC+ timezones.
+- **Sync window semantics**: `syncHealthConnectMetrics({ daysBack })` — manual syncs and first-ever syncs use the full 30 days (the repair path); `HealthConnectAutoSync` narrows to `min(30, daysSince(lastHcSyncAt) + 2)` (2-day overlap heals edits/clock skew), and a manual sync also advances the `lastHcSyncAt` stamp. Sleep HR and sleep-session RR are joined to each night's sleep window (bedtime→waketime) via pure helpers in `shared/health/sleepJoin.ts` (unit-tested), not bucketed by calendar day. Continuous-HR fetch spans the whole sync window but is capped by the bridge limit (5000 samples ≈ 3.5 full days), so a first 30-day backfill may lack HR on older nights; nightly incremental syncs cover every night going forward.
 
 ### Battery Score
 
