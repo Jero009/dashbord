@@ -10,7 +10,7 @@
         <!-- Active workout banner -->
         <ion-card v-if="activeWorkout" class="active-card" @click="backToWorkout">
           <div class="card-topline">
-            <p class="section-kicker">Active workout</p>
+            <p class="nt-kicker">Active workout</p>
           </div>
           <div class="active-card__body">
             <div class="active-card__timer">
@@ -27,7 +27,7 @@
         <!-- Battery -->
         <ion-card class="summary-card">
           <div class="card-topline">
-            <p class="section-kicker">Battery</p>
+            <p class="nt-kicker">Battery</p>
             <span class="card-date">{{ new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }) }}</span>
           </div>
 
@@ -80,19 +80,19 @@
               </button>
 
               <div class="card-metrics">
-                <div class="card-metric">
+                <div class="nt-metric-tile">
                   <span>Sleep</span>
                   <strong>{{ sleepDisplay }}</strong>
                 </div>
-                <div class="card-metric">
+                <div class="nt-metric-tile">
                   <span>Resting HR</span>
                   <strong>{{ restingHrDisplay }}</strong>
                 </div>
-                <div class="card-metric">
+                <div class="nt-metric-tile">
                   <span>Steps</span>
                   <strong>{{ stepsDisplay }}</strong>
                 </div>
-                <div class="card-metric">
+                <div class="nt-metric-tile">
                   <span>Readiness</span>
                   <strong>{{ baseline ?? '—' }}</strong>
                 </div>
@@ -109,7 +109,7 @@
 
         <ion-card v-if="weekDigest" class="summary-card week-card" button @click="openReview">
           <div class="card-topline">
-            <p class="section-kicker">This week</p>
+            <p class="nt-kicker">This week</p>
             <ion-icon :icon="chevronUpOutline" class="week-card__chevron" />
           </div>
           <div class="week-grid">
@@ -134,24 +134,24 @@
         <!-- Last workout card (big) -->
         <ion-card v-if="!activeWorkout && latestWorkout" class="workout-hero-card">
           <div class="workout-hero__topline">
-            <p class="section-kicker">Last workout</p>
+            <p class="nt-kicker">Last workout</p>
             <span class="card-date">{{ latestWorkoutLabel }}</span>
           </div>
           <p class="workout-hero__name">{{ latestWorkout.name ?? 'Workout' }}</p>
           <div class="card-metrics card-metrics--4 workout-hero__metrics">
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Duration</span>
               <strong>{{ latestWorkoutDuration }}</strong>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Volume</span>
               <strong>{{ latestWorkoutVolume }}</strong>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Exercises</span>
               <strong>{{ latestWorkoutExerciseCount }}</strong>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Sets</span>
               <strong>{{ latestWorkoutSetCount }}</strong>
             </div>
@@ -164,7 +164,7 @@
         <!-- Weight card -->
         <ion-card class="weight-card">
           <div class="weight-card__left">
-            <p class="section-kicker">Weight</p>
+            <p class="nt-kicker">Weight</p>
             <strong class="weight-val">{{ todayWeight !== null ? todayWeight + ' kg' : '—' }}</strong>
             <span v-if="goalWeight !== null && todayWeight !== null" class="weight-goal-line">{{ weightDeltaLabel }}</span>
             <div v-if="todayWeight === null" class="weight-quick-log">
@@ -661,7 +661,7 @@ onMounted(() => {
   margin-bottom: 6px;
 }
 
-.workout-hero__topline .section-kicker {
+.workout-hero__topline .nt-kicker {
   margin: 0;
 }
 
@@ -706,14 +706,6 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-}
-
-.section-kicker {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
 }
 
 .card-date {
@@ -917,28 +909,6 @@ onMounted(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.card-metric {
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
-}
-
-.card-metric span {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.75rem;
-  color: rgba(var(--nt-ink), 0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.card-metric strong {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--nt-fg);
-}
-
 /* Active workout timers */
 .active-card__body {
   margin-top: 18px;
@@ -1047,7 +1017,7 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.weight-card__left .section-kicker {
+.weight-card__left .nt-kicker {
   margin: 0 0 2px;
 }
 
