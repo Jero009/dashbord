@@ -63,6 +63,16 @@
       <div class="chart-wrap">
         <div class="axis-label axis-label--left">Load · {{ loadMetricLabel }}</div>
         <div class="axis-label axis-label--right">{{ signalLabel }} z</div>
+        <!-- Scrub readout: defaults to the latest day, follows the finger -->
+        <div class="chart-readout">
+          <span class="chart-readout__date">{{ selectedDateLabel }}</span>
+          <span class="chart-readout__value">
+            load <strong>{{ selectedLoadDisplay }}</strong>
+          </span>
+          <span class="chart-readout__value">
+            {{ signalLabel }} z <strong :style="{ color: selectedZColor }">{{ selectedZDisplay }}</strong>
+          </span>
+        </div>
         <div class="chart-scroll">
           <svg
             :width="innerW"
@@ -71,12 +81,18 @@
             class="chart-svg"
             role="img"
             :aria-label="`Daily training load bars with overlaid ${signalLabel} recovery deviation`"
+            @pointerdown.prevent="onDown"
+            @pointermove="onMove"
+            @pointerup="onUp"
+            @pointercancel="onUp"
           >
-            <!-- recovery z gridlines -->
+            <!-- scrub hairline + markers -->
+            <line v-if="selectedIdx !== null" :x1="selectedIdx * SLOT + SLOT / 2" :x2="selectedIdx * SLOT + SLOT / 2"
+                  y1="0" :y2="svgH" class="chart-hairline" />
             <line :x1="0" :x2="innerW" :y1="zToY(0)" :y2="zToY(0)"
                   :style="{ stroke: 'rgba(var(--nt-ink), 0.18)' }" stroke-width="1" />
             <line :x1="0" :x2="innerW" :y1="zToY(-1)" :y2="zToY(-1)"
-                  stroke="rgba(215,26,33,0.5)" stroke-width="1" stroke-dasharray="3 4" />
+                  stroke="var(--ion-color-accent-red)" stroke-opacity="0.5" stroke-width="1" stroke-dasharray="3 4" />
 
             <!-- load bars (color-coded by ACWR zone) -->
             <rect
@@ -108,6 +124,15 @@
               :style="{ fill: p.low ? 'var(--ion-color-accent-red)' : 'var(--nt-fg)' }"
             />
 
+          <!-- scrub marker on the recovery line -->
+            <circle
+              v-if="selectedZPoint"
+              :cx="selectedZPoint.x"
+              :cy="selectedZPoint.y"
+              r="4"
+              :style="{ fill: selectedZPoint.low ? 'var(--ion-color-accent-red)' : 'var(--nt-fg)' }"
+            />
+
             <!-- now / today date ticks -->
             <text
               v-for="t in dateTicks"
@@ -122,12 +147,12 @@
       </div>
 
       <!-- Legend -->
-      <div class="legend">
-        <span class="legend__item"><i class="legend__swatch" :style="{ background: zoneColor('detraining') }"></i>Detraining</span>
-        <span class="legend__item"><i class="legend__swatch" :style="{ background: zoneColor('optimal') }"></i>Optimal</span>
-        <span class="legend__item"><i class="legend__swatch" :style="{ background: zoneColor('caution') }"></i>Caution</span>
-        <span class="legend__item"><i class="legend__swatch" :style="{ background: zoneColor('high_risk') }"></i>High risk</span>
-        <span class="legend__item"><i class="legend__line"></i>{{ signalLabel }} deviation</span>
+      <div class="chart-legend">
+        <span class="chart-legend__item"><i class="legend__swatch" :style="{ background: zoneColor('detraining') }"></i>Detraining</span>
+        <span class="chart-legend__item"><i class="legend__swatch" :style="{ background: zoneColor('optimal') }"></i>Optimal</span>
+        <span class="chart-legend__item"><i class="legend__swatch" :style="{ background: zoneColor('caution') }"></i>Caution</span>
+        <span class="chart-legend__item"><i class="legend__swatch" :style="{ background: zoneColor('high_risk') }"></i>High risk</span>
+        <span class="chart-legend__item"><i class="legend__line"></i>{{ signalLabel }} deviation</span>
       </div>
     </template>
 
@@ -159,7 +184,7 @@ import { computeRecoverySeries } from '@/shared/health/recoveryBaseline';
 import type { RecoveryMetric } from '@/shared/health/recoveryBaseline';
 import { evaluateOvertraining, acwrZoneLabel } from '@/shared/health/overtraining';
 import { recoveryTimeStatus, aggregateLatestTrainingDay } from '@/shared/health/recoveryTime';
-import { hapticSelect } from '@/shared/utils/haptics';
+import { hapticSelect, hapticLight } from '@/shared/utils/haptics';
 import { localDateISO } from '@/shared/utils/timeFormat';
 
 const SLOT = 16;       // px per day column
@@ -286,6 +311,57 @@ const recoveryPolyline = computed(() =>
   recoveryPath.value.map((p) => `${p.x},${p.y}`).join(' ')
 );
 
+// ── scrub (mirrors TrendChart's select pattern: haptic only on CHANGE) ───────
+const selectedIdx = ref<number | null>(null);
+let scrubbing = false;
+
+const pointerX = (e: PointerEvent) => {
+  const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+  return (e.clientX - rect.left) * (innerW.value / rect.width);
+};
+const select = (e: PointerEvent) => {
+  if (!axis.value.length) return;
+  const i = Math.max(0, Math.min(axis.value.length - 1, Math.floor(pointerX(e) / SLOT)));
+  if (i !== selectedIdx.value) {
+    selectedIdx.value = i;
+    hapticLight();
+  }
+};
+const onDown = (e: PointerEvent) => {
+  scrubbing = true;
+  (e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId);
+  select(e);
+};
+const onMove = (e: PointerEvent) => { if (scrubbing) select(e); };
+const onUp = () => { scrubbing = false; };
+
+const selectedDay = computed(() =>
+  selectedIdx.value === null ? axis.value[axis.value.length - 1] ?? null : axis.value[selectedIdx.value] ?? null
+);
+const selectedDateLabel = computed(() => {
+  const d = selectedDay.value;
+  if (!d) return '';
+  const [, m, day] = d.date.split('-');
+  return `${Number(m)}/${Number(day)}`;
+});
+const selectedLoadDisplay = computed(() => {
+  const d = selectedDay.value;
+  return d ? formatLoad(d.load) : '—';
+});
+const selectedZPoint = computed(() =>
+  selectedDay.value ? recoveryPath.value.find((p) => p.date === selectedDay.value!.date) ?? null : null
+);
+const selectedZDisplay = computed(() => {
+  const p = selectedZPoint.value;
+  if (!p) return '—';
+  const z = recoveryZByDate.value.get(p.date);
+  if (z == null) return '—';
+  return `${z >= 0 ? '+' : ''}${(Math.round(z * 10) / 10)}`;
+});
+const selectedZColor = computed(() =>
+  selectedZPoint.value?.low ? 'var(--ion-color-accent-red)' : 'var(--nt-fg)'
+);
+
 const dateTicks = computed(() => {
   const n = axis.value.length;
   const step = Math.max(1, Math.round(n / 5));
@@ -299,11 +375,13 @@ const dateTicks = computed(() => {
 
 // ── display helpers ──────────────────────────────────────────────────────────
 
+// ACWR zone colors are a data encoding shared with the legend — values kept,
+// expressed via tokens so dark/light themes stay consistent.
 const ZONE_COLORS: Record<AcwrFlag, string> = {
   detraining: 'rgba(var(--nt-ink), 0.28)',
-  optimal: 'rgb(34, 197, 94)',
-  caution: 'rgb(255, 215, 0)',
-  high_risk: 'rgb(215, 26, 33)',
+  optimal: 'var(--nt-data-positive)',
+  caution: 'var(--nt-data-goal)',
+  high_risk: 'var(--ion-color-accent-red)',
 };
 const zoneColor = (flag: AcwrFlag | null) =>
   flag ? ZONE_COLORS[flag] : 'rgba(var(--nt-ink), 0.14)';
@@ -525,11 +603,11 @@ onIonViewWillEnter(load);
   background: rgba(var(--nt-ink), 0.05);
   border: 1px solid transparent;
 }
-.status--yellow { border-color: rgba(255, 215, 0, 0.4); }
+.status--yellow { border-color: color-mix(in srgb, var(--nt-data-goal) 40%, transparent); }
 .status--red { border-color: var(--ion-color-accent-red); }
 .status__icon { font-size: 1.5rem; flex-shrink: 0; }
-.status--green .status__icon { color: rgb(34, 197, 94); }
-.status--yellow .status__icon { color: rgb(255, 215, 0); }
+.status--green .status__icon { color: var(--nt-data-positive); }
+.status--yellow .status__icon { color: var(--nt-data-goal); }
 .status--red .status__icon { color: var(--ion-color-accent-red); }
 .status--unknown .status__icon { color: rgba(var(--nt-ink), 0.5); }
 .status__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -602,29 +680,44 @@ onIonViewWillEnter(load);
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
 }
-.chart-svg { display: block; }
+.chart-svg {
+  display: block;
+  touch-action: pan-y; /* horizontal drag scrubs, vertical still scrolls the page */
+  cursor: crosshair;
+}
+
+.chart-hairline {
+  stroke: rgba(var(--nt-ink), 0.35);
+  stroke-width: 1;
+}
+
+.chart-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  color: var(--nt-text-dim);
+  margin-bottom: 6px;
+}
+
+.chart-readout__date {
+  min-width: 3.5em;
+  letter-spacing: 0.08em;
+}
+
+.chart-readout__value strong {
+  color: var(--nt-fg);
+  font-weight: 600;
+}
 .tick-text {
   fill: rgba(var(--nt-ink), 0.4);
   font-family: var(--nt-font-mono);
   font-size: 9px;
 }
 
-/* Legend */
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--nt-font-head);
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--nt-text-dim);
-}
+/* Legend: layout from the global .chart-legend; only the filled zone swatches
+   (data encoding, unlike the global line swatch) stay scoped here. */
 .legend__swatch { width: 11px; height: 11px; border-radius: 3px; }
 .legend__line {
   width: 16px;
@@ -635,7 +728,7 @@ onIonViewWillEnter(load);
   display: grid;
   gap: 8px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--nt-ink), 0.04);
   border-radius: 10px;
 }
 .rec-list {
@@ -647,7 +740,7 @@ onIonViewWillEnter(load);
 }
 .rec-item {
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--nt-fg);
   line-height: 1.4;
   padding-left: 12px;
   position: relative;

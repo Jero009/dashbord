@@ -53,7 +53,7 @@
               <canvas ref="muscleChartRef"></canvas>
             </div>
           </template>
-          <p v-else class="empty-copy">No sets</p>
+          <p v-else class="nt-empty">No sets</p>
         </div>
 
         <!-- Muscle balance -->
@@ -83,7 +83,7 @@
               <canvas ref="tonnageChartRef"></canvas>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough history</p>
+          <p v-else class="nt-empty">Not enough history</p>
         </div>
 
         <!-- Frequency heatmap -->
@@ -108,7 +108,7 @@
               <span class="freq-legend__label">More</span>
             </div>
           </template>
-          <p v-else class="empty-copy">No workouts</p>
+          <p v-else class="nt-empty">No workouts</p>
         </div>
       </div>
     </ion-content>
@@ -189,8 +189,8 @@ const balanceSegments = computed(() => {
   const total = push + pull + legs + core;
   const pct = (v: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
   return [
-    { label: 'Push', pct: pct(push), color: 'rgb(215, 26, 33)' },
-    { label: 'Pull', pct: pct(pull), color: 'rgba(215, 26, 33, 0.6)' },
+    { label: 'Push', pct: pct(push), color: 'var(--ion-color-accent-red)' },
+    { label: 'Pull', pct: pct(pull), color: 'color-mix(in srgb, var(--ion-color-accent-red) 60%, transparent)' },
     { label: 'Legs', pct: pct(legs), color: 'rgba(var(--nt-ink), 0.45)' },
     { label: 'Core', pct: pct(core), color: 'rgba(var(--nt-ink), 0.2)' },
   ].filter((s) => s.pct > 0);
@@ -231,8 +231,8 @@ function withinWindow(dateKey: string): boolean {
 
 const heatColor = (count: number): string => {
   if (count <= 0) return 'rgba(var(--nt-ink), 0.06)';
-  if (count === 1) return 'rgba(215, 26, 33, 0.55)';
-  return 'rgb(215, 26, 33)';
+  if (count === 1) return 'color-mix(in srgb, var(--ion-color-accent-red) 55%, transparent)';
+  return 'var(--ion-color-accent-red)';
 };
 
 const formatVolume = (volume: number) => {
@@ -529,12 +529,6 @@ onUnmounted(() => {
   font-size: 0.65rem;
   color: rgba(var(--nt-ink), 0.35);
   margin: 0 4px;
-}
-
-.empty-copy {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.6);
-  font-size: 0.9rem;
 }
 
 @media (min-width: 600px) {
