@@ -463,10 +463,6 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
 
   const endDate = new Date().toISOString();
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
-  // Continuous HR is recorded per-minute by the Amazfit (~1440/day).
-  // 30 days = ~43k samples — far over any 1000-sample limit.
-  // Use a 7-day window newest-first so recent days are always in the result set.
-  const recentStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
     Health.readSamples({
@@ -484,12 +480,17 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       bucket: 'day',
       aggregation: 'min',
     }).catch(() => ({ samples: [] as import('@capgo/capacitor-health').AggregatedSample[] })),
+    // HR: continuous HR is ~1440 samples/day (Amazfit). A 30-day read exceeds any
+    // bridge limit, so fetch oldest->newest with the max limit and let the newest
+    // days win when truncated — then per-night windows pick whatever exists.
+    // (The previous fixed 7-day window meant nights older than 7 days could never
+    // get sleep HR, even after a manual 30-day re-sync.)
     Health.readSamples({
       dataType: 'heartRate',
-      startDate: recentStartDate,
+      startDate,
       endDate,
       limit: 5000,
-      ascending: false,
+      ascending: true,
     }),
     Health.readSamples({
       dataType: 'respiratoryRate',
