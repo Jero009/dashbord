@@ -233,6 +233,8 @@ const steps            = ref<number | null>(null);
 const rhrBaseline      = ref<number | null>(null);
 const sleepHrBaseline  = ref<number | null>(null);
 const respRateBaseline = ref<number | null>(null);
+const hrvToday         = ref<number | null>(null);
+const hrvBaseline      = ref<number | null>(null);
 const readinessScore  = ref<number | null>(null);
 const batteryResult   = ref<BatteryResult | null>(null);
 const todayWorkouts   = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
@@ -368,10 +370,12 @@ const loadReadiness = async () => {
         restingHr:                restingHr.value,
         sleepHeartRate:           sleepHr.value,
         respiratoryRate:          respRate.value,
+        hrv:                      hrvToday.value,
         steps:                    steps.value,
         rhrBaseline:              rhrBaseline.value,
         sleepHrBaseline:          sleepHrBaseline.value,
         respiratoryRateBaseline:  respRateBaseline.value,
+        hrvBaseline:              hrvBaseline.value,
       });
 
   const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, []);
@@ -427,12 +431,14 @@ const loadTodayContext = async () => {
 };
 
 const loadBaselines = async () => {
-  // Baselines for the readiness model (RHR / sleep HR / respiratory rate).
+  // Baselines for the readiness model (RHR / sleep HR / respiratory rate / HRV).
   try {
-    const [rhrHistory, sleepHrHistory, respRateHistory] = await Promise.all([
+    const [rhrHistory, sleepHrHistory, respRateHistory, hrvHistory, hrvLatest] = await Promise.all([
       getRecentHealthMetrics('resting_heart_rate', 14),
       getRecentHealthMetrics('sleep_heart_rate', 14),
       getRecentHealthMetrics('respiratory_rate', 14),
+      getRecentHealthMetrics('hrv', 14),
+      getLatestHealthMetric('hrv'),
     ]);
     const rhrBase  = rhrHistory.length
       ? rhrHistory.reduce((s, m) => s + Number(m.value), 0) / rhrHistory.length
@@ -442,6 +448,9 @@ const loadBaselines = async () => {
       ? sleepHrHistory.reduce((s, m) => s + Number(m.value), 0) / sleepHrHistory.length : null;
     respRateBaseline.value = respRateHistory.length >= 3
       ? respRateHistory.reduce((s, m) => s + Number(m.value), 0) / respRateHistory.length : null;
+    hrvBaseline.value = hrvHistory.length >= 3
+      ? hrvHistory.reduce((s, m) => s + Number(m.value), 0) / hrvHistory.length : null;
+    hrvToday.value = hrvLatest ? Number(hrvLatest.value) : null;
   } catch { /* baselines stay null */ }
 };
 

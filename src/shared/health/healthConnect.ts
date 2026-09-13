@@ -95,10 +95,12 @@ export interface ReadinessInputs {
   restingHr: number | null;
   sleepHeartRate: number | null;
   respiratoryRate: number | null;
+  hrv: number | null;
   steps: number | null;
   rhrBaseline: number | null;
   sleepHrBaseline: number | null;
   respiratoryRateBaseline: number | null;
+  hrvBaseline: number | null;
 }
 
 export function isHealthConnectAvailable() {
@@ -108,20 +110,27 @@ export function isHealthConnectAvailable() {
 export function calculateReadinessScore(inputs: ReadinessInputs) {
   const sleepHoursScore = inputs.sleepHours === null ? 0 : clamp((inputs.sleepHours / 8) * 18, 0, 18);
   const sleepEfficiencyScore = inputs.sleepEfficiency === null ? 0 : clamp(inputs.sleepEfficiency * 12, 0, 12);
-  const sleepScoreScore = inputs.sleepScore === null ? 0 : clamp((inputs.sleepScore / 100) * 22, 0, 22);
+  const sleepScoreScore = inputs.sleepScore === null ? 0 : clamp((inputs.sleepScore / 100) * 18, 0, 18);
   const rhrTarget = inputs.rhrBaseline ?? 60;
-  const restingHrScore = inputs.restingHr === null ? 0 : clamp(16 - Math.abs(inputs.restingHr - rhrTarget) * 1.6, 0, 16);
+  const restingHrScore = inputs.restingHr === null ? 0 : clamp(12 - Math.abs(inputs.restingHr - rhrTarget) * 1.2, 0, 12);
   const sleepHrTarget = inputs.sleepHrBaseline ?? 55;
   const sleepHeartRateScore = inputs.sleepHeartRate === null ? 0 : clamp(12 - Math.abs(inputs.sleepHeartRate - sleepHrTarget) * 0.8, 0, 12);
   const rrTarget = inputs.respiratoryRateBaseline ?? 14.5;
   const respiratoryRateScore = inputs.respiratoryRate === null ? 0 : clamp(8 - Math.abs(inputs.respiratoryRate - rrTarget) * 1.4, 0, 8);
+  // HRV vs personal 28-day baseline: ±20% ratio deviation spans 0–10 pts
+  // (at-baseline = 5). Ratio, not absolute ms — HRV magnitude is person-specific.
+  // Needs BOTH a reading and a baseline; a reading without baseline contributes 0.
+  const hrvScore =
+    inputs.hrv === null || !inputs.hrvBaseline
+      ? 0
+      : clamp(5 + ((inputs.hrv - inputs.hrvBaseline) / inputs.hrvBaseline) * 25, 0, 10);
 
-  // Base floor scaled by how many of the 6 scored inputs are present, so a day with
-  // little data doesn't get the same +24 floor as a fully-measured day. Full data
-  // keeps the original +24 (preserving downstream battery-baseline calibration).
+  // Base floor scaled by how many of the 7 scored inputs are present, so a day with
+  // little data doesn't get the same +24 floor as a fully-measured day.
   const scoredInputs = [
     inputs.sleepHours, inputs.sleepEfficiency, inputs.sleepScore,
     inputs.restingHr, inputs.sleepHeartRate, inputs.respiratoryRate,
+    inputs.hrv,
   ];
   const presentCount = scoredInputs.filter((v) => v !== null).length;
   const base = 24 * (presentCount / scoredInputs.length);
@@ -133,7 +142,8 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
     sleepScoreScore +
     restingHrScore +
     sleepHeartRateScore +
-    respiratoryRateScore;
+    respiratoryRateScore +
+    hrvScore;
 
   return Math.max(0, Math.min(100, Math.round(score)));
 }
@@ -777,6 +787,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
 
   // Vitals: one averaged health_metric row per local day per type. Optional —
   // failures here never fail the overall sync (amortised above by .catch on reads).
+  const hrvByDate = new Map<string, number>();
   const vitalsSources = [
     { samples: hrvResult.samples, metric: 'hrv', unit: 'ms', decimals: 1 },
     { samples: spo2Result.samples, metric: 'spo2', unit: 'percent', decimals: 1 },
@@ -787,6 +798,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
       try {
         await replaceHealthMetric(row.date, metric, Number(row.value.toFixed(decimals)), unit, HEALTH_CONNECT_SOURCE);
         synced += 1;
+        if (metric === 'hrv') hrvByDate.set(row.date, row.value);
       } catch (e) {
         console.error(`[healthConnect] ${metric} sync failed for ${row.date}:`, e);
       }
@@ -797,6 +809,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   const rollingRhrValues: number[] = [];
   const rollingSleepHrValues: number[] = [];
   const rollingRespRateValues: number[] = [];
+  const rollingHrvValues: number[] = [];
 
   const readinessDates = new Set(
     [...sleepByDate.keys(), ...restingHeartRateByDate.keys()].sort()
@@ -805,11 +818,13 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   // Seed readiness baselines from history persisted before this window.
   const earliestReadinessDate = [...readinessDates][0];
   if (earliestReadinessDate) {
-    const [priorRhr, priorSessionsForReadiness] = await Promise.all([
+    const [priorRhr, priorHrv, priorSessionsForReadiness] = await Promise.all([
       getHealthMetricValuesBefore('resting_heart_rate', earliestReadinessDate, BASELINE_WINDOW),
+      getHealthMetricValuesBefore('hrv', earliestReadinessDate, BASELINE_WINDOW),
       getSleepSessionsBefore(earliestReadinessDate, BASELINE_WINDOW),
     ]);
     for (const v of [...priorRhr].reverse()) rollingRhrValues.push(v);
+    for (const v of [...priorHrv].reverse()) rollingHrvValues.push(v);
     for (const s of [...priorSessionsForReadiness].reverse()) {
       if (s.sleep_hr !== null) rollingSleepHrValues.push(s.sleep_hr);
       if (s.respiratory_rate !== null) rollingRespRateValues.push(s.respiratory_rate);
@@ -840,6 +855,9 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     const rrBaseline = rollingRespRateValues.length >= 3
       ? rollingRespRateValues.slice(-BASELINE_WINDOW).reduce((s, v) => s + v, 0) / Math.min(rollingRespRateValues.length, BASELINE_WINDOW)
       : null;
+    const hrvBaseline = rollingHrvValues.length >= 3
+      ? rollingHrvValues.slice(-BASELINE_WINDOW).reduce((s, v) => s + v, 0) / Math.min(rollingHrvValues.length, BASELINE_WINDOW)
+      : null;
 
     if (restingHr !== null) rollingRhrValues.push(restingHr);
     if (sleepHeartRate !== null) rollingSleepHrValues.push(sleepHeartRate);
@@ -852,10 +870,12 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
       restingHr,
       sleepHeartRate,
       respiratoryRate,
+      hrv: hrvByDate.get(date) ?? null,
       steps: stepsByDate.get(date) ?? null,
       rhrBaseline,
       sleepHrBaseline,
       respiratoryRateBaseline: rrBaseline,
+      hrvBaseline,
     };
 
     await upsertReadinessScore(date, calculateReadinessScore(readinessInputs), {

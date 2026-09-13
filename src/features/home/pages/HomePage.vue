@@ -366,10 +366,12 @@ const baseline = computed(() => {
     restingHr: restingHr.value,
     sleepHeartRate: null,
     respiratoryRate: null,
+    hrv: null,
     steps: steps.value,
     rhrBaseline: null,
     sleepHrBaseline: null,
     respiratoryRateBaseline: null,
+    hrvBaseline: null,
   });
 });
 
@@ -426,7 +428,7 @@ const latestWorkoutSetCount = computed(() =>
 );
 
 const loadSummary = async () => {
-  const [latestSleep, latestSleepEfficiency, latestSleepScore, latestSleepHeartRate, latestRespiratoryRate, latestSteps, latestHr] =
+  const [latestSleep, latestSleepEfficiency, latestSleepScore, latestSleepHeartRate, latestRespiratoryRate, latestSteps, latestHr, latestHrv] =
     await Promise.all([
       getLatestHealthMetric('sleep_duration'),
       getLatestHealthMetric('sleep_efficiency'),
@@ -435,6 +437,7 @@ const loadSummary = async () => {
       getLatestHealthMetric('respiratory_rate'),
       getLatestHealthMetric('steps'),
       getLatestHealthMetric('resting_heart_rate'),
+      getLatestHealthMetric('hrv'),
     ]);
   const [todayReadiness, latestSession] = await Promise.all([
     getReadinessScore(localDateISO()),
@@ -462,10 +465,12 @@ const loadSummary = async () => {
       restingHr: restingHr.value,
       sleepHeartRate,
       respiratoryRate,
+      hrv: latestHrv ? Number(latestHrv.value) : null,
       steps: steps.value,
       rhrBaseline: null,
       sleepHrBaseline: null,
       respiratoryRateBaseline: null,
+      hrvBaseline: null,
     });
   }
 };
