@@ -11,7 +11,7 @@
         <!-- Hero: score ring + key metrics -->
         <ion-card class="sleep-card">
           <div class="card-topline">
-            <p class="section-kicker">Sleep score</p>
+            <p class="nt-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
               <button class="date-nav__btn" aria-label="Previous day" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
@@ -32,31 +32,31 @@
             </div>
 
             <div class="hero-stats">
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Asleep</span>
                 <strong>{{ sleepHoursDisplay }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>In bed</span>
                 <strong>{{ timeInBedDisplay }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Efficiency</span>
                 <strong>{{ sleepEfficiencyPercent }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Bedtime</span>
                 <strong>{{ bedTimeClock }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Wake</span>
                 <strong>{{ wakeTimeClock }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>HR</span>
                 <strong>{{ sleepHeartRateDisplay }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Resp.</span>
                 <strong>{{ respiratoryRateDisplay }}</strong>
               </div>
@@ -70,7 +70,7 @@
 
         <!-- Stage timeline -->
         <ion-card class="sleep-card">
-          <p class="section-kicker">Sleep stages</p>
+          <p class="nt-kicker">Sleep stages</p>
           <div v-if="hypGeo.bars.length || hypGeo.spikes.length" class="hypnogram-wrap">
             <svg :viewBox="`0 0 ${HYP_W} ${HYP_H}`" class="hypnogram-svg" preserveAspectRatio="xMidYMid meet">
               <!-- plot frame -->
@@ -101,13 +101,13 @@
               <span v-for="(t, i) in hypTimeAxis" :key="i">{{ t }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No stages</p>
+          <p v-else class="nt-empty">No stages</p>
         </ion-card>
 
         <!-- Stage breakdown + consistency row -->
         <div class="two-col">
           <ion-card class="sleep-card">
-            <p class="section-kicker">Stages</p>
+            <p class="nt-kicker">Stages</p>
             <div v-if="stageRows.length" class="stage-list">
               <div v-for="stage in stageRows" :key="stage.stage" class="stage-row">
                 <div class="stage-dot" :class="`stage-dot--${stage.stage}`"></div>
@@ -116,21 +116,21 @@
                 <small>{{ Math.round(stage.share * 100) }}%</small>
               </div>
             </div>
-            <p v-else class="empty-state">No stages</p>
+            <p v-else class="nt-empty">No stages</p>
           </ion-card>
 
           <ion-card class="sleep-card">
-            <p class="section-kicker">Consistency · 7 nights</p>
+            <p class="nt-kicker">Consistency · 7 nights</p>
             <div class="consistency-grid">
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Score</span>
                 <strong>{{ consistencyDisplay }}</strong>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span>Streak</span>
                 <strong>{{ streakDisplay }}</strong>
               </div>
-              <div class="card-metric card-metric--full">
+              <div class="nt-metric-tile nt-metric-tile--full">
                 <span>Good nights</span>
                 <strong>{{ goodNightsDisplay }}</strong>
               </div>
@@ -140,7 +140,7 @@
 
         <!-- Heart rate chart -->
         <ion-card class="sleep-card">
-          <p class="section-kicker">Heart rate overnight</p>
+          <p class="nt-kicker">Heart rate overnight</p>
           <trend-chart
             v-if="heartRatePts.length"
             :pts="heartRatePts"
@@ -148,18 +148,18 @@
             :format="(v) => String(Math.round(v))"
             aria-label="Sleep heart rate graph"
           />
-          <p v-else class="empty-state">No HR data</p>
+          <p v-else class="nt-empty">No HR data</p>
         </ion-card>
 
         <!-- Score history -->
         <ion-card class="sleep-card">
-          <p class="section-kicker">History · 30 nights</p>
+          <p class="nt-kicker">History · 30 nights</p>
           <trend-chart
             v-if="scoreHistoryPts.length"
             :pts="scoreHistoryPts"
             aria-label="Sleep score history"
           />
-          <p v-else class="empty-state">No history</p>
+          <p v-else class="nt-empty">No history</p>
         </ion-card>
 
       </div>
@@ -534,14 +534,6 @@ onIonViewWillEnter(async () => {
   padding: 18px;
 }
 
-.section-kicker {
-  margin: 0 0 14px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
 /* Card topline */
 .card-topline {
   display: flex;
@@ -560,33 +552,6 @@ onIonViewWillEnter(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-/* Metric tiles */
-.card-metric {
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
-}
-
-.card-metric span {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.card-metric strong {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--nt-fg);
-}
-
-.card-metric--full {
-  grid-column: 1 / -1;
 }
 
 /* Sync button */
@@ -793,12 +758,6 @@ onIonViewWillEnter(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-.empty-state {
-  margin: 0;
-  font-size: 0.9rem;
-  color: rgba(var(--nt-ink), 0.5);
 }
 
 @media (min-width: 600px) {
