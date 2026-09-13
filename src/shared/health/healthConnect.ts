@@ -10,6 +10,7 @@ import {
   toChronologicalHrSamples,
 } from '@/shared/health/sleepJoin';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
+import { averageByDay } from '@/shared/health/vitalsAggregate';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 import { clamp } from '@/shared/utils/math';
 
@@ -477,7 +478,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   const endDate = new Date().toISOString();
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
 
-  const [sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult] = await Promise.all([
+  const [sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult, hrvResult, spo2Result, vo2MaxResult] = await Promise.all([
     Health.readSamples({
       dataType: 'sleep',
       startDate,
@@ -512,6 +513,29 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
       limit: 1000,
       ascending: true,
     }),
+    // Vitals (optional reads — each wrapped so a failure/permission gap can
+    // never gate core sync). Spot samples: HRV rmssd ms, SpO₂ %, VO₂ max.
+    Health.readSamples({
+      dataType: 'heartRateVariability',
+      startDate,
+      endDate,
+      limit: 5000,
+      ascending: true,
+    }).catch(() => ({ samples: [] })),
+    Health.readSamples({
+      dataType: 'oxygenSaturation',
+      startDate,
+      endDate,
+      limit: 5000,
+      ascending: true,
+    }).catch(() => ({ samples: [] })),
+    Health.readSamples({
+      dataType: 'vo2Max',
+      startDate,
+      endDate,
+      limit: 1000,
+      ascending: true,
+    }).catch(() => ({ samples: [] })),
   ]);
 
   // Steps: one query per local day instead of one rolling bucket:'day' query.
@@ -748,6 +772,24 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
       synced += 1;
     } catch (e) {
       console.error(`[healthConnect] Respiratory rate sync failed for ${date}:`, e);
+    }
+  }
+
+  // Vitals: one averaged health_metric row per local day per type. Optional —
+  // failures here never fail the overall sync (amortised above by .catch on reads).
+  const vitalsSources = [
+    { samples: hrvResult.samples, metric: 'hrv', unit: 'ms', decimals: 1 },
+    { samples: spo2Result.samples, metric: 'spo2', unit: 'percent', decimals: 1 },
+    { samples: vo2MaxResult.samples, metric: 'vo2max', unit: 'ml/kg/min', decimals: 1 },
+  ] as const;
+  for (const { samples, metric, unit, decimals } of vitalsSources) {
+    for (const row of averageByDay(samples, toDateKey)) {
+      try {
+        await replaceHealthMetric(row.date, metric, Number(row.value.toFixed(decimals)), unit, HEALTH_CONNECT_SOURCE);
+        synced += 1;
+      } catch (e) {
+        console.error(`[healthConnect] ${metric} sync failed for ${row.date}:`, e);
+      }
     }
   }
 
