@@ -64,6 +64,8 @@
   --nt-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
   --nt-dur-micro: 140ms;
   --nt-dur-std: 280ms;
+  --nt-dur-emph: 400ms;
+  --nt-press-scale: 0.97;
 
   /* =======================================================
      Ionic mapping — legacy names kept so existing pages
@@ -568,6 +570,26 @@ html, body, ion-app ion-content {
   border-radius: 50%;
   background: var(--nt-text);
   animation: nt-dot-pulse 1s steps(4, end) infinite;
+}
+
+/* ---- Motion utilities ---- */
+/* Universal press feedback — apply .nt-press to any tappable element */
+.nt-press {
+  transition: transform var(--nt-dur-micro) var(--nt-ease-std),
+              opacity var(--nt-dur-micro) var(--nt-ease-std);
+}
+.nt-press:active {
+  transform: scale(var(--nt-press-scale));
+  opacity: 0.85;
+}
+
+/* Entrance fade+rise for card content */
+.nt-enter {
+  animation: nt-enter var(--nt-dur-std) var(--nt-ease-decel) both;
+}
+@keyframes nt-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
