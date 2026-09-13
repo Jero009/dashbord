@@ -143,7 +143,7 @@
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Doto', sans-serif;
+  font-family: var(--nt-font-display);
   color: var(--ion-color-accent-red);
   pointer-events: none;
 }
@@ -395,7 +395,7 @@
 .rest-time {
   font-size: 1.8rem;
   font-weight: 700;
-  font-family: 'Doto', sans-serif;
+  font-family: var(--nt-font-display);
   color: var(--ion-color-accent-red);
 }
 

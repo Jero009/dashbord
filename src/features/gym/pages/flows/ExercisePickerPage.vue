@@ -112,7 +112,7 @@
 
 .exercise-search {
   --background: rgba(255, 255, 255, 0.06);
-  --color: #fff;
+  --color: var(--nt-text);
   --placeholder-color: rgba(255, 255, 255, 0.4);
   --icon-color: rgba(255, 255, 255, 0.4);
   --border-radius: var(--nt-radius-sm);

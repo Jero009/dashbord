@@ -260,7 +260,7 @@ defineExpose({
 .current-value {
   margin: 8px 0 0 0;
   font-size: 2rem;
-  font-family: 'Doto', sans-serif;
+  font-family: var(--nt-font-display);
   font-weight: bold;
   color: var(--ion-color-accent-red);
 }
@@ -357,7 +357,7 @@ defineExpose({
   font-size: 1.2rem;
   font-weight: bold;
   text-align: center;
-  font-family: 'Doto', sans-serif;
+  font-family: var(--nt-font-display);
 }
 
 .time-input:focus {

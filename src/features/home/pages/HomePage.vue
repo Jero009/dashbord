@@ -966,7 +966,7 @@ onMounted(() => {
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--ion-color-accent-red);
-  font-family: 'Doto', monospace;
+  font-family: var(--nt-font-display);
 }
 
 .active-card__timer--rest {

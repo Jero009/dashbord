@@ -675,7 +675,7 @@ ion-content.home-content {
 .active-card__timer strong {
   color: var(--ion-color-accent-red);
   font-weight: 700;
-  font-family: 'Doto', sans-serif;
+  font-family: var(--nt-font-display);
 }
 
 .active-card__timer--rest {
@@ -798,7 +798,7 @@ ion-content.home-content {
 }
 
 .pr-row__stat {
-  font-family: 'Doto', sans-serif;
+  font-family: var(--nt-font-display);
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--ion-color-accent-red);
