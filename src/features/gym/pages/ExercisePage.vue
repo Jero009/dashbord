@@ -120,18 +120,6 @@
   font-size: 1.4rem;
 }
 
-.exercise-hero__text,
-.section-kicker {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.62);
-}
-
-.section-kicker {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.72rem;
-}
-
 .add-exercise-button {
   margin: 0;
   min-width: 140px;
