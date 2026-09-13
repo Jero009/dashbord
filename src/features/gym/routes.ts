@@ -22,7 +22,7 @@ export const gymRoutes: Array<RouteRecordRaw> = [
       },
       {
         path: 'Home',
-        component: () => import('./pages/HomePage.vue')
+        component: () => import('./pages/GymHomePage.vue')
       },
       {
         path: 'Template',
