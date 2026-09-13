@@ -20,9 +20,12 @@
             </div>
           </div>
           <div class="flow-hero">
-            <span class="flow-hero__label">Left to spend</span>
+            <span class="flow-hero__label">Left to spend · {{ monthLabel }} budgets</span>
             <span class="flow-hero__value" :class="{ 'flow-hero__value--over': leftToSpend < 0 }">
               {{ formatCurrency(leftToSpend) }}
+            </span>
+            <span v-if="unbudgetedSpend > 0" class="flow-hero__note">
+              +{{ formatCurrency(unbudgetedSpend) }} in unbudgeted categories
             </span>
           </div>
           <div class="card-metrics">
@@ -255,7 +258,24 @@ const budgetTotal = computed(() =>
   budgets.value.reduce((sum, b) => sum + (Number(b.monthly_limit) || 0), 0)
 );
 
-const leftToSpend = computed(() => budgetTotal.value - expenseTotal.value);
+// "Left to spend" compares like with like: spend in BUDGETED categories vs the
+// total budgeted amount. Unbudgeted spend (groceries when only 'fun' has a
+// budget) doesn't silently shrink the headline number.
+const budgetedCategories = computed(() => new Set(budgets.value.map((b) => String(b.category))));
+
+const budgetedSpend = computed(() =>
+  transactions.value
+    .filter((t) => t.type !== 'income' && budgetedCategories.value.has(String(t.category || 'other')))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+);
+
+const leftToSpend = computed(() => budgetTotal.value - budgetedSpend.value);
+
+const unbudgetedSpend = computed(() =>
+  transactions.value
+    .filter((t) => t.type !== 'income' && !budgetedCategories.value.has(String(t.category || 'other')))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+);
 
 const spentByCategory = computed(() => {
   const totals: Record<string, number> = {};
@@ -514,6 +534,12 @@ onIonViewWillEnter(async () => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  color: var(--nt-text-dim);
+}
+
+.flow-hero__note {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
   color: var(--nt-text-dim);
 }
 
