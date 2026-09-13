@@ -13,16 +13,25 @@ import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleep
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 import { clamp } from '@/shared/utils/math';
 
-type HealthConnectDataType = 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate' | 'workouts';
+type HealthConnectDataType =
+  | 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate'
+  | 'heartRateVariability' | 'oxygenSaturation' | 'vo2Max'
+  | 'workouts';
 
 // Core metrics the app actually depends on. These — and ONLY these — gate sync.
 const HEALTH_CONNECT_CORE_READ_TYPES: HealthConnectDataType[] = ['steps', 'sleep', 'restingHeartRate', 'heartRate', 'respiratoryRate'];
+// Optional reads: requested so users CAN grant them, but they must never gate
+// core sync (same contract as 'workouts' — a permission reset on any of these
+// leaves steps/sleep/HR/RHR/RR syncing).
+const HEALTH_CONNECT_OPTIONAL_READ_TYPES: HealthConnectDataType[] = [
+  'workouts', 'heartRateVariability', 'oxygenSaturation', 'vo2Max',
+];
 // 'workouts' maps to READ_EXERCISE. It is optional — only used for the activity-drain
 // component of the battery score (getRecentActivities, which degrades gracefully).
 // It is requested so users CAN grant it, but it must never gate core sync: the Amazfit
 // produces no exercise sessions, so this permission is commonly ungranted/reset and
 // requiring it silently blocked all metric syncing.
-const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = [...HEALTH_CONNECT_CORE_READ_TYPES, 'workouts'];
+const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = [...HEALTH_CONNECT_CORE_READ_TYPES, ...HEALTH_CONNECT_OPTIONAL_READ_TYPES];
 
 // True when every core metric is granted. Optional 'workouts' is intentionally ignored.
 const hasCoreReadAccess = (readAuthorized: string[]) =>
