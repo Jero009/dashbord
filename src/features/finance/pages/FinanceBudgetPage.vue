@@ -8,7 +8,7 @@
       <div class="finance-shell">
         <ion-card class="finance-card flow-card">
           <div class="card-topline">
-            <p class="section-kicker">Cash flow</p>
+            <p class="nt-kicker">Cash flow</p>
             <div class="month-nav">
               <button class="month-btn" @click="shiftMonth(-1)" aria-label="Previous month">
                 <ion-icon :icon="chevronBackOutline" />
@@ -29,21 +29,21 @@
             </span>
           </div>
           <div class="card-metrics">
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Income</span>
               <strong>{{ formatCurrency(incomeTotal) }}</strong>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Spent</span>
               <strong>{{ formatCurrency(expenseTotal) }}</strong>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Net</span>
               <strong :class="{ 'metric-negative': netFlow < 0, 'metric-positive': netFlow > 0 }">
                 {{ formatCurrency(netFlow) }}
               </strong>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span>Budgeted</span>
               <strong>{{ formatCurrency(budgetTotal) }}</strong>
             </div>
@@ -52,7 +52,7 @@
 
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Budgets</p>
+            <p class="nt-kicker">Budgets</p>
             <span class="card-count">{{ budgets.length }}</span>
           </div>
           <div v-if="budgetRows.length" class="budget-list">
@@ -80,7 +80,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No budgets</p>
+          <p v-else class="nt-empty">No budgets</p>
 
           <div class="form-fields form-fields--inline">
             <div class="field-group">
@@ -101,7 +101,7 @@
 
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">{{ editingTransactionId ? 'Edit transaction' : 'Add transaction' }}</p>
+            <p class="nt-kicker">{{ editingTransactionId ? 'Edit transaction' : 'Add transaction' }}</p>
             <button v-if="editingTransactionId" class="link-btn" @click="resetTransactionForm">Cancel</button>
           </div>
           <div class="type-toggle">
@@ -145,7 +145,7 @@
 
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Transactions</p>
+            <p class="nt-kicker">Transactions</p>
             <span class="card-count">{{ transactions.length }}</span>
           </div>
           <div v-if="transactions.length" class="item-list">
@@ -169,7 +169,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No transactions</p>
+          <p v-else class="nt-empty">No transactions</p>
         </ion-card>
       </div>
     </ion-content>
@@ -476,14 +476,6 @@ onIonViewWillEnter(async () => {
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
-
 .card-count {
   font-size: 0.72rem;
   color: var(--nt-text-dim);
@@ -556,28 +548,6 @@ onIonViewWillEnter(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-.card-metric {
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
-}
-
-.card-metric span {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--nt-text-dim);
-}
-
-.card-metric strong {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--nt-fg);
 }
 
 .metric-negative {
@@ -820,12 +790,6 @@ onIonViewWillEnter(async () => {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-}
-
-.empty-state {
-  margin: 0;
-  color: var(--nt-text-dim);
-  font-size: 0.9rem;
 }
 
 @media (min-width: 600px) {
