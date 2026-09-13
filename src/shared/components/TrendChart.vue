@@ -36,6 +36,9 @@
       <circle v-else-if="!bare && xs.length" class="trend__dot" :cx="xs[xs.length - 1]" :cy="ys[ys.length - 1]" r="3.5" />
     </svg>
 
+    <span v-if="rangeMax" class="trend__range trend__range--max">{{ rangeMax }}</span>
+    <span v-if="rangeMin" class="trend__range">{{ rangeMin }}</span>
+
     <div v-if="!bare" class="trend__axis">
       <span>{{ pts[0]?.label }}</span>
       <span>{{ pts[pts.length - 1]?.label }}</span>
@@ -62,6 +65,7 @@ const props = withDefaults(defineProps<{
   size?: 'xs' | 'sm' | 'md';
   goal?: number | null;
   showAvg?: boolean;
+  showRange?: boolean;
   format?: (v: number) => string;
   ariaLabel?: string;
 }>(), {
@@ -69,6 +73,7 @@ const props = withDefaults(defineProps<{
   size: 'sm',
   goal: null,
   showAvg: false,
+  showRange: false,
   ariaLabel: 'Trend chart',
 });
 
@@ -143,6 +148,22 @@ const avgY = computed(() => (avg.value === null ? null : yFor(avg.value)));
 const goalY = computed(() =>
   (props.goal === null || props.goal === undefined) ? null : yFor(props.goal));
 
+// Faint min/max edge labels (opt-in via showRange) so the y-extent is
+// readable without scrubbing.
+const valueExtent = computed(() => {
+  const vals = props.pts.map((p) => p.value).filter((v) => Number.isFinite(v));
+  if (!vals.length) return null;
+  return { min: Math.min(...vals), max: Math.max(...vals) };
+});
+const rangeMin = computed(() => {
+  const e = valueExtent.value;
+  return props.showRange && props.pts.length > 1 && e ? (props.format ? props.format(e.min) : String(Math.round(e.min * 10) / 10)) : '';
+});
+const rangeMax = computed(() => {
+  const e = valueExtent.value;
+  return props.showRange && props.pts.length > 1 && e ? (props.format ? props.format(e.max) : String(Math.round(e.max * 10) / 10)) : '';
+});
+
 // ---- scrub ----------------------------------------------------------------
 const scrubIdx = ref<number | null>(null);
 const readout = computed(() =>
@@ -179,6 +200,7 @@ const onUp = () => { scrubbing = false; };
 
 <style scoped>
 .trend {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -230,6 +252,22 @@ const onUp = () => { scrubbing = false; };
 .trend__svg--bare {
   pointer-events: none;
   cursor: default;
+}
+
+/* Faint min/max labels along the right edge (opt-in showRange) */
+.trend__range {
+  position: absolute;
+  right: 2px;
+  bottom: 18px;
+  font-size: 0.62rem;
+  color: rgba(var(--nt-ink), 0.35);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.trend__range--max {
+  top: 26px;
+  bottom: auto;
 }
 
 .trend__line {
