@@ -1877,6 +1877,24 @@ export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRe
   return (result.values ?? []) as SleepSessionRecord[];
 }
 
+/**
+ * Slim sleep-session rows for aggregation (analytics, AI export): the two
+ * timeline JSON blobs are the bulk of each row and unused by these callers,
+ * so skip fetching them.
+ */
+export async function getRecentSleepSessionSummaries(limit = 14): Promise<Array<Omit<SleepSessionRecord, 'hr_timeline_json' | 'stage_timeline_json'>>> {
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT id, date, bedtime, waketime, time_asleep_hours, time_in_bed_hours,
+            efficiency, score, sleep_hr, respiratory_rate,
+            stage_deep_min, stage_light_min, stage_rem_min,
+            stage_awake_min, stage_asleep_min, source
+     FROM sleep_session ORDER BY date DESC LIMIT ?;`,
+    [limit]
+  );
+  return (result.values ?? []) as Array<Omit<SleepSessionRecord, 'hr_timeline_json' | 'stage_timeline_json'>>;
+}
+
 // Sleep sessions strictly before `date` (most recent first). Used to seed rolling
 // baselines at sync time so the first nights inside the sync window are scored
 // against prior persisted history instead of getting null/half-credit baselines.

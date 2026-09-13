@@ -67,6 +67,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSectionTabs.vue';
 import {
   getRecentSleepSessions,
+  getRecentSleepSessionSummaries,
   getRecentHealthMetrics,
   queryReadinessHistory,
   getSessionLoads,
@@ -104,7 +105,7 @@ const formatVolume = (v: number) => (v >= 10000 ? `${Math.round(v / 100) / 10}k`
 
 const loadAll = async () => {
   const [sleep, rhrRows, readinessRows, sessions] = await Promise.all([
-    getRecentSleepSessions(28).catch(() => []),
+    getRecentSleepSessionSummaries(28).catch(() => []),
     getRecentHealthMetrics('resting_heart_rate', 28).catch(() => []),
     queryReadinessHistory(28).catch(() => []),
     getSessionLoads(28).catch(() => []),
