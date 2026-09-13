@@ -1,5 +1,13 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type AuthorizationStatus, type HealthSample, type AggregatedSample, type Workout as HCWorkout } from '@capgo/capacitor-health';
+import {
+  averageOf,
+  getSleepHours as getSleepHoursPure,
+  pickPrimarySleepSample as pickPrimarySleepSamplePure,
+  sleepWindowHeartRate,
+  sleepWindowHeartRateAverage,
+  toChronologicalHrSamples,
+} from '@/shared/health/sleepJoin';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 import { clamp } from '@/shared/utils/math';
@@ -138,8 +146,7 @@ export function applyReadinessDrain(baseScore: number, currentDate = new Date())
 
 
 function average(values: number[]) {
-  if (!values.length) return null;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return averageOf(values);
 }
 
 function hoursBetween(startDate: string, endDate: string) {
@@ -316,33 +323,14 @@ function localDayWindow(daysAgo: number): { startISO: string; endISO: string; da
   };
 }
 
-// When a day bucket holds multiple sleep samples (naps / split sessions), the
-// main overnight sleep is the one with the most time asleep — not necessarily the
-// last-recorded one. Picking by duration avoids a short nap overriding it.
+// Pure window-join logic lives in sleepJoin.ts (unit-tested); these thin
+// wrappers keep every existing call site untouched.
 function pickPrimarySleepSample(samples: HealthSample[]): HealthSample | null {
-  if (!samples.length) return null;
-  return samples.reduce((best, s) =>
-    (getSleepHours(s) ?? 0) > (getSleepHours(best) ?? 0) ? s : best
-  );
+  return pickPrimarySleepSamplePure(samples, getSleepHours);
 }
 
 function getSleepHours(sample: HealthSample) {
-  if (sample.stages?.length) {
-    // Time actually asleep — exclude awake/inBed so this matches sumStageMinutes
-    // (which feeds timeAsleepHours). Summing all stages overcounts as time-in-bed.
-    return sample.stages
-      .filter((stage) => stage.stage !== 'awake' && stage.stage !== 'inBed')
-      .reduce((sum, stage) => sum + stage.durationMinutes, 0) / 60;
-  }
-
-  const start = new Date(sample.startDate).getTime();
-  const end = new Date(sample.endDate).getTime();
-
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
-    return null;
-  }
-
-  return (end - start) / (1000 * 60 * 60);
+  return getSleepHoursPure(sample);
 }
 
 async function ensureAvailability() {
@@ -555,18 +543,10 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   // calendar day: an overnight session straddles midnight, so date-bucketing split the
   // night's HR across two days and left the wake-up day with only the post-midnight
   // (and daytime-polluted) portion. Window matching fixes same-day sleep-HR sync.
-  const heartRateSamples = heartRateResult.samples
-    .filter((sample) => Number.isFinite(sample.value))
-    .map((sample) => ({ time: new Date(sample.startDate).getTime(), value: sample.value, startDate: sample.startDate }))
-    .filter((sample) => Number.isFinite(sample.time))
-    .sort((a, b) => a.time - b.time);
+  const heartRateSamples = toChronologicalHrSamples(heartRateResult.samples);
 
-  const sleepWindowHeartRate = (sample: HealthSample) => {
-    const startMs = new Date(sample.startDate).getTime();
-    const endMs = new Date(sample.endDate).getTime();
-    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return [];
-    return heartRateSamples.filter((s) => s.time >= startMs && s.time <= endMs);
-  };
+  const sleepWindowHeartRateLocal = (sample: HealthSample) =>
+    sleepWindowHeartRate(sample, heartRateSamples);
 
   const restingHeartRateByDate = new Map<string, number>();
   for (const sample of (restingHeartRateResult as { samples: AggregatedSample[] }).samples) {
@@ -620,7 +600,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     // no stages) — otherwise we'd persist a bogus 0-hour sleep_duration metric.
     if (!latestSample || getSleepHours(latestSample) === null) continue;
 
-    const sleepHrSamples = sleepWindowHeartRate(latestSample);
+    const sleepHrSamples = sleepWindowHeartRateLocal(latestSample);
     const sleepHeartRate = average(sleepHrSamples.map((s) => s.value));
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
 
@@ -780,7 +760,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
       (sleepBucket?.samples ?? []).map((sample) => getSleepHours(sample)).filter((value): value is number => value !== null)
     );
     const restingHr = restingHeartRateByDate.get(date) ?? null;
-    const sleepHeartRate = latestSample ? average(sleepWindowHeartRate(latestSample).map((s) => s.value)) : null;
+    const sleepHeartRate = latestSample ? sleepWindowHeartRateAverage(latestSample, heartRateSamples) : null;
     const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
     const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate) : null;
 
