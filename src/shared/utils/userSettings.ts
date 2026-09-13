@@ -1,6 +1,19 @@
 const SLEEP_GOAL_KEY = 'setting_sleep_goal_hours'
 const STEP_GOAL_KEY = 'setting_step_goal'
 
+const WEEKLY_WORKOUT_GOAL_KEY = 'homeWeeklyGoal'
+
+// Weekly workout goal (workouts/week). Kept the legacy `homeWeeklyGoal` key so
+// existing users' settings survive.
+export function getWeeklyWorkoutGoal(): number {
+  const n = Number(localStorage.getItem(WEEKLY_WORKOUT_GOAL_KEY))
+  return Number.isFinite(n) && n > 0 ? n : 4
+}
+
+export function setWeeklyWorkoutGoal(goal: number): void {
+  localStorage.setItem(WEEKLY_WORKOUT_GOAL_KEY, String(goal))
+}
+
 export function getSleepGoalHours(): number {
   const v = localStorage.getItem(SLEEP_GOAL_KEY)
   const n = v ? parseFloat(v) : NaN

@@ -146,6 +146,7 @@ import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/ty
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
 import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
+import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
 import { clearRestNotification } from '@/shared/utils/restTimerAudio';
 import { cancelRestTimerDing } from '@/shared/utils/notifications';
 
@@ -456,8 +457,7 @@ const weeklyGoalProgress = computed(() =>
 )
 
 const loadWeeklyData = async () => {
-  const saved = Number(localStorage.getItem('homeWeeklyGoal'))
-  weeklyWorkoutGoal.value = Number.isFinite(saved) && saved > 0 ? saved : 4
+  weeklyWorkoutGoal.value = getWeeklyWorkoutGoal()
 
   const now = new Date()
   const dayOfWeek = now.getDay() // 0 = Sunday

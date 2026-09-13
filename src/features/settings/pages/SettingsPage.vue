@@ -168,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, toastController, alertController } from '@ionic/vue'
 import { downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
@@ -178,6 +178,7 @@ import {
   getCurrency, setCurrency, getLastHcSyncAt, setLastHcSyncAt,
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
+  getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
 } from '@/shared/utils/userSettings'
 import type { CurrencyCode } from '@/shared/utils/userSettings'
 import {
@@ -269,17 +270,11 @@ const currency = ref<CurrencyCode>(getCurrency())
 watch(currency, (code) => setCurrency(code))
 
 // --- Gym: weekly workout goal ---
-const WEEKLY_GOAL_STORAGE_KEY = 'homeWeeklyGoal'
 const weeklyGoalOptions = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12]
-const weeklyWorkoutGoal = ref(4)
-
-onMounted(() => {
-  const savedGoal = Number(localStorage.getItem(WEEKLY_GOAL_STORAGE_KEY))
-  weeklyWorkoutGoal.value = Number.isFinite(savedGoal) && savedGoal > 0 ? savedGoal : 4
-})
+const weeklyWorkoutGoal = ref(getWeeklyWorkoutGoal())
 
 watch(weeklyWorkoutGoal, (goal) => {
-  localStorage.setItem(WEEKLY_GOAL_STORAGE_KEY, String(goal))
+  setWeeklyWorkoutGoal(goal)
 })
 
 // --- Notifications ---
