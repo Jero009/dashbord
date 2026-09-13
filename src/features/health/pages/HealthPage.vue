@@ -681,66 +681,6 @@ const handleConnect = async () => {
   border-left: 2px solid rgba(215, 26, 33, 0.5);
 }
 
-/* ── Today's schedule ── */
-.event-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.event-row { display: flex; align-items: center; gap: 10px; }
-
-.event-time {
-  font-size: 0.72rem;
-  color: rgba(var(--nt-ink), 0.5);
-  width: 38px;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.event-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.dot--workout  { background: var(--ion-color-accent-red); }
-.dot--school   { background: rgba(var(--nt-ink), 0.85); }
-.dot--recovery { background: rgb(34, 197, 94); }
-.dot--sleep    { background: rgba(var(--nt-ink), 0.5); }
-.dot--reminder { background: rgba(var(--nt-ink), 0.35); }
-.dot--general  { background: rgba(var(--nt-ink), 0.25); }
-
-.event-title {
-  flex: 1;
-  font-size: 0.9rem;
-  color: rgba(var(--nt-ink), 0.85);
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.event-tag {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 2px 6px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.tag--workout  { background: rgba(215, 26, 33,0.15);   color: var(--ion-color-accent-red); }
-.tag--school   { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
-.tag--recovery { background: rgba(34,197,94,0.15);   color: rgb(34,197,94); }
-.tag--sleep    { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
-.tag--reminder { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.85); }
-.tag--general  { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.5); }
-
 .empty-hint { margin: 0; font-size: 0.9rem; color: rgba(var(--nt-ink), 0.5); }
 
 /* ── Heart rate trend ── */

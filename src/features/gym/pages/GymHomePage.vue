@@ -573,16 +573,6 @@ ion-content.home-content {
   border-radius: 999px;
 }
 
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.section-heading h3,
-.hero-copy h2,
 .graph-card__header h3 {
   margin: 0;
 }

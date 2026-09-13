@@ -720,12 +720,6 @@ const handleImportFile = async (event: Event) => {
   cursor: default;
 }
 
-.hint-text {
-  margin: 10px 0 0;
-  font-size: 0.72rem;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
 .settings-select {
   background: rgba(var(--nt-ink), 0.06);
   border: 1px solid rgba(var(--nt-ink), 0.1);
@@ -809,20 +803,6 @@ const handleImportFile = async (event: Event) => {
   padding: 6px 10px;
   font-size: 0.9rem;
   color-scheme: var(--nt-color-scheme);
-}
-
-.form-select {
-  background: rgba(var(--nt-ink), 0.06);
-  border: 1px solid rgba(var(--nt-ink), 0.1);
-  border-radius: 8px;
-  color: var(--nt-fg);
-  outline: none;
-}
-
-.notif-select {
-  padding: 6px 10px;
-  font-size: 0.9rem;
-  max-width: 120px;
 }
 
 /* Toggle switch */

@@ -120,11 +120,6 @@ const dismiss = () => modalController.dismiss();
   font-family: var(--nt-font-display);
 }
 
-.tile__detail {
-  font-size: 0.68rem;
-  color: rgba(var(--nt-ink), 0.4);
-}
-
 .pr-card {
   background: var(--ion-color-primary);
   border-radius: var(--nt-radius-md);

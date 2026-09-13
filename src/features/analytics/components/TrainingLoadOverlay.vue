@@ -665,12 +665,6 @@ onIonViewWillEnter(load);
   left: 0;
   color: var(--nt-text-dim);
 }
-.lag-note {
-  margin: 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
-  color: rgba(var(--nt-ink), 0.5);
-}
 .empty-copy { margin: 0; color: rgba(var(--nt-ink), 0.6); font-size: 0.9rem; }
 
 @media (min-width: 600px) {
