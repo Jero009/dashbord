@@ -262,6 +262,14 @@ const renderCharts = () => {
 };
 
 const renderMuscleChart = () => {
+  // .update() instead of destroy()+new: keeps tooltip state, canvas sizing and
+  // animations stable across re-entries.
+  if (muscleChart && muscleChartRef.value && muscleVolume.value.length > 0) {
+    muscleChart.data.labels = muscleVolume.value.map((m) => m.muscle_group);
+    muscleChart.data.datasets[0].data = muscleVolume.value.map((m) => m.volume);
+    muscleChart.update();
+    return;
+  }
   if (muscleChart) { muscleChart.destroy(); muscleChart = null; }
   if (!muscleChartRef.value || muscleVolume.value.length === 0) return;
   const ctx = muscleChartRef.value.getContext('2d');
@@ -307,6 +315,13 @@ const renderMuscleChart = () => {
 };
 
 const renderTonnageChart = () => {
+  // .update() instead of destroy()+new (see renderMuscleChart).
+  if (tonnageChart && tonnageChartRef.value && weeklyTonnage.value.length > 0) {
+    tonnageChart.data.labels = weeklyTonnage.value.map((w) => weekLabel(w.week));
+    tonnageChart.data.datasets[0].data = weeklyTonnage.value.map((w) => Number(w.volume) || 0);
+    tonnageChart.update();
+    return;
+  }
   if (tonnageChart) { tonnageChart.destroy(); tonnageChart = null; }
   if (!tonnageChartRef.value || weeklyTonnage.value.length === 0) return;
   const ctx = tonnageChartRef.value.getContext('2d');

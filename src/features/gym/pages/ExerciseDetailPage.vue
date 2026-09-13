@@ -268,6 +268,14 @@ const renderCharts = () => {
 };
 
 const renderStrengthChart = () => {
+  // .update() instead of destroy()+new keeps animations/tooltip state stable.
+  if (strengthChart && strengthChartRef.value && historyData.value.length > 0) {
+    strengthChart.data.labels = chartLabels();
+    strengthChart.data.datasets[0].data = historyData.value.map((item) => Number(item.weight) || 0);
+    strengthChart.data.datasets[1].data = historyData.value.map((item) => estOneRepMax(item));
+    strengthChart.update();
+    return;
+  }
   if (strengthChart) { strengthChart.destroy(); strengthChart = null; }
   if (!strengthChartRef.value || historyData.value.length === 0) return;
   const ctx = strengthChartRef.value.getContext('2d');
@@ -317,6 +325,13 @@ const renderStrengthChart = () => {
 };
 
 const renderVolumeChart = () => {
+  // .update() instead of destroy()+new (see renderStrengthChart).
+  if (volumeChart && volumeChartRef.value && historyData.value.length > 0) {
+    volumeChart.data.labels = chartLabels();
+    volumeChart.data.datasets[0].data = historyData.value.map((item) => Number(item.volume) || 0);
+    volumeChart.update();
+    return;
+  }
   if (volumeChart) { volumeChart.destroy(); volumeChart = null; }
   if (!volumeChartRef.value || historyData.value.length === 0) return;
   const ctx = volumeChartRef.value.getContext('2d');
