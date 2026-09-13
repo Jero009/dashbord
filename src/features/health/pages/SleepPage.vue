@@ -166,12 +166,26 @@
           <p v-else class="nt-empty">No history</p>
         </ion-card>
 
+        <!-- Duration history -->
+        <ion-card class="sleep-card">
+          <p class="nt-kicker">Duration · 30 nights</p>
+          <trend-chart
+            v-if="durationHistoryPts.length"
+            :pts="durationHistoryPts"
+            unit="h"
+            :goal="sleepGoalHours"
+            aria-label="Sleep duration history"
+          />
+          <p v-else class="nt-empty">No history</p>
+        </ion-card>
+
         <!-- Score history -->
         <ion-card class="sleep-card">
-          <p class="nt-kicker">History · 30 nights</p>
+          <p class="nt-kicker">Score · 30 nights</p>
           <trend-chart
             v-if="scoreHistoryPts.length"
             :pts="scoreHistoryPts"
+            :goal="70"
             aria-label="Sleep score history"
           />
           <p v-else class="nt-empty">No history</p>
@@ -205,6 +219,7 @@ import { hapticError, hapticLight, hapticSuccess } from '@/shared/utils/haptics'
 import { getSleepSession, getRecentSleepSessions } from '@/shared/db/app_db';
 import type { SleepSessionRecord } from '@/shared/db/app_db';
 import { clamp as clampVal } from '@/shared/utils/math';
+import { getSleepGoalHours } from '@/shared/utils/userSettings';
 
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
@@ -420,6 +435,13 @@ const stageHistoryNights = computed(() =>
       light: s.stage_light_min,
       awake: s.stage_awake_min,
     }))
+);
+const sleepGoalHours = getSleepGoalHours();
+const durationHistoryPts = computed(() =>
+  [...sleepHistory.value].reverse().filter((r) => r.value > 0).map((row) => ({
+    label: new Date(`${row.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    value: row.value,
+  }))
 );
 const scoreHistoryPts = computed(() =>
   [...sleepHistory.value].reverse().filter((r) => r.score !== null).map((row) => ({
