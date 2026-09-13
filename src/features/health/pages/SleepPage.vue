@@ -111,6 +111,7 @@
               </span>
             </div>
           </div>
+          <p v-else-if="hasStageSummaries" class="nt-empty">Stage detail unavailable for this night</p>
           <p v-else class="nt-empty">No stages</p>
         </ion-card>
 
@@ -487,6 +488,9 @@ const respiratoryRateDisplay = computed(() => {
   return value !== null ? `${value} rpm` : '—';
 });
 const stageRows = computed(() => summary.value?.stages ?? []);
+// Device gave stage totals but no per-stage timestamps: show the Stages card,
+// but explain the empty hypnogram instead of a bare "No stages".
+const hasStageSummaries = computed(() => stageRows.value.length > 0);
 const bedTimeClock = computed(() =>
   summary.value ? new Date(summary.value.wentToSleepAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'
 );
