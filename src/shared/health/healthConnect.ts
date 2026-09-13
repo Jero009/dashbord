@@ -6,6 +6,7 @@ import {
   pickPrimarySleepSample as pickPrimarySleepSamplePure,
   sleepWindowHeartRate,
   sleepWindowHeartRateAverage,
+  rrWithinWindowAverage,
   toChronologicalHrSamples,
 } from '@/shared/health/sleepJoin';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
@@ -545,6 +546,8 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
   // night's HR across two days and left the wake-up day with only the post-midnight
   // (and daytime-polluted) portion. Window matching fixes same-day sleep-HR sync.
   const heartRateSamples = toChronologicalHrSamples(heartRateResult.samples);
+  // RR joined to sleep windows by timestamp, like HR (see rrWithinWindowAverage)
+  const rrSamples = toChronologicalHrSamples(respiratoryRateResult.samples);
 
   const sleepWindowHeartRateLocal = (sample: HealthSample) =>
     sleepWindowHeartRate(sample, heartRateSamples);
@@ -603,7 +606,11 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
 
     const sleepHrSamples = sleepWindowHeartRateLocal(latestSample);
     const sleepHeartRate = average(sleepHrSamples.map((s) => s.value));
-    const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
+    // Sleep-session RR = full-night window average. The old day-bucketed value
+    // split an overnight session at midnight (wake-up day only got the
+    // post-midnight portion). The day-bucketed metric write below is kept for
+    // the Health page's per-day RR metric.
+    const respiratoryRate = rrWithinWindowAverage(latestSample, rrSamples);
 
     // Bedtime in minutes since midnight, handling overnight sessions (e.g. 23:00)
     const bedtimeDate = new Date(latestSample.startDate);
@@ -762,7 +769,7 @@ export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthCon
     );
     const restingHr = restingHeartRateByDate.get(date) ?? null;
     const sleepHeartRate = latestSample ? sleepWindowHeartRateAverage(latestSample, heartRateSamples) : null;
-    const respiratoryRate = average(respiratoryRateByDate.get(date)?.values ?? []);
+    const respiratoryRate = latestSample ? rrWithinWindowAverage(latestSample, rrSamples) : null;
     const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate) : null;
 
     if (sleepHours === null && restingHr === null && sleepSummary === null) {
