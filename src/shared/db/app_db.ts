@@ -827,6 +827,7 @@ async function doInitDB() {
         score INTEGER,
         sleep_hr REAL,
         respiratory_rate REAL,
+        hrv REAL,
         stage_deep_min INTEGER DEFAULT 0,
         stage_light_min INTEGER DEFAULT 0,
         stage_rem_min INTEGER DEFAULT 0,
@@ -888,6 +889,7 @@ async function doInitDB() {
       ['hr_timeline_json',    'TEXT'],
       ['stage_timeline_json', 'TEXT'],
       ['source',              "TEXT DEFAULT 'health-connect'"],
+      ['hrv',                'REAL'],
     ] as [string, string][]) {
       if (!sleepColNames.has(col)) {
         await db.execute(`ALTER TABLE sleep_session ADD COLUMN ${col} ${def};`);
@@ -1832,6 +1834,7 @@ export interface SleepSessionRecord {
   score: number | null;      // 0–100, null when insufficient sleep data
   sleep_hr: number | null;
   respiratory_rate: number | null;
+  hrv: number | null;        // nightly HRV (rmssd ms) average within the sleep window
   stage_deep_min: number;
   stage_light_min: number;
   stage_rem_min: number;
@@ -1848,14 +1851,15 @@ export async function upsertSleepSession(record: Omit<SleepSessionRecord, 'sourc
     await db.run(
       `INSERT INTO sleep_session
          (date, bedtime, waketime, time_asleep_hours, time_in_bed_hours, efficiency, score,
-          sleep_hr, respiratory_rate, stage_deep_min, stage_light_min, stage_rem_min,
+          sleep_hr, respiratory_rate, hrv, stage_deep_min, stage_light_min, stage_rem_min,
           stage_awake_min, stage_asleep_min, hr_timeline_json, stage_timeline_json, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(date) DO UPDATE SET
          bedtime = excluded.bedtime, waketime = excluded.waketime,
          time_asleep_hours = excluded.time_asleep_hours, time_in_bed_hours = excluded.time_in_bed_hours,
          efficiency = excluded.efficiency, score = excluded.score,
          sleep_hr = excluded.sleep_hr, respiratory_rate = excluded.respiratory_rate,
+         hrv = excluded.hrv,
          stage_deep_min = excluded.stage_deep_min, stage_light_min = excluded.stage_light_min,
          stage_rem_min = excluded.stage_rem_min, stage_awake_min = excluded.stage_awake_min,
          stage_asleep_min = excluded.stage_asleep_min,
@@ -1866,7 +1870,7 @@ export async function upsertSleepSession(record: Omit<SleepSessionRecord, 'sourc
         record.date, record.bedtime, record.waketime,
         record.time_asleep_hours, record.time_in_bed_hours,
         record.efficiency, record.score ?? null,
-        record.sleep_hr ?? null, record.respiratory_rate ?? null,
+        record.sleep_hr ?? null, record.respiratory_rate ?? null, record.hrv ?? null,
         record.stage_deep_min ?? 0, record.stage_light_min ?? 0,
         record.stage_rem_min ?? 0, record.stage_awake_min ?? 0,
         record.stage_asleep_min ?? 0,

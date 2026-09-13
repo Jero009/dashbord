@@ -7,6 +7,7 @@ import {
   sleepWindowHeartRate,
   sleepWindowHeartRateAverage,
   rrWithinWindowAverage,
+  hrvWithinWindowAverage,
   toChronologicalHrSamples,
 } from '@/shared/health/sleepJoin';
 import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
@@ -83,6 +84,8 @@ export interface SleepSummary {
   wokeUpAt: string;
   sleepHeartRate: number | null;
   respiratoryRate: number | null;
+  hrv: number | null;
+  hrvBaseline: number | null;
   stages: SleepStageSummary[];
   timeline: SleepStageTimeline[];
   heartRateTimeline: SleepHeartRatePoint[];
@@ -221,6 +224,8 @@ function buildSleepSummary(
     targetSleepHours?: number;
     timingVarianceMinutes?: number | null;
     respiratoryRateBaseline?: number | null;
+    hrv?: number | null;
+    hrvBaseline?: number | null;
   } = {}
 ) {
   const timeInBedHours = hoursBetween(sample.startDate, sample.endDate);
@@ -261,6 +266,8 @@ function buildSleepSummary(
       timingVarianceMinutes: options.timingVarianceMinutes ?? null,
       respiratoryRate,
       respiratoryRateBaseline: options.respiratoryRateBaseline ?? null,
+      hrv: options.hrv ?? null,
+      hrvBaseline: options.hrvBaseline ?? null,
       wasoMinutes,
     }),
   };
@@ -275,6 +282,8 @@ interface SleepScoreInputs {
   timingVarianceMinutes: number | null;     // deviation from rolling bedtime mean
   respiratoryRate: number | null;
   respiratoryRateBaseline: number | null;   // rolling personal mean
+  hrv: number | null;                       // nightly HRV (rmssd ms) within sleep window
+  hrvBaseline: number | null;               // rolling personal mean (14-day)
   wasoMinutes: number | null;               // wake-after-sleep-onset minutes; null = no stage data
 }
 
@@ -314,7 +323,16 @@ function calculateSleepScore(inputs: SleepScoreInputs): number | null {
       ? 6.25
       : clamp(12.5 - (Math.abs(inputs.respiratoryRate - inputs.respiratoryRateBaseline) / 3) * 12.5, 0, 12.5);
 
-  return Math.min(100, Math.round(durationScore + efficiencyScore + wasoScore + deepScore + remScore + timingScore + respiratoryScore));
+  // HRV vs personal baseline: 12.5 pts (0 pts at ≥50% below baseline).
+  // Half-score when either side is missing (no data yet / not enough
+  // readings for a baseline) — mirrors the respiratory-rate component;
+  // degrades gracefully when hrv rows are sparse.
+  const hrvScore =
+    inputs.hrv === null || inputs.hrvBaseline === null
+      ? 6.25
+      : clamp(12.5 - (Math.abs(inputs.hrv - inputs.hrvBaseline) / (inputs.hrvBaseline * 0.5)) * 12.5, 0, 12.5);
+
+  return Math.min(100, Math.round(durationScore + efficiencyScore + wasoScore + deepScore + remScore + timingScore + respiratoryScore + hrvScore));
 }
 
 function toDateKey(date: string): string {
@@ -594,6 +612,8 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   const heartRateSamples = toChronologicalHrSamples(heartRateResult.samples);
   // RR joined to sleep windows by timestamp, like HR (see rrWithinWindowAverage)
   const rrSamples = toChronologicalHrSamples(respiratoryRateResult.samples);
+  // HRV joined to sleep windows the same way — see hrvWithinWindowAverage.
+  const hrvSamples = toChronologicalHrSamples(hrvResult.samples);
 
   const sleepWindowHeartRateLocal = (sample: HealthSample) =>
     sleepWindowHeartRate(sample, heartRateSamples);
@@ -630,6 +650,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   const sortedSleepEntries = [...sleepByDate.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const rollingBedtimeMinutes: number[] = [];
   const rollingRespRates: number[] = [];
+  const rollingHrvValues: number[] = [];
   const ROLLING_WINDOW = 14;
 
   // Seed rolling baselines from sleep sessions persisted before this window so the
@@ -657,6 +678,8 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     // post-midnight portion). The day-bucketed metric write below is kept for
     // the Health page's per-day RR metric.
     const respiratoryRate = rrWithinWindowAverage(latestSample, rrSamples);
+    // Sleep-window HRV (rmssd ms) — feeds the sleep-score HRV component.
+    const hrv = hrvWithinWindowAverage(latestSample, hrvSamples);
 
     // Bedtime in minutes since midnight, handling overnight sessions (e.g. 23:00)
     const bedtimeDate = new Date(latestSample.startDate);
@@ -680,14 +703,24 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
       respiratoryRateBaseline = window.reduce((s, v) => s + v, 0) / window.length;
     }
 
+    // HRV baseline: rolling 14-day mean of prior nightly HRV
+    let hrvBaseline: number | null = null;
+    if (rollingHrvValues.length >= 3) {
+      const window = rollingHrvValues.slice(-ROLLING_WINDOW);
+      hrvBaseline = window.reduce((s, v) => s + v, 0) / window.length;
+    }
+
     const sleepSummary = buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate, {
       timingVarianceMinutes,
       respiratoryRateBaseline,
+      hrv,
+      hrvBaseline,
     });
 
     // Update rolling state AFTER scoring so current night doesn't influence its own baseline
     rollingBedtimeMinutes.push(bedtimeMinutes);
     if (respiratoryRate !== null) rollingRespRates.push(respiratoryRate);
+    if (hrv !== null) rollingHrvValues.push(hrv);
 
     try {
       await replaceHealthMetric(date, 'sleep_duration', Number(sleepSummary.timeAsleepHours.toFixed(2)), 'hours', HEALTH_CONNECT_SOURCE);
@@ -752,6 +785,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
         score: sleepSummary.score,
         sleep_hr: sleepHeartRate !== null ? Math.round(sleepHeartRate) : null,
         respiratory_rate: respiratoryRate !== null ? Number(respiratoryRate.toFixed(1)) : null,
+        hrv: hrv !== null ? Math.round(hrv) : null,
         stage_deep_min: stageMin('deep'),
         stage_light_min: stageMin('light'),
         stage_rem_min: stageMin('rem'),
@@ -809,7 +843,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   const rollingRhrValues: number[] = [];
   const rollingSleepHrValues: number[] = [];
   const rollingRespRateValues: number[] = [];
-  const rollingHrvValues: number[] = [];
+  // rollingHrvValues moved earlier (before the sleep loop)
 
   const readinessDates = new Set(
     [...sleepByDate.keys(), ...restingHeartRateByDate.keys()].sort()
@@ -828,6 +862,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     for (const s of [...priorSessionsForReadiness].reverse()) {
       if (s.sleep_hr !== null) rollingSleepHrValues.push(s.sleep_hr);
       if (s.respiratory_rate !== null) rollingRespRateValues.push(s.respiratory_rate);
+      if (s.hrv !== null) rollingHrvValues.push(s.hrv);
     }
   }
   for (const date of readinessDates) {
@@ -839,7 +874,13 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     const restingHr = restingHeartRateByDate.get(date) ?? null;
     const sleepHeartRate = latestSample ? sleepWindowHeartRateAverage(latestSample, heartRateSamples) : null;
     const respiratoryRate = latestSample ? rrWithinWindowAverage(latestSample, rrSamples) : null;
-    const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate) : null;
+    const hrv = latestSample ? hrvWithinWindowAverage(latestSample, hrvSamples) : null;
+    const sleepSummary = latestSample ? buildSleepSummary(latestSample, sleepHeartRate, respiratoryRate, {
+      hrv,
+      hrvBaseline: rollingHrvValues.length >= 3
+        ? rollingHrvValues.slice(-BASELINE_WINDOW).reduce((s, v) => s + v, 0) / Math.min(rollingHrvValues.length, BASELINE_WINDOW)
+        : null,
+    }) : null;
 
     if (sleepHours === null && restingHr === null && sleepSummary === null) {
       continue;
@@ -862,6 +903,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     if (restingHr !== null) rollingRhrValues.push(restingHr);
     if (sleepHeartRate !== null) rollingSleepHrValues.push(sleepHeartRate);
     if (respiratoryRate !== null) rollingRespRateValues.push(respiratoryRate);
+    if (hrv !== null) rollingHrvValues.push(hrv);
 
     const readinessInputs = {
       sleepHours: sleepSummary?.timeAsleepHours ?? sleepHours,

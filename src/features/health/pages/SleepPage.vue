@@ -296,6 +296,8 @@ function sessionToSummary(record: SleepSessionRecord): SleepSummary {
     wokeUpAt: record.waketime,
     sleepHeartRate: record.sleep_hr,
     respiratoryRate: record.respiratory_rate,
+    hrv: record.hrv ?? null,
+    hrvBaseline: null,
     stages,
     timeline,
     heartRateTimeline,

@@ -62,6 +62,20 @@ export function rrWithinWindowAverage(sample: HealthSample, rrSamples: SleepHrPo
 }
 
 /**
+ * HRV samples falling within the sleep window, joined exactly like HR/RR.
+ * Overnight sessions straddle midnight, so date-bucketing would split the
+ * night's HRV across two days — window matching keeps the full night.
+ */
+export function hrvWithinWindow(sample: HealthSample, hrvSamples: SleepHrPoint[]): SleepHrPoint[] {
+  return sleepWindowHeartRate(sample, hrvSamples);
+}
+
+/** Mean HRV (rmssd ms) across the sleep window; null when the window holds no samples. */
+export function hrvWithinWindowAverage(sample: HealthSample, hrvSamples: SleepHrPoint[]): number | null {
+  return averageOf(hrvWithinWindow(sample, hrvSamples).map((s) => s.value));
+}
+
+/**
  * When a day bucket holds multiple sleep samples (naps / split sessions), the
  * main overnight sleep is the one with the most time asleep — not necessarily
  * the last-recorded one. Picking by duration avoids a short nap overriding it.

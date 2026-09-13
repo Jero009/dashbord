@@ -9,6 +9,8 @@ import {
   rrWithinWindowAverage,
   pickPrimarySleepSample,
   getSleepHours,
+  hrvWithinWindow,
+  hrvWithinWindowAverage,
 } from '@/shared/health/sleepJoin';
 
 const iso = (s: string) => new Date(s).toISOString();
@@ -93,6 +95,42 @@ describe('rrWithinWindow', () => {
 
   it('returns null average when no readings fall in the window', () => {
     expect(rrWithinWindowAverage(NIGHT, [])).toBeNull();
+  });
+});
+
+describe('hrvWithinWindow', () => {
+  // Sparse overnight HRV (rmssd ms) — same join as RR so a 23:50–07:00 night
+  // keeps pre-midnight readings instead of donating them to the previous day.
+  const hrvSamples = toChronologicalHrSamples([
+    hr('2026-09-10T22:00', 48),   // before bedtime — excluded
+    hr('2026-09-10T23:55', 62),   // pre-midnight, belongs to this night
+    hr('2026-09-11T03:00', 70),
+    hr('2026-09-11T06:45', 58),
+    hr('2026-09-11T12:00', 40),   // daytime — excluded
+  ]);
+
+  it('keeps the full night: pre-midnight AND post-midnight readings', () => {
+    const values = hrvWithinWindow(NIGHT, hrvSamples).map((s) => s.value);
+    expect(values).toEqual([62, 70, 58]);
+    expect(hrvWithinWindowAverage(NIGHT, hrvSamples)).toBeCloseTo((62 + 70 + 58) / 3, 6);
+  });
+
+  it('includes bedtime/waketime boundary samples', () => {
+    const onBoundary = toChronologicalHrSamples([
+      hr('2026-09-10T23:50', 61),
+      hr('2026-09-11T07:00', 59),
+    ]);
+    expect(hrvWithinWindow(NIGHT, onBoundary).map((s) => s.value)).toEqual([61, 59]);
+  });
+
+  it('returns null average when no readings fall in the window', () => {
+    expect(hrvWithinWindowAverage(NIGHT, [])).toBeNull();
+  });
+
+  it('returns [] when the sleep sample has unparseable dates', () => {
+    const bad = { startDate: 'nope', endDate: 'nope' } as unknown as HealthSample;
+    expect(hrvWithinWindow(bad, hrvSamples)).toEqual([]);
+    expect(hrvWithinWindowAverage(bad, hrvSamples)).toBeNull();
   });
 });
 
