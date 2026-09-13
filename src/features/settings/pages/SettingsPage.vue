@@ -143,7 +143,7 @@
             <button class="btn-chip" :disabled="syncing" @click="syncNow">{{ syncing ? 'Syncing…' : 'Sync now' }}</button>
           </div>
 
-          <button class="nav-row" @click="handleExport">
+          <button class="nav-row" :disabled="exporting" @click="handleExport">
             <span class="set-row__title">Export backup</span>
             <ion-icon :icon="downloadOutline" class="nav-row__icon" />
           </button>
@@ -323,9 +323,14 @@ const showToast = async (message: string, color: string = 'danger', duration: nu
   await toast.present()
 }
 
+const exporting = ref(false)
+
 const handleExport = async () => {
+  if (exporting.value) return
+  exporting.value = true
   hapticMedium()
-  const backup = await exportDatabaseToSQL()
+  try {
+    const backup = await exportDatabaseToSQL()
 
   if (!backup) {
     showToast('database not ready', 'warning')
@@ -366,6 +371,8 @@ const handleExport = async () => {
     console.error('Export failed:', error)
     hapticError()
     showToast('export failed', 'danger')
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -451,10 +458,26 @@ const runImportWithConfirm = async (sqlContent: string) => {
         text: 'Import',
         handler: async () => {
           try {
+            // Safety net: export the current DB to Documents before replacing it.
+            const backup = await exportDatabaseToSQL()
+            if (backup) {
+              await Filesystem.writeFile({
+                path: backup.fileName,
+                data: backup.sql,
+                directory: Directory.Documents,
+                encoding: Encoding.UTF8,
+                recursive: true
+              })
+              showToast(`pre-import backup · ${backup.fileName}`, 'success', 3000)
+            }
+
             const result = await importDatabaseFromSQL(sqlContent)
 
             if (result.success) {
-              showToast('imported', 'success', 3000)
+              showToast('imported · restarting…', 'success', 1500)
+              // In-memory refs still hold the OLD dataset after a replace; a full
+              // reload re-runs initDB + every page loader against the new data.
+              setTimeout(() => window.location.reload(), 1200)
             } else {
               showToast(`import failed · ${result.message}`, 'danger')
             }
