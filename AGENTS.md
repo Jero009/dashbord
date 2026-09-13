@@ -2,7 +2,7 @@
 
 This file provides guidance to AI coding agents (Claude Code, OpenCode, Cursor, Aider, etc.) when working with code in this repository.
 
-> **Single source of truth.** A legacy `CLAUDE.md` previously duplicated this file; it has been removed. The content was kept here because `AGENTS.md` is the convention supported across tools.
+> **Single source of truth.** A legacy `CLAUDE.md` previously duplicated this file; it has been removed.
 
 ## Project Overview
 
@@ -13,7 +13,7 @@ Ionic + Vue 3 health and fitness tracking app with local SQLite storage and Andr
 ```bash
 npm run dev           # Vite dev server at http://localhost:5173
 npm run build         # TypeScript compile + Vite build
-npm run lint          # ESLint
+npm run lint          # ESLint (must be clean before commit)
 npm run test:unit     # Vitest unit tests (add --run for non-watch)
 npm run test:unit -- src/path/file   # Single file
 npm run test:e2e      # Cypress (requires dev server running separately)
@@ -23,15 +23,32 @@ npm run test:e2e      # Cypress (requires dev server running separately)
 
 ### Feature Modules
 
-`src/features/` — isolated modules: **gym**, **health**, **finance**, **home**, **plan**. Each has `routes.ts`, `pages/`, `components/`. Routes are lazy-loaded and merged in `src/router/index.ts`.
+`src/features/` — isolated modules: **gym**, **health**, **home**, **finance**, **analytics**, **settings**. Each has `routes.ts`, `pages/`, and most have `components/`. Routes are lazy-loaded and merged in `src/router/index.ts`.
+
+There is **no Plan/Calendar/Habits/Goals feature, no Circadian module, and no Cardio page** — these were removed in earlier debloat passes. Don't reintroduce them or reference them in docs/code.
 
 ### Shared Layer
 
 `src/shared/` for cross-feature concerns:
 - `db/app_db.ts` — single SQLite instance, all DB functions exported from here
-- `health/` — Health Connect sync (`HealthConnectAutoSync.vue` mounted in `App.vue`, runs on startup)
-- `utils/` — formatting, type conversions, haptics, notifications
-- `components/` — global UI components
+- `health/` — Health Connect sync + pure-TS compute services (`healthConnect.ts`, `trainingLoad.ts`, `recoveryBaseline.ts`, `overtraining.ts`, `recoveryTime.ts`, `todayRecovery.ts`, `insights.ts`), plus `HealthConnectAutoSync.vue` (mounted in `App.vue`, syncs on startup)
+- `utils/` — formatting (`timeFormat.ts`, `currency.ts`), user settings accessors (`userSettings.ts`), toasts (`toast.ts`), haptics, notifications, AI export (`aiExport.ts`), rest-timer support (`restTimerAudio.ts`, `restTimerGlyph.ts`), Glyph bridge (`glyphMatrix.ts`, `glyphFrames.ts`), chart helpers (`chartStyle.ts`, `chartGeom.ts`), `math.ts` (clamp etc.), `habitStats.ts`
+- `composables/useTheme.ts` — light/dark/system theme
+- `components/` — `DashboardTopBar.vue` (global tab bar), `TrendChart.vue` (standard SVG trend chart)
+
+### Top Bar (the app's only tab navigation)
+
+`DashboardTopBar.vue` — segment pill with **Home / Finance / Health / Gym / Analytics** + a settings gear. Targets: `/home`, `/finance`, `/health`, `/tabs/Home` (gym), `/analytics`. Active-tab check tests `/analytics` → `/finance` → `/health` → `/tabs|/workout|/exercise` (gym) → else home. There is no Plan tab.
+
+### Routes
+
+- `/home` — HomePage (features/home): daily dashboard
+- `/finance` (+ `/budget`, `/analytics`, `/accounts`, `/investments`, `/subscriptions`)
+- `/health` (+ `/sleep`, `/body`)
+- `/workout/:id`, `/exercise/:id` — workout player, exercise detail
+- `/tabs/` (gym): Home (GymHomePage), Template, Exercise, History, ExercisePicker, TemplateBuilder, TemplateEditor/:id
+- `/analytics` (+ `/gym`, `/review`)
+- `/settings`
 
 ### Data Flow
 
@@ -44,238 +61,167 @@ Pages call exported functions from `src/shared/db/app_db.ts` directly. No global
 - SQLite unavailable on web — DB calls must tolerate empty/null results
 - **New DB tables**: Add to `EXPORT_DELETE_TABLES`, `EXPORT_INSERT_TABLES`, `deleteOrder`, and `insertOrder` in `importDatabaseFromSQL` — all four lists.
 - **Nullable unique columns**: Never `WHERE col = NULL`. Use `(col = ? OR (col IS NULL AND ? IS NULL))` in any upsert on a nullable unique column.
+- **Bulk writes**: prefer `db.executeSet([...])` over N sequential `db.run` calls (see `updateWorkoutExerciseOrders` for the reorder pattern).
+- `recordNetWorthSnapshot` writes at most once per day (checks today's snapshot first, plus `ON CONFLICT(date)` upsert).
+
+### Shared helpers — use them, don't re-inline
+
+- `showToast(message, color?, duration?)` in `utils/toast.ts` — all toasts
+- `formatRestTime` / `formatDuration` / `formatWorkoutDate` / `localDateISO` / `normalizeDateInput` / `parseLocalDate` in `utils/timeFormat.ts`
+- `formatCurrency(value)` in `utils/currency.ts` — whole units except small fractional values (shows cents under 1000 so sub-$1 crypto doesn't read "$0"); currency from `getCurrency()`
+- User-set numbers via accessors in `utils/userSettings.ts`: `getWeeklyWorkoutGoal`, `getSleepGoalHours`, `getStepGoal`, `getGoalWeightKg`, `getCurrency`. Raw `localStorage` reads for these values are not allowed.
+- `clamp` in `utils/math.ts` — all clamping in compute code
 
 ### Health Connect
 
-- Syncs steps, sleep, heart rate, respiratory rate via `@capgo/capacitor-health`
-- `HealthConnectAutoSync.vue` — initial sync on mount + 6 s retry for cold-start race condition
-- Readiness score inputs — 6 physiological signals, each present-weighted (the base floor scales by how many are present): sleep hours, sleep efficiency, sleep score, resting HR, sleep HR, respiratory rate. **Steps is synced and stored but NOT scored** (it's passed into `ReadinessInputs` for completeness; `calculateReadinessScore`'s `scoredInputs` array is the 6 above).
-- Sleep score (`calculateSleepScore` in `healthConnect.ts`) — 100-pt model: duration vs target (25), efficiency (15), WASO (10), deep% ≥18% (10), REM% ≥22% (12.5), bedtime timing variance vs 14-night mean (15), respiratory rate vs 14-night baseline (12.5). Returns `number | null` — null when `timeAsleepHours < 1`.
-- User device: Amazfit Active 2 via Zepp Health → Health Connect. Provides sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
+- Syncs steps, sleep, heart rate (continuous, per-minute Amazfit data is downsampled), resting HR, respiratory rate via `@capgo/capacitor-health`
+- **Core vs optional reads**: `HEALTH_CONNECT_CORE_READ_TYPES` = steps, sleep, restingHeartRate, heartRate, respiratoryRate — these gate sync. `workouts` (READ_EXERCISE) is requested only so users *can* grant it (battery activity-drain); it must never gate core sync. If a permission reset kills the read, core metrics still sync.
+- `HealthConnectAutoSync.vue` — initial sync on mount + retry for cold-start race condition; manual re-sync button on Settings and HealthPage
+- Readiness score (`calculateReadinessScore`) — 6 scored signals with per-signal caps (sleep hours/8×18, efficiency×12, sleep score/100×22, RHR vs baseline 16, sleep HR 12, respiratory rate 8) plus a base floor of 24 scaled by how many inputs are present. **Steps is synced and stored but NOT scored** (passed into `ReadinessInputs` for completeness only).
+- Sleep score (`calculateSleepScore` in `healthConnect.ts`, private) — 100-pt model: duration vs `getSleepGoalHours()` target (25), efficiency (15), WASO (10, neutral 5 without stage data), deep% ≥18% (10), REM% ≥22% (12.5), bedtime-timing variance (15, neutral 7.5), respiratory rate vs personal baseline (12.5, neutral 6.25). Returns `number | null` — null when `timeAsleepHours < 1`.
+- User device: Amazfit Active 2 via Zepp Health → Health Connect. Sleep stages, HR, steps, respiratory rate. No HRV without device upgrade.
 - **`toDateKey` uses local date**: extracts `YYYY-MM-DD` using `getFullYear/getMonth/getDate` (NOT `.toISOString().slice(0,10)`). UTC slice was off-by-one for UTC+ timezones.
-- **Steps sync**: separate query window (7 days, 5000-record limit, `ascending: false`) so today's steps are always in the result set.
-
-### Planner (separate Calendar / Habits / Goals pages, shared logic)
-
-Calendar, Habits, and Goals are **three separate pages** under the Plan tab, all backed by one composable so they share identical logic:
-- **`src/features/plan/composables/usePlanner.ts`** — single source of truth: all calendar-event, habit (with streak stats) and goal state/actions/loaders. Each page destructures only the slice it renders.
-- **`src/features/plan/planner.css`** — shared styles, scoped per page via `<style scoped src="../../plan/planner.css">`.
-- `HealthCalendarPage` (`/plan/calendar`) — month grid (dots: red=event, white=habit done, yellow=goal due) + selected-day detail (events + scheduled habits + goal deadlines).
-- `HealthHabitsPage` (`/plan/habits`) — habit board (7-day week strip with toggles, expandable per-habit stats: current streak, best streak, 30-day completion rate, 28-day mini grid, edit form) + 10-week consistency heatmap.
-- `HealthGoalsPage` (`/plan/goals`) — goals with progress bars, linked-habit counts, due labels, completed list.
-- `PlanPage` (`/plan`) — "Today" snapshot overview. Tabs: `PlanSectionTabs` (Overview / Goals / Habits / Calendar).
-- Legacy `/health/planner`, `/health/calendar`, `/health/habits`, `/health/goals` redirect to `/plan` and `/plan/{calendar,habits,goals}`. There is no longer a merged `HealthPlannerPage`, and Health's section tabs no longer include "Planner".
-
-- `habit.days_of_week` — comma-separated JS weekday digits (Sunday=0), NULL/empty = every day. `getHabitsWithStatus(date)` only returns habits scheduled on that date's weekday.
-- `habit.goal_id` — habit-goal link: `toggleHabitCompletion` moves the linked goal's `current_value` by ±1 on real state changes (all callers, including HomePage, get this behavior). `deleteGoal` clears `goal_id` on linked habits.
-- Streak math lives in `src/shared/utils/habitStats.ts` (`currentStreak`, `bestStreak`, `completionRate`, `isScheduledOn`) — unscheduled days never break a streak; an incomplete *today* doesn't either. Unit tests in `tests/unit/habitStats.spec.ts`.
-- `goal.status`: `active` | `completed`. `getGoalDueDatesForMonth` feeds the yellow calendar dots.
-
-### Training Load vs Recovery Overlay
-
-Three pure-TS services in `src/shared/health/` (no DB/Vue deps, unit-tested in `tests/unit/{trainingLoad,recoveryBaseline,overtraining}.spec.ts`):
-- **`trainingLoad.ts`** — `sessionRpeLoad(rpe, durationMin)`, `computeDailyLoads(sessions)` (per-day `volumeLoad = Σ reps×weight` and `rpeLoad = Σ rpe×duration`, null when no RPE that day), `selectLoadMetric`/`dailyLoadValue`, `computeAcwrSeries(dailyLoads, {acuteDays=7, chronicDays=28, minChronicDays=14, metric='auto', method='ewma', coupling='uncoupled', endDate})`. **One consistent unit per series** (never mixes sRPE+volume): `auto` picks `'rpe'` only when *every* training day has an RPE load, else `'volume'` — `AcwrPoint.metric` records which. **Default `method='ewma'`**: acute/chronic are exponentially weighted moving averages (λ=2/(N+1), Williams et al. 2017) — more injury-sensitive than rolling averages and avoids the rolling-average "mathematical coupling" critiqued by Lolli/Impellizzeri; seeded at day 1's load so ACWR ≈ 1.0 in steady state. `method='rolling'` gives the classic SMA (Gabbett), with `coupling='uncoupled'` (default) computing chronic from the window *before* the acute days (no overlap). EWMA runs over gap-filled days (rest days = 0). **`endDate`** extends the series across rest days so acute load decays (detraining shows up instead of freezing at the last workout) — the component passes today. `acwrFlag`: `<0.8` detraining · `0.8–1.3` optimal · `1.3–1.5` caution · `>1.5` high_risk.
-- **`recoveryBaseline.ts`** — `computeRecoverySeries(readings, metric)` for `metric: 'hrv' | 'rhr'`. Trailing 7/28-reading means, 28-reading sample SD, raw `z = (v−mean28)/sd28`, and **`recoveryZ`** (sign-normalised so **negative = worse recovery**: HRV uses raw z, RHR uses `−z` since elevated RHR is bad). HRV-ready — fed by RHR today; drop in an `hrv` health_metric and it switches automatically.
-- **`overtraining.ts`** — `evaluateOvertraining(points)` → `{status: 'green'|'yellow'|'red', overreaching, acwr, consecutiveLowRecovery, reasons}`. **Red** = ACWR > 1.5 AND `recoveryZ ≤ −1.0` for 2+ consecutive (trailing) days. Yellow = a single warning. `acwrZoneLabel(acwr)` helper.
-- **`recoveryTime.ts`** — Garmin-style "recovery time advisor" (hours-until-recovered after a session; this is the time-to-recover **countdown**, NOT a 0–100 recovery *score* — that role is the battery/readiness). `estimateRecoveryHours({rpeLoad, volumeLoad, recoveryZ, sleepScore})`: base hours from the session's internal load (sRPE = RPE×min preferred, Σ weight×reps volume as fallback; ~12.5 sRPE/h, ~280 volume/h, clamped 0–96 h), then multiplied by a recovery-signal modifier (±15% per z, 0.7–1.4×) and a sleep modifier (ref 75, 0.8–1.3×). `recoveryTimeStatus(input, sessionEndIso, now)` adds the live countdown (`remainingHours`/`readyAt`/`recovered`/`label`). `aggregateLatestTrainingDay(sessions)` picks & sums the most recent training day (two-a-days add). `recoveryTimeLabel(h)` → "Recovered" | "<1h" | "18h" | "1d 4h". Unit-tested in `tests/unit/recoveryTime.spec.ts`.
-
-**Data**: `workout.session_rpe REAL` (nullable, added via migration block; auto-handled by export/import). Set by `setWorkoutSessionRpe(id, rpe)` — optional 1–10 prompt in `WorkoutPage` end-workout flow. `getSessionLoads(days)` → per-workout `{date, time_end, duration_minutes, session_rpe, volume}` (`time_end` drives the recovery-time countdown); `getHealthMetricDailySeries(type, days)` → one averaged value/date ascending (RHR today, `hrv`-ready; also feeds `sleep_score` to recovery time).
-
-**UI**: `src/features/analytics/components/TrainingLoadOverlay.vue` — mounted on `AnalyticsGymPage`. Custom **SVG dual-axis chart** (not Chart.js): load bars color-coded by ACWR zone (detraining=dim white, optimal=green, caution=gold, high_risk=red) + overlaid recovery-z polyline. Day N+1's recovery point is drawn at the **left edge of its bar** (= right edge of bar N) so the load→recovery lag reads at a glance. Status banner green/yellow/red — plus a neutral **'unknown'** ("Load tracked") state when no recovery signal exists, so it never shows a falsely confident green. HRV only takes over from RHR at ≥14 readings (`HRV_TAKEOVER_MIN`). Loads on mount + `onIonViewWillEnter`. ACWR/acute/chronic/recovery-z tiles + a full-width **Recovery time** tile (`.tile--wide`, green/gold/red by hours remaining, shows "ready ~HH:MM"), window selector 28/56/90 days.
 
 ### Battery Score
 
-`calculateBattery(baseline, now, workouts, activities, events, circadianScore?)` in `healthConnect.ts`:
-- Drains: time (gradual), workout (gym log), activity (HC activities — only when no gym workout today), events (calendar)
-- `eventDrain` inner clamp is `(-5, 15)` per event; outer clamp is `(-20, 25)` — lower bound must stay negative to allow sleep/recovery events to benefit the score
-- School events drain `+2/hr`. Sleep events drain `−5/hr`.
-- Optional 6th param `circadianScore: number | null = null` applies a `0.90–1.00` multiplier to the baseline (irregular rhythm → up to 10% penalty). `HealthPage.vue` computes and passes it.
-- Shown as hero on `HealthPage.vue` and as tile on `HomePage.vue`.
+`calculateBattery(baseline, now, workouts, activities, events, circadianScore = null)` in `healthConnect.ts`:
+- Drains: time (gradual, readiness-shaped), workout (gym log), activity (HC workouts — capped 0–30), events (already-started same-day events; overnight windows roll to next day)
+- The `events` param is still in the signature but **no caller currently feeds it real data** (the calendar feature is gone; `HomePage` passes an always-empty ref and `HealthPage` an empty array)
+- `circadianScore` param survives with a 0.90–1.00 multiplier but defaults to `null` (no-op) — no caller passes it since the Circadian module was removed
+- Shown as hero on `HomePage` (with an 06:00–23:00 Chart.js timeline split past/future at the current hour) and on `HealthPage`
 
-### Calendar Events
+### Training Load & Recovery Services (src/shared/health/)
 
-`HealthCalendarPage.vue` supports types: `general`, `workout`, `recovery`, `school`, `sleep`, `reminder`. CSS class: `item-tag--<type>`.
+Pure-TS services + one "today verdict" (no DB/Vue deps; unit-tested in `tests/unit/{trainingLoad,recoveryBaseline,overtraining,recoveryTime,insights}.spec.ts`):
+- **`trainingLoad.ts`** — `sessionRpeLoad(rpe, durationMin)`, `computeDailyLoads(sessions)` (per-day `volumeLoad = Σ reps×weight`, `rpeLoad = Σ rpe×duration`), `selectLoadMetric`/`dailyLoadValue`, `computeAcwrSeries(dailyLoads, {acuteDays=7, chronicDays=28, minChronicDays=14, metric='auto', method='ewma', coupling='uncoupled', endDate})`. **One consistent unit per series** (`auto` = `'rpe'` only when every training day has RPE load, else `'volume'`; `AcwrPoint.metric` records which). EWMA (λ=2/(N+1)) is default; `method='rolling'` = classic SMA. `endDate` extends the series across rest days so acute load decays. `acwrFlag`: `<0.8` detraining · `0.8–1.3` optimal · `1.3–1.5` caution · `>1.5` high_risk.
+- **`recoveryBaseline.ts`** — `computeRecoverySeries(readings, 'hrv'|'rhr')`: trailing 7/28 means, 28-SD, `recoveryZ` sign-normalised (**negative = worse recovery**: HRV raw z, RHR `−z`). Fed by RHR today; HRV-ready.
+- **`overtraining.ts`** — `evaluateOvertraining(points)` → `{status: 'green'|'yellow'|'red', ...}`. Red = ACWR > 1.5 AND recoveryZ ≤ −1.0 for 2+ consecutive days. `acwrZoneLabel(acwr)` helper.
+- **`recoveryTime.ts`** — Garmin-style hours-until-recovered countdown (NOT a 0–100 score). `estimateRecoveryHours({rpeLoad, volumeLoad, recoveryZ, sleepScore})`, `recoveryTimeStatus(...)` → live `remainingHours`/`readyAt`/`label`. `aggregateLatestTrainingDay(sessions)` sums the most recent training day (two-a-days add).
+- **`todayRecovery.ts`** — `computeTodayRecovery(...)`: single "today" verdict (EWMA ACWR + recovery z) shared by the Home recovery chip AND Analytics overview, so the two pages can never disagree. Built from the same services the overlay charts.
+- **`insights.ts`** — `computeInsights({sleepHours, rhr, readiness, dailyVolume})`: Pearson-correlation cross-domain insights (sleep↔volume, RHR↔readiness, weekly sleep vs target), warnings ranked first, capped at 4. The legacy SMA `computeTrainingLoad`/`computeRecoveryRecommendation` were removed — use `todayRecovery.ts`/`trainingLoad.ts` instead.
 
-- **Views**: month grid / week (7-day columns w/ event chips) / **day (HomePage-style schedule timeline)** / agenda (next 45 days grouped by date). `viewMode` + `setViewMode`/`goPrev`/`goNext`/`periodLabel` in `usePlanner`. The selected-day detail card renders under month/week/day (not agenda). Day view renders a scrollable hour grid (`dayTlHeight`/`dayVisibleHours`/`dayHourToY`/`dayTimedEvents`/`dayTimedHabits`/`dayAllDayEvents`/`dayNowY` in `usePlanner`, `HOUR_PX=52`) mirroring HomePage's timeline — all-day strip, hour gridlines, now-line, absolutely-positioned event blocks + habit pills. Tapping a block opens the edit form (which has a Delete button, since the day view has no per-row delete); the plain event list only shows under month/week.
-- **Recurrence engine** — `src/shared/utils/recurrence.ts` (pure TS, unit-tested in `tests/unit/recurrence.spec.ts`). Types: `none` | `daily` | `weekly` | `weekdays` | `monthly` | `yearly`. Columns: `recur_interval` (every-N, default 1), `recur_days` (weekly: comma weekday digits Sun=0, empty = start weekday), `recur_count` (cap # occurrences), `end_date` (inclusive "until"). Monthly skips short months (no 31st in Feb); yearly skips Feb 29 in non-leap years (RRULE semantics, not clamped). `eventOccursOn(ev, date)`, `expandOccurrencesInMonth`, `expandOccurrencesInRange`, `recurrenceLabel`. DB queries (`getCalendarEventsForDate`, `getCalendarEventDatesForMonth`, `getCalendarEventsInRange`) expand via this engine in JS, NOT strftime.
-- **All-day** (`all_day` 0/1) — nulls `time_start`/`time_end`. **Color** (`color` TEXT) — custom hex overrides the type CSS class via inline style (`tagStyle`/`chipStyle`); empty = type color. Palette `EVENT_COLORS` in `usePlanner`.
-- **Overnight events (spanning)** — when `time_end <= time_start` (e.g. 19:00→05:00) the end is the next day, and the event is **split into two dated segments**: a `start` segment (start→24:00 on day D) and a `tail` segment (00:00→end on day D+1). Done in `expandEventSegments` in `app_db.ts`; segments carry `seg`/`continues_next_day`/`continued_from_prev_day`/`base_date`. `getCalendarEventsForDate(date, includeOvernightTails=false)` adds tails only when the flag is set (calendar passes `true`; battery/reminder/digest callers use the default so they still see one row on the start day). `getCalendarEventsInRange`/`getCalendarEventDatesForMonth` always split (calendar-only). `eventTimeLabel`/`isOvernight` render `(+1 day)` / `cont. until HH:MM`. `calculateBattery` and HomePage timeline independently roll overnight ends to midnight.
-- **Editing**: `beginEditEvent(ev)` populates the shared add-form and switches to edit mode (`editingEventId`); `saveEvent` branches to `updateCalendarEvent` vs `addCalendarEvent`. Editing a recurring occurrence edits the whole series (anchored to `base_date`; no per-occurrence exceptions).
-- **Deleting**: `removeEvent(ev)` (takes the row, not just id). Non-recurring → direct delete. Recurring → action sheet: "Delete all occurrences" (`deleteCalendarEvent`) vs "Delete this and future occurrences" (`stopCalendarEventAt(id, selectedDate − 1 day)` to cap the series, preserving past history; deletes the row outright if stopping at/before `base_date`).
-- **Search**: `searchCalendarEvents(query)` (title+notes LIKE) → `searchQuery`/`searchResults` in `usePlanner`; results replace the views while the box is non-empty.
-- `addCalendarEvent`/`updateCalendarEvent` take a single `CalendarEventInput` object (not positional args). Type allowlist + recurrence allowlist enforced in `calendarEventColumnValues`.
-- `getCalendarEventsInRange(start,end)` returns concrete occurrences, each row carrying its occurrence `date` plus the original `base_date`.
-- `end_date TEXT`: also set by `stopCalendarEventAt(id, lastDate)` to end a recurring event from a date forward without deleting history.
-- New event types must pass the allowlist. New event types need a drain rate in `calculateBattery`. New `calendar_event` columns are auto-handled by export/import (PRAGMA + `SELECT *`), but must be added to the migration block in `initDB`.
+**Data**: `workout.session_rpe REAL` (nullable, migration block; export/import-safe). Set by `setWorkoutSessionRpe(id, rpe)` — optional 1–10 prompt in `WorkoutPage` end-workout flow. `getSessionLoads(days)` → per-workout `{date, time_end, duration_minutes, session_rpe, volume}`; `getHealthMetricDailySeries(type, days)` → one averaged value/date ascending (also feeds sleep_score to recovery time).
 
-### AI Data Export
+**UI**: `src/features/analytics/components/TrainingLoadOverlay.vue` on `AnalyticsGymPage` — custom SVG dual-axis chart (load bars color-coded by ACWR zone + recovery-z polyline), green/yellow/red status banner, ACWR/acute/chronic/recovery-z tiles, full-width Recovery-time tile, 28/56/90-day selector. Loads on mount + `onIonViewWillEnter`. HRV only takes over from RHR at ≥14 readings (`HRV_TAKEOVER_MIN`).
 
-`src/shared/utils/aiExport.ts` — `buildAiExport({days=120})` assembles all tracked domains into one plain-text report meant to be pasted into an external LLM to find cross-domain / lagged patterns the app doesn't surface. Centrepiece is a date-aligned **daily timeline CSV** (readiness, sleep h/eff/score/stages, RHR, resp, steps, weight, trained/volume/RPE, ACWR + zone, recovery z, habits done/scheduled, day type, energy, morning light), built by merging the per-domain queries by date. Followed by summary sections: profile/targets, circadian profile (chronotype/MSFsc/DLMO/CTmin/social jetlag/score), training-load & recovery latest, PRs, habits (streaks via `habitStats`), goals, body (latest + window change), finance (accounts/investments/monthly income-expense/budgets vs spend/subscriptions). Pure aggregation over `app_db` + the health compute modules; degrades gracefully on empty domains. Surfaced in Settings → Data & sync as "Export for AI analysis" (`.txt`, web download / native Share). Unit-tested in `tests/unit/aiExport.spec.ts`.
+### Gym Feature
 
-### Body Log
-
-- `body_log` table: `id, date, weight_kg, notes, photo_path`
-- Photos: `@capacitor/filesystem` in `Directory.Data/body_photos/`, picked via `@capawesome/capacitor-file-picker`
-- Route: `/health/body` → `BodyPage.vue`. After logging weight, calls `dismissWeightReminder()`.
-
-### Health Overview Page
-
-`HealthPage.vue` — `<div>` cards only (no `ion-card`). Sections: battery hero (drain breakdown tiles + Train/Study badges), sleep detail (score + 4 metrics + insight), body (resting HR, steps, weight), today's schedule strip, 14-day readiness SVG chart, sync button. `HealthSectionTabs.vue` tabs: **Overview / Sleep / Body / Circadian / Cardio** (Cardio → `/health/cardio` → `CardioPage.vue`).
-
-### Plan Feature Module
-
-`src/features/plan/` — routes `/plan`, `/plan/goals`, `/plan/habits`, `/plan/calendar`. `PlanPage.vue` shows a live "Today" snapshot card (habits done, next event, active goals). `/plan/goals`, `/plan/habits`, `/plan/calendar` reuse Health page components.
-
-**Sub-nav**: `HealthGoalsPage`, `HealthHabitsPage`, `HealthCalendarPage` now render `PlanSectionTabs` unconditionally (they are mounted only under `/plan/*`; the legacy `/health/{goals,habits,calendar}` routes redirect to `/plan/*`). There is no longer a route-based conditional between Plan/Health section tabs on these pages.
-
-**Tab order** in `DashboardTopBar.vue`: Home / Finance / Health / Plan / Gym. Active-tab check tests `/plan` before `/health`.
-
-### Finance Feature Module
-
-`src/features/finance/` — routes `/finance` (Overview), `/finance/budget`, `/finance/analytics`, `/finance/accounts`, `/finance/investments`, `/finance/subscriptions`. Section tabs in `FinanceSectionTabs.vue` (Overview / Budget / Analytics / Accounts / Investments / Subscriptions).
-
-- **Shared math** lives in `src/features/finance/finance.ts` (pure TS, no DB/Vue): `computeNetWorth`/`computeTotalAssets`, `accountAssetsTotal`/`accountLiabilitiesTotal` (`LIABILITY_ACCOUNT_TYPES = ['credit','loan']` — these balances are entered positive and **subtracted** from net worth), `investmentsTotal`/`investmentsCostBasis`, `monthlyCostOf`/`yearlyCostOf` (cadence-normalised), `subscriptionsMonthlyOutflow`/`subscriptionsMonthlyInflow` (active-only), `upcomingBills(subs, days)`, `savingsRate`, `EXPENSE_CATEGORIES`/`categoryLabel`, `dueLabel`. **All pages and `recordNetWorthSnapshot` must use these** so net-worth/liability math stays identical everywhere.
-- **Overview (`FinancePage`)** — dashboard: net-worth hero (Doto) + 30-day delta chip, net-worth **trend SVG area chart** (sourced from `net_worth_snapshot` via `getNetWorthHistory(days)`), assets-vs-liabilities split bar, this-month cash flow + savings-rate bar, upcoming bills (14d), top categories, recent activity. Cards link to their tabs.
-- **CRUD**: accounts/investments/subscriptions all have add + **edit (inline form, `editingId`) + delete (`alertController` confirm)**. `updateFinanceAccount`/`deleteFinanceAccount` (clears `account_id` on linked rows), `updateFinanceInvestment`/`deleteFinanceInvestment`, `updateFinanceSubscription`/`deleteFinanceSubscription`/`setFinanceSubscriptionStatus(id,'active'|'paused')`.
-- **Accounts** — grouped Assets / Liabilities, net-worth summary. **Investments** — `cost_basis` column → gain/loss amount + % per holding and portfolio total. **Subscriptions** — pause/resume (`status` excluded from totals + reminders), monthly + annualised totals, income vs expense.
-- **Live prices** — `src/features/finance/prices.ts` (`fetchInvestmentPrices(holdings)`) pulls real-time quotes via `CapacitorHttp` (bypasses WebView CORS natively; web dev may CORS-fail, degrades gracefully). Crypto → CoinGecko `simple/price` (ticker→coin-id map `CRYPTO_IDS`, priced in the user's currency, +24h change); stocks/funds → Yahoo Finance `v8/finance/chart/{SYMBOL}` (regular-market price + day change vs prev close). `finance_investment.symbol` holds the ticker; refresh recomputes `value = quantity × price` and persists via `updateInvestmentPrice(id, value, lastPrice)`. The Investments page auto-refreshes on enter when any holding has a symbol, plus a manual Refresh button; 24h change % shown per row (in-memory). Needs `android.permission.INTERNET` (already in the manifest).
-  - **Known limitation (2.0)**: crypto is fetched in the user's currency, but Yahoo stock/fund quotes are in the instrument's native currency (`meta.currency`) and `value = quantity × price` does **no FX conversion** — a non-matching-currency holding stores a value in the quote's currency. Acceptable for single-currency portfolios; a proper fix needs an FX step. Don't "fix" it by silently skipping the update (that makes Refresh a no-op for foreign holdings with no user feedback).
-- **DB**: liability-aware `recordNetWorthSnapshot` (credit/loan = `total_liabilities`, rest + investments = `total_assets`). New columns `finance_investment.cost_basis`/`symbol`/`last_price` and `finance_subscription.status` are in the `initDB` migration block + auto-handled by export/import (PRAGMA + `SELECT *`). `getRecentFinanceTransactions(limit)` feeds the overview feed.
-
-### Sleep Hypnogram
-
-`SleepPage.vue` — single SVG hypnogram drawn as a **Zepp-style stepped waveform** (NOT fixed horizontal bands): capsule bars per stage segment + step connectors between transitions, with Awake rendered as upward spikes (`HYP_SPIKE_TOP`/`HYP_SPIKE_BOTTOM`) above the band rather than a band of its own, and a **bottom time axis** (`hypTimeAxis`). Geometry/colours come from `hypGeo`/`hypStageMeta`. Stage name aliases handle Health Connect variants (`sleeping`, `out_of_bed`, `unknown`). `wakeHour` clamped to `[4, 13]` to guard UTC offset errors.
-
-### Circadian Rhythm Module
-
-`src/shared/health/circadian.ts` — pure TS computation, no DB or Vue:
-- `computeCircadianProfile(sessions, dayTypes)` — MSFsc chronotype, DLMO/CTmin estimates, sleep consistency, social jetlag. Needs ≥3 sessions; free-day flag needed for accurate MSFsc. **Phase offsets (corrected to literature)**: `DLMO ≈ MSFsc − 6h` (DLMO is ~2h before sleep onset, onset ~4h before mid-sleep), `CTmin ≈ DLMO + 7h ≈ MSFsc + 1h` (~2–3h before wake, matching the measured HR-nadir branch). Covered by `tests/unit/circadian.spec.ts`.
-- `computeCircadianScore(sessions, rhrToday, rhrBaseline, morningLightFraction?)` — 0–100: consistency 30%, amplitude 20%, efficiency 20%, recovery 15%, **light 15%** (morning-light exposure is the strongest entrainment signal; `morningLightFraction` null = 50 neutral). `HealthPage.vue`/`CircadianPage.vue` pass the recent morning-light share.
-- `computeAlertnessCurve(profile, wakeHour)` — two-process model. Process C = `0.5 - 0.5*cos(phaseAngle)`, minimum at CTmin, maximum at CTmin+12h. Process S = exponential buildup/decay.
-- `computeCircadianWindows(profile, wakeHour)` — timing windows **anchored to wake time** (not CTmin — too noisy): morning exercise = wake+0.5h→wake+2.5h, afternoon = wake+6h→wake+9h, cognitive peak = CTmin+2h→CTmin+8h.
-- `computeCircadianRecommendations(...)` — text nudges
-
-**Guard**: `computeAlertnessCurve` and `computeCircadianWindows` clamp `wakeHour` to `[4, 13]`.
-
-**DB**: `circadian_log` table — `id, date, day_type, energy_wake, energy_noon, energy_evening, meal_first, meal_last, morning_light, notes`. Functions: `upsertCircadianLog`, `getCircadianLog(date)`, `getRecentCircadianLogs(days)`. In all 4 export/import lists.
-
-**Route**: `/health/circadian` → `CircadianPage.vue`. "Circadian" tab in `HealthSectionTabs.vue`.
-
-**Notifications**: `scheduleCircadianNudges(morning, noon, cogPeakLabel)` in `notifications.ts` — IDs 8 (morning) and 9 (noon).
-
-**HomePage integration**: alertness curve SVG card with zone bands + contextual daily log widget (shows different fields by time of day: morning = day type + morning light + wake energy; noon = noon energy; evening = evening energy). Auto-saves on tap.
-
-**CircadianPage layout (redesigned 2026-06-13)**: Alertness curve + schedule merged into one horizontally-scrollable card. SVG uses `HOUR_PX = 52` (52px/hour, 1248px total). Y-axis labels (High/Mid/Low) pinned left outside the scroll container. Three rows inside the scrollable area: (1) SVG curve with sleep/exercise/focus bands and now-line; (2) activity blocks row (absolutely positioned `tl-block` divs); (3) event pins row (Last meal, Dim screens at DLMO, Bedtime). A single white vertical `now-line` runs through all rows at `currentHour * HOUR_PX`. Auto-scrolls to `(currentHour - 2) * HOUR_PX` on load. Score card uses horizontal mini-bars per component instead of tile grid. Recommendations card shows `socialJetlagWarning` when present.
-
-### Health Connect Known Issues
-- **READ_EXERCISE SecurityException**: `@capgo/capacitor-health` declares `READ_EXERCISE` and reads `ExerciseSessionRecord` internally. After any HC permission reset, this permission may not be granted, causing a native SecurityException that kills the process. The app does not use exercise data but cannot prevent the plugin read. **Workaround**: user must manually grant Exercise permission in HC settings. A proper fix requires forking the plugin.
+- GymHomePage (tab): last-workout card, weekly workout-goal dots (goal via `getWeeklyWorkoutGoal()`), active-rest-timer chip (reads the same localStorage `restTimer` state WorkoutPage writes, cancels the OS ding if the rest ends there)
+- WorkoutPage (`/workout/:id`): set editing with blur-commit + **hardware/browser back guard** (`useBackButton`) that flushes unsaved set edits before leaving; progressive overload `overloadHint` (2.5% rounded to nearest 2.5 kg, display-only); rest timer (below); end-workout → session RPE prompt → `WorkoutSummaryModal` via `modalController` (await `onDidDismiss` before navigating)
+- Exercise reorder persists via `updateWorkoutExerciseOrders` — one `executeSet` transaction, not N updates
+- ExercisePicker: `route.query.from` routing; `from=TemplateBuilder` stores selection in `localStorage('selectedExerciseForTemplate')` and the caller must clear the key after reading
+- History: paginated (`ion-infinite-scroll`) + alert-confirm deletes
+- Exercise detail: PR history, Chart.js progress charts
 
 ### Rest Timer (WorkoutPage)
 
-Completing a set starts the rest timer in `WorkoutPage.vue`. Designed to survive a full app close and to ding audibly even when the app is backgrounded/killed:
-- **Canonical state is `endTime`** (wall-clock ms), stored in `localStorage` under `restTimer`. Not `sessionStorage` (wiped on process kill). The JS `setInterval` is display-only; `tickRestTimer` derives `remaining` from `endTime` each second, so a throttled background tab stays correct.
-- **Ding when closed**: `scheduleRestTimerDing(endTime)` (`notifications.ts`, ID 20) arms an OS local notification at the end time on `startRestTimer`/`adjustRestTimer`. Cancelled on skip/stop/end via `cancelRestTimerDing()`.
-- **Ding when alive (duck-then-ding)**: if the app is foreground at end, `tickRestTimer` calls `duckAndDing()` (`src/shared/utils/restTimerAudio.ts` → native `RestTimerAudio` plugin) which requests transient `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` so other audio (music) ducks, then — after a `PRE_DUCK_DELAY_MS` (300 ms) beat so the music audibly dips *before* the beep — plays a `ToneGenerator` ding and restores focus. It also cancels the pending notification to avoid a double ding. Web/dev falls back to the Web Audio `playBeep`.
-- **Glyph countdown (foreground only)**: while WorkoutPage is open, `tickRestTimer`/`startRestTimer`/`resumeRestTimer`/`adjustRestTimer` push the countdown to the Nothing back display via `glyphRestDraw(fraction)` (`src/shared/utils/restTimerGlyph.ts`); the end-of-rest branch flashes via `glyphRestEnd()`, skip/stop calls `glyphRestStop()`, and `onUnmounted` calls `glyphRestRelease()`. The depleting ring frame itself is built by `restRingFrame(fraction)` in `glyphFrames.ts` (pure, unit-tested in `tests/unit/glyphFrames.spec.ts`). App-matrix mode is **foreground-only** — when backgrounded the system reclaims the matrix, so the back display can't update there; the notification chronometer + scheduled ding cover the backgrounded case, and `resyncRestTimer` re-renders the Glyph on return to foreground.
-- **Live countdown notification**: `showRestNotification(exerciseName, durationMs)` (native plugin) posts an ongoing notification with a system **chronometer** counting down (no per-second JS) and the current exercise name as the body. `setTimeoutAfter` self-clears it at zero even if the app was killed. (Re)posted on start/adjust/resume; cleared via `clearRestNotification()` inside `clearTimerState`. `exerciseName` is persisted in localStorage so the text survives a restore.
-- **Native plugin**: `android/app/src/main/java/io/ionic/starter/RestTimerAudio.java` (methods `duckAndDing`, `showRestNotification`, `clearRestNotification`; channel `rest_timer`, notification ID 21), registered in `MainActivity.onCreate` via `registerPlugin`. Small icon resolved by name (`ic_stat_icon_config_sample`, merged from LocalNotifications) with `android.R.drawable.ic_lock_idle_alarm` fallback. After any change, `npm run build` → `npx cap sync` → rebuild APK.
-- `restoreTimerState` (on view enter) resumes a running timer without re-dinging; an already-expired timer just clears (the notification already fired while closed).
-- **Glyph Matrix dial**: the rest countdown also renders on the Nothing back LED matrix (so a face-down phone shows it) via `glyphRest*` helpers from `src/shared/utils/restTimerGlyph.ts`. `startRestTimer`/`resumeRestTimer` draw the full dial; `tickRestTimer` redraws the draining arc each second and calls `glyphRestEnd()` (flash) at zero; `adjustRestTimer` redraws; `onSkipRestTimer` calls `glyphRestStop()`; `onUnmounted` calls `glyphRestRelease()`. All no-op off-device — see Glyph Matrix below.
+Completing a set starts the rest timer. Designed to survive a full app close and ding when backgrounded/killed:
+- **Canonical state is `endTime`** (wall-clock ms) in `localStorage` under `restTimer`. The JS `setInterval` is display-only; remaining derives from `endTime` each second.
+- **Ding when closed**: `scheduleRestTimerDing(endTime)` (ID 20) arms an OS notification; cancelled via `cancelRestTimerDing()` on skip/stop/end/clear.
+- **Ding when alive (duck-then-ding)**: foreground expiry calls `duckAndDing()` (`utils/restTimerAudio.ts` → native plugin, `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, 300 ms pre-duck, ToneGenerator ding), cancelling the pending notification. Web falls back to Web Audio.
+- **Glyph countdown (foreground only)**: `glyphRestDraw/End/Stop/Release` push the countdown to the Nothing back matrix (`utils/restTimerGlyph.ts`); frames built by `restRingFrame(fraction)` in `glyphFrames.ts` (unit-tested). App-matrix mode is foreground-only — the notification covers backgrounded; `resyncRestTimer` re-renders on return to foreground (appStateChange listener native / visibilitychange web).
+- **Live countdown notification**: `showRestNotification(exerciseName, durationMs)` posts an ongoing chronometer notification, self-clears at zero; cleared in `clearTimerState`. Exercise name persisted in localStorage.
+- **Native plugin**: `android/app/src/main/java/io/ionic/starter/RestTimerAudio.java` (channel `rest_timer`, ID 21), registered in `MainActivity.onCreate`. After any change: `npm run build` → `npx cap sync` → rebuild APK.
+- `restoreTimerState` (on view enter) resumes without re-dinging; an expired timer just clears.
+- GymHomePage renders the same timer as a chip with stop/adjust, and cancels the OS ding/notification when the rest ends or is cleared there.
 
 ### Glyph Matrix (Nothing back display)
 
-Bridge to the dot-matrix LED display on the back of the Nothing Phone (4a) Pro (and Phone (3)). The TS/Java plugin is **transport only** — it connects and pushes raw per-LED frames; callers decide what to draw. The one caller today is the rest timer (`src/shared/utils/restTimerGlyph.ts`, see Rest Timer above), which builds the countdown frame and renders it while WorkoutPage is foreground.
-- **SDK**: `android/app/libs/glyph-matrix-sdk-2.0.aar` (from [Nothing-Developer-Programme/GlyphMatrix-Developer-Kit](https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit)), package `com.nothing.ketchum`. Wired via `implementation files('libs/glyph-matrix-sdk-2.0.aar')` in `android/app/build.gradle`.
-- **minSdk conflict**: the AAR declares `minSdk 33`, the app is `26`. Resolved with `<uses-sdk tools:overrideLibrary="com.nothing.thirdparty"/>` (+ `xmlns:tools`) in `AndroidManifest.xml` — **do not bump the app's minSdk**. Also needs `<uses-permission android:name="com.nothing.ketchum.permission.ENABLE"/>`.
-- **Native plugin**: `android/app/src/main/java/io/ionic/starter/GlyphMatrix.java`, registered in `MainActivity.onCreate`. Uses **app-matrix mode** (`GlyphMatrixManager.setAppMatrixFrame(int[])`), NOT a Glyph Toy service — so the app drives the matrix directly while foreground, no carousel registration. `init()` binds the manager async and registers the device in `onServiceConnected` (defaults `Glyph.DEVICE_25111p` = 4a Pro; `Glyph.DEVICE_23112` if `Common.is23112()` = Phone (3)), with a 5 s connect timeout that rejects so JS never hangs on non-Nothing devices. Methods: `init`/`draw`/`clear`/`turnOff`/`getMatrixLength`/`isReady`/`deinit`.
-- **TS bridge**: `src/shared/utils/glyphMatrix.ts` — `glyphInit()`, `glyphDraw(pixels: number[])`, `glyphClear()`, `glyphTurnOff()`, `glyphMatrixLength()`, `glyphIsReady()`, `glyphDeinit()`. All no-op (or return falsy) off-device, like the other native wrappers.
-- **Frame format**: row-major array of per-LED brightness `0–255`. **4a Pro = 13×13 = 169 LEDs** (Phone (3) = 25×25 = 625). Size the array with `glyphMatrixLength()` (returns 0 until `glyphInit()` succeeds).
-- **Constraints**: app-matrix mode requires Nothing system version **20250801+** (else `setAppMatrixFrame` throws `GlyphException`, surfaced as a rejected `draw()`), and only drives the display while the app is foreground. After any native change: `npm run build` → `npx cap sync` → rebuild APK. Verify Java with `cd android && JAVA_HOME=/opt/android-studio/jbr ./gradlew :app:compileDebugJavaWithJavac` (a green `npm run build` does NOT check the Java).
-- **Frame geometry**: pure generators live in `src/shared/utils/glyphFrames.ts` (no Capacitor/Vue deps, unit-tested in `tests/unit/glyphFrames.spec.ts`) — `restRingFrame(fraction, side=13)` (clock-style countdown dial: dim track + bright arc remaining, sweeping clockwise from 12 o'clock; normalised angle `[0,1)` with strict `<` so f=0 lights nothing and f=1 the whole ring), `fullFrame()`, `blankFrame()`. Add new patterns here, not in the bridge.
-- **First consumer**: the rest-timer dial — `src/shared/utils/restTimerGlyph.ts` orchestrates lazy `glyphInit()` (one bind per page session), `glyphRestDraw(fraction)`, `glyphRestEnd()` (end flash + hand back), `glyphRestStop()`, `glyphRestRelease()` (clear + deinit). Wired into `WorkoutPage.vue` (see Rest Timer above).
+Bridge to the dot-matrix LED display on the Nothing Phone (4a) Pro / Phone (3). TS/Java plugin is transport only; the rest timer is the one consumer today.
+- **SDK**: `android/app/libs/glyph-matrix-sdk-2.0.aar`, package `com.nothing.ketchum`, wired in `android/app/build.gradle`.
+- **minSdk conflict**: AAR declares minSdk 33, app is 26 — resolved with `<uses-sdk tools:overrideLibrary="com.nothing.thirdparty"/>` in `AndroidManifest.xml`. **Do not bump the app's minSdk.** Needs the `com.nothing.ketchum.permission.ENABLE` permission.
+- **Native plugin**: `GlyphMatrix.java` (registered in `MainActivity.onCreate`), app-matrix mode (`setAppMatrixFrame`), device auto-detected (4a Pro / Phone (3)), 5 s connect timeout so JS never hangs on non-Nothing devices. Methods: `init`/`draw`/`clear`/`turnOff`/`getMatrixLength`/`isReady`/`deinit`.
+- **TS bridge**: `utils/glyphMatrix.ts` — all no-op/falsy off-device.
+- **Frame format**: row-major per-LED brightness 0–255; 4a Pro = 13×13 = 169 LEDs. Size arrays with `glyphMatrixLength()`.
+- **Constraints**: app-matrix needs Nothing OS 20250801+; only drives while foreground. After native changes: `npm run build` → `npx cap sync` → rebuild APK; verify Java with `cd android && JAVA_HOME=/opt/android-studio/jbr ./gradlew :app:compileDebugJavaWithJavac` (a green `npm run build` does NOT check Java).
+- **Frame geometry**: pure generators in `glyphFrames.ts` — `restRingFrame(fraction, side=13)` (clock-style countdown dial), `fullFrame()`, `blankFrame()`. Add new patterns here.
+
+### Home Page (features/home)
+
+Daily dashboard: battery hero (drain breakdown + Chart.js past/future timeline), "This week" digest card (`getReviewDigest('week')` → links to Analytics Review), last-workout hero card with Start-again, weight card (quick log, goal delta via `getGoalWeightKg()`, 7-day TrendChart sparkline), recovery chip (`computeTodayRecovery`), active-workout banner, active rest-timer chip.
+
+### Health Feature
+
+- `HealthPage.vue` — `<div>` cards only (no ion-card). Battery hero, sleep detail, body (RHR/steps/weight), readiness chart. `HealthSectionTabs.vue` tabs: **Overview / Sleep / Body**. No Circadian, no Cardio.
+- `SleepPage.vue` (`/health/sleep`) — Zepp-style stepped hypnogram: capsule bars per stage + step connectors, Awake as upward spikes (`HYP_SPIKE_TOP/BOTTOM`) above the band, bottom time axis (`hypTimeAxis`). Stage aliases handle HC variants (`sleeping`, `out_of_bed`, `unknown`). `wakeHour` clamped to `[4, 13]`.
+- `BodyPage.vue` (`/health/body`) — `body_log`: weight, notes, waist/chest/hips/arm/thigh cm, body-fat %. Same-date entry opens the existing entry for edit. After logging, calls `dismissWeightReminder()`. (`photo_path` column exists in the schema but no photo UI — don't document one.)
+
+### Finance Feature
+
+- **Shared math** in `features/finance/finance.ts` (pure TS): `computeNetWorth`/`computeTotalAssets`, `accountAssetsTotal`/`accountLiabilitiesTotal` (`LIABILITY_ACCOUNT_TYPES = ['credit','loan']`, entered positive and subtracted), `investmentsTotal`/`investmentsCostBasis`, `monthlyCostOf`/`yearlyCostOf`, `subscriptionsMonthlyOutflow`/`Inflow`, `upcomingBills(subs, days)`, `savingsRate`, `EXPENSE_CATEGORIES`/`categoryLabel`, `dueLabel`. **All pages and `recordNetWorthSnapshot` must use these.**
+- **Overview** — net-worth hero + 30-day delta, net-worth trend (from `net_worth_snapshot` via `getNetWorthHistory(days)`), assets-vs-liabilities split, cash flow + savings rate, upcoming bills, top categories, recent activity (`getRecentFinanceTransactions`). Also auto-posts due unpaid subscriptions (`last_posted_date`-idempotent) on page enter.
+- **CRUD** — add/edit (inline `editingId`)/delete (`alertController` confirm) on accounts, investments, subscriptions; budget add/edit/delete. `deleteFinanceAccount` clears `account_id` on linked rows. Subscriptions: pause/resume (`status`, excluded from totals), income vs expense.
+- **Live prices** — `prices.ts` `fetchInvestmentPrices(holdings)` via `CapacitorHttp` (bypasses WebView CORS; web may CORS-fail, degrades gracefully). Crypto → CoinGecko (ticker→id map `CRYPTO_IDS`, priced in user currency); stocks/funds → Yahoo chart endpoint. **FX**: quotes in a foreign currency are converted to the user's currency when a rate is available (`fxConverted`), and flagged `fxFailed` (never silently skipped) when conversion fails. Refresh recomputes `value = quantity × price`, persists via `updateInvestmentPrice(id, value, lastPrice)`. `cost_basis` → gain/loss per holding + portfolio total. Needs `android.permission.INTERNET` (already in manifest).
+- **DB**: `finance_investment.cost_basis/symbol/last_price`, `finance_subscription.status/last_posted_date` — migration block + export/import-safe. `recordNetWorthSnapshot` is liability-aware and writes at most once per day.
+
+### Analytics Feature
+
+- Overview — cross-domain insight cards (`computeInsights`) + today's recovery verdict (`computeTodayRecovery`)
+- Gym — workout-frequency heatmap (`queryWorkoutFrequency(weeks)`) + TrainingLoadOverlay
+- Review — weekly/monthly cross-domain digest (`getReviewDigest('week'|'month')`; the older `getWeeklyDigest()` is removed — always use `getReviewDigest`)
+
+### Settings Feature
+
+Theme (light/dark/system via `useTheme`), notification reminders (weight/sleep, via `utils/notifications.ts`), manual Health Connect sync (`syncHealthConnectMetrics`), SQL export/import (auto-backup before import, `location.reload()` after), and "Export for AI analysis" (`buildAiExport({days=120})` in `utils/aiExport.ts` — daily-timeline CSV + profile/training-load/PRs/body sections; unit-tested in `tests/unit/aiExport.spec.ts`).
 
 ## Key Conventions
 
 - `<script setup lang="ts">` for all components; no `reactive()` unless complex state demands it
 - Import types with `import type { ... }`; use `@/` path alias for all imports
 - Scoped styles in feature pages to prevent leakage
-- `no-console` / `no-debugger` warnings in dev, errors in prod
-- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. **All chart styling comes from `src/shared/utils/chartStyle.ts`** — spread `chartLineDataset` (red primary series), `chartDimDataset` (dim dashed secondary: forecasts, goal lines), `chartTooltip`, `chartTicks`, `chartGrid` into configs instead of literals. CSS vars don't resolve in canvas, which is why the module holds raw rgb values. `animation: false`, `maintainAspectRatio: false` (give the canvas wrapper a fixed height). SVG charts match: red `rgb(215, 26, 33)` line, `rgba(215, 26, 33, 0.15)` area, `rgba(255,255,255,0.4)` axis labels, dim white dashed now/forecast lines.
+- `no-console` / `no-debugger` warnings in dev, errors in prod; `npm run lint` must stay clean
+- **Chart.js**: destroy in `onUnmounted`, `flush: 'post'` in chart-render watches. **All chart styling comes from `utils/chartStyle.ts`** — spread `chartLineDataset`, `chartDimDataset`, `chartBarDataset`, `chartGoalDataset`, `chartTooltip`, `chartTicks`, `chartGrid`, `chartDonutPalette()`; never inline colors (CSS vars don't resolve in canvas). `animation: false`, `maintainAspectRatio: false` with a fixed-height canvas wrapper. SVG charts match: red `rgb(215, 26, 33)` line, `rgba(215, 26, 33, 0.15)` area, `rgba(255,255,255,0.4)` axis labels.
 - **Build + sync order**: `npm run build` THEN `npx cap sync` before APK rebuild.
 - **No raw unicode checkmarks/crosses** — use `ion-icon` instead of `✓`, `×`, `✕`.
 - **No emojis** anywhere in the UI.
-- **Progressive overload**: `overloadHint(ex)` in `WorkoutPage.vue` — 2.5% increase, rounded to nearest 2.5 kg, display-only.
-- **Workout summary modal**: `WorkoutSummaryModal.vue` is shown via `modalController` after `saveWorkout()`. Receives `{ duration, totalVolume, exerciseCount, setCount, prs: AchievedPR[] }`. PR badge: `is_new=true` → solid red "NEW"; `is_new=false` → outline red "PR+". `WorkoutPage` calls `await modal.onWillDismiss()` before navigating home so the user sees the card.
-- **Bodyweight pre-fill**: `loadWorkout` in `WorkoutPage.vue` calls `getLatestBodyWeight()` and pre-fills set `weight`/`previous_weight` for exercises whose equipment is `bodyweight`.
-- **ExercisePicker caller routing**: `ExercisePickerPage` uses `route.query.from` to determine return path. `from=TemplateBuilder` → stores selection in `localStorage('selectedExerciseForTemplate')` and pushes back to `TemplateBuilder`. Callers must clear the key after reading. No global store involved. Has a name search box (`searchQuery`) on top of the muscle-group filter.
-- **Digest**: cross-domain summaries come from `getReviewDigest('week'|'month')` in `app_db.ts` — surfaced in `AnalyticsReviewPage` and the scheduled notifications (`buildWeeklyBody`/`buildMorningBody` in `notificationDigests.ts`). The older `getWeeklyDigest()` was dead code and has been removed; use `getReviewDigest` for any new digest UI.
-- **Haptics**: `src/shared/utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Wire into all interactive elements. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after successful save, Select = picker/option select.
-- **Section tabs**: all three section tab bars (`HealthSectionTabs`, `PlanSectionTabs`, `FinanceSectionTabs`) wrap `<ion-segment>` in a `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — do NOT put border-radius directly on `ion-segment` (shadow DOM doesn't clip). Set `--background: transparent` on the segment AND on the `.section-toolbar` (a grey toolbar background reads as a full-width bar behind the pill).
+- **Haptics**: `utils/haptics.ts` — `hapticLight/Medium/Heavy/Success/Warning/Error/Select`. All no-ops on web. Light = navigation/toggles, Medium = save/submit, Heavy = start workout/delete, Success = after save, Select = picker select.
+- **Section tabs** (`HealthSectionTabs`, `FinanceSectionTabs`, `AnalyticsSectionTabs`) and the top bar wrap `<ion-segment>` in `<div class="seg-pill">` with `overflow: hidden; border-radius: 999px` — never put border-radius directly on `ion-segment` (shadow DOM doesn't clip). `--background: transparent` on segment and toolbar.
 
 ## Chart Standard
 
-ALL charts follow one standard. Do not hand-roll per-page chart geometry or CSS.
-
-- **`src/shared/components/TrendChart.vue`** — the standard line/area trend chart (SVG). Props: `pts` (`{label, value, pos?}` oldest→newest, `pos` 0..1 for irregular spacing), `unit`, `size` (`xs` bare 48px sparkline / `sm` 118px / `md` 156px), `goal` (gold dashed line), `showAvg` (ink dashed mean line), `format`. Scrub anywhere on the plot to read values (readout row in Doto red, defaults to latest point). `touch-action: pan-y` keeps vertical page scroll working. Use it for every simple single-series trend.
-- **`src/theme/charts.css`** (imported once in `main.ts`) — global `.chart-frame` (+`--short` 160 / `--tall` 260, default 220), `.chart-legend` (+`--red/--dim/--goal` swatches), `.chart-empty`. Never re-declare these in scoped styles.
-- **`src/shared/utils/chartStyle.ts`** — Chart.js dataset presets: `chartLineDataset` (red line+fill), `chartDimDataset` (dashed ink secondary), `chartBarDataset` (dim red bars), `chartGoalDataset` (gold dashed goal), `chartDonutPalette()` (theme-aware categorical palette), `chartTooltip`/`chartTicks`/`chartGrid`. Spread these; don't inline colors.
-- **`src/shared/utils/chartGeom.ts`** — pure geometry helpers (`padExtent`, `smoothPath`, `nearestXIndex`), unit-tested in `tests/unit/chartGeom.spec.ts`.
-- Chart.js stays for: bar charts, donuts, and the battery timeline's past/future split — anything needing axes/tooltips beyond TrendChart. Hypnogram and TrainingLoadOverlay are deliberately custom (specialized designs), keep them.
+- **`TrendChart.vue`** — standard line/area trend chart (SVG). Props: `pts` (`{label, value, pos?}` oldest→newest), `unit`, `size` (`xs`/`sm`/`md`), `goal`, `showAvg`, `format`. Scrub to read values; `touch-action: pan-y`. Use for every simple single-series trend.
+- **`theme/charts.css`** (imported once in `main.ts`) — global `.chart-frame` (+`--short`/`--tall`), `.chart-legend`, `.chart-empty`. Never re-declare in scoped styles.
+- **`utils/chartStyle.ts`** / **`utils/chartGeom.ts`** — Chart.js presets / pure geometry helpers (`chartGeom` unit-tested).
+- Chart.js stays for: bar charts, donuts, the battery timeline's past/future split. Hypnogram and TrainingLoadOverlay are deliberately custom — keep them.
 
 ## Design System — Nothing OS aesthetic
 
-**ALWAYS follow these rules.** Do not invent new patterns — extend existing ones. The system is a Nothing-OS-inspired language: near-monochrome surfaces, ONE red accent used as a signal (not decoration), dot-matrix display type for numerics only, borderless cards (surfaces separate by background contrast), mechanical motion. All tokens live in `src/theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex**, except in Chart.js configs where CSS vars don't resolve.
+**ALWAYS follow these rules.** Nothing-OS-inspired: near-monochrome surfaces, ONE red accent as signal, dot-matrix type for numerics only, borderless cards, mechanical motion. Tokens live in `theme/variables.css` as `--nt-*` custom properties — **use tokens, never raw hex or raw font names**, except Chart.js configs and SVG-compute code where vars don't resolve. Light theme flips the same tokens via `html.theme-light` (set by `useTheme`); a single token swap re-skins both.
 
 ### Colors
-- Page background: `var(--nt-bg)` (`#000000`, true OLED black — Nothing OS fidelity). Cards: `var(--nt-surface)` (`#1A1A1A` — grey, not black) via `var(--ion-color-primary)`. Elevated/pressed: `var(--nt-surface-2)` (`#242424`).
-- **Nothing red** `#D71A21` / `rgb(215, 26, 33)` — `var(--nt-accent)` = `var(--ion-color-accent-red)`. The ONLY accent. Used as a *signal*: live/recording states (rest timer, active workout), destructive actions, active tab, key highlights. Pressed shade: `var(--nt-accent-press)` (`#B21319` / `rgb(178, 19, 25)`).
-- **No yellow in UI chrome.** Live/active states are red (Glyph logic: red LED = recording). Gold `#FFD700` (`var(--nt-data-goal)`) survives ONLY as a data-encoding color: calendar goal dots, planner goal tags, BodyPage goal line, hypnogram Awake band.
-- Success green `rgb(34, 197, 94)` (`var(--nt-data-positive)`) — data semantics only (scores, positive deltas), never buttons/chrome.
-- Labels: `var(--nt-text-dim)` (`rgba(255,255,255,0.5)`), values: `rgba(255,255,255,0.85)`–`#fff`
-- Borders: **cards and tiles are borderless** — never add hairline borders to surface containers. `var(--nt-border)` (`rgba(255,255,255,0.08)`) / `var(--nt-border-strong)` (`0.12`) survive only on inputs, outline buttons, and chips. Colored borders (red live/destructive, gold goal-due, green positive) remain as signals.
-- Monochrome glow, never colored neon: active emphasis uses `.nt-glow-active` (white `box-shadow` bloom, `var(--nt-glow)`).
+- Page background `var(--nt-bg)` (true black in dark), cards `var(--ion-color-primary)` / `var(--nt-surface)`, elevated `var(--nt-surface-2)`
+- **Nothing red** `var(--nt-accent)` — the ONLY accent, used as signal (live/recording, destructive, active tab). Pressed: `var(--nt-accent-press)`.
+- **No yellow in UI chrome.** Gold (`var(--nt-data-goal)`) survives ONLY as data encoding: goal lines/dots, hypnogram Awake band.
+- Success green `var(--nt-data-positive)` — data semantics only, never buttons/chrome.
+- Labels `var(--nt-text-dim)`, values white — reference via tokens (`var(--nt-text)` / `--nt-white`), not literal `#fff`.
+- Cards/tiles are borderless; `var(--nt-border)`/`--nt-border-strong` only on inputs, outline buttons, chips.
+- Monochrome glow only: `.nt-glow-active`.
 
 ### Typography
-- Body/UI text: `Space Grotesk` (`var(--nt-font-body)`, default via `--ion-font-family`) — Colophon-foundry grotesque, closest open font to Nothing's NType 82
-- Headings, labels, kickers, buttons, chips: `Space Grotesk` (`var(--nt-font-head)`), usually UPPERCASE with `letter-spacing: var(--nt-tracking-label)` (0.12em)
-- **Dot-matrix face `Doto` (`var(--nt-font-display)`) is seasoning, not body**: big numerics, timers, metric readouts, clock-like displays ONLY. Never body or long text.
-- Tabular/mono numerics: `Space Mono` (`var(--nt-font-mono)`)
-- `.section-kicker`: `0.72rem`, uppercase, `letter-spacing: 0.18em`, `var(--nt-text-dim)` — never accent-colored
-- Metric label: `0.75rem`, uppercase, `letter-spacing: 0.1em+`, `var(--nt-text-dim)`
-- Metric value: `0.95rem–1rem`, `#fff`, `font-weight: 600`; hero metrics in `Doto`
-- Timer/live value: `Doto`, **red** (`var(--ion-color-accent-red)`)
-- Fonts are self-hosted SIL OFL 1.1 via `@fontsource/*` imports in `main.ts` + local `Doto` TTF. Never ship Nothing's proprietary NDot/NType fonts.
+- Body/UI + headings/labels: `Space Grotesk` (`var(--nt-font-body)` / `--nt-font-head`); labels uppercase with `letter-spacing: var(--nt-tracking-label)`
+- **`Doto` = `var(--nt-font-display)`** — big numerics, timers, readouts ONLY. Never body text, never the raw string `Doto` in a Vue file.
+- Mono numerics: `Space Mono` (`var(--nt-font-mono)`)
+- `.section-kicker`: 0.72rem, uppercase, `var(--nt-text-dim)`, never accent-colored
+- Fonts self-hosted SIL OFL 1.1 via `@fontsource/*` in `main.ts` + local Doto TTF in `variables.css`. Never ship Nothing's NDot/NType fonts.
 
 ### Cards & Tiles
-- Card: `background: var(--ion-color-primary)`, **no border**, `border-radius: var(--nt-radius-md)` (16px), `padding: 18px`, no box-shadow. Hover/pressed surface: `var(--nt-surface-2)`.
-- Metric tile: `background: rgba(255,255,255,0.05)`, `border-radius: 10px`, `padding: 12px 14px`, no border
-- Selected/live card: red hairline (`border-color: var(--ion-color-accent-red)` or rgba thereof) — when a card needs a state border, give the base `border: 1px solid transparent` so layout doesn't shift
-- Gap between cards: `16px`, between tiles: `10–12px`
-- Status chips: use `.nt-chip` (pill, hairline, uppercase micro-label) + `.nt-chip__dot` (red dot = live/alert)
-- Optional dot-grid substrate behind hero sections: `.nt-dotgrid`
+- Card: `background: var(--ion-color-primary)`, no border, `border-radius: var(--nt-radius-md)`, 18px padding, no box-shadow
+- Metric tile: `rgba(255,255,255,0.05)` surface, 10px radius
+- Selected/live card: red hairline; give the base `border: 1px solid transparent` so layout doesn't shift
+- Status chips: `.nt-chip` + `.nt-chip__dot` (red dot = live/alert)
 
-### Spacing / Radius / Motion tokens
-- Spacing on an 8px base: `--nt-space-1..6` (4/8/12/16/24/32)
-- Radius: `--nt-radius-sm` 8px (chips, inputs), `--nt-radius-md` 16px (cards, buttons), `--nt-radius-lg` 24px (sheets, modals), `--nt-radius-pill` 999px (pills, toggles)
-- Motion: micro `var(--nt-dur-micro)` (140ms) + `var(--nt-ease-decel)`; standard `var(--nt-dur-std)` (280ms) + `var(--nt-ease-std)`. Dot/LED animations use `steps()` for a mechanical scanning feel (`.nt-loading-dot`).
+### Spacing / Radius / Motion
+- Spacing `--nt-space-1..6` (4/8/12/16/24/32); radius `--nt-radius-sm/md/lg/pill` (8/16/24/999)
+- Motion: `var(--nt-dur-micro)`+`--nt-ease-decel`, `--nt-dur-std`+`--nt-ease-std`; LED animations use `steps()`
 
 ### Inputs / Buttons
-- Input: `background: rgba(255,255,255,0.06)`, `border: 1px solid rgba(255,255,255,0.1)`, `border-radius: var(--nt-radius-sm)`, `color: #fff`
-- Time/date inputs: `color-scheme: dark`
-- Primary button: `background: rgb(215, 26, 33)`, `border-radius: 8px`, no border. Red is for the page's key/destructive action — secondary actions use hairline-outline transparent buttons (`.button-yellow` is now this secondary style; `.button-white` = high-contrast solid).
-- Pressed state: `opacity: 0.7` or `var(--nt-surface-2)`
+- Input: dark translucent surface, hairline border, `var(--nt-radius-sm)`; time/date inputs `color-scheme: dark`
+- Primary button: red, radius 8px, no border — red only for the page's key/destructive action; secondary = hairline-outline transparent (`.button-yellow` style), `.button-white` = high-contrast solid
+- Pressed: `opacity: 0.7` or `var(--nt-surface-2)`
 
 ### Responsive
-- Max content width: `760px` centered
-- Breakpoints: `600px` (side-by-side within cards), `760px` (grid column changes)
+- Max content width 760px centered; breakpoints 600px / 760px
 
 ## graphify
 
-Knowledge graph at `graphify-out/`.
-
-**MANDATORY — run before any grep or source browsing:**
-- `graphify query "<question>"` — broad context, nearest neighbors first
-- `graphify path "<A>" "<B>"` — trace relationships between files/symbols
-- `graphify explain "<concept>"` — full explanation of a concept across the codebase
-- `graphify-out/GRAPH_REPORT.md` — only for broad architecture review when query/explain are insufficient
-- **After modifying code**: `graphify update .` to keep the graph current (AST-only, no API cost).
+`graphify-out/` holds a knowledge graph of the codebase. Where the `graphify` CLI is installed: `graphify query "..."` for broad context, `graphify path "A" "B"` to trace relationships, and `graphify update .` after modifying code (AST-only, no API cost) to keep it current. If the CLI is unavailable, ignore it and use normal search.
