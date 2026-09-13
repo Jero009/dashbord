@@ -13,9 +13,9 @@
           <div class="card-topline">
             <p class="nt-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
-              <button class="date-nav__btn" aria-label="Previous day" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
+              <button class="date-nav__btn nt-press" aria-label="Previous day" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
               <span class="date-nav__label">{{ selectedDateLabel }}</span>
-              <button class="date-nav__btn" aria-label="Next day" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
+              <button class="date-nav__btn nt-press" aria-label="Next day" @click="goToNextDay" :disabled="sessionDates.indexOf(selectedDate ?? '') <= 0"><ion-icon :icon="chevronForwardOutline" /></button>
             </div>
           </div>
 
@@ -63,7 +63,7 @@
             </div>
           </div>
 
-          <button class="sync-btn" :disabled="syncing" @click="handleSync">
+          <button class="sync-btn nt-press" :disabled="syncing" @click="handleSync">
             {{ syncing ? 'Syncing…' : 'Sync' }}
           </button>
         </ion-card>
@@ -185,6 +185,7 @@ import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vu
 import { useCountUp } from '@/shared/composables/useCountUp';
 import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepSummary } from '@/shared/health/healthConnect';
 import { requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
+import { hapticError, hapticLight, hapticSuccess } from '@/shared/utils/haptics';
 import { getSleepSession, getRecentSleepSessions } from '@/shared/db/app_db';
 import type { SleepSessionRecord } from '@/shared/db/app_db';
 import { clamp as clampVal } from '@/shared/utils/math';
@@ -286,6 +287,7 @@ const loadSleep = async () => {
 const goToPrevDay = async () => {
   const idx = sessionDates.value.indexOf(selectedDate.value ?? '');
   if (idx < sessionDates.value.length - 1) {
+    hapticLight();
     selectedDate.value = sessionDates.value[idx + 1];
     const record = await getSleepSession(selectedDate.value);
     summary.value = record ? sessionToSummary(record) : null;
@@ -295,6 +297,7 @@ const goToPrevDay = async () => {
 const goToNextDay = async () => {
   const idx = sessionDates.value.indexOf(selectedDate.value ?? '');
   if (idx > 0) {
+    hapticLight();
     selectedDate.value = sessionDates.value[idx - 1];
     const record = await getSleepSession(selectedDate.value);
     summary.value = record ? sessionToSummary(record) : null;
@@ -335,6 +338,7 @@ const handleSync = async () => {
     selectedDate.value = null; // reset to latest after sync
     await loadSleep();
 
+    hapticSuccess();
     const toast = await toastController.create({
       message: `synced ${result.synced} records`,
       duration: 2000,
@@ -342,6 +346,7 @@ const handleSync = async () => {
     });
     await toast.present();
   } catch (error) {
+    hapticError();
     const toast = await toastController.create({
       message: error instanceof Error ? error.message : 'sync failed',
       duration: 2200,

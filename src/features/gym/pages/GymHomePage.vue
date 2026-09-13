@@ -107,7 +107,7 @@
             <button
               v-for="pr in recentPRs"
               :key="pr.id"
-              class="pr-row"
+              class="pr-row nt-press"
               @click="openExercise(pr.exercise_id)"
             >
               <span class="pr-row__name">{{ pr.exercise_name }}</span>

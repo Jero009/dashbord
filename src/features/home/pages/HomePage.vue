@@ -156,7 +156,7 @@
               <strong>{{ latestWorkoutSetCount }}</strong>
             </div>
           </div>
-          <button v-if="latestWorkout.id_workout_template" class="workout-hero__start" @click="repeatLastWorkout">
+          <button v-if="latestWorkout.id_workout_template" class="workout-hero__start nt-press" @click="repeatLastWorkout">
             Start again
           </button>
         </ion-card>
@@ -177,7 +177,7 @@
                 class="form-input weight-input"
                 @keyup.enter="logQuickWeight"
               />
-              <button class="log-btn" @click="logQuickWeight">Log</button>
+              <button class="log-btn nt-press" @click="logQuickWeight">Log</button>
             </div>
           </div>
           <div class="weight-card__spark">
