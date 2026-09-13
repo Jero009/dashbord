@@ -332,12 +332,11 @@ const handleExport = async () => {
   try {
     const backup = await exportDatabaseToSQL()
 
-  if (!backup) {
-    showToast('database not ready', 'warning')
-    return
-  }
+    if (!backup) {
+      showToast('database not ready', 'warning')
+      return
+    }
 
-  try {
     if (Capacitor.getPlatform() === 'web') {
       const blob = new Blob([backup.sql], { type: 'application/sql' })
       const url = URL.createObjectURL(blob)
