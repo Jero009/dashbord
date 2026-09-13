@@ -488,7 +488,7 @@ ion-toast.pr-toast::part(header) {
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController, toastController, useBackButton } from '@ionic/vue';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -1165,6 +1165,18 @@ onIonViewWillEnter(async () => {
   await loadWorkout();
   startTimer();
   restoreTimerState();
+});
+
+// Hardware/browser back while a set edit is unsaved: flush pending set saves
+// (blurred inputs commit on blur, but a back press can skip the blur) before
+// leaving so nothing typed is lost. Registration is torn down automatically
+// when the component unmounts.
+useBackButton(10, async () => {
+  await Promise.all(
+    workoutExercises.value.flatMap((ex) =>
+      (ex.sets || []).map((s) => saveSet(s))
+    )
+  );
 });
 
 // Re-sync the rest timer when the app returns to the foreground (picked the phone
