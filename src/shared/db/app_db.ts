@@ -850,6 +850,9 @@ async function doInitDB() {
     if (!subColNames.has('status')) {
       await db.execute(`ALTER TABLE finance_subscription ADD COLUMN status TEXT DEFAULT 'active';`);
     }
+    if (!subColNames.has('last_posted_date')) {
+      await db.execute(`ALTER TABLE finance_subscription ADD COLUMN last_posted_date TEXT;`);
+    }
 
     const invColumns = await db.query(`PRAGMA table_info("finance_investment");`);
     const invColNames = new Set((invColumns.values || []).map((c: any) => String(c.name)));
@@ -2205,6 +2208,53 @@ export async function deleteFinanceSubscription(id: number) {
     throw error;
   }
 }
+
+// Advance a subscription's next_due_date by one cadence step. Returns the new date.
+function nextDueAfter(dateKey: string, cadence: string): string {
+  const d = new Date(`${dateKey}T00:00:00`);
+  if (cadence === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  else if (cadence === 'weekly') d.setDate(d.getDate() + 7);
+  else d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Post due unpaid subscription periods as finance_transaction rows.
+ * Idempotent per period via last_posted_date: a subscription with
+ * next_due_date <= today posts ONE transaction per call (the oldest due
+ * period), stamps last_posted_date, and rolls next_due_date forward — so
+ * repeated calls catch up multi-month lags without ever double-posting.
+ * Returns the number of transactions created. Safe to call on every app
+ * start / finance page entry.
+ */
+export async function postDueSubscriptions(today = new Date().toISOString().slice(0, 10)): Promise<number> {
+  if (!db) return 0;
+  const subs = await getFinanceSubscriptions();
+  let posted = 0;
+  for (const s of subs) {
+    if (s.status !== 'active') continue;
+    const due = s.next_due_date ? String(s.next_due_date) : null;
+    if (!due || due > today) continue;
+    // Already posted this exact period → roll forward without posting again.
+    if (s.last_posted_date === due) {
+      await db.run(`UPDATE finance_subscription SET next_due_date = ? WHERE id = ?;`, [nextDueAfter(due, String(s.cadence)), s.id]);
+      continue;
+    }
+    const type = s.direction === 'income' ? 'income' : 'expense';
+    await addFinanceTransaction(
+      due,
+      String(s.name),
+      'subscriptions',
+      Number(s.amount) || 0,
+      type,
+      'Auto-posted subscription'
+    );
+    await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDueAfter(due, String(s.cadence)), s.id]);
+    posted++;
+  }
+  return posted;
+}
+
 
 export async function addFinanceTransaction(
   date: string,
