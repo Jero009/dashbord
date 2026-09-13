@@ -139,7 +139,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import TrendChart from '@/shared/components/TrendChart.vue'
 import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat'
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue'
-import { insertBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
+import { insertBodyLog, updateBodyLog, getBodyLogs, deleteBodyLog } from '@/shared/db/app_db'
 import { hapticHeavy, hapticMedium, hapticSuccess } from '@/shared/utils/haptics'
 import { dismissWeightReminder } from '@/shared/utils/notifications'
 import type { BodyLogEntry } from '@/shared/db/app_db'
@@ -186,6 +186,9 @@ const chartPts = computed(() => {
       value: Number((e as Record<string, unknown>)[metric.key]),
     }))
 })
+
+// id of the entry being edited (set when the user re-submits a same-date entry)
+const editingEntryId = ref<number | null>(null)
 
 const form = ref({
   date: localDateISO(),
@@ -240,24 +243,48 @@ const saveEntry = async () => {
   }
 
   const existing = entries.value.find(e => e.date === form.value.date)
-  if (existing) {
-    const t = await toastController.create({ message: 'already logged', duration: 1800, color: 'warning' })
+  if (existing && !editingEntryId.value) {
+    // Same-date entry: open the form in edit mode instead of dead-ending.
+    editingEntryId.value = existing.id
+    form.value.weight = String(existing.weight_kg)
+    form.value.notes = existing.notes ?? ''
+    form.value.waist = existing.waist_cm != null ? String(existing.waist_cm) : ''
+    form.value.chest = existing.chest_cm != null ? String(existing.chest_cm) : ''
+    form.value.hips = existing.hips_cm != null ? String(existing.hips_cm) : ''
+    form.value.arm = existing.arm_cm != null ? String(existing.arm_cm) : ''
+    form.value.thigh = existing.thigh_cm != null ? String(existing.thigh_cm) : ''
+    form.value.bodyFat = existing.body_fat_pct != null ? String(existing.body_fat_pct) : ''
+    const t = await toastController.create({ message: 'editing existing entry', duration: 1800 })
     await t.present()
     return
   }
 
   try {
-    await insertBodyLog({
-      date: form.value.date,
-      weight_kg: weight,
-      notes: form.value.notes.trim() || undefined,
-      waist_cm: optionalNum(form.value.waist),
-      chest_cm: optionalNum(form.value.chest),
-      hips_cm: optionalNum(form.value.hips),
-      arm_cm: optionalNum(form.value.arm),
-      thigh_cm: optionalNum(form.value.thigh),
-      body_fat_pct: optionalNum(form.value.bodyFat),
-    })
+    if (editingEntryId.value) {
+      await updateBodyLog(editingEntryId.value, {
+        weight_kg: weight,
+        notes: form.value.notes.trim() || undefined,
+        waist_cm: optionalNum(form.value.waist),
+        chest_cm: optionalNum(form.value.chest),
+        hips_cm: optionalNum(form.value.hips),
+        arm_cm: optionalNum(form.value.arm),
+        thigh_cm: optionalNum(form.value.thigh),
+        body_fat_pct: optionalNum(form.value.bodyFat),
+      })
+      editingEntryId.value = null
+    } else {
+      await insertBodyLog({
+        date: form.value.date,
+        weight_kg: weight,
+        notes: form.value.notes.trim() || undefined,
+        waist_cm: optionalNum(form.value.waist),
+        chest_cm: optionalNum(form.value.chest),
+        hips_cm: optionalNum(form.value.hips),
+        arm_cm: optionalNum(form.value.arm),
+        thigh_cm: optionalNum(form.value.thigh),
+        body_fat_pct: optionalNum(form.value.bodyFat),
+      })
+    }
     const today = localDateISO()
     if (form.value.date === today) dismissWeightReminder()
 
@@ -270,6 +297,7 @@ const saveEntry = async () => {
     form.value.bodyFat = ''
     form.value.notes = ''
     form.value.date = localDateISO()
+    editingEntryId.value = null
 
     await loadEntries()
 

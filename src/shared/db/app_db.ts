@@ -2695,6 +2695,30 @@ export async function insertBodyLog(entry: {
   )
 }
 
+export async function updateBodyLog(id: number, entry: {
+  weight_kg: number
+  notes?: string | null
+  waist_cm?: number | null
+  chest_cm?: number | null
+  hips_cm?: number | null
+  arm_cm?: number | null
+  thigh_cm?: number | null
+  body_fat_pct?: number | null
+}): Promise<void> {
+  if (!db) return
+  await db.run(
+    `UPDATE body_log
+       SET weight_kg = ?, notes = ?, waist_cm = ?, chest_cm = ?, hips_cm = ?, arm_cm = ?, thigh_cm = ?, body_fat_pct = ?
+     WHERE id = ?`,
+    [
+      entry.weight_kg, entry.notes ?? null,
+      entry.waist_cm ?? null, entry.chest_cm ?? null, entry.hips_cm ?? null,
+      entry.arm_cm ?? null, entry.thigh_cm ?? null, entry.body_fat_pct ?? null,
+      id,
+    ]
+  )
+}
+
 export async function getBodyLogs(limit = 500): Promise<BodyLogEntry[]> {
   if (!db) return []
   const result = await db.query(`SELECT * FROM body_log ORDER BY date DESC, id DESC LIMIT ?`, [limit])
