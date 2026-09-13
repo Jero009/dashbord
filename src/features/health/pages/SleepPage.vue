@@ -156,6 +156,16 @@
           <p v-else class="nt-empty">No HR data</p>
         </ion-card>
 
+        <!-- Stage composition history -->
+        <ion-card class="sleep-card">
+          <p class="nt-kicker">Stages · 30 nights</p>
+          <stage-bars-chart
+            v-if="stageHistoryNights.length"
+            :nights="stageHistoryNights"
+          />
+          <p v-else class="nt-empty">No history</p>
+        </ion-card>
+
         <!-- Score history -->
         <ion-card class="sleep-card">
           <p class="nt-kicker">History · 30 nights</p>
@@ -186,6 +196,7 @@ import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { computed, ref, toRef } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
+import StageBarsChart from '@/shared/components/StageBarsChart.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import { useCountUp } from '@/shared/composables/useCountUp';
 import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepSummary } from '@/shared/health/healthConnect';
@@ -197,6 +208,8 @@ import { clamp as clampVal } from '@/shared/utils/math';
 
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
+// raw records so stage minutes survive for the composition chart
+const sleepHistoryRaw = ref<SleepSessionRecord[]>([]);
 const sleepHistory = ref<Array<{ date: string; value: number; score: number | null; efficiency: number | null }>>([]);
 const sessionDates = ref<string[]>([]);
 const selectedDate = ref<string | null>(null);
@@ -269,6 +282,7 @@ function sessionToSummary(record: SleepSessionRecord): SleepSummary {
 const loadSleep = async () => {
   const sessions = await getRecentSleepSessions(30);
   sessionDates.value = sessions.map((s) => s.date);
+  sleepHistoryRaw.value = sessions;
   sleepHistory.value = sessions.map((s) => ({
     date: s.date,
     value: s.time_asleep_hours,
@@ -395,6 +409,18 @@ const heartRatePts = computed(() => {
     pos: p.offset / 100, // irregular time spacing from the sleep timeline
   }));
 });
+const stageHistoryNights = computed(() =>
+  [...sleepHistoryRaw.value]
+    .reverse()
+    .filter((s) => s.stage_deep_min + s.stage_rem_min + s.stage_light_min + s.stage_awake_min > 0)
+    .map((s) => ({
+      date: s.date,
+      deep: s.stage_deep_min,
+      rem: s.stage_rem_min,
+      light: s.stage_light_min,
+      awake: s.stage_awake_min,
+    }))
+);
 const scoreHistoryPts = computed(() =>
   [...sleepHistory.value].reverse().filter((r) => r.score !== null).map((row) => ({
     label: new Date(`${row.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),
