@@ -227,7 +227,7 @@ import { hapticError, hapticLight, hapticSuccess } from '@/shared/utils/haptics'
 import { getSleepSession, getRecentSleepSessions } from '@/shared/db/app_db';
 import type { SleepSessionRecord } from '@/shared/db/app_db';
 import { clamp as clampVal } from '@/shared/utils/math';
-import { getSleepGoalHours } from '@/shared/utils/userSettings';
+import { getSleepGoalHours, setLastHcSyncAt } from '@/shared/utils/userSettings';
 
 const syncing = ref(false);
 const summary = ref<SleepSummary | null>(null);
@@ -377,6 +377,7 @@ const handleSync = async () => {
     }
 
     const result = await syncHealthConnectMetrics();
+    setLastHcSyncAt(Date.now()); // manual sync advances the incremental-sync stamp too
     selectedDate.value = null; // reset to latest after sync
     await loadSleep();
 

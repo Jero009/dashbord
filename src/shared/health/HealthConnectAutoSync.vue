@@ -7,7 +7,7 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { onMounted, onUnmounted } from 'vue';
 import { canAutoSyncHealthConnectMetrics, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
-import { setLastHcSyncAt } from '@/shared/utils/userSettings';
+import { getLastHcSyncAt, setLastHcSyncAt } from '@/shared/utils/userSettings';
 import { toastController } from '@ionic/vue';
 
 const syncIntervalMs = 30 * 60 * 1000;
@@ -38,7 +38,15 @@ const syncIfNeeded = async () => {
       return;
     }
 
-    await syncHealthConnectMetrics();
+    // Incremental window: only re-read the nights since the last sync, plus a
+    // 2-day overlap that heals edits / clock skew. First-ever sync (no stamp)
+    // keeps the full 30 days. Cuts a background sync from ~35 native queries
+    // to ~7 for the daily case.
+    const lastStamp = getLastHcSyncAt();
+    const daysBack = lastStamp === null
+      ? 30
+      : Math.min(30, Math.ceil((Date.now() - lastStamp) / (24 * 60 * 60 * 1000)) + 2);
+    await syncHealthConnectMetrics({ daysBack });
     lastSyncAt = Date.now();
     // Update the "last sync" stamp so Settings/Health pages don't show a stale time.
     setLastHcSyncAt(Date.now());

@@ -443,7 +443,10 @@ export async function checkHealthConnectExerciseAccess(): Promise<HealthConnectE
   }
 }
 
-export async function syncHealthConnectMetrics(daysBack = 30): Promise<HealthConnectSyncResult> {
+export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {}): Promise<HealthConnectSyncResult> {
+  // Full 30-day window by default (manual syncs = the repair path). Auto-syncs
+  // pass a narrowed incremental window — see HealthConnectAutoSync.
+  const daysBack = opts.daysBack ?? 30;
   if (!isHealthConnectAvailable()) {
     return { available: false, granted: false, synced: 0 };
   }
