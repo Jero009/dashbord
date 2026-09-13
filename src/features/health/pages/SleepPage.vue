@@ -105,6 +105,11 @@
             <div class="axis-row hyp-axis">
               <span v-for="(t, i) in hypTimeAxis" :key="i">{{ t }}</span>
             </div>
+            <div class="hyp-legend">
+              <span v-for="st in HYP_LEGEND" :key="st.key" class="hyp-legend__item">
+                <i class="stage-dot" :class="`stage-dot--${st.key}`" />{{ st.label }}
+              </span>
+            </div>
           </div>
           <p v-else class="nt-empty">No stages</p>
         </ion-card>
@@ -151,6 +156,8 @@
             :pts="heartRatePts"
             unit="bpm"
             :format="(v) => String(Math.round(v))"
+            show-avg
+            show-range
             aria-label="Sleep heart rate graph"
           />
           <p v-else class="nt-empty">No HR data</p>
@@ -510,6 +517,13 @@ const HYP_BAND = { rem: 86, light: 124, deep: 162 } as const;
 // dotted gridlines between levels
 const HYP_GRID = [70, 105, 143] as const;
 
+const HYP_LEGEND = [
+  { key: 'awake', label: 'Awake' },
+  { key: 'rem', label: 'REM' },
+  { key: 'light', label: 'Light' },
+  { key: 'deep', label: 'Deep' },
+] as const;
+
 type HypMeta =
   | { kind: 'awake'; color: string }
   | { kind: 'bar'; y: number; color: string };
@@ -541,13 +555,20 @@ const hypGeo = computed(() => {
     const meta = hypStageMeta(s.stage);
 
     if (meta.kind === 'awake') {
-      spikes.push({ x: x + w / 2, w: clampVal(w, 4, 12), color: meta.color });
+      // width by time, not segment width: a 40-min awake block reads wider than a 1-min wake
+      const spikeW = clampVal((s.minutes / 5) * 12, 4, 12);
+      spikes.push({ x: x + w / 2, w: spikeW, color: meta.color });
       continue;
     }
 
     const bar = { x1: x, x2: x + w, y: meta.y, color: meta.color };
     if (prevBar && Math.abs(prevBar.y - bar.y) > 0.5) {
       connectors.push({ x: bar.x1, y1: prevBar.y, y2: bar.y, color: bar.color });
+    }
+    // merge consecutive same-level bars separated by <3px so the line reads continuously
+    if (prevBar && Math.abs(prevBar.y - bar.y) <= 0.5 && bar.x1 - prevBar.x2 < 3) {
+      prevBar.x2 = bar.x2;
+      continue;
     }
     bars.push(bar);
     prevBar = bar;
@@ -774,6 +795,19 @@ onIonViewWillEnter(async () => {
 
 .hyp-spike {
   stroke-linecap: round;
+}
+
+.hyp-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 0.68rem;
+  color: rgba(var(--nt-ink), 0.5);
+}
+
+.hyp-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .axis-row {
