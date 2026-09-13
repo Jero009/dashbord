@@ -14,20 +14,20 @@
           <div class="top-cards">
             <ion-card v-if="!activeWorkout" class="summary-card">
               <div class="card-topline">
-                <p class="section-kicker">Last workout</p>
+                <p class="nt-kicker">Last workout</p>
               </div>
 
               <div class="summary-card__body">
                 <div class="card-metrics">
-                  <div class="card-metric">
+                  <div class="nt-metric-tile">
                     <span>Time</span>
                     <strong>{{ formatDuration(latestWorkout?.time_start, latestWorkout?.time_end) }}</strong>
                   </div>
-                  <div class="card-metric">
+                  <div class="nt-metric-tile">
                     <span>Total load</span>
                     <strong>{{ `${latestWorkout?.total_kg || 0} kg` }}</strong>
                   </div>
-                  <div class="card-metric card-metric-wide">
+                  <div class="nt-metric-tile nt-metric-tile--full">
                     <span>Completed</span>
                     <strong>{{ formatWorkoutDate(latestWorkout?.time_end) }}</strong>
                   </div>
@@ -39,7 +39,7 @@
 
             <ion-card v-else class="active-card" @click="backToWorkout()">
               <div class="card-topline">
-                <p class="section-kicker">Active workout</p>
+                <p class="nt-kicker">Active workout</p>
               </div>
 
               <div class="active-card__body">
@@ -59,7 +59,7 @@
           <!-- Weekly progress -->
           <div class="weekly-card">
             <div class="weekly-card__header">
-              <span class="section-kicker">This week</span>
+              <span class="nt-kicker">This week</span>
               <span class="weekly-count">{{ weeklyCompletedWorkouts }} / {{ weeklyWorkoutGoal }}</span>
             </div>
             <div class="weekly-dots">
@@ -100,7 +100,7 @@
 
         <ion-card v-if="recentPRs.length" class="pr-card">
           <div class="card-topline">
-            <p class="section-kicker">Recent PRs</p>
+            <p class="nt-kicker">Recent PRs</p>
             <span class="pr-card__window">30 days</span>
           </div>
           <div class="pr-list">
@@ -529,9 +529,8 @@ ion-content.home-content {
   justify-content: space-between;
 }
 
-.weekly-card__header .section-kicker {
+.weekly-card__header .nt-kicker {
   margin: 0;
-  color: rgba(var(--nt-ink), 0.5) !important;
 }
 
 .weekly-count {
@@ -637,14 +636,12 @@ ion-content.home-content {
   gap: 12px;
 }
 
-.card-metric,
 .active-card__timer {
   border-radius: 10px;
   padding: 14px;
   background: rgba(var(--nt-ink), 0.05);
 }
 
-.card-metric span,
 .active-card__timer span,
 .workout-tile__copy span {
   display: block;
@@ -655,7 +652,6 @@ ion-content.home-content {
   letter-spacing: 0.1em;
 }
 
-.card-metric strong,
 .active-card__timer strong {
   display: block;
   font-size: 1rem;
@@ -673,10 +669,6 @@ ion-content.home-content {
   border: 1px solid rgba(215, 26, 33, 0.3);
 }
 
-
-.card-metric-wide {
-  grid-column: 1 / -1;
-}
 
 .workout-grid {
   display: grid;
@@ -744,7 +736,7 @@ ion-content.home-content {
   gap: 12px;
 }
 
-.pr-card .section-kicker {
+.pr-card .nt-kicker {
   margin: 0;
 }
 
