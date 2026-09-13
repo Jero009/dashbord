@@ -109,7 +109,6 @@ const netClass = computed(() => ({
   'bar-row__value--over': (digest.value.netWorthDelta ?? 0) < 0,
 }));
 
-const pct = (v: number | null) => `${Math.round((v ?? 0) * 100)}%`;
 const formatVolume = (v: number) => (v >= 10000 ? `${Math.round(v / 100) / 10}k` : `${Math.round(v)}`);
 
 const load = async () => {

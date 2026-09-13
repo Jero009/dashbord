@@ -51,6 +51,7 @@ vi.mock('@capacitor-community/sqlite', () => {
   return {
     CapacitorSQLite: db,
     SQLiteConnection: class {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       constructor(_db: unknown) {
         return
       }

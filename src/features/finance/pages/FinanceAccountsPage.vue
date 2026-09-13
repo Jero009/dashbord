@@ -128,7 +128,6 @@ import {
   IonButton,
   IonIcon,
   onIonViewWillEnter,
-  toastController,
   alertController,
 } from '@ionic/vue';
 import { showToast } from '@/shared/utils/toast';

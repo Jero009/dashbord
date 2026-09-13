@@ -50,8 +50,6 @@ export interface Insight {
 
 const TARGET_SLEEP_HOURS = 7.5;
 const RHR_ELEVATED_RATIO = 1.08; // ≥8% above baseline reads as elevated
-const ACWR_HIGH = 1.5;           // injury-risk "danger zone"
-const ACWR_LOW = 0.8;            // detraining floor
 const MIN_PAIRS = 6;             // minimum paired days for a correlation insight
 
 // ── small numeric helpers ────────────────────────────────────────────────────

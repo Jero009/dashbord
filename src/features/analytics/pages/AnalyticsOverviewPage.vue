@@ -66,13 +66,12 @@ import { ref, computed } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSectionTabs.vue';
 import {
-  getRecentSleepSessions,
   getRecentSleepSessionSummaries,
   getRecentHealthMetrics,
   queryReadinessHistory,
   getSessionLoads,
 } from '@/shared/db/app_db';
-import { computeInsights, mean, type DatedValue, type TrainingLoad, type RecoveryRecommendation, type Insight } from '@/shared/health/insights';
+import { computeInsights, type DatedValue, type TrainingLoad, type RecoveryRecommendation, type Insight } from '@/shared/health/insights';
 import { computeTodayRecovery } from '@/shared/health/todayRecovery';
 import { computeDailyLoads, computeAcwrSeries, type DailyLoad } from '@/shared/health/trainingLoad';
 import { localDateISO } from '@/shared/utils/timeFormat';

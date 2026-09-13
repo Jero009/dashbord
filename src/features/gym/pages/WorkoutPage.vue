@@ -413,7 +413,7 @@
 
 .rest-timer-controls ion-button {
   --border-radius: 999px;
-  font-family: Doto;
+  font-family: var(--nt-font-display);
 }
 
 .rest-progress-bar {
