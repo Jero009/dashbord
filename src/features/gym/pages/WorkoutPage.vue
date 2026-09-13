@@ -488,7 +488,7 @@ ion-toast.pr-toast::part(header) {
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController, toastController } from '@ionic/vue';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -579,14 +579,20 @@ const swapExercises = async (index1: number, index2: number) => {
 
 // saving
 
-const saveSet = async (set: any) => {
-  await updateWorkoutSet(
-    set.id,
-    set.reps,
-    set.weight,
-    set.completed,
-    set.rpe ?? null
-  );
+const saveSet = async (set: any): Promise<boolean> => {
+  try {
+    await updateWorkoutSet(
+      set.id,
+      set.reps,
+      set.weight,
+      set.completed,
+      set.rpe ?? null
+    );
+    return true;
+  } catch (error) {
+    console.error('Failed to save set:', error);
+    return false;
+  }
 };
 
 const pickRpe = async (set: any) => {
@@ -619,10 +625,10 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
     onSkipRestTimer(new Event('skip'));
   }
 
-  try {
-    await saveSet(set);
-  } catch (error) {
-    console.error('Failed to save set state:', error);
+  const ok = await saveSet(set);
+  if (!ok) {
+    const t = await toastController.create({ message: 'save failed — check the set values', duration: 2000, color: 'danger' });
+    await t.present();
   }
 };
 

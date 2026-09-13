@@ -267,9 +267,12 @@ const formatDuration = (start: string, end: any) => {
 };
 //refresh 
 
- const handleRefresh = async  (event: RefresherCustomEvent) => {
-   await LoadHistory()
-   event.target.complete();
+ const handleRefresh = async (event: RefresherCustomEvent) => {
+   try {
+     await LoadHistory();
+   } finally {
+     event.target.complete();
+   }
   };
 
 const handleDelete = async (id: number) => {

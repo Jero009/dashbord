@@ -298,8 +298,11 @@ const toggleArchive = async (template: Template) => {
 //refresh
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
-  await loadTemplates();
-  event.target.complete();
+  try {
+    await loadTemplates();
+  } finally {
+    event.target.complete();
+  }
 };
 
 

@@ -380,8 +380,11 @@ const renameEx = async (ex: Exercise) => {
 //refresh 
 
 const handleRefresh = async (event: RefresherCustomEvent) => {
-  await LoadExercises();
-  event.target.complete();
+  try {
+    await LoadExercises();
+  } finally {
+    event.target.complete();
+  }
 };
 
 
