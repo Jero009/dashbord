@@ -20,7 +20,7 @@
 
         <!-- Category breakdown -->
         <div class="card">
-          <p class="section-kicker">Spending by category</p>
+          <p class="nt-kicker">Spending by category</p>
           <template v-if="categories.length > 0">
             <div class="donut-wrap">
               <canvas ref="donutRef"></canvas>
@@ -42,7 +42,7 @@
 
         <!-- Budget vs actual -->
         <div class="card">
-          <p class="section-kicker">Budget vs actual</p>
+          <p class="nt-kicker">Budget vs actual</p>
           <template v-if="budgetRows.length > 0">
             <div class="budget-list">
               <div v-for="row in budgetRows" :key="row.category" class="budget-row">
@@ -68,7 +68,7 @@
 
         <!-- Monthly trend -->
         <div class="card">
-          <p class="section-kicker">Income vs spending</p>
+          <p class="nt-kicker">Income vs spending</p>
           <template v-if="monthly.length > 1">
             <div class="chart-frame">
               <canvas ref="trendRef"></canvas>
@@ -272,14 +272,7 @@ onUnmounted(() => {
   gap: 14px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
+
 
 /* Month nav */
 .month-nav {

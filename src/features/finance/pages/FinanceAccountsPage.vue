@@ -9,7 +9,7 @@
         <!-- Summary -->
         <ion-card class="finance-card summary-card">
           <div class="card-topline">
-            <p class="section-kicker">Net worth</p>
+            <p class="nt-kicker">Net worth</p>
           </div>
           <div class="summary-value">{{ formatCurrency(netWorth) }}</div>
           <div class="summary-grid">
@@ -27,7 +27,7 @@
         <!-- Add / edit form -->
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">{{ editingId ? 'Edit account' : 'Add account' }}</p>
+            <p class="nt-kicker">{{ editingId ? 'Edit account' : 'Add account' }}</p>
             <button v-if="editingId" class="link-btn" @click="resetForm">Cancel</button>
           </div>
           <div class="form-fields">
@@ -61,7 +61,7 @@
         <!-- Assets -->
         <ion-card v-if="assetAccounts.length" class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Assets</p>
+            <p class="nt-kicker">Assets</p>
             <span class="card-count">{{ formatCurrency(assetsTotal) }}</span>
           </div>
           <div class="account-list">
@@ -86,7 +86,7 @@
         <!-- Liabilities -->
         <ion-card v-if="liabilityAccounts.length" class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Liabilities</p>
+            <p class="nt-kicker">Liabilities</p>
             <span class="card-count metric-negative">{{ formatCurrency(liabilitiesTotal) }}</span>
           </div>
           <div class="account-list">
@@ -109,7 +109,7 @@
         </ion-card>
 
         <ion-card v-if="!accounts.length" class="finance-card">
-          <p class="empty-state">No accounts yet</p>
+          <p class="nt-empty">No accounts yet</p>
         </ion-card>
       </div>
     </ion-content>
@@ -333,13 +333,7 @@ onIonViewWillEnter(loadAccounts);
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
+
 
 .card-count {
   font-family: var(--nt-font-mono);
@@ -473,9 +467,5 @@ onIonViewWillEnter(loadAccounts);
   font-size: 0.95rem;
 }
 
-.empty-state {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.5);
-  font-size: 0.9rem;
-}
+
 </style>

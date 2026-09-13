@@ -8,7 +8,7 @@
 
         <!-- PREFERENCES -->
         <div class="card">
-          <p class="section-kicker">Preferences</p>
+          <p class="nt-kicker">Preferences</p>
 
           <div class="set-stack">
             <span class="set-row__title">Theme</span>
@@ -44,7 +44,7 @@
 
         <!-- GOALS & TARGETS -->
         <div class="card">
-          <p class="section-kicker">Goals &amp; targets</p>
+          <p class="nt-kicker">Goals &amp; targets</p>
 
           <div class="set-row">
             <div class="set-row__label">
@@ -89,7 +89,7 @@
 
         <!-- NOTIFICATIONS -->
         <div class="card">
-          <p class="section-kicker">Notifications</p>
+          <p class="nt-kicker">Notifications</p>
 
           <div class="set-row">
             <div class="set-row__label">
@@ -131,7 +131,7 @@
 
         <!-- DATA & SYNC -->
         <div class="card">
-          <p class="section-kicker">Data &amp; sync</p>
+          <p class="nt-kicker">Data &amp; sync</p>
 
           <input ref="importFileInput" type="file" accept=".sql,text/plain" style="display:none" @change="handleImportFile" />
 
@@ -557,13 +557,7 @@ const handleImportFile = async (event: Event) => {
   padding: 18px;
 }
 
-.section-kicker {
-  margin: 0 0 6px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
+
 
 /* Unified setting row: label block on the left, control on the right. */
 .set-row {

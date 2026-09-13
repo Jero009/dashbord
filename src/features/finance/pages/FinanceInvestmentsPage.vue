@@ -9,7 +9,7 @@
         <!-- Portfolio summary -->
         <ion-card class="finance-card summary-card">
           <div class="card-topline">
-            <p class="section-kicker">Portfolio value</p>
+            <p class="nt-kicker">Portfolio value</p>
           </div>
           <div class="summary-value">{{ formatCurrency(totalValue) }}</div>
           <div class="summary-grid">
@@ -30,7 +30,7 @@
         <!-- Add / edit form -->
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">{{ editingId ? 'Edit investment' : 'Add investment' }}</p>
+            <p class="nt-kicker">{{ editingId ? 'Edit investment' : 'Add investment' }}</p>
             <button v-if="editingId" class="link-btn" @click="resetForm">Cancel</button>
           </div>
           <div class="form-fields">
@@ -84,7 +84,7 @@
         <!-- Holdings -->
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Holdings</p>
+            <p class="nt-kicker">Holdings</p>
             <button v-if="hasSymbols" class="refresh-btn" :disabled="refreshing" @click="refreshPrices(false)">
               <ion-icon :icon="refreshOutline" :class="{ spinning: refreshing }" />
               {{ refreshing ? 'Updating' : 'Refresh' }}
@@ -122,7 +122,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No investments</p>
+          <p v-else class="nt-empty">No investments</p>
         </ion-card>
       </div>
     </ion-content>
@@ -477,13 +477,7 @@ onIonViewWillEnter(loadAll);
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
+
 
 .card-count {
   font-size: 0.72rem;
@@ -701,9 +695,5 @@ onIonViewWillEnter(loadAll);
   font-weight: 600;
 }
 
-.empty-state {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.5);
-  font-size: 0.9rem;
-}
+
 </style>

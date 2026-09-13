@@ -20,7 +20,7 @@
         <!-- PR hero -->
         <div v-if="hasAnyData" class="card">
           <div class="card-header">
-            <p class="section-kicker">Personal record</p>
+            <p class="nt-kicker">Personal record</p>
             <div v-if="muscleGroup || equipment" class="meta-chips">
               <span v-if="muscleGroup" class="meta-chip">{{ muscleGroup }}</span>
               <span v-if="equipment" class="meta-chip">{{ equipment }}</span>
@@ -49,7 +49,7 @@
         <!-- Strength chart -->
         <div v-if="hasAnyData" class="card">
           <div class="card-header">
-            <p class="section-kicker">Strength</p>
+            <p class="nt-kicker">Strength</p>
             <ion-select
               v-model="timeFrame"
               interface="action-sheet"
@@ -76,7 +76,7 @@
 
         <!-- Volume chart -->
         <div v-if="historyData.length > 0" class="card">
-          <p class="section-kicker">Volume per session</p>
+          <p class="nt-kicker">Volume per session</p>
           <div class="chart-frame chart-frame--short">
             <canvas ref="volumeChartRef"></canvas>
           </div>
@@ -84,7 +84,7 @@
 
         <!-- Stats -->
         <div v-if="historyData.length > 0" class="card">
-          <p class="section-kicker">Last {{ timeFrame }} days</p>
+          <p class="nt-kicker">Last {{ timeFrame }} days</p>
           <div class="tile-grid tile-grid--4">
             <div class="tile">
               <span class="tile__label">Sessions</span>
@@ -112,7 +112,7 @@
 
         <!-- Recent sessions -->
         <div v-if="sessions.length > 0" class="card">
-          <p class="section-kicker">Recent sessions</p>
+          <p class="nt-kicker">Recent sessions</p>
           <div class="session-list">
             <div v-for="s in sessions" :key="s.workout_id" class="session-row">
               <span class="session-row__date">{{ formatWorkoutDate(s.date) }}</span>
@@ -415,14 +415,7 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
+
 
 .tile-grid {
   display: grid;

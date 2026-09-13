@@ -10,7 +10,7 @@
         <!-- Net worth hero + trend -->
         <ion-card class="finance-card hero-card">
           <div class="card-topline">
-            <p class="section-kicker">Net worth</p>
+            <p class="nt-kicker">Net worth</p>
             <span v-if="failed['accounts'] || failed['investments']" class="card-error">Couldn't load</span>
             <span v-if="netDelta !== null" class="delta-chip" :class="netDelta >= 0 ? 'delta-chip--up' : 'delta-chip--down'">
               <ion-icon :icon="netDelta >= 0 ? trendingUpOutline : trendingDownOutline" />
@@ -61,7 +61,7 @@
         <!-- This month cash flow -->
         <ion-card class="finance-card tappable" button @click="go('/finance/budget')">
           <div class="card-topline">
-            <p class="section-kicker">This month</p>
+            <p class="nt-kicker">This month</p>
             <span v-if="failed['month']" class="card-error">Couldn't load</span>
             <ion-icon class="chev" :icon="chevronForwardOutline" />
           </div>
@@ -96,7 +96,7 @@
         <!-- Upcoming bills -->
         <ion-card class="finance-card tappable" button @click="go('/finance/subscriptions')">
           <div class="card-topline">
-            <p class="section-kicker">Upcoming bills · {{ rangeBillsDays }}d</p>
+            <p class="nt-kicker">Upcoming bills · {{ rangeBillsDays }}d</p>
             <span class="card-count">{{ formatCurrency(billsTotal) }}</span>
           </div>
           <div v-if="bills.length" class="mini-list">
@@ -108,13 +108,13 @@
               <span class="mini-row__val">{{ formatCurrency(Number(bill.amount) || 0) }}</span>
             </div>
           </div>
-          <p v-else class="empty-state">No bills in the next {{ rangeBillsDays }} days</p>
+          <p v-else class="nt-empty">No bills in the next {{ rangeBillsDays }} days</p>
         </ion-card>
 
         <!-- Top spending categories -->
         <ion-card class="finance-card tappable" button @click="go('/finance/analytics')">
           <div class="card-topline">
-            <p class="section-kicker">Top categories</p>
+            <p class="nt-kicker">Top categories</p>
             <ion-icon class="chev" :icon="chevronForwardOutline" />
           </div>
           <div v-if="topCategories.length" class="cat-list">
@@ -128,13 +128,13 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No spending this month</p>
+          <p v-else class="nt-empty">No spending this month</p>
         </ion-card>
 
         <!-- Recent activity -->
         <ion-card class="finance-card tappable" button @click="go('/finance/budget')">
           <div class="card-topline">
-            <p class="section-kicker">Recent activity</p>
+            <p class="nt-kicker">Recent activity</p>
             <ion-icon class="chev" :icon="chevronForwardOutline" />
           </div>
           <div v-if="recent.length" class="mini-list">
@@ -151,7 +151,7 @@
             </div>
           </div>
           <p v-else-if="failed['recent']" class="empty-state card-error">Couldn't load transactions</p>
-          <p v-else class="empty-state">No transactions yet</p>
+          <p v-else class="nt-empty">No transactions yet</p>
         </ion-card>
       </div>
     </ion-content>
@@ -387,14 +387,7 @@ onIonViewWillEnter(loadFinance);
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
+
 
 .card-count {
   font-family: var(--nt-font-mono);
@@ -703,9 +696,5 @@ onIonViewWillEnter(loadFinance);
   background: var(--ion-color-accent-red);
 }
 
-.empty-state {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.5);
-  font-size: 0.88rem;
-}
+
 </style>

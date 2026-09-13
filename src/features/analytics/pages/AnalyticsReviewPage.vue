@@ -9,7 +9,7 @@
       <div class="analytics-shell">
         <!-- Period header + compact switch (a filter control, not a nav-style bar) -->
         <div class="review-head">
-          <p class="section-kicker">Review</p>
+          <p class="nt-kicker">Review</p>
           <div class="period-switch" role="group" aria-label="Review period">
             <button
               type="button"
@@ -30,7 +30,7 @@
 
         <!-- Training & health -->
         <div class="card">
-          <p class="section-kicker">Training &amp; health</p>
+          <p class="nt-kicker">Training &amp; health</p>
           <div class="tile-grid tile-grid--4">
             <div class="tile">
               <span class="tile__label">Workouts</span>
@@ -56,7 +56,7 @@
 
         <!-- Finance -->
         <div class="card">
-          <p class="section-kicker">Finance</p>
+          <p class="nt-kicker">Finance</p>
           <div class="bar-row">
             <span class="bar-row__label">Spent vs budget</span>
             <span class="bar-row__value" :class="{ 'bar-row__value--over': overBudget }">
@@ -143,14 +143,7 @@ onIonViewWillEnter(load);
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
+
 
 /* Period control: a small content-width switch, distinct from the red-underline
    nav pills (top bar / section tabs) — active = filled chip, not an indicator. */

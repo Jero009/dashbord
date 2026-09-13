@@ -1,7 +1,7 @@
 <template>
   <div class="card tlo">
     <div class="card-header">
-      <p class="section-kicker">Load vs recovery</p>
+      <p class="nt-kicker">Load vs recovery</p>
       <ion-select
         v-model="windowDays"
         interface="action-sheet"
@@ -26,7 +26,7 @@
 
       <!-- Recovery recommendations -->
       <div v-if="recommendations.length" class="recs">
-        <p class="section-kicker">Recommendations</p>
+        <p class="nt-kicker">Recommendations</p>
         <ul class="rec-list">
           <li v-for="(r, i) in recommendations" :key="i" class="rec-item">{{ r }}</li>
         </ul>
@@ -505,14 +505,7 @@ onIonViewWillEnter(load);
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
+
 
 .time-select {
   max-width: 130px;

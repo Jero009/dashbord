@@ -9,7 +9,7 @@
         <!-- Summary -->
         <ion-card class="finance-card summary-card">
           <div class="card-topline">
-            <p class="section-kicker">Recurring / mo</p>
+            <p class="nt-kicker">Recurring / mo</p>
           </div>
           <div class="summary-value">{{ formatCurrency(monthlyOutflow) }}</div>
           <div class="summary-grid">
@@ -27,7 +27,7 @@
         <!-- Add / edit form -->
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">{{ editingId ? 'Edit recurring' : 'Add recurring' }}</p>
+            <p class="nt-kicker">{{ editingId ? 'Edit recurring' : 'Add recurring' }}</p>
             <button v-if="editingId" class="link-btn" @click="resetForm">Cancel</button>
           </div>
           <div class="type-toggle">
@@ -73,7 +73,7 @@
         <!-- List -->
         <ion-card class="finance-card">
           <div class="card-topline">
-            <p class="section-kicker">Recurring</p>
+            <p class="nt-kicker">Recurring</p>
             <span class="card-count">{{ subscriptions.length }}</span>
           </div>
           <div v-if="subscriptions.length" class="item-list">
@@ -112,7 +112,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="empty-state">No recurring items</p>
+          <p v-else class="nt-empty">No recurring items</p>
         </ion-card>
       </div>
     </ion-content>
@@ -379,13 +379,7 @@ onIonViewWillEnter(async () => {
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
+
 
 .card-count {
   font-size: 0.72rem;
@@ -589,9 +583,5 @@ onIonViewWillEnter(async () => {
   font-size: 0.95rem;
 }
 
-.empty-state {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.5);
-  font-size: 0.9rem;
-}
+
 </style>

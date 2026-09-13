@@ -10,7 +10,7 @@
         <!-- Recovery recommendation hero -->
         <div class="card recovery-card" :class="`recovery-card--${recovery.level}`">
           <div class="card-header">
-            <p class="section-kicker">Today</p>
+            <p class="nt-kicker">Today</p>
             <span class="recovery-pill" :class="`recovery-pill--${recovery.level}`">
               {{ recoveryLabel }}
             </span>
@@ -21,7 +21,7 @@
 
         <!-- Training load -->
         <div class="card">
-          <p class="section-kicker">Training load</p>
+          <p class="nt-kicker">Training load</p>
           <template v-if="load.status !== 'insufficient'">
             <div class="tile-grid tile-grid--3">
               <div class="tile">
@@ -44,7 +44,7 @@
 
         <!-- Insights -->
         <div class="card">
-          <p class="section-kicker">Insights</p>
+          <p class="nt-kicker">Insights</p>
           <template v-if="insights.length > 0">
             <div class="insight-list">
               <div v-for="ins in insights" :key="ins.id" class="insight-row">
@@ -203,14 +203,7 @@ onIonViewWillEnter(() => {
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
+
 
 /* Recovery hero */
 .recovery-card {

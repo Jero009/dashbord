@@ -10,7 +10,7 @@
         <!-- Summary tiles -->
         <div class="card">
           <div class="card-header">
-            <p class="section-kicker">Training load</p>
+            <p class="nt-kicker">Training load</p>
             <ion-select
               v-model="windowDays"
               interface="action-sheet"
@@ -47,7 +47,7 @@
 
         <!-- Volume by muscle group -->
         <div class="card">
-          <p class="section-kicker">Volume by muscle group</p>
+          <p class="nt-kicker">Volume by muscle group</p>
           <template v-if="muscleVolume.length > 0">
             <div class="chart-frame chart-frame--tall">
               <canvas ref="muscleChartRef"></canvas>
@@ -58,7 +58,7 @@
 
         <!-- Muscle balance -->
         <div v-if="muscleVolume.length > 0" class="card">
-          <p class="section-kicker">Push / Pull / Legs balance</p>
+          <p class="nt-kicker">Push / Pull / Legs balance</p>
           <div class="balance-bar">
             <div
               v-for="seg in balanceSegments"
@@ -77,7 +77,7 @@
 
         <!-- Weekly tonnage trend -->
         <div class="card">
-          <p class="section-kicker">Weekly tonnage</p>
+          <p class="nt-kicker">Weekly tonnage</p>
           <template v-if="weeklyTonnage.length > 0">
             <div class="chart-frame chart-frame--short">
               <canvas ref="tonnageChartRef"></canvas>
@@ -88,7 +88,7 @@
 
         <!-- Frequency heatmap -->
         <div class="card">
-          <p class="section-kicker">Training frequency</p>
+          <p class="nt-kicker">Training frequency</p>
           <template v-if="frequency.length > 0">
             <div class="freq-grid">
               <div
@@ -414,14 +414,7 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.section-kicker {
-  margin: 0;
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--nt-text-dim);
-}
+
 
 .tile-grid {
   display: grid;
