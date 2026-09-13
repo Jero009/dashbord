@@ -143,7 +143,7 @@ import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
-import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
+import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed, formatRestTime } from '@/shared/utils/timeFormat';
 import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
@@ -233,12 +233,6 @@ const openExercise = (exerciseId: number) => {
   router.push(`/exercise/${exerciseId}`);
 };
 
-
-const formatRestTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-};
 
 const clearActiveRestTimer = (removeStorage = false) => {
   if (activeRestInterval) {

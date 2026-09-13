@@ -144,6 +144,7 @@ import {
   toastController,
   alertController,
 } from '@ionic/vue';
+import { showToast } from '@/shared/utils/toast';
 import { createOutline, trashOutline, refreshOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
@@ -300,10 +301,7 @@ const refreshPrices = async (silent: boolean) => {
   }
 };
 
-const showToast = async (message: string, color: 'warning' | 'success') => {
-  const toast = await toastController.create({ message, duration: 1800, color });
-  await toast.present();
-};
+
 
 const resetForm = () => {
   editingId.value = null;

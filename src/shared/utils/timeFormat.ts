@@ -78,6 +78,10 @@ export const formatTime = (secondsValue: number) => {
   return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 };
 
+// Compact m:ss clock for rest-timer countdowns (e.g. `1:05`).
+export const formatRestTime = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+
 export const formatWorkoutDate = (value: unknown) => {
   const normalized = normalizeDateInput(value);
 

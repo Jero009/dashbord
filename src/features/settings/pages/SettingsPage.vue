@@ -170,6 +170,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, toastController, alertController } from '@ionic/vue'
+import { showToast } from '@/shared/utils/toast';
 import { downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
@@ -313,10 +314,7 @@ const saveNotifSleep = async () => {
 // --- Database: export / import ---
 const importFileInput = ref<HTMLInputElement | null>(null)
 
-const showToast = async (message: string, color: string = 'danger', duration: number = 2000) => {
-  const toast = await toastController.create({ message, duration, position: 'top', color })
-  await toast.present()
-}
+
 
 const exporting = ref(false)
 

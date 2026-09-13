@@ -203,7 +203,7 @@ import { calculateReadinessScore, calculateBattery, getRecentActivities, type Ba
 import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
 import { computeTodayRecovery, type RecoveryRecommendation } from '@/shared/health/todayRecovery';
 import { formatCurrency } from '@/shared/utils/currency';
-import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, parseLocalDate, formatTime as formatElapsed } from '@/shared/utils/timeFormat';
+import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, parseLocalDate, formatTime as formatElapsed, formatRestTime } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
@@ -288,9 +288,6 @@ const clearRestTimer = (removeStorage = false) => {
     void clearRestNotification();
   }
 };
-
-const formatRestTime = (s: number) =>
-  `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 const formatWorkoutTimer = () => formatElapsed(workoutSeconds.value);
 

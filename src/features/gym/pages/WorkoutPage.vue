@@ -505,6 +505,7 @@ import { glyphRestDraw, glyphRestEnd, glyphRestStop, glyphRestRelease } from '@/
 import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
+import { formatRestTime } from '@/shared/utils/timeFormat';
 
 const router = useRouter();
 // id from route
@@ -1146,12 +1147,6 @@ const adjustRestTimer = (seconds: number) => {
   void scheduleRestTimerDing(new Date(restEndTime));
   showRestCountdown();
   void glyphRestDraw(restTimer.value.remaining / (restTimer.value.total || restTimer.value.remaining));
-};
-
-const formatRestTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
 };
 
 const restProgress = computed(() => {

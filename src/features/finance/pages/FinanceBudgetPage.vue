@@ -191,6 +191,7 @@ import {
   toastController,
   alertController,
 } from '@ionic/vue';
+import { showToast } from '@/shared/utils/toast';
 import { chevronBackOutline, chevronForwardOutline, closeOutline, createOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
@@ -333,10 +334,7 @@ const beginEditTransaction = (transaction: Record<string, any>) => {
   transactionCategory.value = transaction.type === 'income' ? 'food' : String(transaction.category || 'food');
 };
 
-const showToast = async (message: string, color: 'warning' | 'success') => {
-  const toast = await toastController.create({ message, duration: 1800, color });
-  await toast.present();
-};
+
 
 const saveTransaction = async () => {
   if (!transactionName.value.trim()) {

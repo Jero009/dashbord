@@ -101,7 +101,8 @@
 
 </style>
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter, toastController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption, IonItemSliding, IonItemOptions, IonItemOption, onIonViewWillEnter } from '@ionic/vue';
+import { showToast } from '@/shared/utils/toast';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Draggable from 'vuedraggable';
@@ -111,15 +112,7 @@ import { RPE_OPTIONS } from '@/features/gym/types/rpe';
 const router = useRouter();
 
 // Toast helper
-const showToast = async (message: string, color: string = 'danger') => {
-  const toast = await toastController.create({
-    message,
-    duration: 2000,
-    position: 'top',
-    color,
-  });
-  await toast.present();
-};
+
 
 // exercise picker 
 const goToExercisePicker = () => {
