@@ -9,7 +9,7 @@
 
         <!-- Log entry card -->
         <div class="card">
-          <p class="section-kicker">Log weight</p>
+          <p class="nt-kicker">Log weight</p>
           <div class="form-fields">
             <div class="field-row">
               <div class="field-group">
@@ -103,7 +103,7 @@
 
         <!-- History -->
         <div v-if="entries.length" class="card">
-          <p class="section-kicker">History</p>
+          <p class="nt-kicker">History</p>
           <div v-if="trendDelta !== null" class="trend-row">
             <span class="trend-label">vs previous</span>
             <span class="trend-value" :class="trendClass">{{ trendLabel }}</span>
@@ -354,14 +354,6 @@ onIonViewWillEnter(loadEntries)
   padding: 18px;
 }
 
-.section-kicker {
-  margin: 0 0 14px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
 /* Form */
 .form-fields {
   display: flex;
@@ -552,7 +544,7 @@ onIonViewWillEnter(loadEntries)
   margin-bottom: 12px;
 }
 
-.chart-header .section-kicker {
+.chart-header .nt-kicker {
   margin: 0;
 }
 
