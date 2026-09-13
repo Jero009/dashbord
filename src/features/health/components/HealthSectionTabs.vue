@@ -11,6 +11,9 @@
         <ion-segment-button value="body">
           <ion-label>Body</ion-label>
         </ion-segment-button>
+        <ion-segment-button value="vitals">
+          <ion-label>Vitals</ion-label>
+        </ion-segment-button>
       </ion-segment>
     </div>
   </ion-toolbar>
@@ -28,6 +31,7 @@ const route = useRoute();
 const activeSegment = computed(() => {
   if (route.path.includes('/sleep'))     return 'sleep';
   if (route.path.includes('/body'))      return 'body';
+  if (route.path.includes('/vitals'))    return 'vitals';
   return 'overview';
 });
 
@@ -40,6 +44,7 @@ const handleSegmentChange = (event: CustomEvent) => {
     overview:  '/health',
     sleep:     '/health/sleep',
     body:      '/health/body',
+    vitals:    '/health/vitals',
   };
 
   const dest = target[value];

@@ -15,5 +15,10 @@ export const healthRoutes: Array<RouteRecordRaw> = [
     path: '/health/body',
     name: 'HealthBody',
     component: () => import('./pages/BodyPage.vue')
+  },
+  {
+    path: '/health/vitals',
+    name: 'HealthVitals',
+    component: () => import('./pages/VitalsPage.vue')
   }
 ];
