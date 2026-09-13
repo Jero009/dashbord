@@ -592,6 +592,42 @@ html, body, ion-app ion-content {
   to   { opacity: 1; transform: none; }
 }
 
+/* ---- Shared card primitives (canonical; pages must not re-declare) ---- */
+.nt-kicker {
+  margin: 0 0 14px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: var(--nt-tracking-kicker);
+  color: var(--nt-text-dim);
+}
+.nt-metric-tile {
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(var(--nt-ink), 0.05);
+}
+.nt-metric-tile span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--nt-text-dim);
+}
+.nt-metric-tile strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--nt-fg);
+}
+.nt-metric-tile--full {
+  grid-column: 1 / -1;
+}
+.nt-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--nt-text-dim);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0.01ms !important;
