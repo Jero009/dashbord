@@ -13,7 +13,7 @@
 
         <!-- 1. Battery hero -->
         <div class="card readiness-card">
-          <p class="section-kicker">Battery</p>
+          <p class="nt-kicker">Battery</p>
           <div class="readiness-hero">
             <div class="readiness-score-wrap">
               <span class="readiness-score-num">{{ readinessDisplay }}</span>
@@ -32,19 +32,19 @@
           </div>
           <!-- Drain breakdown -->
           <div v-if="batteryResult" class="metric-grid drain-grid">
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Time</span>
               <span class="metric-value drain-val">-{{ batteryResult.drains.time }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Workout</span>
               <span class="metric-value drain-val">-{{ batteryResult.drains.workout }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Activity</span>
               <span class="metric-value drain-val">-{{ batteryResult.drains.activity }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Events</span>
               <span class="metric-value" :class="batteryResult.drains.event < 0 ? 'drain-val--positive' : 'drain-val'">
                 {{ batteryResult.drains.event <= 0 ? '+' : '-' }}{{ Math.abs(batteryResult.drains.event) }}
@@ -52,15 +52,15 @@
             </div>
           </div>
           <div v-else class="metric-grid readiness-mini-grid">
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Sleep</span>
               <span class="metric-value">{{ sleepDisplay }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Steps</span>
               <span class="metric-value">{{ stepsDisplay }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Resting HR</span>
               <span class="metric-value">{{ restingHrDisplay }}</span>
             </div>
@@ -69,26 +69,26 @@
 
         <!-- 2. Sleep card -->
         <div class="card">
-          <p class="section-kicker">Sleep · last night</p>
+          <p class="nt-kicker">Sleep · last night</p>
           <div class="sleep-top">
             <div class="sleep-score-block">
               <span class="sleep-score-num" :class="sleepScoreClass">{{ sleepScoreDisplay }}</span>
               <span class="sleep-score-sub">score</span>
             </div>
             <div class="metric-grid metric-grid--2col sleep-metrics">
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span class="metric-label">Duration</span>
                 <span class="metric-value">{{ sleepDisplay }}</span>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span class="metric-label">Efficiency</span>
                 <span class="metric-value">{{ sleepEfficiencyDisplay }}</span>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span class="metric-label">Sleep HR</span>
                 <span class="metric-value">{{ sleepHrDisplay }}</span>
               </div>
-              <div class="card-metric">
+              <div class="nt-metric-tile">
                 <span class="metric-label">Resp. Rate</span>
                 <span class="metric-value">{{ respRateDisplay }}</span>
               </div>
@@ -99,17 +99,17 @@
 
         <!-- 3. Body + vitals -->
         <div class="card">
-          <p class="section-kicker">Body</p>
+          <p class="nt-kicker">Body</p>
           <div class="metric-grid metric-grid--3col">
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Resting HR</span>
               <span class="metric-value">{{ restingHrDisplay }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Steps</span>
               <span class="metric-value">{{ stepsDisplay }}</span>
             </div>
-            <div class="card-metric">
+            <div class="nt-metric-tile">
               <span class="metric-label">Weight</span>
               <span class="metric-value">{{ weightDisplay }}</span>
             </div>
@@ -119,7 +119,7 @@
         <!-- 4. Heart rate trend -->
         <div class="card">
           <div class="hr-head">
-            <p class="section-kicker">Heart rate · last 14 days</p>
+            <p class="nt-kicker">Heart rate · last 14 days</p>
             <div v-if="restingHrAvg !== null" class="hr-avg">
               <span class="hr-avg-label">Avg resting</span>
               <span class="hr-avg-val">{{ restingHrAvgDisplay }}</span>
@@ -137,7 +137,7 @@
 
         <!-- 5. Readiness history -->
         <div class="card">
-          <p class="section-kicker">Readiness · last 14 days</p>
+          <p class="nt-kicker">Readiness · last 14 days</p>
           <trend-chart
             v-if="readinessHistory.length >= 2"
             :pts="readinessTrendPts"
@@ -148,7 +148,7 @@
 
         <!-- 7. Recent activities -->
         <section v-if="activities.length">
-          <p class="section-kicker">Activity · last 7 days</p>
+          <p class="nt-kicker">Activity · last 7 days</p>
           <div class="activity-list">
             <div v-for="(act, i) in activities" :key="i" class="activity-card">
               <div class="activity-icon">{{ workoutInitial(act.workoutType) }}</div>
@@ -167,7 +167,7 @@
 
         <!-- 8. Sync -->
         <div class="card sync-card">
-          <p class="section-kicker">Health Connect</p>
+          <p class="nt-kicker">Health Connect</p>
           <div v-if="exerciseAccessMissing" class="hc-warning">
             <p class="hc-warning__title">Exercise permission missing</p>
             <p class="hc-warning__body">
@@ -522,34 +522,10 @@ const handleConnect = async () => {
   padding: 18px;
 }
 
-.section-kicker {
-  margin: 0 0 12px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
 /* ── Metric tiles ── */
 .metric-grid { display: grid; gap: 10px; }
 .metric-grid--2col { grid-template-columns: repeat(2, 1fr); }
 .metric-grid--3col { grid-template-columns: repeat(3, 1fr); }
-
-.card-metric {
-  background: rgba(var(--nt-ink), 0.05);
-  border-radius: 10px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.metric-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.5);
-}
 
 .metric-value { font-size: 0.95rem; font-weight: 600; color: var(--nt-fg); }
 
@@ -692,7 +668,7 @@ const handleConnect = async () => {
   margin-bottom: 12px;
 }
 
-.hr-head .section-kicker { margin: 0; }
+.hr-head .nt-kicker { margin: 0; }
 
 .hr-avg { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 
