@@ -19,7 +19,7 @@
             </div>
           </div>
 
-          <div class="hero-body">
+          <div :key="selectedDate ?? 'none'" class="hero-body nt-enter">
             <div class="sleep-ring" :style="{ '--score': sleepScoreRatio }">
               <svg viewBox="0 0 120 120" class="sleep-ring__svg" aria-hidden="true">
                 <circle class="sleep-ring__track" cx="60" cy="60" r="46" />
