@@ -12,12 +12,24 @@
         <ion-card class="vitals-card">
           <div class="card-topline">
             <p class="nt-kicker">Heart rate variability</p>
+            <div class="range-selector">
+              <button 
+                v-for="r in ([30, 90] as const)"
+                :key="r" 
+                class="range-btn" 
+                :class="{ active: hrvRange === r }" 
+                @click="hrvRange = r"
+              >
+                {{ r }}d
+              </button>
+            </div>
           </div>
           <trend-chart
             v-if="hrvPts.length"
             :pts="hrvPts"
             unit="ms"
             :show-avg="true"
+            :size="hrvRange === 90 ? 'md' : 'sm'"
             aria-label="Heart rate variability history"
           />
           <p v-else class="nt-empty">No HRV yet — sync after wearing the watch overnight</p>
@@ -30,6 +42,10 @@
             <div class="nt-metric-tile">
               <span>7-day mean</span>
               <strong>{{ meanDisplay(hrvPts.slice(-7)) }}</strong>
+            </div>
+            <div class="nt-metric-tile">
+              <span>Min/Max</span>
+              <strong>{{ rangeDisplay(hrvSeries) }}</strong>
             </div>
             <div class="nt-metric-tile nt-metric-tile--full">
               <span>Recovery signal</span>
@@ -64,6 +80,10 @@
             <div class="nt-metric-tile">
               <span>7-day mean</span>
               <strong>{{ meanDisplay(spo2Pts.slice(-7)) }}</strong>
+            </div>
+            <div class="nt-metric-tile">
+              <span>30-day mean</span>
+              <strong>{{ spo2MeanDisplay }}</strong>
             </div>
           </div>
           <p v-if="spo2Pts.length" class="vitals-note">Spot checks from the watch — gaps are normal</p>
@@ -131,7 +151,8 @@ const toPts = (rows: DailyPoint[], days: number) =>
     value: r.value,
   }));
 
-const hrvPts = computed(() => toPts(hrvSeries.value, 30));
+const hrvRange = ref<30 | 90>(30);
+const hrvPts = computed(() => toPts(hrvSeries.value, hrvRange.value));
 const spo2Pts = computed(() => toPts(spo2Series.value, 30));
 const vo2Pts = computed(() => toPts(vo2Series.value, 90));
 
@@ -141,6 +162,15 @@ const meanDisplay = (pts: { value: number }[]) => {
   return `${Math.round(mean * 10) / 10} ms`;
 };
 
+// Range display across the given series (raw DailyPoints, not chart pts).
+const rangeDisplay = (rows: DailyPoint[]) => {
+  if (rows.length < 2) return '—';
+  const values = rows.map((r) => r.value);
+  const min = Math.round(Math.min(...values));
+  const max = Math.round(Math.max(...values));
+  return `${min}–${max} ms`;
+};
+
 const hrvLatestDisplay = computed(() => {
   const last = hrvSeries.value[hrvSeries.value.length - 1];
   return last ? `${Math.round(last.value)} ms` : '—';
@@ -148,6 +178,12 @@ const hrvLatestDisplay = computed(() => {
 const spo2LatestDisplay = computed(() => {
   const last = spo2Series.value[spo2Series.value.length - 1];
   return last ? `${Math.round(last.value)}%` : '—';
+});
+const spo2MeanDisplay = computed(() => {
+  const pts = spo2Pts.value;
+  if (!pts.length) return '—';
+  const mean = pts.reduce((s, p) => s + p.value, 0) / pts.length;
+  return `${Math.round(mean)}%`;
 });
 const vo2LatestDisplay = computed(() => {
   const last = vo2Series.value[vo2Series.value.length - 1];
@@ -208,7 +244,31 @@ onIonViewWillEnter(loadData);
 }
 
 .card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 14px;
+}
+
+.range-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.range-btn {
+  background: transparent;
+  border: 1px solid var(--nt-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--nt-radius-sm, 6px);
+  color: var(--nt-text-dim);
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  transition: color var(--nt-ease-std, ease) 140ms, border-color var(--nt-ease-std, ease) 140ms;
+}
+
+.range-btn.active {
+  color: var(--nt-fg);
+  border-color: var(--nt-fg);
 }
 
 .vitals-tiles {

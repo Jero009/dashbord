@@ -59,8 +59,8 @@ describe('calculateReadinessScore', () => {
     // unlike a missing reading (6/7 base), so null − atBaseline ≠ null − below.
     const s = calculateReadinessScore({ ...fullInputs, hrv: 52 });
     const noHrv = calculateReadinessScore({ ...fullInputs, hrv: null });
-    expect(s).toBe(88); // base 24 + components 64.4 + hrv 0 → round(88.4)
-    expect(noHrv).toBe(85); // base 20.57 + components 64.4 → round(84.97)
+    expect(s).toBe(85); // 7/8 base (21) + components 64.4 + hrv 0 → round(85.4)
+    expect(noHrv).toBe(82); // 6/8 base (18) + components 64.4 → round(82.4)
   });
 
   it('HRV +20% vs baseline → 10 pts (cap of the ratio rule)', () => {
@@ -73,8 +73,8 @@ describe('calculateReadinessScore', () => {
     // A reading without a baseline is real data: 0 component pts, 7/7 base floor.
     const s = calculateReadinessScore({ ...fullInputs, hrvBaseline: null });
     const noHrv = calculateReadinessScore({ ...fullInputs, hrv: null });
-    expect(s).toBe(88);
-    expect(noHrv).toBe(85);
+    expect(s).toBe(85); // 7/8 base with spo2 absent
+    expect(noHrv).toBe(82);
   });
 
   it('steps never affect the score', () => {

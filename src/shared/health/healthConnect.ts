@@ -144,7 +144,7 @@ export function calculateReadinessScore(inputs: ReadinessInputs) {
   const scoredInputs = [
     inputs.sleepHours, inputs.sleepEfficiency, inputs.sleepScore,
     inputs.restingHr, inputs.sleepHeartRate, inputs.respiratoryRate,
-    inputs.hrv, inputs.spo2,
+    inputs.hrv, inputs.spo2 ?? null,
   ];
   const presentCount = scoredInputs.filter((v) => v !== null).length;
   const base = 24 * (presentCount / scoredInputs.length);
