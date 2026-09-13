@@ -194,7 +194,7 @@
 <script setup lang="ts">
 import { IonCard, IonContent, IonHeader, IonIcon, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { chevronUpOutline } from 'ionicons/icons';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
@@ -606,7 +606,7 @@ const loadAll = async () => {
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
   ]);
-  await new Promise(r => setTimeout(r, 60));
+  await nextTick();
   buildBatteryChart();
 };
 
