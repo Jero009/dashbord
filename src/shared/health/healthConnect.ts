@@ -11,7 +11,8 @@ import {
   toChronologicalHrSamples,
   calculateSpo2Score,
 } from '@/shared/health/sleepJoin';
-import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore } from '@/shared/db/app_db';
+import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore, getLatestHealthMetric, getHealthMetricDailySeries } from '@/shared/db/app_db';
+import { updateSleepWidget } from '@/shared/widget/widgetBridge';
 import { averageByDay } from '@/shared/health/vitalsAggregate';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 import { clamp } from '@/shared/utils/math';
@@ -938,11 +939,41 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     });
   }
 
+  await pushSleepWidgetSnapshot();
+
   return {
     available: true,
     granted: true,
     synced,
   };
+}
+
+/**
+ * Push the latest sleep night to the home-screen widget. Called once at the
+ * end of every sync so the widget updates from the same data the app shows.
+ * Best-effort: a widget failure never fails the sync.
+ */
+async function pushSleepWidgetSnapshot(): Promise<void> {
+  try {
+    const [latest, series] = await Promise.all([
+      getLatestHealthMetric('sleep_score'),
+      getHealthMetricDailySeries('sleep_score', 14),
+    ]);
+    if (!latest) return;
+
+    const latestDate = String(latest.date);
+    const idx = series.findIndex((p) => p.date === latestDate);
+    const weekAgo = idx >= 7 ? series[idx - 7].value : null;
+
+    await updateSleepWidget({
+      date: latestDate,
+      sleepScore: Number(latest.value),
+      sleepHours: null,
+      delta7d: weekAgo !== null ? Number(latest.value) - weekAgo : null,
+    });
+  } catch (error) {
+    console.error('Sleep widget snapshot failed:', error);
+  }
 }
 
 export interface BatteryDrains {

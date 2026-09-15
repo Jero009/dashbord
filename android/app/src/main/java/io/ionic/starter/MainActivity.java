@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(RestTimerAudio.class);
         registerPlugin(GlyphMatrix.class);
+        registerPlugin(DashboardWidgetPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
