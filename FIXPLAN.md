@@ -9,7 +9,7 @@ Rules for every batch:
 ## v3.7 additions (post-audit feature work)
 - Hermes integration tab: DONE — `/hermes` (`src/features/hermes/`), recovery verdict + signal tiles + insights + latest Hermes messages; top bar extended to six tabs.
 - Hermes→phone push channel: DONE — `src/shared/hermes/hermesPush.ts`, contract in `docs/HERMES_PUSH.md` (app polls the existing health receiver, type=hermes; delivers via the shared LocalNotifications pipeline).
-- Homescreen widgets: deferred (out of scope for v3.7).
+- Homescreen widgets: STARTED — v3.9 ships the sleep-score widget (RemoteViews + DashboardWidget snapshot plugin, `SleepWidgetProvider`); more widgets deferred.
 
 ## Batch 1 — HIGH bugs (code)
 - #2 Ghost rest-timer ding: DONE (v3.7) — shared `useRestTimer` composable (`src/shared/composables/useRestTimer.ts`); WorkoutPage owns start/adjust/skip/expiry and schedules the AlarmManager-backed ding at timer start; GymHomePage + HomePage read the same canonical localStorage record and clear via `cancelRestTimer()` (cancels the OS ding + countdown notification everywhere); unit-tested in `tests/unit/useRestTimer.spec.ts`.
