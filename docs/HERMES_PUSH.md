@@ -11,14 +11,18 @@ The receiver stores arbitrary `type` / `data` pairs via its webhook and serves
 them back via `/latest`:
 
 ```
-POST /webhook?type=hermes        (or header X-Api-Key / ?key=…, as already used)
-     body: JSON array (or object) of messages:
-     [{ "title": "Recovery briefing", "body": "ACWR is 1.6 — take it easy today." }]
+POST /webhook        (header X-Api-Key or ?key=…, as already used)
+     body: JSON object keyed by type — values must be arrays:
+     { "hermes": [{ "title": "Recovery briefing", "body": "ACWR is 1.6 — take it easy today." }] }
 
 GET  /latest?type=hermes&limit=5
      → [{ "received_at": 1789476376, "data": [{ "title": …, "body": … }] }, …]
        (received_at: unix seconds; newest first)
 ```
+
+**Gotcha:** the receiver ignores any `?type=` on POST — it keys rows off the
+top-level JSON key. A bare array body (or `?type=hermes` with an array body)
+gets stored as type `data` and silently never reaches the app.
 
 The only convention on top of the receiver: **type `hermes`, rows shaped
 `{ title: string, body: string }`.** Rows missing both fields are ignored.

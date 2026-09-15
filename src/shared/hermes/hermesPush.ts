@@ -4,7 +4,9 @@
 // health-receiver service on the docker VM — the same collector the phone's
 // health data flows through — and the app polls them down:
 //
-//   Hermes  →  POST {receiver}/webhook?type=hermes?key=…   body: [{ title, body }]
+//   Hermes  →  POST {receiver}/webhook  body: {"hermes": [{ title, body }]}
+//              (the receiver keys rows off the top-level JSON key — a bare
+//              array body lands as type "data" and never reaches the app)
 //   Phone   →  GET  {receiver}/latest?type=hermes&limit=N
 //              → [{ received_at: unix-s, data: [{ title, body }] }, …]
 //
@@ -20,7 +22,10 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 
 // Base URL lives here, not in settings — it is infrastructure, not a user
 // preference. Override via localStorage('hermesReceiverBase') for testing.
-const DEFAULT_RECEIVER_BASE = 'http://100.95.172.88:8901'
+// Must be HTTPS: Android 9+ blocks cleartext HTTP from the WebView/native
+// HTTP stack, so the receiver's plain-HTTP :8901 listener is unreachable from
+// the app — the Tailscale HTTPS sidecar proxies the same service.
+const DEFAULT_RECEIVER_BASE = 'https://docker.tail85cdcd.ts.net:9443'
 const SEEN_KEY = 'hermesPush.seenAt'
 const ID_HERMES_BASE = 100 // below ID range collisions: rest timer=20, weight=1, sleep=3
 
