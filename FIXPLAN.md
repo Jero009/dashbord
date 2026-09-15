@@ -6,8 +6,13 @@ Rules for every batch:
 - No new dependencies. Smallest correct diff. Delete over add.
 - After each batch: `npm run build` + `npm run test:unit --run` must pass.
 
+## v3.7 additions (post-audit feature work)
+- Hermes integration tab: DONE — `/hermes` (`src/features/hermes/`), recovery verdict + signal tiles + insights + latest Hermes messages; top bar extended to six tabs.
+- Hermes→phone push channel: DONE — `src/shared/hermes/hermesPush.ts`, contract in `docs/HERMES_PUSH.md` (app polls the existing health receiver, type=hermes; delivers via the shared LocalNotifications pipeline).
+- Homescreen widgets: deferred (out of scope for v3.7).
+
 ## Batch 1 — HIGH bugs (code)
-- #2 Ghost rest-timer ding: extract shared `useRestTimer` composable; all timer readers/writers route through it; on-screen expiry cancels the OS notification (cancelRestTimerDing/clearRestNotification) everywhere the timer is cleared.
+- #2 Ghost rest-timer ding: DONE (v3.7) — shared `useRestTimer` composable (`src/shared/composables/useRestTimer.ts`); WorkoutPage owns start/adjust/skip/expiry and schedules the AlarmManager-backed ding at timer start; GymHomePage + HomePage read the same canonical localStorage record and clear via `cancelRestTimer()` (cancels the OS ding + countdown notification everywhere); unit-tested in `tests/unit/useRestTimer.spec.ts`.
 - #3 Session-RPE alert hang: `promptSessionRpe` (WorkoutPage.vue) must resolve on backdrop dismiss (onDidDismiss) so endWorkout always runs.
 - #4 Unbounded queries: add LIMIT/date-bounds to getWorkouts, getBodyLogs, getWorkoutsByName; replace full-month transaction fetch with SUM aggregate in FinancePage; add ion-infinite-scroll to HistoryPage.
 - #5 Divergent recovery systems: migrate Home recovery chip onto trainingLoad.ts/overtraining.ts/recoveryBaseline.ts; delete legacy computeTrainingLoad from insights.ts.
