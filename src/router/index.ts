@@ -5,6 +5,7 @@ import { financeRoutes } from '@/features/finance/routes';
 import { healthRoutes } from '@/features/health/routes';
 import { settingsRoutes } from '@/features/settings/routes';
 import { analyticsRoutes } from '@/features/analytics/routes';
+import { hermesRoutes } from '@/features/hermes/routes';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,6 +20,7 @@ const router = createRouter({
     ...gymRoutes,
     ...settingsRoutes,
     ...analyticsRoutes,
+    ...hermesRoutes,
   ],
 })
 

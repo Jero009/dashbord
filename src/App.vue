@@ -12,6 +12,7 @@ import type { AnimationBuilder } from '@ionic/vue';
 import HealthConnectAutoSync from '@/shared/health/HealthConnectAutoSync.vue';
 import { Capacitor } from '@capacitor/core'
 import { scheduleWeightReminder, scheduleSleepReminder } from '@/shared/utils/notifications'
+import { startHermesPolling } from '@/shared/hermes/hermesPush'
 import { getNotifWeightEnabled, getNotifWeightTime, getNotifSleepEnabled, getNotifSleepTime } from '@/shared/utils/userSettings'
 import { initDB } from '@/shared/db/app_db'
 
@@ -26,6 +27,10 @@ onMounted(async () => {
     if (getNotifWeightEnabled()) await scheduleWeightReminder(getNotifWeightTime())
 
     if (getNotifSleepEnabled()) await scheduleSleepReminder(getNotifSleepTime())
+
+    // Hermes push channel: poll the health receiver for new agent messages and
+    // surface them as OS notifications (no-op on web/dev).
+    startHermesPolling()
   } catch (error) {
     console.error('Startup notification scheduling failed:', error)
   }
