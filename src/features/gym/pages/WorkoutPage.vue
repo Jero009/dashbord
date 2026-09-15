@@ -500,9 +500,19 @@ import { normalizeDateInput, formatTime as formatElapsed } from '@/shared/utils/
 import TimerDial from '@/features/gym/components/TimerDial.vue';
 import WorkoutSummaryModal from '@/features/gym/components/WorkoutSummaryModal.vue';
 import { hapticHeavy, hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
-import { duckAndDing, showRestNotification, clearRestNotification } from '@/shared/utils/restTimerAudio';
+import { duckAndDing, showRestNotification } from '@/shared/utils/restTimerAudio';
 import { glyphRestDraw, glyphRestEnd, glyphRestStop, glyphRestRelease } from '@/shared/utils/restTimerGlyph';
-import { scheduleRestTimerDing, cancelRestTimerDing } from '@/shared/utils/notifications';
+import { scheduleRestTimerDing } from '@/shared/utils/notifications';
+import {
+  restTimerState,
+  REST_TIMER_KEY,
+  startRestTimer,
+  cancelRestTimer,
+  resumeRestTimer,
+  readRestTimerRecord,
+  restTimerRemaining,
+  stopRestInterval,
+} from '@/shared/composables/useRestTimer';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 import { formatRestTime } from '@/shared/utils/timeFormat';
@@ -619,7 +629,7 @@ const handleSetChange = async (exercise: any, set: any, event?: CustomEvent) => 
   hapticMedium();
 
   if (isChecked) {
-    startRestTimer(Number(exercise.rest_seconds) || 60, exercise.name || '');
+    startRestTimerWithDing(Number(exercise.rest_seconds) || 60, exercise.name || '');
   } else if (restTimer.value.isActive) {
     // Unchecking a set means the rest isn't warranted anymore — stop the timer
     // and cancel the scheduled OS ding instead of letting it ding for nothing.
@@ -701,9 +711,7 @@ const saveWorkout = async () => {
           const durationStr = formatTime();
           if (interval) clearInterval(interval);
           interval = null;
-          if (restInterval) clearInterval(restInterval);
-          restInterval = null;
-          clearTimerState();
+          cancelRestTimer();
 
           const completedSets = workoutExercises.value.flatMap(ex =>
             (ex.sets || []).filter((s: any) => s.completed)
@@ -747,9 +755,7 @@ const handleCancelWorkout = async () => {
           await cancelWorkout(workoutId);
           if (interval) clearInterval(interval);
           interval = null;
-          if (restInterval) clearInterval(restInterval);
-          restInterval = null;
-          clearTimerState();
+          cancelRestTimer();
           router.push('/tabs/Home');
         }
       }
@@ -945,27 +951,20 @@ const formatTime = () => formatElapsed(seconds.value);
 
 // Rest Timer
 //
-// Persistence model: the canonical state is the wall-clock `endTime`, stored in
-// localStorage (NOT sessionStorage — sessionStorage is wiped when the app process
-// is killed, so the timer would vanish on a full close). The JS interval is only
-// for the on-screen countdown; "done" is derived from endTime so the timer stays
-// correct even if the interval is throttled while backgrounded.
+// The shared state, persistence and cancel paths live in
+// `shared/composables/useRestTimer.ts` (all timer readers/writers — this page,
+// GymHomePage and HomePage — route through it). This page OWNS the timer: start
+// (from set completion), +/−15 s adjust, skip, and foreground expiry. The
+// composable's `cancelRestTimer()` clears storage AND the OS ding + countdown
+// notification everywhere.
 //
 // Ding model: when the set is completed we schedule an OS-level local
-// notification at endTime, so the ding fires reliably even if the app is fully
-// closed (a JS timer/Web Audio beep can't run then). If the app is still alive
-// when the timer ends, we instead play the in-app ducked ding (lowers other
-// audio, dings, restores it) and cancel the pending notification so there's no
-// double ding.
-const REST_TIMER_KEY = 'restTimer';
-const restTimer = ref({
-  isActive: false,
-  remaining: 0,
-  total: 0
-});
-let restInterval: any = null;
-let restEndTime = 0;
-let restExerciseName = '';
+// notification (AlarmManager-backed exact alarm) at endTime, so the ding fires
+// reliably even if the app is fully closed (a JS timer/Web Audio beep can't run
+// then). If the app is still alive when the timer ends, we instead play the
+// in-app ducked ding (lowers other audio, dings, restores it) and cancel the
+// pending notification so there's no double ding.
+const restTimer = restTimerState;
 let restAppStateListener: { remove: () => Promise<void> } | null = null;
 let restVisibilityHandler: (() => void) | null = null;
 let restListenersTornDown = false;
@@ -1002,43 +1001,28 @@ const playRestDing = async () => {
   if (!played) playBeep();
 };
 
-const persistTimerState = () => {
-  localStorage.setItem(REST_TIMER_KEY, JSON.stringify({
-    endTime: restEndTime,
-    exerciseName: restExerciseName,
-    total: restTimer.value.total,
-  }));
-};
-
-const clearTimerState = () => {
-  localStorage.removeItem(REST_TIMER_KEY);
-  void cancelRestTimerDing();
-  void clearRestNotification();
-};
-
 // (Re)post the ongoing countdown notification for the time remaining.
 const showRestCountdown = () => {
-  const remainingMs = Math.max(0, restEndTime - Date.now());
-  if (remainingMs > 0) void showRestNotification(restExerciseName, remainingMs);
+  const record = readRestTimerRecord();
+  const remainingMs = record ? Math.max(0, record.endTime - Date.now()) : 0;
+  if (remainingMs > 0) void showRestNotification(record!.exerciseName, remainingMs);
 };
 
-const tickRestTimer = () => {
-  // A stale tick can fire just after resyncRestTimer() already finalized the timer
-  // on resume — bail so we don't ding/flash twice.
-  if (!restTimer.value.isActive) { stopRestTimer(); return; }
-  const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
-  restTimer.value.remaining = remaining;
-  if (remaining <= 0) {
-    // App is alive at the end: ding in-app and cancel the scheduled notification
-    // so it doesn't also fire.
-    void playRestDing();
-    void glyphRestEnd(); // flash the back matrix, then hand it back
-    stopRestTimer();
-    clearTimerState();
-  } else {
-    // Draw the depleting dial on the Nothing back matrix (no-op off-device).
-    void glyphRestDraw(remaining / (restTimer.value.total || remaining));
-  }
+// Foreground expiry: the OS notification covers the closed/backgrounded case,
+// so when the app is alive at zero we ding in-app and cancel the scheduled
+// notification so it doesn't also fire.
+const onRestExpired = () => {
+  void playRestDing();
+  void glyphRestEnd(); // flash the back matrix, then hand it back
+};
+
+const startRestTimerWithDing = (seconds: number, exerciseName = '') => {
+  hapticLight();
+  stopRestInterval();
+  startRestTimer({ seconds, exerciseName, onExpire: onRestExpired });
+  void scheduleRestTimerDing(new Date(readRestTimerRecord()!.endTime));
+  showRestCountdown();
+  void glyphRestDraw(1); // full dial on the Nothing back matrix
 };
 
 // Both the on-screen countdown and the Glyph dial are driven by the JS interval,
@@ -1049,79 +1033,32 @@ const tickRestTimer = () => {
 // (the OS notification already dinged — don't double-ding), else resume ticking.
 const resyncRestTimer = () => {
   if (!restTimer.value.isActive) return;
-  const remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
+  const record = readRestTimerRecord();
+  const remaining = record ? restTimerRemaining(record) : 0;
   if (remaining <= 0) {
     restTimer.value.remaining = 0;
-    stopRestTimer();
+    stopRestInterval();
     void glyphRestStop(); // hand the matrix back (no stale end-flash)
-    clearTimerState();
+    cancelRestTimer();
   } else {
     restTimer.value.remaining = remaining;
-    // The interval may have been killed while backgrounded — make sure it runs.
-    if (!restInterval) restInterval = setInterval(tickRestTimer, 1000);
+    resumeRestTimer(undefined, onRestExpired);
     void glyphRestDraw(remaining / (restTimer.value.total || remaining));
   }
 };
 
 const restoreTimerState = () => {
-  const saved = localStorage.getItem(REST_TIMER_KEY);
-  if (!saved) return;
-
-  try {
-    const { endTime, exerciseName, total } = JSON.parse(saved);
-    if (!Number.isFinite(endTime)) { clearTimerState(); return; }
-    restExerciseName = typeof exerciseName === 'string' ? exerciseName : '';
-    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-    if (remaining > 0) {
-      // Resume the running timer; the notification scheduled before the app was
-      // closed is still queued in the OS, so don't re-ding here.
-      resumeRestTimer(endTime, remaining, typeof total === 'number' ? total : undefined);
-    } else {
-      // It already finished while the app was closed — the notification dinged.
-      clearTimerState();
-    }
-  } catch {
-    clearTimerState();
+  // Canonical record already re-armed by startRestTimer/composable; a record
+  // that expired while the app was closed just clears (the OS ding fired).
+  const record = readRestTimerRecord();
+  if (!record) return;
+  const remaining = restTimerRemaining(record);
+  if (remaining > 0) {
+    resumeRestTimer(undefined, onRestExpired);
+    void glyphRestDraw(remaining / (restTimer.value.total || remaining));
+  } else {
+    cancelRestTimer();
   }
-};
-
-// Resume a timer from a known endTime without re-scheduling (used on restore).
-const resumeRestTimer = (endTime: number, remaining: number, total?: number) => {
-  stopRestTimer();
-  restEndTime = endTime;
-  restTimer.value.total = total ?? remaining;
-  restTimer.value.remaining = remaining;
-  restTimer.value.isActive = true;
-  showRestCountdown();
-  void glyphRestDraw(remaining / (restTimer.value.total || remaining));
-  restInterval = setInterval(tickRestTimer, 1000);
-};
-
-const startRestTimer = (seconds: number, exerciseName = '') => {
-  hapticLight();
-  // Stop any existing timer before starting a new one
-  stopRestTimer();
-
-  // Validate seconds input
-  const restSeconds = Math.max(1, Number(seconds) || 60);
-
-  restEndTime = Date.now() + restSeconds * 1000;
-  restExerciseName = exerciseName;
-  restTimer.value.total = restSeconds;
-  restTimer.value.remaining = restSeconds;
-  restTimer.value.isActive = true;
-  persistTimerState();
-  void scheduleRestTimerDing(new Date(restEndTime));
-  showRestCountdown();
-  void glyphRestDraw(1); // full dial on the Nothing back matrix
-
-  restInterval = setInterval(tickRestTimer, 1000);
-};
-
-const stopRestTimer = () => {
-  if (restInterval) clearInterval(restInterval);
-  restInterval = null;
-  restTimer.value.isActive = false;
 };
 
 const onSkipRestTimer = (event: Event) => {
@@ -1133,20 +1070,26 @@ const onSkipRestTimer = (event: Event) => {
   restTimer.value.total = 0;
   restTimer.value.isActive = false;
 
-  stopRestTimer();
-  clearTimerState();
+  stopRestInterval();
+  cancelRestTimer();
   void glyphRestStop(); // blank the back matrix
 };
 
 const adjustRestTimer = (seconds: number) => {
   if (!restTimer.value.isActive) return;
-  restEndTime = Math.max(Date.now(), restEndTime + seconds * 1000);
-  restTimer.value.remaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
-  persistTimerState();
+  const record = readRestTimerRecord();
+  if (!record) return;
+  const newEndTime = Math.max(Date.now(), record.endTime + seconds * 1000);
+  const remaining = restTimerRemaining({ ...record, endTime: newEndTime });
+  localStorage.setItem(
+    REST_TIMER_KEY,
+    JSON.stringify({ endTime: newEndTime, exerciseName: record.exerciseName, total: record.total }),
+  );
+  restTimer.value.remaining = remaining;
   // Reschedule the OS ding and refresh the countdown notification.
-  void scheduleRestTimerDing(new Date(restEndTime));
+  void scheduleRestTimerDing(new Date(newEndTime));
   showRestCountdown();
-  void glyphRestDraw(restTimer.value.remaining / (restTimer.value.total || restTimer.value.remaining));
+  void glyphRestDraw(remaining / (record.total || remaining));
 };
 
 const restProgress = computed(() => {
@@ -1207,10 +1150,7 @@ onUnmounted(() => {
     clearInterval(interval);
     interval = null;
   }
-  if (restInterval) {
-    clearInterval(restInterval);
-    restInterval = null;
-  }
+  stopRestInterval();
   if (audioContext) {
     void audioContext.close().catch(() => undefined);
     audioContext = null;

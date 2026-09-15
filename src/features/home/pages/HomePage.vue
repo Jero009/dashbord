@@ -207,8 +207,7 @@ import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, pa
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
-import { clearRestNotification } from '@/shared/utils/restTimerAudio';
-import { cancelRestTimerDing } from '@/shared/utils/notifications';
+import { restTimerState, cancelRestTimer, resumeRestTimer } from '@/shared/composables/useRestTimer';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
@@ -271,45 +270,20 @@ const activeWorkout = ref(false);
 const workoutStartTime = ref<string | null>(null);
 const workoutSeconds = ref(0);
 let workoutInterval: ReturnType<typeof setInterval> | null = null;
-const activeRestTimer = ref({ isActive: false, remaining: 0, total: 0 });
-let restInterval: ReturnType<typeof setInterval> | null = null;
+// Countdown display is the shared rest-timer state (WorkoutPage owns start/stop;
+// this page reads the same canonical localStorage record and can clear it).
+const activeRestTimer = restTimerState;
 
 const clearWorkoutTimer = () => {
   if (workoutInterval) { clearInterval(workoutInterval); workoutInterval = null; }
 };
-const clearRestTimer = (removeStorage = false) => {
-  if (restInterval) { clearInterval(restInterval); restInterval = null; }
-  activeRestTimer.value = { isActive: false, remaining: 0, total: 0 };
-  if (removeStorage) {
-    localStorage.removeItem('restTimer');
-    // Timer visibly ended/cleared on this page — cancel the OS ding that
-    // WorkoutPage scheduled, so it doesn't fire for a rest that's already over.
-    void cancelRestTimerDing();
-    void clearRestNotification();
-  }
+const clearRestTimer = () => {
+  cancelRestTimer();
 };
-
 const formatWorkoutTimer = () => formatElapsed(workoutSeconds.value);
 
 const restoreRestTimer = () => {
-  // Read from localStorage to match WorkoutPage's canonical rest-timer storage
-  // (sessionStorage is wiped on process kill and nothing ever writes the key there).
-  const saved = localStorage.getItem('restTimer');
-  if (!saved) return;
-  try {
-    const parsed = JSON.parse(saved);
-    const endTime = Number(parsed.endTime);
-    if (!Number.isFinite(endTime)) return;
-    const total = Math.max(1, Number(parsed.total) || Number(parsed.remaining) || 0);
-    activeRestTimer.value = { isActive: true, remaining: 0, total };
-    const tick = () => {
-      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-      activeRestTimer.value.remaining = remaining;
-      if (remaining <= 0) { clearRestTimer(true); }
-    };
-    tick();
-    if (activeRestTimer.value.isActive) restInterval = setInterval(tick, 1000);
-  } catch { /* ignore */ }
+  resumeRestTimer(undefined, () => clearRestTimer());
 };
 
 const loadActiveWorkout = async () => {

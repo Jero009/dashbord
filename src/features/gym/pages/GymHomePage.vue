@@ -147,16 +147,12 @@ import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, fo
 import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
-import { clearRestNotification } from '@/shared/utils/restTimerAudio';
-import { cancelRestTimerDing } from '@/shared/utils/notifications';
+import { restTimerState, cancelRestTimer, resumeRestTimer } from '@/shared/composables/useRestTimer';
 
 const activeWorkout = ref(false);
-const activeRestTimer = ref({
-  isActive: false,
-  remaining: 0,
-  total: 0
-});
-let activeRestInterval: ReturnType<typeof setInterval> | null = null;
+// Countdown display is the shared rest-timer state (WorkoutPage owns start/stop;
+// this page reads the same canonical localStorage record and can clear it).
+const activeRestTimer = restTimerState;
 
 // routing
 const router = useRouter();
@@ -234,71 +230,14 @@ const openExercise = (exerciseId: number) => {
 };
 
 
-const clearActiveRestTimer = (removeStorage = false) => {
-  if (activeRestInterval) {
-    clearInterval(activeRestInterval);
-    activeRestInterval = null;
-  }
-
-  activeRestTimer.value.isActive = false;
-  activeRestTimer.value.remaining = 0;
-  activeRestTimer.value.total = 0;
-
-  if (removeStorage) {
-    localStorage.removeItem('restTimer');
-    // Timer visibly ended/cleared on this page — cancel the OS ding that
-    // WorkoutPage scheduled, so it doesn't fire for a rest that's already over.
-    void cancelRestTimerDing();
-    void clearRestNotification();
-  }
+// Clear via the shared composable: wipes canonical storage and cancels the OS
+// ding + countdown notification in one place.
+const clearActiveRestTimer = () => {
+  cancelRestTimer();
 };
 
 const restoreActiveRestTimer = () => {
-  // Canonical rest-timer state lives in localStorage (written by WorkoutPage so it
-  // survives a full process kill); sessionStorage is wiped on kill and nothing
-  // writes the key there, so reading it left this countdown permanently blank.
-  const savedTimer = localStorage.getItem('restTimer');
-
-  if (!savedTimer) {
-    clearActiveRestTimer();
-    return;
-  }
-
-  try {
-    const parsedTimer = JSON.parse(savedTimer);
-    const total = Math.max(1, Number(parsedTimer.total) || Number(parsedTimer.remaining) || 0);
-    const endTime = Number(parsedTimer.endTime);
-
-    if (!Number.isFinite(endTime)) {
-      clearActiveRestTimer(true);
-      return;
-    }
-
-    if (activeRestInterval) {
-      clearInterval(activeRestInterval);
-      activeRestInterval = null;
-    }
-
-    activeRestTimer.value.isActive = true;
-    activeRestTimer.value.total = total;
-
-    const syncRestTimer = () => {
-      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-      activeRestTimer.value.remaining = remaining;
-
-      if (remaining <= 0) {
-        clearActiveRestTimer(true);
-      }
-    };
-
-    syncRestTimer();
-
-    if (activeRestTimer.value.isActive) {
-      activeRestInterval = setInterval(syncRestTimer, 1000);
-    }
-  } catch {
-    clearActiveRestTimer(true);
-  }
+  resumeRestTimer(undefined, () => clearActiveRestTimer());
 };
 
 
@@ -320,7 +259,7 @@ const loadActiveWorkout = async () => {
     startTime.value = null;
     seconds.value = 0;
     activeWorkout.value = false;
-    clearActiveRestTimer(true);
+    clearActiveRestTimer();
     clearTimer();
   }
 };
