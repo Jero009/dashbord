@@ -63,9 +63,14 @@
             </ion-select>
           </div>
           <template v-if="historyData.length > 0">
-            <div class="chart-frame chart-frame--tall">
-              <canvas ref="strengthChartRef"></canvas>
-            </div>
+            <TrendChart
+              :pts="strengthPts"
+              unit="kg"
+              size="md"
+              show-range
+              :overlay-pts="est1rmPts"
+              aria-label="Top set weight with estimated 1RM"
+            />
             <div class="chart-legend">
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--red"></i>Top set</span>
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Est. 1RM</span>
@@ -77,8 +82,19 @@
         <!-- Volume chart -->
         <div v-if="historyData.length > 0" class="card">
           <p class="nt-kicker">Volume per session</p>
+          <div class="chart-readout">
+            <span class="chart-readout__date">{{ volumeReadoutDate }}</span>
+            <span class="chart-readout__value">volume <strong>{{ volumeReadoutValue }}</strong></span>
+          </div>
           <div class="chart-frame chart-frame--short">
-            <canvas ref="volumeChartRef"></canvas>
+            <canvas
+              ref="volumeChartRef"
+              class="scrub-canvas"
+              @pointerdown.prevent="volumeScrub.onDown"
+              @pointermove="volumeScrub.onMove"
+              @pointerup="volumeScrub.onUp"
+              @pointercancel="volumeScrub.onUp"
+            ></canvas>
           </div>
         </div>
 
@@ -152,21 +168,20 @@ import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
 import { getExerciseById, getExercisePR, getExerciseHistory, getExerciseSessions } from '@/shared/db/app_db';
 import {
   Chart,
-  LineController, LineElement, PointElement,
   BarController, BarElement,
-  LinearScale, CategoryScale, Filler, Tooltip
+  LinearScale, CategoryScale, Tooltip
 } from 'chart.js';
-import { chartLineDataset, chartDimDataset, chartBarDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import { chartBarDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import TrendChart from '@/shared/components/TrendChart.vue';
+import { useChartScrub } from '@/shared/composables/useChartScrub';
 import { formatWorkoutDate } from '@/shared/utils/timeFormat';
 import { hapticSelect } from '@/shared/utils/haptics';
 import type { ExercisePR, ExerciseHistoryPoint, ExerciseSession } from '@/features/gym/types/models';
 
-Chart.register(LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip);
+Chart.register(BarController, BarElement, LinearScale, CategoryScale, Tooltip);
 
 const route = useRoute();
-const strengthChartRef = ref<HTMLCanvasElement>();
 const volumeChartRef = ref<HTMLCanvasElement>();
-let strengthChart: Chart | null = null;
 let volumeChart: Chart | null = null;
 
 const exerciseId = computed(() => Number(route.params.id));
@@ -262,70 +277,43 @@ const chartLabels = () =>
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   });
 
+// ── Strength chart (TrendChart) ──────────────────────────────────────────────
+// Top set line + est. 1RM overlay. Pure presentation — the Epley formula and
+// the history pipeline are unchanged.
+
+const strengthPts = computed(() =>
+  historyData.value.map((item, i) => ({
+    label: chartLabels()[i] ?? '',
+    value: Number(item.weight) || 0,
+  }))
+);
+
+const est1rmPts = computed(() =>
+  historyData.value.map((item) => ({
+    label: '',
+    value: estOneRepMax(item),
+  }))
+);
+
 const renderCharts = () => {
-  renderStrengthChart();
   renderVolumeChart();
 };
 
-const renderStrengthChart = () => {
-  // .update() instead of destroy()+new keeps animations/tooltip state stable.
-  if (strengthChart && strengthChartRef.value && historyData.value.length > 0) {
-    strengthChart.data.labels = chartLabels();
-    strengthChart.data.datasets[0].data = historyData.value.map((item) => Number(item.weight) || 0);
-    strengthChart.data.datasets[1].data = historyData.value.map((item) => estOneRepMax(item));
-    strengthChart.update();
-    return;
-  }
-  if (strengthChart) { strengthChart.destroy(); strengthChart = null; }
-  if (!strengthChartRef.value || historyData.value.length === 0) return;
-  const ctx = strengthChartRef.value.getContext('2d');
-  if (!ctx) return;
-
-  strengthChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: chartLabels(),
-      datasets: [
-        {
-          ...chartLineDataset,
-          label: 'Top set',
-          data: historyData.value.map((item) => Number(item.weight) || 0),
-        },
-        {
-          ...chartDimDataset,
-          label: 'Est. 1RM',
-          data: historyData.value.map((item) => estOneRepMax(item)),
-        },
-      ]
-    },
-    options: {
-      responsive: true,
-      animation: false,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...chartTooltip,
-          callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y} kg` },
-        },
-      },
-      scales: {
-        y: {
-          ticks: { ...chartTicks, callback: (v) => `${v} kg` },
-          grid: chartGrid,
-        },
-        x: {
-          ticks: { ...chartTicks, maxTicksLimit: 6 },
-          grid: chartGrid,
-        }
-      }
-    }
-  });
-};
+// Scrub: selected index + readout row (defaults to the latest session).
+const volumeScrub = useChartScrub({
+  chart: () => volumeChart,
+  count: () => historyData.value.length,
+});
+const volumeActiveIdx = computed(() =>
+  volumeScrub.selectedIdx.value ?? Math.max(historyData.value.length - 1, 0));
+const volumeReadoutDate = computed(() => chartLabels()[volumeActiveIdx.value] ?? '');
+const volumeReadoutValue = computed(() => {
+  const item = historyData.value[volumeActiveIdx.value];
+  return item ? formatVolume(Number(item.volume) || 0) : '—';
+});
 
 const renderVolumeChart = () => {
-  // .update() instead of destroy()+new (see renderStrengthChart).
+  // .update() instead of destroy()+new keeps animations/tooltip state stable.
   if (volumeChart && volumeChartRef.value && historyData.value.length > 0) {
     volumeChart.data.labels = chartLabels();
     volumeChart.data.datasets[0].data = historyData.value.map((item) => Number(item.volume) || 0);
@@ -353,11 +341,12 @@ const renderVolumeChart = () => {
       responsive: true,
       animation: false,
       maintainAspectRatio: false,
+      layout: { padding: { top: 8 } },
       plugins: {
         legend: { display: false },
         tooltip: {
           ...chartTooltip,
-          callbacks: { label: (c) => ` ${Math.round(c.parsed.y ?? 0)} kg` },
+          enabled: false, // readout row replaces the floating tooltip
         },
       },
       scales: {
@@ -371,7 +360,8 @@ const renderVolumeChart = () => {
           grid: { display: false },
         }
       }
-    }
+    },
+    plugins: [volumeScrub.scrubPlugin],
   });
 };
 
@@ -385,7 +375,6 @@ onIonViewWillEnter(() => {
 });
 
 onUnmounted(() => {
-  if (strengthChart) { strengthChart.destroy(); strengthChart = null; }
   if (volumeChart) { volumeChart.destroy(); volumeChart = null; }
 });
 </script>
@@ -561,6 +550,31 @@ onUnmounted(() => {
   margin: 0;
   color: rgba(var(--nt-ink), 0.6);
   font-size: 0.9rem;
+}
+
+/* Chart.js scrub readout (mirrors TrendChart's readout row) */
+.chart-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  color: var(--nt-text-dim);
+}
+
+.chart-readout__date {
+  min-width: 3.5em;
+  letter-spacing: 0.08em;
+}
+
+.chart-readout__value strong {
+  color: var(--nt-fg);
+  font-weight: 600;
+}
+
+.scrub-canvas {
+  touch-action: pan-y; /* horizontal drag scrubs, vertical still scrolls */
+  cursor: crosshair;
 }
 
 @media (min-width: 600px) {

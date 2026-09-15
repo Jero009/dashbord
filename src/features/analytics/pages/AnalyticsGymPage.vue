@@ -49,8 +49,19 @@
         <div class="card">
           <p class="nt-kicker">Volume by muscle group</p>
           <template v-if="muscleVolume.length > 0">
+            <div class="chart-readout">
+              <span class="chart-readout__date">{{ muscleReadoutLabel }}</span>
+              <span class="chart-readout__value">volume <strong>{{ muscleReadoutValue }}</strong></span>
+            </div>
             <div class="chart-frame chart-frame--tall">
-              <canvas ref="muscleChartRef"></canvas>
+              <canvas
+                ref="muscleChartRef"
+                class="scrub-canvas"
+                @pointerdown.prevent="muscleScrub.onDown"
+                @pointermove="muscleScrub.onMove"
+                @pointerup="muscleScrub.onUp"
+                @pointercancel="muscleScrub.onUp"
+              ></canvas>
             </div>
           </template>
           <p v-else class="nt-empty">No sets</p>
@@ -78,11 +89,14 @@
         <!-- Weekly tonnage trend -->
         <div class="card">
           <p class="nt-kicker">Weekly tonnage</p>
-          <template v-if="weeklyTonnage.length > 0">
-            <div class="chart-frame chart-frame--short">
-              <canvas ref="tonnageChartRef"></canvas>
-            </div>
-          </template>
+          <TrendChart
+            v-if="weeklyTonnage.length > 0"
+            :pts="tonnagePts"
+            unit="kg"
+            size="md"
+            show-range
+            aria-label="Weekly tonnage trend"
+          />
           <p v-else class="nt-empty">Not enough history</p>
         </div>
 
@@ -136,15 +150,16 @@ import {
 import type { MuscleVolume, WeeklyTonnage, WorkoutDayCount } from '@/shared/db/app_db';
 import {
   Chart,
-  LineController, LineElement, PointElement,
   BarController, BarElement,
-  LinearScale, CategoryScale, Filler, Tooltip
+  LinearScale, CategoryScale, Tooltip
 } from 'chart.js';
-import { chartLineDataset, chartBarDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import { chartBarDataset, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import TrendChart from '@/shared/components/TrendChart.vue';
+import { useChartScrub } from '@/shared/composables/useChartScrub';
 import { hapticSelect } from '@/shared/utils/haptics';
 import { localDateISO } from '@/shared/utils/timeFormat';
 
-Chart.register(LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip);
+Chart.register(BarController, BarElement, LinearScale, CategoryScale, Tooltip);
 
 const HEATMAP_WEEKS = 10;
 
@@ -154,9 +169,7 @@ const weeklyTonnage = ref<WeeklyTonnage[]>([]);
 const frequency = ref<WorkoutDayCount[]>([]);
 
 const muscleChartRef = ref<HTMLCanvasElement>();
-const tonnageChartRef = ref<HTMLCanvasElement>();
 let muscleChart: Chart | null = null;
-let tonnageChart: Chart | null = null;
 
 const totalVolume = computed(() =>
   muscleVolume.value.reduce((acc, m) => acc + (Number(m.volume) || 0), 0)
@@ -258,8 +271,22 @@ const loadAll = async () => {
 
 const renderCharts = () => {
   renderMuscleChart();
-  renderTonnageChart();
 };
+
+// Scrub: selected row + readout (defaults to the top muscle group).
+const muscleScrub = useChartScrub({
+  chart: () => muscleChart,
+  count: () => muscleVolume.value.length,
+  vertical: true, // indexAxis 'y' — bars stack top→bottom, so scrub vertically
+});
+const muscleActiveIdx = computed(() =>
+  muscleScrub.selectedIdx.value ?? Math.max(muscleVolume.value.length - 1, 0));
+const muscleReadoutLabel = computed(() =>
+  muscleVolume.value[muscleActiveIdx.value]?.muscle_group ?? '');
+const muscleReadoutValue = computed(() => {
+  const m = muscleVolume.value[muscleActiveIdx.value];
+  return m ? `${formatVolume(Number(m.volume) || 0)} kg` : '—';
+});
 
 const renderMuscleChart = () => {
   // .update() instead of destroy()+new: keeps tooltip state, canvas sizing and
@@ -292,11 +319,11 @@ const renderMuscleChart = () => {
       responsive: true,
       animation: false,
       maintainAspectRatio: false,
+      layout: { padding: { right: 8 } },
       plugins: {
         legend: { display: false },
         tooltip: {
-          ...chartTooltip,
-          callbacks: { label: (c) => ` ${Math.round((c.parsed.x as number) ?? 0)} kg` },
+          enabled: false, // readout row replaces the floating tooltip
         },
       },
       scales: {
@@ -310,60 +337,18 @@ const renderMuscleChart = () => {
           grid: { display: false },
         }
       }
-    }
-  });
-};
-
-const renderTonnageChart = () => {
-  // .update() instead of destroy()+new (see renderMuscleChart).
-  if (tonnageChart && tonnageChartRef.value && weeklyTonnage.value.length > 0) {
-    tonnageChart.data.labels = weeklyTonnage.value.map((w) => weekLabel(w.week));
-    tonnageChart.data.datasets[0].data = weeklyTonnage.value.map((w) => Number(w.volume) || 0);
-    tonnageChart.update();
-    return;
-  }
-  if (tonnageChart) { tonnageChart.destroy(); tonnageChart = null; }
-  if (!tonnageChartRef.value || weeklyTonnage.value.length === 0) return;
-  const ctx = tonnageChartRef.value.getContext('2d');
-  if (!ctx) return;
-
-  tonnageChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: weeklyTonnage.value.map((w) => weekLabel(w.week)),
-      datasets: [
-        {
-          ...chartLineDataset,
-          label: 'Volume',
-          data: weeklyTonnage.value.map((w) => Number(w.volume) || 0),
-        },
-      ]
     },
-    options: {
-      responsive: true,
-      animation: false,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...chartTooltip,
-          callbacks: { label: (c) => ` ${Math.round(c.parsed.y ?? 0)} kg` },
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { ...chartTicks, callback: (v) => `${v}` },
-          grid: chartGrid,
-        },
-        x: {
-          ticks: { ...chartTicks, maxTicksLimit: 8 },
-          grid: { display: false },
-        }
-      }
-    }
+    plugins: [muscleScrub.scrubPlugin],
   });
 };
+
+// Weekly tonnage → TrendChart pts
+const tonnagePts = computed(() =>
+  weeklyTonnage.value.map((w) => ({
+    label: weekLabel(w.week),
+    value: Number(w.volume) || 0,
+  }))
+);
 
 // "2026-23" -> "W23"
 const weekLabel = (week: string) => {
@@ -382,7 +367,6 @@ onIonViewWillEnter(() => {
 
 onUnmounted(() => {
   if (muscleChart) { muscleChart.destroy(); muscleChart = null; }
-  if (tonnageChart) { tonnageChart.destroy(); tonnageChart = null; }
 });
 </script>
 
@@ -529,6 +513,32 @@ onUnmounted(() => {
   font-size: 0.65rem;
   color: rgba(var(--nt-ink), 0.35);
   margin: 0 4px;
+}
+
+/* Chart.js scrub readout (mirrors TrendChart's readout row) */
+.chart-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  color: var(--nt-text-dim);
+}
+
+.chart-readout__date {
+  min-width: 3.5em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-readout__value strong {
+  color: var(--nt-fg);
+  font-weight: 600;
+}
+
+.scrub-canvas {
+  touch-action: pan-y; /* horizontal drag scrubs, vertical still scrolls */
+  cursor: crosshair;
 }
 
 @media (min-width: 600px) {

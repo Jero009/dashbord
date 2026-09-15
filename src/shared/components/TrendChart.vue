@@ -29,6 +29,7 @@
       <line v-if="goalY !== null" class="trend__goal" x1="0" :y1="goalY" :x2="w" :y2="goalY" />
       <line v-if="avgY !== null" class="trend__avg" x1="0" :y1="avgY" :x2="w" :y2="avgY" />
       <path v-if="lineD" class="trend__line" :d="lineD" />
+      <path v-if="overlayD" class="trend__overlay" :d="overlayD" />
       <line v-if="scrubIdx !== null && xs[scrubIdx] !== undefined" class="trend__hairline"
             :x1="xs[scrubIdx]" y1="0" :x2="xs[scrubIdx]" :y2="svgH" />
       <circle v-if="scrubIdx !== null" class="trend__dot trend__dot--bg" :cx="xs[scrubIdx]" :cy="ys[scrubIdx]" r="6" />
@@ -61,6 +62,8 @@ import { hapticLight } from '@/shared/utils/haptics';
 
 const props = withDefaults(defineProps<{
   pts: { label: string; value: number; pos?: number }[];
+  /** Secondary dim line sharing pts' x-axis and the same y-extent (e.g. est. 1RM over top set). */
+  overlayPts?: { label: string; value: number }[];
   unit?: string;
   size?: 'xs' | 'sm' | 'md';
   goal?: number | null;
@@ -69,6 +72,7 @@ const props = withDefaults(defineProps<{
   format?: (v: number) => string;
   ariaLabel?: string;
 }>(), {
+  overlayPts: () => [],
   unit: '',
   size: 'sm',
   goal: null,
@@ -113,6 +117,7 @@ const xs = computed(() => {
 
 const extent = computed(() => {
   const vals = props.pts.map((p) => p.value);
+  if (props.overlayPts) vals.push(...props.overlayPts.map((p) => p.value));
   if (props.goal !== null && props.goal !== undefined) vals.push(props.goal);
   return padExtent(vals);
 });
@@ -132,6 +137,17 @@ const yFor = (v: number) => {
 
 const lineD = computed(() =>
   props.pts.length >= 2 ? smoothPath(xs.value, ys.value) : '');
+
+// Secondary dim line — same x grid as pts (index 1:1), plotted through the
+// shared extent so the two series are directly comparable.
+const overlayD = computed(() => {
+  if (!props.overlayPts || props.overlayPts.length < 2) return '';
+  const [min, max] = extent.value;
+  const usableH = Math.max(svgH - 2 * PAD_Y, 1);
+  const oys = props.overlayPts.map((p) =>
+    PAD_Y + (1 - (p.value - min) / (max - min)) * usableH);
+  return smoothPath(xs.value, oys);
+});
 const areaD = computed(() => {
   const n = props.pts.length;
   if (n < 2) return '';
@@ -290,6 +306,15 @@ const onUp = () => { scrubbing = false; };
   stroke: rgba(var(--nt-ink), 0.35);
   stroke-width: 1;
   stroke-dasharray: 3 3;
+}
+
+.trend__overlay {
+  fill: none;
+  stroke: rgba(var(--nt-ink), 0.45);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .trend__hairline {

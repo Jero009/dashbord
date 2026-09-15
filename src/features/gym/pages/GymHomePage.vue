@@ -125,9 +125,7 @@
               </ion-select-option>
             </ion-select>
           </div>
-          <div class="chart-frame">
-            <canvas ref="chartRef"></canvas>
-          </div>
+          <TrendChart :pts="tonnagePts" unit="kg" size="md" aria-label="Tonnage per workout" />
         </ion-card>
       </div>
     </ion-content>
@@ -141,10 +139,9 @@ import { getTemplates, startWorkoutFromTemplate, getActiveWorkout, getLatestWork
 import { ref, onUnmounted,computed,watch } from 'vue';
 import { barbellSharp } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
-import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler } from 'chart.js';
+import TrendChart from '@/shared/components/TrendChart.vue';
 import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/types/models';
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed, formatRestTime } from '@/shared/utils/timeFormat';
-import { chartLineDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
 import { restTimerState, cancelRestTimer, resumeRestTimer } from '@/shared/composables/useRestTimer';
@@ -283,12 +280,7 @@ const clearTimer = () => {
 
 const formatWorkoutTimer = () => formatElapsed(seconds.value);
 
-// chart 
-
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler);
-
-const chartRef = ref<HTMLCanvasElement | null>(null);
-let chart: Chart | null = null;
+// chart — TrendChart (v3.x scrub standard)
 
 const workouts = ref<WorkoutHistory[]>([]);
 const selectedTemplateId = ref<number | undefined>(undefined);
@@ -304,76 +296,20 @@ const chartData = computed(() => {
     .reverse(); // oldest → newest
 });
 
-// draw chart with debouncing
-let renderChartTimeout: ReturnType<typeof setTimeout> | null = null;
+const tonnagePts = computed(() =>
+  chartData.value.map(d => ({ label: d.date, value: d.kg }))
+);
 
-const renderChart = () => {
-  if (!chartRef.value) return;
-
-  if (chart) {
-    chart.destroy(); // prevent duplicates
-  }
-
-  chart = new Chart(chartRef.value, {
-    type: 'line',
-    data: {
-      labels: chartData.value.map(d => d.date),
-      datasets: [
-        {
-          ...chartLineDataset,
-          label: 'Total KG',
-          data: chartData.value.map(d => d.kg),
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      animation: false,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...chartTooltip,
-          callbacks: { label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(0)} kg` }
-        }
-      },
-      scales: {
-        x: {
-          ticks: { ...chartTicks, maxTicksLimit: 6 },
-          grid: chartGrid,
-        },
-        y: {
-          min: 0,
-          ticks: { ...chartTicks, callback: (v) => `${v} kg` },
-          grid: chartGrid,
-        },
-      }
-    }
-  });
-};
-
-// Debounced chart rendering to prevent excessive redraws
-const debouncedRenderChart = () => {
-  if (renderChartTimeout) {
-    clearTimeout(renderChartTimeout);
-  }
-  renderChartTimeout = setTimeout(() => {
-    renderChart();
-    renderChartTimeout = null;
-  }, 300);
-};
-
-// Watch for template selection and update chart data
+// Watch for template selection and update chart data (TrendChart is reactive
+// to tonnagePts — no manual render needed)
 watch(selectedTemplateId, async (templateId) => {
   if (templateId === undefined || templateId === null) {
     workouts.value = [];
-    debouncedRenderChart();
     return;
   }
   const numId = Number(templateId);
   const data = await getWorkoutsByName(numId);
   workouts.value = data || [];
-  debouncedRenderChart();
 });
 
 // Load all templates and latest workout on mount
@@ -417,16 +353,13 @@ onIonViewWillEnter(async () => {
   await loadLatestWorkout();
   await loadWeeklyData();
   await loadRecentPRs();
-  renderChart();
 });
 
 
 
 onUnmounted(() => {
-  if (renderChartTimeout) { clearTimeout(renderChartTimeout); renderChartTimeout = null; }
   clearTimer();
   clearActiveRestTimer();
-  if (chart) chart.destroy();
 });
 
 </script>
@@ -740,19 +673,6 @@ ion-content.home-content {
 
 .graph-card__header ion-select {
   min-width: 132px;
-}
-
-.chart-frame {
-  margin-top: 16px;
-  height: 240px;
-  background: rgba(var(--nt-ink), 0.05);
-  border-radius: 10px;
-  padding: 10px 6px 6px;
-}
-
-.chart-frame canvas {
-  width: 100% !important;
-  height: 100% !important;
 }
 
 @media (min-width: 760px) {
