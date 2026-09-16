@@ -105,8 +105,16 @@
     <FrameLayout
         android:id="@+id/stages_bar_host"
         android:layout_width="match_parent"
-        android:layout_height="10dp"
-        android:layout_marginTop="10dp" />
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp">
+
+        <ImageView
+            android:id="@+id/stages_bar_bitmap"
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:scaleType="fitXY"
+            android:contentDescription="sleep stages timeline" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

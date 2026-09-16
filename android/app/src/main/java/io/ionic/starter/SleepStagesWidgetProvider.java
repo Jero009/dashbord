@@ -6,6 +6,10 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.widget.RemoteViews;
 
 import org.json.JSONArray;
@@ -14,8 +18,10 @@ import org.json.JSONObject;
 /**
  * Sleep Stages widget: summary row (total / deep / REM) plus a horizontal
  * stacked timeline of the night's stages, colored with the app-wide fixed
- * stage palette. Data comes from the shared snapshot pushed by
- * DashboardWidgetPlugin (stageSegments JSON array).
+ * stage palette. The timeline is pre-rendered to a bitmap at sync time —
+ * nested RemoteViews layouts are fragile across launchers, bitmaps are not.
+ * Data comes from the shared snapshot pushed by DashboardWidgetPlugin
+ * (stageSegments JSON array with fractional weights).
  */
 public class SleepStagesWidgetProvider extends AppWidgetProvider {
 
@@ -43,12 +49,16 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
         String total = "--";
         String deep = "--";
         String rem = "--";
+        String bedtime = "--";
+        String waketime = "--";
         JSONArray segments = null;
         try {
             JSONObject data = new JSONObject(json);
             total = data.optString("sleepDuration", "--");
             deep = data.optString("deepDuration", "--");
             rem = data.optString("remDuration", "--");
+            bedtime = data.optString("bedtime", "--");
+            waketime = data.optString("waketime", "--");
             segments = data.optJSONArray("stageSegments");
         } catch (Exception ignored) {
             // Malformed snapshot → keep the fallback strings
@@ -57,44 +67,12 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.stages_total, total);
         views.setTextViewText(R.id.stages_deep, deep);
         views.setTextViewText(R.id.stages_rem, rem);
-        views.setTextViewText(R.id.stages_bedtime, "--");
-        views.setTextViewText(R.id.stages_waketime, "--");
+        views.setTextViewText(R.id.stages_bedtime, bedtime);
+        views.setTextViewText(R.id.stages_waketime, waketime);
 
-        // Timeline: a horizontal LinearLayout of weighted colored views.
-        // Rebuild it by removing children via a fresh layout index — RemoteViews
-        // supports removeAllViews + addView with an outermost-layout stub.
-        RemoteViews timeline = new RemoteViews(context.getPackageName(), R.layout.widget_stages_timeline);
-        if (segments != null && segments.length() > 0) {
-            try {
-                JSONObject first = segments.getJSONObject(0);
-                JSONObject last = segments.getJSONObject(segments.length() - 1);
-                views.setTextViewText(R.id.stages_bedtime, compactTime(first.optString("start", "")));
-                views.setTextViewText(R.id.stages_waketime, compactTime(last.optString("end", "")));
-                for (int i = 0; i < segments.length() && i < 60; i++) {
-                    JSONObject seg = segments.getJSONObject(i);
-                    float weight = (float) Math.max(seg.optDouble("weight", 0), 0.001);
-                    RemoteViews cell = new RemoteViews(context.getPackageName(), R.layout.widget_stage_cell);
-                    // cell background color via setColorFilter isn't available; use setInt backgroundResource-free:
-                    // RemoteViews can setInt(viewId, "setBackgroundColor", color) on any View.
-                    cell.setInt(R.id.stage_cell, "setBackgroundColor", stageColor(seg.optString("stage", "")));
-                    // weight must be set in the layout params — RemoteViews can't change LayoutParams,
-                    // so width is expressed via the cell's layout_weight in a horizontal container:
-                    // we encode weight through the cell layout's fixed attribute; per-cell variation uses
-                    // setFloat on the parent's weightSum pattern is not supported either. Workaround:
-                    // use setViewLayoutWidth when available (API 31+), else equal cells.
-                    try {
-                        cell.setViewLayoutWidth(R.id.stage_cell, weight, android.view.Gravity.START);
-                    } catch (NoSuchMethodError legacy) {
-                        // API < 31: equal-width cells (acceptable degradation)
-                    }
-                    timeline.addView(R.id.stages_bar, cell);
-                }
-            } catch (Exception ignored) {
-                // Bad segment data → leave the empty bar
-            }
-        }
-        views.removeAllViews(R.id.stages_bar_host);
-        views.addView(R.id.stages_bar_host, timeline);
+        int density = (int) context.getResources().getDisplayMetrics().density;
+        views.setImageViewBitmap(R.id.stages_bar_bitmap,
+                drawTimeline(segments, 400 * density, 14 * density, density));
 
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (intent != null) {
@@ -104,6 +82,48 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
             views.setOnClickPendingIntent(R.id.stages_root, pi);
         }
         return views;
+    }
+
+    /** Stacked stage timeline as a bitmap; 1dp gaps between segments, 2dp corner radius. */
+    static Bitmap drawTimeline(JSONArray segments, int width, int height, int density) {
+        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+        canvas.drawColor(0x00000000, android.graphics.PorterDuff.Mode.CLEAR);
+
+        float gapPx = density;
+        if (segments == null || segments.length() == 0) {
+            Paint dim = new Paint(Paint.ANTI_ALIAS_FLAG);
+            dim.setColor(0x1AFFFFFF);
+            canvas.drawRoundRect(new RectF(0, 0, width, height), 2f * density, 2f * density, dim);
+            return bmp;
+        }
+
+        float totalWeight = 0;
+        for (int i = 0; i < segments.length(); i++) {
+            try {
+                totalWeight += Math.max((float) segments.getJSONObject(i).optDouble("weight", 0), 0);
+            } catch (Exception ignored) {}
+        }
+        if (totalWeight <= 0) return bmp;
+
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        float x = 0;
+        int n = segments.length();
+        for (int i = 0; i < n; i++) {
+            try {
+                JSONObject seg = segments.getJSONObject(i);
+                float weight = Math.max((float) seg.optDouble("weight", 0), 0);
+                float segWidth = (weight / totalWeight) * width;
+                // Reserve gap after every segment except the last
+                float drawWidth = (i == n - 1) ? (width - x) : Math.max(segWidth - gapPx, 1f);
+                if (drawWidth <= 0) continue;
+                paint.setColor(stageColor(seg.optString("stage", "")));
+                canvas.drawRoundRect(new RectF(x, 0, x + drawWidth, height),
+                        2f * density, 2f * density, paint);
+                x += segWidth;
+            } catch (Exception ignored) {}
+        }
+        return bmp;
     }
 
     static int stageColor(String stage) {
@@ -116,11 +136,5 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
             case "inBed": return COLOR_INBED;
             default: return COLOR_LIGHT;
         }
-    }
-
-    /** "2026-09-16T23:14:00" → "23:14" */
-    static String compactTime(String iso) {
-        if (iso == null || iso.length() < 16 || !iso.contains("T")) return "--";
-        return iso.substring(11, 16);
     }
 }
