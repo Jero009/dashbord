@@ -14,13 +14,18 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 /**
  * Receives widget state snapshots from JS and persists them so the
- * AppWidgetProvider can render without the web app running.
+ * AppWidgetProviders can render without the web app running.
  * Transport only — all data shaping happens in TypeScript.
  */
 @CapacitorPlugin(name = "DashboardWidget")
 public class DashboardWidgetPlugin extends Plugin {
 
     static final String PREFS = "WidgetData";
+    private static final Class<?>[] WIDGET_PROVIDERS = {
+            SleepWidgetProvider.class,
+            SleepBatteryWidgetProvider.class,
+            SleepStagesWidgetProvider.class,
+    };
 
     @PluginMethod
     public void sync(PluginCall call) {
@@ -34,13 +39,16 @@ public class DashboardWidgetPlugin extends Plugin {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         prefs.edit().putString("snapshot", data).apply();
 
-        int[] ids = AppWidgetManager.getInstance(context)
-                .getAppWidgetIds(new ComponentName(context, SleepWidgetProvider.class));
-        if (ids.length > 0) {
-            Intent intent = new Intent(context, SleepWidgetProvider.class);
-            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-            context.sendBroadcast(intent);
+        for (Class<?> provider : WIDGET_PROVIDERS) {
+            int[] ids = AppWidgetManager.getInstance(context)
+                    .getAppWidgetIds(new ComponentName(context, provider));
+            if (ids.length > 0) {
+                @SuppressWarnings("unchecked")
+                Intent intent = new Intent(context, (Class<? extends android.content.BroadcastReceiver>) provider);
+                intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+                intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+                context.sendBroadcast(intent);
+            }
         }
 
         call.resolve();

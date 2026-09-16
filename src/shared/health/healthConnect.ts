@@ -11,7 +11,7 @@ import {
   toChronologicalHrSamples,
   calculateSpo2Score,
 } from '@/shared/health/sleepJoin';
-import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore, getLatestHealthMetric, getHealthMetricDailySeries } from '@/shared/db/app_db';
+import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore, getLatestHealthMetric, getHealthMetricDailySeries } from '@/shared/db/app_db';
 import { updateSleepWidget } from '@/shared/widget/widgetBridge';
 import { averageByDay } from '@/shared/health/vitalsAggregate';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
@@ -955,21 +955,44 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
  */
 async function pushSleepWidgetSnapshot(): Promise<void> {
   try {
-    const [latest, series] = await Promise.all([
+    const [latest, series, session] = await Promise.all([
       getLatestHealthMetric('sleep_score'),
       getHealthMetricDailySeries('sleep_score', 14),
+      getLatestHealthMetric('sleep_duration').then((m) => (m ? getSleepSession(String(m.date)) : null)),
     ]);
     if (!latest) return;
 
     const latestDate = String(latest.date);
-    const idx = series.findIndex((p) => p.date === latestDate);
+    const idx = series.findIndex((p: { date: string; value: number }) => p.date === latestDate);
     const weekAgo = idx >= 7 ? series[idx - 7].value : null;
+
+    const stageSegments = session?.stage_timeline_json
+      ? (() => {
+          try {
+            const raw = JSON.parse(session.stage_timeline_json) as { s: string; start: string; end: string; dur: number }[];
+            const totalMin = Math.max(1, raw.reduce((sum, seg) => sum + seg.dur, 0));
+            return raw.map((seg) => ({
+              stage: seg.s,
+              start: seg.start,
+              end: seg.end,
+              weight: seg.dur / totalMin,
+            }));
+          } catch {
+            return null;
+          }
+        })()
+      : null;
 
     await updateSleepWidget({
       date: latestDate,
       sleepScore: Number(latest.value),
-      sleepHours: null,
+      sleepHours: session ? session.time_asleep_hours : null,
       delta7d: weekAgo !== null ? Number(latest.value) - weekAgo : null,
+      bedtime: session ? session.bedtime : null,
+      waketime: session ? session.waketime : null,
+      deepMinutes: session ? session.stage_deep_min : null,
+      remMinutes: session ? session.stage_rem_min : null,
+      stageSegments,
     });
   } catch (error) {
     console.error('Sleep widget snapshot failed:', error);
