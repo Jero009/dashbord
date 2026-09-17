@@ -2,6 +2,7 @@ import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { localDateISO } from '@/shared/utils/timeFormat';
+import { nextDueAfter } from '@/shared/db/financeDates';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
 let db: SQLiteDBConnection | null = null;
@@ -306,7 +307,8 @@ async function doInitDB() {
     category TEXT DEFAULT 'other',
     amount REAL DEFAULT 0,
     type TEXT DEFAULT 'expense',
-    notes TEXT
+    notes TEXT,
+    account_id INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS finance_budget (
@@ -853,6 +855,14 @@ async function doInitDB() {
     }
     if (!subColNames.has('last_posted_date')) {
       await db.execute(`ALTER TABLE finance_subscription ADD COLUMN last_posted_date TEXT;`);
+    }
+
+    // finance_transaction.account_id — links manual/imported transactions to
+    // an account so cash flow can reconcile against balances (T10).
+    const txColumns = await db.query(`PRAGMA table_info("finance_transaction");`);
+    const txColNames = new Set((txColumns.values || []).map((c: any) => String(c.name)));
+    if (!txColNames.has('account_id')) {
+      await db.execute(`ALTER TABLE finance_transaction ADD COLUMN account_id INTEGER;`);
     }
 
     const invColumns = await db.query(`PRAGMA table_info("finance_investment");`);
@@ -2076,6 +2086,7 @@ export async function deleteFinanceAccount(id: number) {
   try {
     await db.run(`UPDATE finance_investment SET account_id = NULL WHERE account_id = ?;`, [id]);
     await db.run(`UPDATE finance_subscription SET account_id = NULL WHERE account_id = ?;`, [id]);
+    await db.run(`UPDATE finance_transaction SET account_id = NULL WHERE account_id = ?;`, [id]);
     await db.run(`DELETE FROM finance_account WHERE id = ?;`, [id]);
   } catch (error) {
     console.error('Error deleting finance account:', error);
@@ -2247,13 +2258,9 @@ export async function deleteFinanceSubscription(id: number) {
 }
 
 // Advance a subscription's next_due_date by one cadence step. Returns the new date.
-function nextDueAfter(dateKey: string, cadence: string): string {
-  const d = new Date(`${dateKey}T00:00:00`);
-  if (cadence === 'yearly') d.setFullYear(d.getFullYear() + 1);
-  else if (cadence === 'weekly') d.setDate(d.getDate() + 7);
-  else d.setMonth(d.getMonth() + 1);
-  return d.toISOString().slice(0, 10);
-}
+// Implementation lives in the pure module financeDates.ts (unit-tested);
+// re-exported here for existing import sites.
+export { nextDueAfter };
 
 /**
  * Post due unpaid subscription periods as finance_transaction rows.
@@ -2264,14 +2271,17 @@ function nextDueAfter(dateKey: string, cadence: string): string {
  * Returns the number of transactions created. Safe to call on every app
  * start / finance page entry.
  */
-export async function postDueSubscriptions(today = new Date().toISOString().slice(0, 10)): Promise<number> {
+export async function postDueSubscriptions(today?: string): Promise<number> {
   if (!db) return 0;
+  // Local calendar date — never toISOString().slice(0,10), which is the UTC
+  // date and lags a day behind Slovenia in the evening (due-date drift bug).
+  const todayKey = today ?? localDateISO(new Date());
   const subs = await getFinanceSubscriptions();
   let posted = 0;
   for (const s of subs) {
     if (s.status !== 'active') continue;
     const due = s.next_due_date ? String(s.next_due_date) : null;
-    if (!due || due > today) continue;
+    if (!due || due > todayKey) continue;
     // Already posted this exact period → roll forward without posting again.
     if (s.last_posted_date === due) {
       await db.run(`UPDATE finance_subscription SET next_due_date = ? WHERE id = ?;`, [nextDueAfter(due, String(s.cadence)), s.id]);
@@ -2284,7 +2294,8 @@ export async function postDueSubscriptions(today = new Date().toISOString().slic
       'subscriptions',
       Number(s.amount) || 0,
       type,
-      'Auto-posted subscription'
+      'Auto-posted subscription',
+      s.account_id != null ? Number(s.account_id) : undefined
     );
     await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDueAfter(due, String(s.cadence)), s.id]);
     posted++;
@@ -2299,14 +2310,15 @@ export async function addFinanceTransaction(
   category: string,
   amount: number,
   type: 'expense' | 'income',
-  notes?: string
+  notes?: string,
+  accountId?: number
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_transaction (date, name, category, amount, type, notes)
-       VALUES (?, ?, ?, ?, ?, ?);`,
-      [date, name, category, amount, type, notes ?? null]
+      `INSERT INTO finance_transaction (date, name, category, amount, type, notes, account_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [date, name, category, amount, type, notes ?? null, accountId ?? null]
     );
     return result;
   } catch (error) {
@@ -2322,15 +2334,16 @@ export async function updateFinanceTransaction(
   category: string,
   amount: number,
   type: 'expense' | 'income',
-  notes?: string
+  notes?: string,
+  accountId?: number | null
 ) {
   if (!db) return;
   try {
     await db.run(
       `UPDATE finance_transaction
-       SET date = ?, name = ?, category = ?, amount = ?, type = ?, notes = ?
+       SET date = ?, name = ?, category = ?, amount = ?, type = ?, notes = ?, account_id = ?
        WHERE id = ?;`,
-      [date, name, category, amount, type, notes ?? null, id]
+      [date, name, category, amount, type, notes ?? null, accountId ?? null, id]
     );
   } catch (error) {
     console.error('Error updating finance transaction:', error);
@@ -2365,10 +2378,14 @@ export async function getFinanceMonthTotals(monthKey: string) {
 }
 
 // Most recent transactions across all months (for the overview feed).
+// LEFT JOIN carries the linked account name so rows can show "from <account>".
 export async function getRecentFinanceTransactions(limit = 5) {
   if (!db) return [];
   const result = await db.query(
-    `SELECT * FROM finance_transaction ORDER BY date DESC, id DESC LIMIT ?;`,
+    `SELECT t.*, a.name AS account_name
+     FROM finance_transaction t
+     LEFT JOIN finance_account a ON a.id = t.account_id
+     ORDER BY t.date DESC, t.id DESC LIMIT ?;`,
     [limit]
   );
   return result.values || [];

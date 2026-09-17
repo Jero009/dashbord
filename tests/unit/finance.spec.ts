@@ -15,7 +15,9 @@ import {
   savingsRate,
   categoryLabel,
   dueLabel,
+  daysFromToday,
 } from '@/features/finance/finance';
+import { nextDueAfter } from '@/shared/db/financeDates';
 
 const accounts = [
   { type: 'cash', balance: 500 },
@@ -139,5 +141,63 @@ describe('labels', () => {
     expect(dueLabel(iso(5))).toBe('in 5d');
     expect(dueLabel(iso(-3))).toBe('3d ago');
     expect(dueLabel(null)).toBe('TBD');
+  });
+});
+
+describe('nextDueAfter (local-date safe cadence roll)', () => {
+  test('monthly roll keeps day-of-month', () => {
+    expect(nextDueAfter('2026-09-17', 'monthly')).toBe('2026-10-17');
+  });
+
+  test('yearly and weekly', () => {
+    expect(nextDueAfter('2026-09-17', 'yearly')).toBe('2027-09-17');
+    expect(nextDueAfter('2026-09-17', 'weekly')).toBe('2026-09-24');
+  });
+
+  test('quarterly advances three months', () => {
+    expect(nextDueAfter('2026-09-17', 'quarterly')).toBe('2026-12-17');
+    expect(nextDueAfter('2026-11-15', 'quarterly')).toBe('2027-02-15');
+  });
+
+  test('month-end clamp: Jan 31 + monthly = Feb 28 (non-leap 2027)', () => {
+    expect(nextDueAfter('2027-01-31', 'monthly')).toBe('2027-02-28');
+  });
+
+  test('leap year: Jan 31 + monthly = Feb 29 in 2028', () => {
+    expect(nextDueAfter('2028-01-31', 'monthly')).toBe('2028-02-29');
+  });
+
+  test('result never shifts a day back (UTC+ timezone regression)', () => {
+    // The old implementation did new Date(key + 'T00:00:00').toISOString()
+    // which landed on the PREVIOUS day for UTC+1/+2 local midnight.
+    for (const key of ['2026-03-29', '2026-06-15', '2026-10-31', '2026-12-31']) {
+      expect(nextDueAfter(key, 'monthly') >= key).toBe(true);
+      expect(nextDueAfter(key, 'weekly') >= key).toBe(true);
+      expect(nextDueAfter(key, 'yearly') >= key).toBe(true);
+    }
+  });
+});
+
+describe('daysFromToday (calendar-day diff, local-safe)', () => {
+  test('same day is 0 regardless of parse-timezone', () => {
+    const d = new Date();
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    expect(daysFromToday(key)).toBe(0);
+  });
+
+  test('positive ahead, negative behind, by calendar days', () => {
+    const mk = (offset: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    expect(daysFromToday(mk(3))).toBe(3);
+    expect(daysFromToday(mk(-5))).toBe(-5);
+  });
+
+  test('invalid/empty keys return null', () => {
+    expect(daysFromToday('')).toBeNull();
+    expect(daysFromToday('garbage')).toBeNull();
+    expect(daysFromToday(null as unknown as string)).toBeNull();
   });
 });
