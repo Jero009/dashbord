@@ -19,7 +19,13 @@ import {
   getBodyLogs,
   getSessionLoads,
   getAllExercisePRs,
+  getNetWorthHistory,
+  getFinanceMonthTotals,
+  getFinanceSubscriptions,
+  getFinanceBudgets,
+  getFinanceTransactionsForMonth,
 } from '@/shared/db/app_db';
+import { monthlyCostOf, categoryLabel } from '@/features/finance/finance';
 import type { SleepSessionRecord } from '@/shared/db/app_db';
 import { computeDailyLoads, computeAcwrSeries } from '@/shared/health/trainingLoad';
 import { computeRecoverySeries } from '@/shared/health/recoveryBaseline';
@@ -300,6 +306,62 @@ export async function buildAiExport(options: AiExportOptions = {}): Promise<stri
     if (last.arm_cm != null) latestExtra.push(`arm ${n1(last.arm_cm)} cm`);
     if (last.thigh_cm != null) latestExtra.push(`thigh ${n1(last.thigh_cm)} cm`);
     if (latestExtra.length) push(`Latest measurements: ${latestExtra.join(', ')}`);
+  }
+  push('');
+
+  // Finance: net-worth trend, this month's cash flow, subscriptions, budgets.
+  // All queries tolerate an empty DB — the section renders "(no data)" instead.
+  push('=== FINANCE ===');
+  try {
+    const monthKey = localDateISO().slice(0, 7);
+    const [netHist, monthTotals, subs, budgets, monthTx] = await Promise.all([
+      getNetWorthHistory(90).catch(() => [] as { date: string; assets: number; liabilities: number; net: number }[]),
+      getFinanceMonthTotals(monthKey).catch(() => ({ income: 0, expense: 0 })),
+      getFinanceSubscriptions().catch(() => []),
+      getFinanceBudgets().catch(() => []),
+      getFinanceTransactionsForMonth(monthKey).catch(() => []),
+    ]);
+    const hasFinanceData =
+      netHist.length > 0 || monthTotals.income > 0 || monthTotals.expense > 0 || subs.length > 0;
+    if (!hasFinanceData) {
+      push('(no data)');
+    } else {
+      if (netHist.length > 0) {
+        const first = netHist[0];
+        const last = netHist[netHist.length - 1];
+        push(`Net worth (90d): ${n0(last.net)} now; change ${n0(last.net - first.net)} since ${first.date}`);
+        // Downsample to ~weekly rows so the timeline stays compact.
+        const step = Math.max(1, Math.ceil(netHist.length / 13));
+        push('date,assets,liabilities,net');
+        for (let i = 0; i < netHist.length; i += step) {
+          const p = netHist[i];
+          push(`${p.date},${n0(p.assets)},${n0(p.liabilities)},${n0(p.net)}`);
+        }
+      }
+      push(`This month (${monthKey}): income ${n0(monthTotals.income)}, expenses ${n0(monthTotals.expense)}, kept ${n0(monthTotals.income - monthTotals.expense)}`);
+      const activeSubs = subs.filter((s: Record<string, unknown>) => String(s.status ?? 'active') === 'active');
+      if (activeSubs.length > 0) {
+        const monthlyOut = activeSubs
+          .filter((s: Record<string, unknown>) => s.direction !== 'income')
+          .reduce((sum: number, s: Record<string, unknown>) => sum + monthlyCostOf(s as never), 0);
+        push(`Active subscriptions (monthly-normalized): ${activeSubs.length}, outflow ${n0(monthlyOut)}/mo`);
+        for (const s of activeSubs as Array<Record<string, unknown>>) {
+          push(`- ${String(s.name)}: ${n0(Number(s.amount) || 0)} / ${String(s.cadence ?? 'monthly')} (next ${String(s.next_due_date ?? '—')})`);
+        }
+      }
+      const budgetRows = budgets as Array<Record<string, unknown>>;
+      if (budgetRows.length > 0) {
+        push('Budget vs actual (this month):');
+        for (const b of budgetRows) {
+          const spent = monthTx
+            .filter((t: Record<string, unknown>) => t.category === b.category && t.type !== 'income')
+            .reduce((sum: number, t: Record<string, unknown>) => sum + (Number(t.amount) || 0), 0);
+          push(`- ${categoryLabel(String(b.category))}: ${n0(spent)} of ${n0(Number(b.monthly_limit) || 0)}`);
+        }
+      }
+    }
+  } catch {
+    push('(no data)');
   }
   push('');
 
