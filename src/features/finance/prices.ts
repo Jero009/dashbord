@@ -6,7 +6,7 @@
 // is native-first. All functions degrade gracefully (missing quote = skipped).
 
 import { CapacitorHttp } from '@capacitor/core';
-import { getCurrency } from '@/shared/utils/userSettings';
+import { getCurrency, getCoinGeckoApiKey } from '@/shared/utils/userSettings';
 
 export interface PriceQuote {
   price: number; // per-unit price in `currency`
@@ -61,8 +61,8 @@ const resolveCoinId = (symbol: string): string => {
   return CRYPTO_IDS[key] ?? key;
 };
 
-const getJson = async (url: string): Promise<any> => {
-  const res = await CapacitorHttp.get({ url, headers: { Accept: 'application/json' } });
+const getJson = async (url: string, headers: Record<string, string> = {}): Promise<any> => {
+  const res = await CapacitorHttp.get({ url, headers: { Accept: 'application/json', ...headers } });
   if (res.status < 200 || res.status >= 300) return null;
   if (typeof res.data === 'string') {
     try {
@@ -81,7 +81,9 @@ const fetchCrypto = async (items: PriceableHolding[], out: Map<number, PriceQuot
   const url =
     `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids.join(','))}` +
     `&vs_currencies=${encodeURIComponent(vs)}&include_24hr_change=true`;
-  const data = await getJson(url).catch(() => null);
+  // Optional demo key raises the rate limit (100 calls/min); empty = keyless.
+  const key = getCoinGeckoApiKey().trim();
+  const data = await getJson(url, key ? { 'x-cg-demo-api-key': key } : {}).catch(() => null);
   if (!data) return;
   for (const item of items) {
     const row = data[resolveCoinId(item.symbol)];

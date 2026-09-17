@@ -28,17 +28,26 @@
             <div class="set-row__label">
               <span class="set-row__title">Currency</span>
             </div>
-            <ion-select
-              v-model="currency"
-              interface="action-sheet"
-              :interface-options="{ cssClass: 'app-action-sheet' }"
-              class="settings-select"
-              @ionChange="hapticSelect()"
-            >
+            <ion-select v-model="currency" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="settings-select" @ionChange="hapticSelect()">
               <ion-select-option v-for="code in currencyOptions" :key="code" :value="code">
                 {{ code }}
               </ion-select-option>
             </ion-select>
+          </div>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">CoinGecko key</span>
+              <span class="set-row__sub">Optional · rate limit for crypto prices</span>
+            </div>
+            <ion-input
+              v-model="coinGeckoKey"
+              type="password"
+              placeholder="demo key"
+              class="form-input form-input--compact"
+              style="max-width: 140px"
+              @ionBlur="saveCoinGeckoKey"
+            ></ion-input>
           </div>
         </div>
 
@@ -184,7 +193,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, toastController, alertController } from '@ionic/vue'
+import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, IonInput, toastController, alertController } from '@ionic/vue'
 import { showToast } from '@/shared/utils/toast';
 import { downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
@@ -195,6 +204,7 @@ import {
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
   getNotifBillAlertEnabled, setNotifBillAlertEnabled, getNotifBillAlertTime, setNotifBillAlertTime,
+  getCoinGeckoApiKey, setCoinGeckoApiKey,
   getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
 } from '@/shared/utils/userSettings'
 import type { CurrencyCode } from '@/shared/utils/userSettings'
@@ -285,6 +295,8 @@ const syncNow = async () => {
 const currencyOptions: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'CHF']
 const currency = ref<CurrencyCode>(getCurrency())
 watch(currency, (code) => setCurrency(code))
+const coinGeckoKey = ref(getCoinGeckoApiKey())
+const saveCoinGeckoKey = () => setCoinGeckoApiKey(coinGeckoKey.value)
 
 // --- Gym: weekly workout goal ---
 const weeklyGoalOptions = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12]

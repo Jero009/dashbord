@@ -84,3 +84,6 @@ export function getNotifBillAlertEnabled(): boolean { return localStorage.getIte
 export function setNotifBillAlertEnabled(v: boolean): void { localStorage.setItem('notif_bill_enabled', v ? '1' : '0') }
 export function getNotifBillAlertTime(): string { return localStorage.getItem('notif_bill_time') ?? '20:00' }
 export function setNotifBillAlertTime(t: string): void { localStorage.setItem('notif_bill_time', t) }
+
+export function getCoinGeckoApiKey(): string { return localStorage.getItem('coingecko_api_key') ?? '' }
+export function setCoinGeckoApiKey(key: string): void { localStorage.setItem('coingecko_api_key', key.trim()) }
