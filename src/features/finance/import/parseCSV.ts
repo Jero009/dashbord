@@ -94,7 +94,7 @@ export function normalizeImportDate(value: string): string | null {
 export function normalizeImportAmount(value: string): number | null {
   let v = String(value ?? '').trim();
   if (!v) return null;
-  v = v.replace(/[^\d.,+\-]/g, '');
+  v = v.replace(/[^\d.,+-]/g, '');
   if (!v) return null;
   const hasComma = v.includes(',');
   const hasDot = v.includes('.');

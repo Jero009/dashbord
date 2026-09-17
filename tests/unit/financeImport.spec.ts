@@ -81,10 +81,6 @@ describe('bank profile', () => {
 });
 
 describe('paypal profile', () => {
-  const csv = 'Datum,Name, Brutto, Gebühr, Netto\n17.09.2026,Some Sale,25,00,1,15,23,85';
-  // NOTE: PayPal exports use comma decimals with comma delimiter? No — the
-  // web export is comma-delimited with quoted numeric fields in EN, or
-  // semicolon-delimited in DE locales. Test the quoted-EN form below.
   test('detectHeader and gross/fee/net collapse (quoted fields)', () => {
     const rows = parseCSV('Datum,Name," Brutto"," Gebühr"," Netto"\n17.09.2026,Some Sale,"25,00","1,15","23,85"');
     expect(paypalProfile.detectHeader(rows[0])).toBe(true);

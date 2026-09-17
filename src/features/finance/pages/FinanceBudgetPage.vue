@@ -101,6 +101,53 @@
 
         <ion-card class="finance-card">
           <div class="card-topline">
+            <p class="nt-kicker">Import CSV</p>
+            <span v-if="importProfileId" class="card-count">{{ importProfileId }}</span>
+          </div>
+          <template v-if="importPreview.length === 0">
+            <p class="nt-empty">
+              Bank or PayPal statement. Duplicates are skipped automatically.
+            </p>
+            <ion-button expand="block" class="add-btn" :disabled="importing" @click="pickImportFile">
+              {{ importing ? 'Reading…' : 'Import CSV' }}
+            </ion-button>
+          </template>
+          <template v-else>
+            <div class="item-list">
+              <div v-for="(row, i) in importPreview.slice(0, 20)" :key="i" class="list-item">
+                <div class="list-item__info">
+                  <strong class="list-item__name">{{ row.tx.name }}</strong>
+                  <span class="list-item__meta">
+                    {{ row.tx.type === 'income' ? 'Income' : categoryLabel(row.tx.category) }} · {{ formatDay(row.tx.date) }}
+                    <template v-if="row.dup"> · duplicate</template>
+                  </span>
+                </div>
+                <span class="list-item__value" :class="{ 'metric-positive': row.tx.type === 'income' }">
+                  {{ row.tx.type === 'income' ? '+' : '−' }}{{ formatCurrency(row.tx.amount) }}
+                </span>
+              </div>
+            </div>
+            <p v-if="importPreview.length > 20" class="nt-empty">…and {{ importPreview.length - 20 }} more</p>
+            <div class="form-fields--inline">
+              <div class="field-group">
+                <label class="field-label">Account</label>
+                <ion-select v-model="importAccountId" class="styled-select" interface="action-sheet" placeholder="Account" :disabled="!accounts.length">
+                  <ion-select-option :value="null">No account</ion-select-option>
+                  <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
+                    {{ account.name }}
+                  </ion-select-option>
+                </ion-select>
+              </div>
+            </div>
+            <ion-button expand="block" class="add-btn" :disabled="importing" @click="confirmImport">
+              Import {{ importFreshCount }} new{{ importDupCount ? `, skip ${importDupCount} duplicates` : '' }}
+            </ion-button>
+            <ion-button expand="block" fill="outline" class="add-btn" @click="resetImport">Cancel</ion-button>
+          </template>
+        </ion-card>
+
+        <ion-card class="finance-card">
+          <div class="card-topline">
             <p class="nt-kicker">{{ editingTransactionId ? 'Edit transaction' : 'Add transaction' }}</p>
             <button v-if="editingTransactionId" class="link-btn" @click="resetTransactionForm">Cancel</button>
           </div>
@@ -204,7 +251,7 @@ import { chevronBackOutline, chevronForwardOutline, closeOutline, createOutline 
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
-import { hapticLight, hapticMedium, hapticHeavy, hapticSuccess } from '@/shared/utils/haptics';
+import { hapticLight, hapticMedium, hapticHeavy, hapticSuccess, hapticSelect } from '@/shared/utils/haptics';
 import { formatCurrency } from '@/shared/utils/currency';
 import { localDateISO } from '@/shared/utils/timeFormat';
 import {
@@ -217,6 +264,11 @@ import {
   deleteFinanceBudget,
   getFinanceAccounts,
 } from '@/shared/db/app_db';
+import { parseCSV } from '@/features/finance/import/parseCSV';
+import { detectProfile, type NewTransaction } from '@/features/finance/import/profiles';
+import { splitDuplicates, type ExistingTx } from '@/features/finance/import/dedupe';
+import { FilePicker } from '@capawesome/capacitor-file-picker';
+import { Capacitor } from '@capacitor/core';
 import { EXPENSE_CATEGORIES as expenseCategories, categoryLabel } from '@/features/finance/finance';
 
 // Local-date keys: toISOString would shift the month near midnight in UTC+ timezones.
@@ -411,6 +463,109 @@ const removeTransaction = async (id: number) => {
   }
   if (editingTransactionId.value === Number(id)) resetTransactionForm();
   await loadBudgetData();
+};
+
+// ── CSV import (T11) ──
+interface ImportPreviewRow {
+  tx: NewTransaction;
+  dup: boolean;
+}
+const importing = ref(false);
+const importPreview = ref<ImportPreviewRow[]>([]);
+const importAccountId = ref<number | null>(null);
+const importProfileId = ref<string | null>(null);
+
+const importFreshCount = computed(() => importPreview.value.filter((r) => !r.dup).length);
+const importDupCount = computed(() => importPreview.value.filter((r) => r.dup).length);
+
+const resetImport = () => {
+  importPreview.value = [];
+  importAccountId.value = null;
+  importProfileId.value = null;
+};
+
+const pickImportFile = async () => {
+  hapticLight();
+  importing.value = true;
+  try {
+    let csvText = '';
+    if (Capacitor.getPlatform() === 'web') {
+      // Web dev path: hidden file input (FilePicker is native-only).
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv,text/csv,text/plain';
+      const picked = new Promise<File | null>((resolve) => {
+        input.onchange = () => resolve(input.files?.[0] ?? null);
+      });
+      input.click();
+      const file = await picked;
+      if (!file) return;
+      csvText = await file.text();
+    } else {
+      const result = await FilePicker.pickFiles({
+        types: ['text/csv', 'text/comma-separated-values', 'text/plain', 'application/vnd.ms-excel'],
+      });
+      const file = result.files[0];
+      if (!file) return;
+      const blob = await fetch(file.path ?? '').then((r) => r.blob());
+      csvText = await blob.text();
+    }
+    const rows = parseCSV(csvText);
+    if (rows.length < 2) {
+      await showToast('empty or header-only file', 'warning');
+      return;
+    }
+    const profile = detectProfile(rows[0]);
+    importProfileId.value = profile.id;
+    const candidates = profile.mapRows(rows, null);
+    if (candidates.length === 0) {
+      await showToast('no mappable rows found', 'warning');
+      return;
+    }
+    // Dedupe against existing transactions for all months touched by the file.
+    const months = [...new Set(candidates.map((c) => c.date.slice(0, 7)))];
+    const existing: ExistingTx[] = [];
+    for (const month of months) {
+      for (const t of await getFinanceTransactionsForMonth(month)) {
+        existing.push({ date: String(t.date), amount: Number(t.amount) || 0, name: String(t.name) });
+      }
+    }
+    const { duplicates } = splitDuplicates(existing, candidates);
+    const dupSet = new Set(duplicates);
+    importPreview.value = candidates.map((tx) => ({ tx, dup: dupSet.has(tx) }));
+    hapticSelect();
+  } catch {
+    await showToast('could not read file', 'warning');
+  } finally {
+    importing.value = false;
+  }
+};
+
+const confirmImport = async () => {
+  hapticMedium();
+  importing.value = true;
+  try {
+    const fresh = importPreview.value.filter((r) => !r.dup);
+    for (const { tx } of fresh) {
+      await addFinanceTransaction(
+        tx.date,
+        tx.name,
+        tx.category,
+        tx.amount,
+        tx.type,
+        tx.notes,
+        importAccountId.value ?? undefined
+      );
+    }
+    resetImport();
+    await loadBudgetData();
+    hapticSuccess();
+    await showToast(`imported ${fresh.length}`, 'success');
+  } catch {
+    await showToast('import failed', 'warning');
+  } finally {
+    importing.value = false;
+  }
 };
 
 const saveBudget = async () => {

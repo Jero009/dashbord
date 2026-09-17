@@ -1,7 +1,6 @@
 // Import profiles (T11): per-source column mapping + normalization. Pure.
 // Each profile takes the FULL parsed row list (header row included), finds its
 // columns in the header, and maps the data rows below it.
-import type { Delimiter } from './parseCSV';
 import { normalizeImportDate, normalizeImportAmount } from './parseCSV';
 
 export interface NewTransaction {
