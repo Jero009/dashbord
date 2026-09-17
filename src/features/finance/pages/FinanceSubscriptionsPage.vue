@@ -48,6 +48,7 @@
                 <label class="field-label">Cadence</label>
                 <ion-select v-model="subscriptionCadence" class="styled-select" interface="action-sheet">
                   <ion-select-option value="monthly">Monthly</ion-select-option>
+                  <ion-select-option value="quarterly">Quarterly</ion-select-option>
                   <ion-select-option value="yearly">Yearly</ion-select-option>
                   <ion-select-option value="weekly">Weekly</ion-select-option>
                 </ion-select>

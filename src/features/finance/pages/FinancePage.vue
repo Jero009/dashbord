@@ -20,23 +20,12 @@
           </div>
           <div class="hero-value">{{ formatCurrency(netWorth) }}</div>
 
-          <div v-if="trendPath" class="trend">
-            <svg class="trend__svg" :viewBox="`0 0 ${CHART_W} ${CHART_H}`" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="nwFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="rgba(215, 26, 33, 0.22)" />
-                  <stop offset="100%" stop-color="rgba(215, 26, 33, 0)" />
-                </linearGradient>
-              </defs>
-              <path :d="areaPath" fill="url(#nwFill)" />
-              <path :d="trendPath" fill="none" stroke="rgb(215, 26, 33)" stroke-width="2"
-                    stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-            </svg>
-            <div class="trend__axis">
-              <span>{{ trendStartLabel }}</span>
-              <span>Today</span>
-            </div>
-          </div>
+          <TrendChart
+            v-if="history.length >= 2"
+            :pts="history.map((p) => ({ label: formatDay(p.date), value: p.net }))"
+            unit=""
+            size="xs"
+          />
           <p v-else class="hero-hint">Net worth trend builds as you use the app daily.</p>
 
           <!-- Assets vs liabilities split -->
@@ -171,6 +160,7 @@ import { chevronForwardOutline, trendingUpOutline, trendingDownOutline } from 'i
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
+import TrendChart from '@/shared/components/TrendChart.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import {
   getFinanceAccounts,
@@ -201,8 +191,6 @@ import {
 
 const router = useRouter();
 
-const CHART_W = 320;
-const CHART_H = 64;
 const rangeDays = 30;
 const rangeBillsDays = 14;
 
@@ -250,42 +238,6 @@ const bills = computed(() => allBills.value.slice(0, 4));
 const billsTotal = computed(() => allBills.value.reduce((s, b) => s + (Number(b.amount) || 0), 0));
 
 const topCategoryMax = computed(() => topCategories.value[0]?.amount || 1);
-
-// --- Net-worth trend SVG path ---
-const trendPoints = computed(() => {
-  const pts = history.value;
-  if (pts.length < 2) return [];
-  const nets = pts.map((p) => p.net);
-  const min = Math.min(...nets);
-  const max = Math.max(...nets);
-  const range = max - min;
-  const stepX = CHART_W / (pts.length - 1);
-  const pad = 6;
-  return pts.map((p, i) => ({
-    x: i * stepX,
-    // Centre the line vertically when net worth is flat (range 0) instead of
-    // pinning it to the bottom edge.
-    y: pad + (1 - (range > 0 ? (p.net - min) / range : 0.5)) * (CHART_H - pad * 2),
-  }));
-});
-
-const trendPath = computed(() => {
-  const pts = trendPoints.value;
-  if (!pts.length) return '';
-  return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-});
-
-const areaPath = computed(() => {
-  const pts = trendPoints.value;
-  if (!pts.length) return '';
-  const line = pts.map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  return `M ${pts[0].x.toFixed(1)} ${CHART_H} ${line} L ${pts[pts.length - 1].x.toFixed(1)} ${CHART_H} Z`;
-});
-
-const trendStartLabel = computed(() => {
-  if (history.value.length < 2) return '';
-  return formatDay(history.value[0].date);
-});
 
 const formatDay = (date: string) => {
   const [year, month, day] = String(date).split('-').map(Number);
@@ -442,27 +394,6 @@ onIonViewWillEnter(loadFinance);
 .delta-chip--down {
   color: var(--ion-color-accent-red);
   background: rgba(215, 26, 33, 0.12);
-}
-
-.trend {
-  display: grid;
-  gap: 4px;
-}
-
-.trend__svg {
-  width: 100%;
-  height: 64px;
-  display: block;
-}
-
-.trend__axis {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--nt-font-head);
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.4);
 }
 
 .hero-hint {
