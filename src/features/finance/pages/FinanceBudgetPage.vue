@@ -256,6 +256,7 @@ import { formatCurrency } from '@/shared/utils/currency';
 import { localDateISO } from '@/shared/utils/timeFormat';
 import {
   addFinanceTransaction,
+  addFinanceTransactionsBulk,
   updateFinanceTransaction,
   getFinanceTransactionsForMonth,
   deleteFinanceTransaction,
@@ -494,21 +495,30 @@ const pickImportFile = async () => {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.csv,text/csv,text/plain';
+      // Resolve null on cancel too — otherwise `importing` stays true forever
+      // and both import buttons stay disabled.
       const picked = new Promise<File | null>((resolve) => {
         input.onchange = () => resolve(input.files?.[0] ?? null);
+        input.oncancel = () => resolve(null);
       });
       input.click();
       const file = await picked;
       if (!file) return;
       csvText = await file.text();
     } else {
+      // readData returns the file content as base64 in files[0].data — the
+      // WebView cannot fetch file:// or content:// paths.
       const result = await FilePicker.pickFiles({
         types: ['text/csv', 'text/comma-separated-values', 'text/plain', 'application/vnd.ms-excel'],
+        readData: true,
       });
       const file = result.files[0];
       if (!file) return;
-      const blob = await fetch(file.path ?? '').then((r) => r.blob());
-      csvText = await blob.text();
+      if (!file.data) {
+        await showToast('empty file', 'warning');
+        return;
+      }
+      csvText = atob(file.data);
     }
     const rows = parseCSV(csvText);
     if (rows.length < 2) {
@@ -546,17 +556,18 @@ const confirmImport = async () => {
   importing.value = true;
   try {
     const fresh = importPreview.value.filter((r) => !r.dup);
-    for (const { tx } of fresh) {
-      await addFinanceTransaction(
-        tx.date,
-        tx.name,
-        tx.category,
-        tx.amount,
-        tx.type,
-        tx.notes,
-        importAccountId.value ?? undefined
-      );
-    }
+    // One executeSet transaction: all-or-nothing, no partial imports.
+    await addFinanceTransactionsBulk(
+      fresh.map(({ tx }) => ({
+        date: tx.date,
+        name: tx.name,
+        category: tx.category,
+        amount: tx.amount,
+        type: tx.type,
+        notes: tx.notes,
+        accountId: importAccountId.value,
+      }))
+    );
     resetImport();
     await loadBudgetData();
     hapticSuccess();

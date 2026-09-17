@@ -210,7 +210,7 @@ import {
 import type { CurrencyCode } from '@/shared/utils/userSettings'
 import {
   requestNotificationPermission,
-  scheduleWeightReminder, scheduleSleepReminder,
+  scheduleWeightReminder, scheduleSleepReminder, cancelBillAlert,
   cancelWeightReminder, cancelSleepReminder,
 } from '@/shared/utils/notifications'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
@@ -348,6 +348,8 @@ const saveNotifBill = async () => {
   hapticLight()
   setNotifBillAlertEnabled(notifBillEnabled.value)
   setNotifBillAlertTime(notifBillTime.value)
+  // Toggle-off must also disarm a notification armed by an earlier Home entry.
+  if (!notifBillEnabled.value) await cancelBillAlert()
 }
 
 // --- Database: export / import ---

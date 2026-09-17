@@ -20,9 +20,12 @@ export function detectDelimiter(raw: string): Delimiter {
   return semi > comma ? ';' : ',';
 }
 
-/** Parse a CSV string into rows of cells. Skips fully-empty trailing lines. */
+/** Parse a CSV string into rows of cells. Skips fully-empty trailing lines.
+ *  Strips a leading UTF-8 BOM so Excel "CSV UTF-8" exports don't break the
+ *  anchored header patterns (^date, ^amount, …). */
 export function parseCSV(raw: string, delimiter?: Delimiter): string[][] {
   const delim = delimiter ?? detectDelimiter(raw);
+  const text = raw.startsWith('\uFEFF') ? raw.slice(1) : raw;
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';
@@ -38,11 +41,11 @@ export function parseCSV(raw: string, delimiter?: Delimiter): string[][] {
     if (row.some((c) => c.trim().length > 0)) rows.push(row);
     row = [];
   };
-  while (i < raw.length) {
-    const ch = raw[i];
+  while (i < text.length) {
+    const ch = text[i];
     if (inQuotes) {
       if (ch === '"') {
-        if (raw[i + 1] === '"') {
+        if (text[i + 1] === '"') {
           cell += '"';
           i += 2;
           continue;
@@ -76,21 +79,35 @@ export function parseCSV(raw: string, delimiter?: Delimiter): string[][] {
 }
 
 // Local-safe date normalization for import sources. Accepts DD.MM.YYYY (SI
-// bank standard) and YYYY-MM-DD. Returns a YYYY-MM-DD key or null.
+// bank standard), D.M.YYYY, and YYYY-MM-DD. Calendar-validated — returns a
+// YYYY-MM-DD key or null.
 export function normalizeImportDate(value: string): string | null {
   const v = String(value ?? '').trim();
   let m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(v);
   if (m) {
     const [, d, mo, y] = m;
+    const day = Number(d);
+    const month = Number(mo);
+    if (month < 1 || month > 12) return null;
+    const daysInMonth = new Date(Number(y), month, 0).getDate();
+    if (day < 1 || day > daysInMonth) return null; // no 31.02. rolling into March
     return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
   m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  if (m) {
+    const day = Number(m[3]);
+    const month = Number(m[2]);
+    if (month < 1 || month > 12) return null;
+    const daysInMonth = new Date(Number(m[1]), month, 0).getDate();
+    if (day < 1 || day > daysInMonth) return null;
+    return `${m[1]}-${m[2]}-${m[3]}`;
+  }
   return null;
 }
 
 // Amount normalization: SI formats use 1.234,56 (dot thousands, comma
-// decimals); EN uses 1,234.56. Strips currency symbols and spaces.
+// decimals); EN uses 1,234.56. Strips currency symbols and spaces. A lone
+// separator followed by exactly 3 digits is treated as grouping (1,234 = 1234).
 export function normalizeImportAmount(value: string): number | null {
   let v = String(value ?? '').trim();
   if (!v) return null;
@@ -102,8 +119,21 @@ export function normalizeImportAmount(value: string): number | null {
     // The rightmost separator is the decimal one.
     if (v.lastIndexOf(',') > v.lastIndexOf('.')) v = v.replace(/\./g, '').replace(',', '.');
     else v = v.replace(/,/g, '');
-  } else if (hasComma) {
-    v = v.replace(',', '.');
+  } else if (hasComma || hasDot) {
+    const sep = hasComma ? ',' : '.';
+    const parts = v.split(sep);
+    const last = parts[parts.length - 1];
+    if (parts.length === 2 && last.length === 3) {
+      // Ambiguous: "1,234" could be 1234 (grouping) or 1.234 (decimal).
+      // Bank/paypal statements at this granularity are thousands — treat as
+      // grouping. "1,23" / "1,2345" stay decimal.
+      v = parts.join('');
+    } else if (parts.length > 2 || last.length === 3) {
+      // "1,234,567" — consistent grouping.
+      v = parts.join('');
+    } else {
+      v = v.replace(sep === ',' ? /,/g : /\./g, '.');
+    }
   }
   const n = Number(v);
   return Number.isFinite(n) ? n : null;

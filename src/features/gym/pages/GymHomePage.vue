@@ -144,7 +144,7 @@ import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/ty
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed, formatRestTime } from '@/shared/utils/timeFormat';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
-import { restTimerState, cancelRestTimer, resumeRestTimer } from '@/shared/composables/useRestTimer';
+import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval } from '@/shared/composables/useRestTimer';
 
 const activeWorkout = ref(false);
 // Countdown display is the shared rest-timer state (WorkoutPage owns start/stop;
@@ -359,7 +359,10 @@ onIonViewWillEnter(async () => {
 
 onUnmounted(() => {
   clearTimer();
-  clearActiveRestTimer();
+  // Teardown stops the interval view only — the rest record in localStorage is
+  // canonical and WorkoutPage may still be resting; only explicit user
+  // stop/adjust may cancel it.
+  stopRestInterval();
 });
 
 </script>

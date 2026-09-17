@@ -447,7 +447,9 @@ const stageHistoryNights = computed(() =>
       awake: s.stage_awake_min,
     }))
 );
-const sleepGoalHours = getSleepGoalHours();
+// computed (not a setup-time const): Settings can change the goal while this
+// kept-alive page stays mounted — BodyPage had the same bug and fixed it.
+const sleepGoalHours = computed(() => getSleepGoalHours());
 const durationHistoryPts = computed(() =>
   [...sleepHistory.value].reverse().filter((r) => r.value > 0).map((row) => ({
     label: new Date(`${row.date}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' }),

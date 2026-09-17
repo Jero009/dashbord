@@ -4,7 +4,8 @@ import { getCurrency } from '@/shared/utils/userSettings'
 // Device locale decides separators; whole units keep tiles compact — except
 // small values, which would round to "$0" (sub-$1 crypto holdings).
 export function formatCurrency(value: number): string {
-  const safe = Number.isFinite(value) ? value : 0
+  let safe = Number.isFinite(value) ? value : 0
+  if (Object.is(safe, -0)) safe = 0 // Intl renders -0 as "-$0"
   const needsCents = Math.abs(safe) < 1000 && safe % 1 !== 0
   return new Intl.NumberFormat(undefined, {
     style: 'currency',

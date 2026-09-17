@@ -11,7 +11,9 @@ const ID_FINANCE_BILL  = 30
 // never hand setHours(NaN) to the scheduler (which yields an Invalid Date).
 function parseHhmm(hhmm: string): [number, number] {
   const [h, m] = (hhmm ?? '').split(':').map(Number)
-  return [Number.isFinite(h) ? h : 9, Number.isFinite(m) ? m : 0]
+  const hh = Number.isFinite(h) && h >= 0 && h <= 23 ? h : 9
+  const mm = Number.isFinite(m) && m >= 0 && m <= 59 ? m : 0
+  return [hh, mm]
 }
 
 function nextOccurrence(hhmm: string): Date {
@@ -29,14 +31,27 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return display === 'granted'
 }
 
-export async function scheduleWeightReminder(time: string): Promise<void> {
+export function scheduleWeightReminder(time: string): Promise<void> {
+  return scheduleDailyReminder(ID_WEIGHT, 'Log your weight', 'Tap to record today\'s weight.', time)
+}
+
+export function scheduleSleepReminder(time: string): Promise<void> {
+  return scheduleDailyReminder(ID_SLEEP, 'Time to wind down', 'Get ready for bed to hit your sleep goal.', time)
+}
+
+// Shared daily-reminder scheduler: checks (but does not beg for) permission
+// first — on Android 13+ an ungranted POST_NOTIFICATIONS makes schedule()
+// reject and the Settings toggle would surface an unhandled rejection.
+async function scheduleDailyReminder(id: number, title: string, body: string, time: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
-  await LocalNotifications.cancel({ notifications: [{ id: ID_WEIGHT }] })
+  await LocalNotifications.cancel({ notifications: [{ id }] })
+  const granted = (await LocalNotifications.checkPermissions()).display === 'granted'
+  if (!granted) return
   await LocalNotifications.schedule({
     notifications: [{
-      id: ID_WEIGHT,
-      title: 'Log your weight',
-      body: 'Tap to record today\'s weight.',
+      id,
+      title,
+      body,
       schedule: { at: nextOccurrence(time), repeats: true, every: 'day' },
       smallIcon: 'ic_stat_icon_config_sample',
     }]
@@ -46,20 +61,6 @@ export async function scheduleWeightReminder(time: string): Promise<void> {
 export async function dismissWeightReminder(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
   await LocalNotifications.removeDeliveredNotifications({ notifications: [{ id: ID_WEIGHT, title: '', body: '' }] })
-}
-
-export async function scheduleSleepReminder(time: string): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return
-  await LocalNotifications.cancel({ notifications: [{ id: ID_SLEEP }] })
-  await LocalNotifications.schedule({
-    notifications: [{
-      id: ID_SLEEP,
-      title: 'Time to wind down',
-      body: 'Get ready for bed to hit your sleep goal.',
-      schedule: { at: nextOccurrence(time), repeats: true, every: 'day' },
-      smallIcon: 'ic_stat_icon_config_sample',
-    }]
-  })
 }
 
 // Rest timer ding. Scheduled at the timer's end time when the set is completed,
@@ -126,10 +127,6 @@ export async function cancelBillAlert(): Promise<void> {
   await LocalNotifications.cancel({ notifications: [{ id: ID_FINANCE_BILL }] })
 }
 
-export async function cancelAllNotifications(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return
-  const pending = await LocalNotifications.getPending()
-  if (pending.notifications.length) {
-    await LocalNotifications.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) })
-  }
-}
+// NOTE: deliberately no cancelAllNotifications() — it would also kill the
+// rest-timer ding and Hermes push notifications owned by other modules.
+// Each feature cancels its own IDs (cancelWeightReminder, cancelBillAlert, …).

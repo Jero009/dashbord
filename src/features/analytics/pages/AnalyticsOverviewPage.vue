@@ -8,15 +8,16 @@
     <ion-content :fullscreen="true">
       <div class="analytics-shell">
         <!-- Recovery recommendation hero -->
-        <div class="card recovery-card" :class="`recovery-card--${recovery.level}`">
+        <div class="card recovery-card" :class="recovery ? `recovery-card--${recovery.level}` : ''">
           <div class="card-header">
             <p class="nt-kicker">Today</p>
-            <span class="recovery-pill" :class="`recovery-pill--${recovery.level}`">
+            <span v-if="recovery" class="recovery-pill" :class="`recovery-pill--${recovery.level}`">
               {{ recoveryLabel }}
             </span>
           </div>
-          <strong class="recovery-headline">{{ recoveryLabel }}</strong>
-          <p class="recovery-reason">{{ recovery.reason }}</p>
+          <strong v-if="recovery" class="recovery-headline">{{ recoveryLabel }}</strong>
+          <p v-if="recovery" class="recovery-reason">{{ recovery.reason }}</p>
+          <p v-else class="recovery-reason">Log a few workouts and sync health data to get a recovery verdict.</p>
         </div>
 
         <!-- Training load -->
@@ -77,14 +78,14 @@ import { computeDailyLoads, computeAcwrSeries, type DailyLoad } from '@/shared/h
 import { localDateISO } from '@/shared/utils/timeFormat';
 
 const load = ref<TrainingLoad>({ acuteTotal: 0, chronicWeeklyAvg: 0, acwr: 0, status: 'insufficient' });
-const recovery = ref<RecoveryRecommendation>({ level: 'train', reason: 'Recovery markers look good — green light to push.' });
+const recovery = ref<RecoveryRecommendation | null>(null);
 const insights = ref<Insight[]>([]);
 
 const recoveryLabel = computed(() => ({
   train: 'Train hard',
   maintain: 'Maintain',
   recover: 'Recover',
-}[recovery.value.level]));
+}[recovery.value?.level ?? 'train']));
 
 const acwrClass = computed(() => ({
   'tile__value--accent': load.value.status === 'high',
@@ -135,7 +136,9 @@ const loadAll = async () => {
     readiness,
     today: localDateISO(),
   });
-  recovery.value = verdict ?? { level: 'train', reason: 'Recovery markers look good — green light to push.' };
+  // Null verdict = not enough data yet — never show a confident 'push' hero
+  // on an empty database (Home hides its chip in this case; we show a hint).
+  recovery.value = verdict;
 
   // Load tiles read off the same ACWR series the verdict used.
   const dailyLoads = computeDailyLoads(sessions.map((s) => ({

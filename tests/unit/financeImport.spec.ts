@@ -41,6 +41,29 @@ describe('normalizeImportDate / Amount', () => {
     expect(normalizeImportAmount('€ 15')).toBe(15);
     expect(normalizeImportAmount('')).toBeNull();
   });
+
+  test('ambiguous lone separator + 3 digits = grouping, not decimal', () => {
+    expect(normalizeImportAmount('1,234')).toBe(1234); // EN thousands
+    expect(normalizeImportAmount('1.234')).toBe(1234); // SI thousands
+    expect(normalizeImportAmount('1,234,567')).toBe(1234567); // multi-group
+    expect(normalizeImportAmount('12,5')).toBe(12.5); // 1-2 digits stays decimal
+    expect(normalizeImportAmount('0,99')).toBe(0.99);
+  });
+
+  test('BOM prefix is stripped before parsing', () => {
+    const rows = parseCSV('\uFEFFDatum;Opis;Znesek\n17.9.2026;X;-1,00', ';');
+    expect(rows[0][0]).toBe('Datum');
+  });
+});
+
+describe('normalizeImportDate calendar validation', () => {
+  test('impossible dates rejected instead of rolling over', () => {
+    expect(normalizeImportDate('31.02.2026')).toBeNull();
+    expect(normalizeImportDate('2026-02-31')).toBeNull();
+    expect(normalizeImportDate('13.13.2026')).toBeNull();
+    expect(normalizeImportDate('29.02.2028')).toBe('2028-02-29'); // leap ok
+    expect(normalizeImportDate('29.02.2027')).toBeNull();
+  });
 });
 
 describe('category rules', () => {

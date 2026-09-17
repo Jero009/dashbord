@@ -373,7 +373,8 @@ const loadReadiness = async () => {
     ? Number(stored.score)
     : calculateReadinessScore({
         sleepHours:               sleepHours.value,
-        sleepEfficiency:          sleepEfficiency.value,
+        // stored metric is 0–100; the scorer's contract is 0–1
+        sleepEfficiency:          sleepEfficiency.value === null ? null : sleepEfficiency.value / 100,
         sleepScore:               sleepScore.value,
         restingHr:                restingHr.value,
         sleepHeartRate:           sleepHr.value,

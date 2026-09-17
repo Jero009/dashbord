@@ -38,7 +38,11 @@ const GOAL_WEIGHT_KEY = 'setting_goal_weight_kg'
 
 export function getGoalWeightKg(): number | null {
   const v = localStorage.getItem(GOAL_WEIGHT_KEY)
-  return v ? parseFloat(v) : null
+  if (!v) return null
+  const n = parseFloat(v)
+  // Guard like the other numeric accessors: 'abc'/String(NaN) in storage must
+  // never leak NaN into delta math or the AI export.
+  return Number.isFinite(n) && n > 0 ? n : null
 }
 
 export function setGoalWeightKg(kg: number): void {
@@ -80,7 +84,7 @@ export function setNotifSleepEnabled(v: boolean): void { localStorage.setItem('n
 export function getNotifSleepTime(): string { return localStorage.getItem('notif_sleep_time') ?? '22:30' }
 export function setNotifSleepTime(t: string): void { localStorage.setItem('notif_sleep_time', t) }
 
-export function getNotifBillAlertEnabled(): boolean { return localStorage.getItem('notif_bill_enabled') !== '0' }
+export function getNotifBillAlertEnabled(): boolean { return localStorage.getItem('notif_bill_enabled') === '1' }
 export function setNotifBillAlertEnabled(v: boolean): void { localStorage.setItem('notif_bill_enabled', v ? '1' : '0') }
 export function getNotifBillAlertTime(): string { return localStorage.getItem('notif_bill_time') ?? '20:00' }
 export function setNotifBillAlertTime(t: string): void { localStorage.setItem('notif_bill_time', t) }

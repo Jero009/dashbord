@@ -29,7 +29,8 @@ export function dueWithin(subs: SubscriptionRow[], days = 3): BillAlert[] | null
     .sort((a, b) => a.diff - b.diff)
     .map((a) => ({
       name: a.name,
-      label: a.diff === 0 ? 'today' : a.diff === 1 ? 'tomorrow' : `in ${a.diff}d`,
+      // Overdue bills keep a sane label ("2d ago"), not "in -2d".
+      label: a.diff === 0 ? 'today' : a.diff === 1 ? 'tomorrow' : a.diff === -1 ? '1d ago' : a.diff < 0 ? `${-a.diff}d ago` : `in ${a.diff}d`,
       amount: a.amount,
     }));
   return alerts.length ? alerts : null;

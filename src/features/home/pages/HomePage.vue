@@ -207,7 +207,7 @@ import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, pa
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
-import { restTimerState, cancelRestTimer, resumeRestTimer } from '@/shared/composables/useRestTimer';
+import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval } from '@/shared/composables/useRestTimer';
 import { dueWithin, billAlertBody } from '@/features/finance/billAlerts';
 import { scheduleBillAlert, cancelBillAlert } from '@/shared/utils/notifications';
 import { getNotifBillAlertEnabled, getNotifBillAlertTime } from '@/shared/utils/userSettings';
@@ -220,7 +220,9 @@ const router = useRouter();
 
 // Weight card
 const todayWeight = ref<number | null>(null);
-const goalWeight = ref<number | null>(getGoalWeightKg());
+// computed (not a setup-time ref): the goal can change in Settings while this
+// kept-alive page stays mounted, and the delta label must follow.
+const goalWeight = computed<number | null>(() => getGoalWeightKg());
 const quickWeightInput = ref('');
 const weekWeights = ref<{ label: string; value: number }[]>([]);
 
@@ -296,9 +298,10 @@ const loadActiveWorkout = async () => {
     workoutStartTime.value = normalizeDateInput(workout.time_start);
     activeWorkout.value = true;
     clearWorkoutTimer();
-    // Clear any existing rest interval before restoring — loadActiveWorkout runs on
-    // every view re-entry, so without this each re-entry leaked another interval.
-    clearRestTimer();
+    // Stop only this page's countdown interval before restoring — NEVER
+    // cancelRestTimer() here: that wipes the canonical localStorage record and
+    // kills a live rest owned by WorkoutPage whenever Home is visited. 
+    // resumeRestTimer() already stops the shared interval itself.
     workoutInterval = setInterval(() => {
       workoutSeconds.value = Math.max(0, Math.floor((Date.now() - new Date(workoutStartTime.value!).getTime()) / 1000));
     }, 1000);
@@ -308,6 +311,7 @@ const loadActiveWorkout = async () => {
     workoutStartTime.value = null;
     workoutSeconds.value = 0;
     clearWorkoutTimer();
+    // No active workout → no rest can belong to one either; safe to clear.
     clearRestTimer();
   }
 };
@@ -597,7 +601,12 @@ const loadAll = async () => {
 const armFinance = async () => {
   await postDueSubscriptions().catch(() => {});
   try {
-    if (!getNotifBillAlertEnabled() || !Capacitor.isNativePlatform()) return;
+    if (!getNotifBillAlertEnabled()) {
+      // Toggle is off — make sure no previously-armed alert survives it.
+      await cancelBillAlert();
+      return;
+    }
+    if (!Capacitor.isNativePlatform()) return;
     const alerts = dueWithin(await getFinanceSubscriptions(), 3);
     if (!alerts) {
       await cancelBillAlert();
@@ -618,7 +627,9 @@ onIonViewWillEnter(loadAll);
 onUnmounted(() => {
   if (readinessTimer) { clearInterval(readinessTimer); readinessTimer = null; }
   clearWorkoutTimer();
-  clearRestTimer();
+  // Teardown must NOT cancel the rest: the record in localStorage is canonical
+  // and WorkoutPage may still be resting. Just stop this page's interval view.
+  stopRestInterval();
   if (batteryChartInstance) { batteryChartInstance.destroy(); batteryChartInstance = null; }
 });
 

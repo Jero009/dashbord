@@ -1474,6 +1474,21 @@ export async function updateWorkoutExerciseOrders(
   return await db.executeSet(set);
 }
 
+// Bulk-insert imported transactions in ONE executeSet transaction (all-or-
+// nothing — a mid-batch failure can never leave a partial import behind).
+export async function addFinanceTransactionsBulk(
+  txs: Array<{ date: string; name: string; category: string; amount: number; type: 'expense' | 'income'; notes?: string; accountId?: number | null }>
+) {
+  if (!db) return;
+  if (txs.length === 0) return;
+  const set = txs.map((t) => ({
+    statement:
+      'INSERT INTO finance_transaction (date, name, category, amount, type, notes, account_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    values: [t.date, t.name, t.category, t.amount, t.type, t.notes ?? null, t.accountId ?? null],
+  }));
+  return await db.executeSet(set);
+}
+
 export async function getWorkouts(limit = 500) {
   if (!db) return [];
 
@@ -1914,7 +1929,7 @@ export async function getRecentSleepSessions(limit = 14): Promise<SleepSessionRe
 export async function getRecentSleepSessionSummaries(limit = 14): Promise<Array<Omit<SleepSessionRecord, 'hr_timeline_json' | 'stage_timeline_json'>>> {
   if (!db) return [];
   const result = await db.query(
-    `SELECT id, date, bedtime, waketime, time_asleep_hours, time_in_bed_hours,
+    `SELECT date, bedtime, waketime, time_asleep_hours, time_in_bed_hours,
             efficiency, score, sleep_hr, respiratory_rate,
             stage_deep_min, stage_light_min, stage_rem_min,
             stage_awake_min, stage_asleep_min, source
@@ -2084,10 +2099,14 @@ export async function updateFinanceAccount(
 export async function deleteFinanceAccount(id: number) {
   if (!db) return;
   try {
-    await db.run(`UPDATE finance_investment SET account_id = NULL WHERE account_id = ?;`, [id]);
-    await db.run(`UPDATE finance_subscription SET account_id = NULL WHERE account_id = ?;`, [id]);
-    await db.run(`UPDATE finance_transaction SET account_id = NULL WHERE account_id = ?;`, [id]);
-    await db.run(`DELETE FROM finance_account WHERE id = ?;`, [id]);
+    // One transaction: unlink + delete commit together, so a crash can never
+    // leave rows pointing at a half-deleted account.
+    await db.executeSet([
+      { statement: 'UPDATE finance_investment SET account_id = NULL WHERE account_id = ?', values: [id] },
+      { statement: 'UPDATE finance_subscription SET account_id = NULL WHERE account_id = ?', values: [id] },
+      { statement: 'UPDATE finance_transaction SET account_id = NULL WHERE account_id = ?', values: [id] },
+      { statement: 'DELETE FROM finance_account WHERE id = ?', values: [id] },
+    ]);
   } catch (error) {
     console.error('Error deleting finance account:', error);
     throw error;
@@ -2288,17 +2307,24 @@ export async function postDueSubscriptions(today?: string): Promise<number> {
       continue;
     }
     const type = s.direction === 'income' ? 'income' : 'expense';
-    await addFinanceTransaction(
-      due,
-      String(s.name),
-      'subscriptions',
-      Number(s.amount) || 0,
-      type,
-      'Auto-posted subscription',
-      s.account_id != null ? Number(s.account_id) : undefined
-    );
-    await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDueAfter(due, String(s.cadence)), s.id]);
-    posted++;
+    // Per-row guard: one failing subscription must not abort the remaining
+    // catch-up posts (callers swallow errors — a silent stop would stall
+    // every later sub forever).
+    try {
+      await addFinanceTransaction(
+        due,
+        String(s.name),
+        'subscriptions',
+        Number(s.amount) || 0,
+        type,
+        'Auto-posted subscription',
+        s.account_id != null ? Number(s.account_id) : undefined
+      );
+      await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDueAfter(due, String(s.cadence)), s.id]);
+      posted++;
+    } catch (error) {
+      console.error('Failed to auto-post subscription', s.id, error);
+    }
   }
   return posted;
 }
@@ -2797,17 +2823,18 @@ export async function updateExercisePRs(workoutId: number): Promise<AchievedPR[]
   const achieved: AchievedPR[] = [];
 
   try {
-    // Get all exercises from this workout with their completed sets
+    // Get all exercises from this workout with their completed sets.
+    // reps_at_max_weight: correlated subquery — SQLite rejects MAX() inside the
+    // subquery's WHERE (misuse of aggregate), so order by weight/reps instead.
     const result = await db.query(`
-      SELECT 
+      SELECT
         we.exercise_id,
         e.name as exercise_name,
         MAX(wes.weight) as max_weight,
         (SELECT wes2.reps FROM workout_exercise_sets wes2
          WHERE wes2.workout_exercise_id = we.id
-         AND wes2.weight = MAX(wes.weight)
          AND wes2.completed = 1
-         ORDER BY wes2.reps DESC
+         ORDER BY wes2.weight DESC, wes2.reps DESC
          LIMIT 1) as reps_at_max_weight
       FROM workout_exercise we
       JOIN exercise e ON e.id = we.exercise_id

@@ -211,7 +211,12 @@ const onDown = (e: PointerEvent) => {
   select(e);
 };
 const onMove = (e: PointerEvent) => { if (scrubbing) select(e); };
-const onUp = () => { scrubbing = false; };
+const onUp = () => {
+  scrubbing = false;
+  // Drop the selection on release: pts can shrink (e.g. prev-day HR has fewer
+  // samples), and a stale index past the new length renders a stray marker.
+  scrubIdx.value = null;
+};
 </script>
 
 <style scoped>
