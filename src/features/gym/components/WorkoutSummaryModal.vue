@@ -126,7 +126,7 @@ const dismiss = () => modalController.dismiss();
   padding: 16px;
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(215, 26, 33, 0.4);
+  border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 40%, transparent);
 }
 
 .pr-kicker {
@@ -190,7 +190,7 @@ const dismiss = () => modalController.dismiss();
 
 .pr-badge--improved {
   background: transparent;
-  border: 1px solid rgba(215, 26, 33, 0.6);
+  border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 60%, transparent);
   color: var(--ion-color-accent-red);
 }
 

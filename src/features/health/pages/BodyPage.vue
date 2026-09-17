@@ -448,7 +448,7 @@ onIonViewWillEnter(loadEntries)
   color: rgba(var(--nt-ink), 0.85);
 }
 
-.trend-value--down { color: rgb(34, 197, 94); }
+.trend-value--down { color: var(--nt-data-positive); }
 .trend-value--up   { color: var(--ion-color-accent-red); }
 
 /* Entry list */

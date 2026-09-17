@@ -298,7 +298,7 @@ const batteryBarColor = computed(() => {
   if (s === null) return 'rgba(var(--nt-ink), 0.25)';
   if (s >= 70) return 'rgb(34,197,94)';
   if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
-  return 'rgb(215, 26, 33)';
+  return 'var(--ion-color-accent-red)';
 });
 
 const readinessBarWidth = computed(() => {
@@ -582,7 +582,7 @@ const handleConnect = async () => {
   font-weight: 600;
 }
 
-.label--green  { color: rgb(34, 197, 94); }
+.label--green  { color: var(--nt-data-positive); }
 .label--yellow { color: rgba(var(--nt-ink), 0.85); }
 .label--red    { color: var(--ion-color-accent-red); }
 .label--muted  { color: rgba(var(--nt-ink), 0.5); }
@@ -617,7 +617,7 @@ const handleConnect = async () => {
 .drain-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
 .drain-val { color: var(--ion-color-accent-red); }
-.drain-val--positive { color: rgb(34, 197, 94); }
+.drain-val--positive { color: var(--nt-data-positive); }
 
 .readiness-mini-grid { grid-template-columns: repeat(3, 1fr); }
 
@@ -648,7 +648,7 @@ const handleConnect = async () => {
   line-height: 1;
 }
 
-.score--green  { color: rgb(34, 197, 94); }
+.score--green  { color: var(--nt-data-positive); }
 .score--yellow { color: rgba(var(--nt-ink), 0.85); }
 .score--red    { color: var(--ion-color-accent-red); }
 .score--muted  { color: rgba(var(--nt-ink), 0.25); }
@@ -671,7 +671,7 @@ const handleConnect = async () => {
   padding: 10px 12px;
   background: rgba(var(--nt-ink), 0.05);
   border-radius: 10px;
-  border-left: 2px solid rgba(215, 26, 33, 0.5);
+  border-left: 2px solid color-mix(in srgb, var(--ion-color-accent-red) 50%, transparent);
 }
 
 .empty-hint { margin: 0; font-size: 0.9rem; color: rgba(var(--nt-ink), 0.5); }
@@ -732,7 +732,7 @@ const handleConnect = async () => {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(215, 26, 33, 0.12);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 12%, transparent);
   color: var(--ion-color-accent-red);
   display: flex;
   align-items: center;
@@ -765,7 +765,7 @@ const handleConnect = async () => {
   margin: 0 0 14px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(215, 26, 33, 0.1);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 10%, transparent);
   border: 1px solid var(--ion-color-accent-red);
   display: grid;
   gap: 8px;

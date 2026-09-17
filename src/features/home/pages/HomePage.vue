@@ -702,7 +702,7 @@ onMounted(() => {
 
 .active-card {
   background: var(--ion-color-primary);
-  border: 1px solid rgba(215, 26, 33, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 35%, transparent);
   cursor: pointer;
   transition: border-color 150ms ease;
 }
@@ -786,9 +786,9 @@ onMounted(() => {
 }
 
 .ready-chip--on {
-  background: rgba(34, 197, 94, 0.15);
-  color: rgb(34, 197, 94);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: color-mix(in srgb, var(--nt-data-positive) 15%, transparent);
+  color: var(--nt-data-positive);
+  border: 1px solid color-mix(in srgb, var(--nt-data-positive) 30%, transparent);
 }
 
 .ready-chip--off {
@@ -817,13 +817,13 @@ onMounted(() => {
 }
 
 .recovery-chip--recover {
-  background: rgba(215, 26, 33, 0.12);
-  border-color: rgba(215, 26, 33, 0.35);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ion-color-accent-red) 35%, transparent);
 }
 
 .recovery-chip--train {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: color-mix(in srgb, var(--nt-data-positive) 12%, transparent);
+  border-color: color-mix(in srgb, var(--nt-data-positive) 30%, transparent);
 }
 
 .recovery-chip__label {
@@ -946,8 +946,8 @@ onMounted(() => {
 }
 
 .active-card__timer--rest {
-  background: rgba(215, 26, 33, 0.08);
-  border: 1px solid rgba(215, 26, 33, 0.25);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 25%, transparent);
 }
 
 .readiness-ring {

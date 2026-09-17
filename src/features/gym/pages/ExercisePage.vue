@@ -153,7 +153,7 @@
 }
 
 .exercise-item:active {
-  background-color: rgba(215, 26, 33, 0.1);
+  background-color: color-mix(in srgb, var(--ion-color-accent-red) 10%, transparent);
 }
 
 .exercise-item__content {
@@ -196,7 +196,7 @@
 }
 
 .pr-badge {
-  background: rgba(215, 26, 33, 0.2);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 20%, transparent);
   color: var(--ion-color-accent-red);
   padding: 2px 8px;
   border-radius: 4px;

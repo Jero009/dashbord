@@ -249,12 +249,12 @@ onIonViewWillEnter(() => {
 }
 
 .recovery-pill--recover {
-  background: rgba(215, 26, 33, 0.15);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 15%, transparent);
   color: var(--ion-color-accent-red);
 }
 
 .recovery-pill--train {
-  background: rgba(34, 197, 94, 0.15);
+  background: color-mix(in srgb, var(--nt-data-positive) 15%, transparent);
   color: var(--nt-data-positive);
 }
 

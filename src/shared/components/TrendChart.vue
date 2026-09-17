@@ -20,8 +20,8 @@
     >
       <defs>
         <linearGradient :id="uid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" :stop-color="bare ? 'rgba(215, 26, 33, 0.16)' : 'rgba(215, 26, 33, 0.20)'" />
-          <stop offset="100%" stop-color="rgba(215, 26, 33, 0)" />
+          <stop offset="0%" :stop-color="bare ? 'color-mix(in srgb, var(--nt-accent) 16%, transparent)' : 'color-mix(in srgb, var(--nt-accent) 20%, transparent)'" />
+          <stop offset="100%" stop-color="color-mix(in srgb, var(--nt-accent) 0%, transparent)" />
         </linearGradient>
       </defs>
 

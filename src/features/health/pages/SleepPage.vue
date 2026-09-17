@@ -844,7 +844,7 @@ onIonViewWillEnter(async () => {
   flex-shrink: 0;
 }
 
-.stage-dot--awake  { background: rgba(255, 215, 0, 0.95); }
+.stage-dot--awake  { background: color-mix(in srgb, var(--nt-data-goal) 95%, transparent); }
 .stage-dot--rem    { background: rgba(45, 212, 238, 0.95); }
 .stage-dot--light  { background: rgba(130, 170, 250, 0.95); }
 .stage-dot--deep   { background: rgba(58, 99, 216, 0.97); }

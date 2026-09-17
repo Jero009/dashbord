@@ -402,8 +402,8 @@ const recoveryDisplay = computed(() =>
 const recoveryColor = computed(() => {
   const z = latestRecovery.value;
   if (z == null) return 'var(--nt-fg)';
-  if (z <= -1) return 'rgb(215, 26, 33)';
-  if (z >= 0.5) return 'rgb(34, 197, 94)';
+  if (z <= -1) return 'var(--ion-color-accent-red)';
+  if (z >= 0.5) return 'var(--nt-data-positive)';
   return 'var(--nt-fg)';
 });
 
@@ -428,9 +428,9 @@ const recoveryTime = computed(() => {
 });
 const recoveryTimeColor = computed(() => {
   const rt = recoveryTime.value;
-  if (!rt || rt.recovered) return 'rgb(34, 197, 94)';
-  if (rt.remainingHours >= 48) return 'rgb(215, 26, 33)';
-  if (rt.remainingHours >= 24) return 'rgb(255, 215, 0)';
+  if (!rt || rt.recovered) return 'var(--nt-data-positive)';
+  if (rt.remainingHours >= 48) return 'var(--ion-color-accent-red)';
+  if (rt.remainingHours >= 24) return 'var(--nt-data-goal)';
   return 'var(--nt-fg)';
 });
 const recoveryReadyLabel = computed(() => {

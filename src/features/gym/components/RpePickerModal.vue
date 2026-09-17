@@ -94,7 +94,7 @@ const select = (value: number | null) => {
 }
 
 .rpe-row--active {
-  background: rgba(215, 26, 33, 0.08);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 8%, transparent);
 }
 
 .rpe-row__num {

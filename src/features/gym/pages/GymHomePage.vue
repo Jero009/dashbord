@@ -467,14 +467,14 @@ ion-content.home-content {
 
 .active-card {
   background: var(--ion-color-primary);
-  border: 1px solid rgba(215, 26, 33, 0.3);
+  border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 30%, transparent);
   position: relative;
   transition: border-color 150ms ease;
   cursor: pointer;
 }
 
 .active-card:hover {
-  border-color: rgba(215, 26, 33, 0.5);
+  border-color: color-mix(in srgb, var(--ion-color-accent-red) 50%, transparent);
 }
 
 .active-card:active {
@@ -537,8 +537,8 @@ ion-content.home-content {
 }
 
 .active-card__timer--rest {
-  background: rgba(215, 26, 33, 0.1);
-  border: 1px solid rgba(215, 26, 33, 0.3);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 30%, transparent);
 }
 
 
