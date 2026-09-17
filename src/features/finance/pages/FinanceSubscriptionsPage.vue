@@ -498,11 +498,11 @@ onIonViewWillEnter(async () => {
 }
 
 .list-item--due-soon {
-  border-color: rgba(255, 215, 0, 0.35);
+  border-color: color-mix(in srgb, var(--nt-data-goal) 35%, transparent);
 }
 
 .list-item--overdue {
-  border-color: rgba(215, 26, 33, 0.5);
+  border-color: color-mix(in srgb, var(--ion-color-accent-red) 50%, transparent);
 }
 
 .list-item--paused {
@@ -532,13 +532,13 @@ onIonViewWillEnter(async () => {
 }
 
 .due-badge--soon {
-  color: rgb(255, 215, 0);
-  background: rgba(255, 215, 0, 0.12);
+  color: var(--nt-data-goal);
+  background: color-mix(in srgb, var(--nt-data-goal) 12%, transparent);
 }
 
 .due-badge--overdue {
   color: var(--nt-accent);
-  background: rgba(215, 26, 33, 0.12);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 12%, transparent);
 }
 
 .due-badge--paused {

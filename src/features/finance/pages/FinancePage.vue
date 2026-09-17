@@ -388,12 +388,12 @@ onIonViewWillEnter(loadFinance);
 
 .delta-chip--up {
   color: var(--nt-data-positive);
-  background: rgba(34, 197, 94, 0.12);
+  background: color-mix(in srgb, var(--nt-data-positive) 12%, transparent);
 }
 
 .delta-chip--down {
   color: var(--ion-color-accent-red);
-  background: rgba(215, 26, 33, 0.12);
+  background: color-mix(in srgb, var(--ion-color-accent-red) 12%, transparent);
 }
 
 .hero-hint {
