@@ -139,6 +139,15 @@
                 </ion-select-option>
               </ion-select>
             </div>
+            <div class="field-group">
+              <label class="field-label">Account</label>
+              <ion-select v-model="transactionAccountId" class="styled-select" interface="action-sheet" placeholder="Account" :disabled="!accounts.length">
+                <ion-select-option :value="null">No account</ion-select-option>
+                <ion-select-option v-for="account in accounts" :key="account.id" :value="account.id">
+                  {{ account.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
           </div>
           <ion-button expand="block" class="add-btn" @click="saveTransaction">{{ editingTransactionId ? 'Save' : 'Add' }}</ion-button>
         </ion-card>
@@ -206,6 +215,7 @@ import {
   upsertFinanceBudget,
   getFinanceBudgets,
   deleteFinanceBudget,
+  getFinanceAccounts,
 } from '@/shared/db/app_db';
 import { EXPENSE_CATEGORIES as expenseCategories, categoryLabel } from '@/features/finance/finance';
 
@@ -223,12 +233,14 @@ const isCurrentMonth = computed(() => viewedMonth.value === toLocalDateKey(new D
 
 const transactions = ref<Array<Record<string, any>>>([]);
 const budgets = ref<Array<Record<string, any>>>([]);
+const accounts = ref<Array<Record<string, any>>>([]);
 
 const transactionName = ref('');
 const transactionAmount = ref('');
 const transactionDate = ref(toLocalDateKey(new Date()));
 const transactionCategory = ref('food');
 const transactionType = ref<'expense' | 'income'>('expense');
+const transactionAccountId = ref<number | null>(null);
 const editingTransactionId = ref<number | null>(null);
 
 const budgetCategory = ref('food');
@@ -299,6 +311,7 @@ const budgetRows = computed(() =>
 const loadBudgetData = async () => {
   transactions.value = await getFinanceTransactionsForMonth(viewedMonth.value);
   budgets.value = await getFinanceBudgets();
+  accounts.value = await getFinanceAccounts();
 };
 
 const shiftMonth = async (delta: number) => {
@@ -321,6 +334,7 @@ const resetTransactionForm = () => {
   transactionDate.value = toLocalDateKey(new Date());
   transactionCategory.value = 'food';
   transactionType.value = 'expense';
+  transactionAccountId.value = null;
 };
 
 const beginEditTransaction = (transaction: Record<string, any>) => {
@@ -331,6 +345,7 @@ const beginEditTransaction = (transaction: Record<string, any>) => {
   transactionDate.value = String(transaction.date ?? toLocalDateKey(new Date()));
   transactionType.value = transaction.type === 'income' ? 'income' : 'expense';
   transactionCategory.value = transaction.type === 'income' ? 'food' : String(transaction.category || 'food');
+  transactionAccountId.value = transaction.account_id != null ? Number(transaction.account_id) : null;
 };
 
 
@@ -360,7 +375,9 @@ const saveTransaction = async () => {
         transactionName.value.trim(),
         category,
         amount,
-        transactionType.value
+        transactionType.value,
+        undefined,
+        transactionAccountId.value
       );
     } else {
       await addFinanceTransaction(
@@ -368,7 +385,9 @@ const saveTransaction = async () => {
         transactionName.value.trim(),
         category,
         amount,
-        transactionType.value
+        transactionType.value,
+        undefined,
+        transactionAccountId.value ?? undefined
       );
     }
   } catch {

@@ -142,7 +142,7 @@
               <div class="mini-row__info">
                 <strong class="mini-row__name">{{ tx.name }}</strong>
                 <span class="mini-row__meta">
-                  {{ tx.type === 'income' ? 'Income' : categoryLabel(tx.category) }} · {{ formatDay(tx.date) }}
+                  {{ tx.type === 'income' ? 'Income' : categoryLabel(tx.category) }} · {{ formatDay(tx.date) }}<template v-if="tx.account_name"> · {{ tx.account_name }}</template>
                 </span>
               </div>
               <span class="mini-row__val" :class="{ 'metric-positive': tx.type === 'income' }">
