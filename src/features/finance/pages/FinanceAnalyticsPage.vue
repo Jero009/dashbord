@@ -70,8 +70,22 @@
         <div class="card">
           <p class="nt-kicker">Income vs spending</p>
           <template v-if="monthly.length > 1">
+            <div class="chart-readout">
+              <span class="chart-readout__date">{{ trendReadoutLabel }}</span>
+              <span class="chart-readout__value">
+                spending <strong>{{ trendReadoutExpense }}</strong>
+                · income <strong>{{ trendReadoutIncome }}</strong>
+              </span>
+            </div>
             <div class="chart-frame">
-              <canvas ref="trendRef"></canvas>
+              <canvas
+                ref="trendRef"
+                class="scrub-canvas"
+                @pointerdown.prevent="trendScrub.onDown"
+                @pointermove="trendScrub.onMove"
+                @pointerup="trendScrub.onUp"
+                @pointercancel="trendScrub.onUp"
+              ></canvas>
             </div>
             <div class="chart-legend">
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--red"></i>Spending</span>
@@ -106,6 +120,7 @@ import {
   LinearScale, CategoryScale, Filler, Tooltip,
 } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartDonutPalette, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import { useChartScrub } from '@/shared/composables/useChartScrub';
 import { hapticLight } from '@/shared/utils/haptics';
 import { localMonthISO } from '@/shared/utils/timeFormat';
 
@@ -205,6 +220,13 @@ const renderDonut = () => {
   });
 };
 
+// Scrub contract (v3.x): whole-surface pointer scrub + readout row, haptics
+// fire inside the composable only when the selected index changes.
+const trendScrub = useChartScrub({
+  chart: () => trendChart,
+  count: () => monthly.value.length,
+});
+
 const renderTrend = () => {
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   if (!trendRef.value || monthly.value.length < 2) return;
@@ -220,6 +242,7 @@ const renderTrend = () => {
         { ...chartDimDataset, label: 'Income', data: monthly.value.map((m) => m.income) },
       ],
     },
+    plugins: [trendScrub.scrubPlugin],
     options: {
       responsive: true,
       animation: false,
@@ -227,10 +250,7 @@ const renderTrend = () => {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        tooltip: {
-          ...chartTooltip,
-          callbacks: { label: (c) => ` ${c.dataset.label}: ${formatCurrency(c.parsed.y ?? 0)}` },
-        },
+        tooltip: { enabled: false }, // readout row replaces the floating tooltip
       },
       scales: {
         y: { beginAtZero: true, ticks: chartTicks, grid: chartGrid },
@@ -239,6 +259,19 @@ const renderTrend = () => {
     },
   });
 };
+
+const trendActiveIdx = computed(() =>
+  trendScrub.selectedIdx.value ?? Math.max(monthly.value.length - 1, 0));
+const trendReadoutLabel = computed(() => {
+  const m = monthly.value[trendActiveIdx.value];
+  if (!m) return '';
+  const [year, month] = m.month.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+});
+const trendReadoutExpense = computed(() =>
+  formatCurrency(monthly.value[trendActiveIdx.value]?.expense ?? 0));
+const trendReadoutIncome = computed(() =>
+  formatCurrency(monthly.value[trendActiveIdx.value]?.income ?? 0));
 
 // "2026-06" -> "Jun"
 const monthShort = (key: string) => {
@@ -435,5 +468,30 @@ onUnmounted(() => {
   margin: 0;
   color: rgba(var(--nt-ink), 0.6);
   font-size: 0.9rem;
+}
+
+.chart-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--nt-font-head);
+  font-size: 0.72rem;
+  color: var(--nt-text-dim);
+}
+
+.chart-readout__date {
+  min-width: 3.5em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-readout__value strong {
+  color: var(--nt-fg);
+  font-weight: 600;
+}
+
+.scrub-canvas {
+  touch-action: pan-y; /* horizontal drag scrubs, vertical still scrolls */
+  cursor: crosshair;
 }
 </style>
