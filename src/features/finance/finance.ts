@@ -49,6 +49,7 @@ export const computeTotalAssets = (
 export const monthlyCostOf = (sub: SubscriptionRow): number => {
   const amount = num(sub.amount);
   if (sub.cadence === 'yearly') return amount / 12;
+  if (sub.cadence === 'quarterly') return amount / 3;
   if (sub.cadence === 'weekly') return (amount * 52) / 12;
   return amount;
 };
@@ -71,17 +72,15 @@ export const subscriptionsMonthlyInflow = (subs: SubscriptionRow[]): number =>
     0
   );
 
-// Active expense items due within the next `days`, soonest first. Items with no
-// due date are skipped (we can't schedule them on the timeline).
-export const upcomingBills = (subs: SubscriptionRow[], days = 14): SubscriptionRow[] => {
-  const now = Date.now();
-  const horizon = now + days * 86400000;
-  return subs
+// Active expense items due within the next `days`, soonest first (overdue
+// included — negative day diff sorts first). Items with no due date are
+// skipped (we can't schedule them on the timeline).
+export const upcomingBills = (subs: SubscriptionRow[], days = 14): SubscriptionRow[] =>
+  subs
     .filter((s) => isActive(s) && s.direction !== 'income' && s.next_due_date)
-    .map((s) => ({ ...s, _due: new Date(String(s.next_due_date)).getTime() }))
-    .filter((s) => Number.isFinite(s._due) && s._due <= horizon)
-    .sort((a, b) => a._due - b._due);
-};
+    .map((s) => ({ ...s, _diff: daysFromToday(String(s.next_due_date)) }))
+    .filter((s) => s._diff !== null && s._diff <= days)
+    .sort((a, b) => (a._diff as number) - (b._diff as number));
 
 // Savings rate as a 0–1 fraction (income kept rather than spent). Null when no income.
 export const savingsRate = (income: number, expense: number): number | null => {
@@ -112,13 +111,23 @@ export const EXPENSE_CATEGORIES: CategoryMeta[] = [
 export const categoryLabel = (value: string): string =>
   EXPENSE_CATEGORIES.find((c) => c.value === value)?.label ?? 'Other';
 
+// Calendar-day difference between a YYYY-MM-DD local date key and today,
+// computed in local date space (never `new Date('YYYY-MM-DD')`, which parses
+// as UTC midnight and shifts a day in UTC+ timezones). Null for invalid keys.
+export const daysFromToday = (dateKey: string | null | undefined): number | null => {
+  if (!dateKey) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateKey));
+  if (!m) return null;
+  const target = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(target.getTime())) return null;
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
+};
+
 // Relative due label: "Today", "Tomorrow", "in 5d", "3d ago".
 export const dueLabel = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return 'TBD';
-  const target = new Date(String(dateStr));
-  if (!Number.isFinite(target.getTime())) return 'TBD';
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const diffDays = Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
+  const diffDays = daysFromToday(dateStr);
+  if (diffDays === null) return 'TBD';
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
   if (diffDays === -1) return 'Yesterday';
