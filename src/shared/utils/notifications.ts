@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core'
 const ID_WEIGHT        = 1
 const ID_SLEEP         = 3
 const ID_REST_TIMER    = 20
+const ID_FINANCE_BILL  = 30
 
 // Parse 'HH:MM', falling back to 09:00 if the stored value is malformed so we
 // never hand setHours(NaN) to the scheduler (which yields an Invalid Date).
@@ -97,6 +98,32 @@ export async function cancelWeightReminder(): Promise<void> {
 export async function cancelSleepReminder(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
   await LocalNotifications.cancel({ notifications: [{ id: ID_SLEEP }] })
+}
+
+// Bill-due summary (finance). One-shot scheduled at the user's alert time for
+// the current/next occurrence — re-armed on every Home entry by the caller,
+// which recomputes whether anything is actually due (local notifications can't
+// query the DB themselves).
+export async function scheduleBillAlert(title: string, body: string, at: Date): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_FINANCE_BILL }] })
+  if (at.getTime() <= Date.now()) return
+  const granted = (await LocalNotifications.checkPermissions()).display === 'granted'
+  if (!granted) return
+  await LocalNotifications.schedule({
+    notifications: [{
+      id: ID_FINANCE_BILL,
+      title,
+      body,
+      schedule: { at },
+      smallIcon: 'ic_stat_icon_config_sample',
+    }]
+  })
+}
+
+export async function cancelBillAlert(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  await LocalNotifications.cancel({ notifications: [{ id: ID_FINANCE_BILL }] })
 }
 
 export async function cancelAllNotifications(): Promise<void> {

@@ -79,3 +79,8 @@ export function getNotifSleepEnabled(): boolean { return localStorage.getItem('n
 export function setNotifSleepEnabled(v: boolean): void { localStorage.setItem('notif_sleep_enabled', v ? '1' : '0') }
 export function getNotifSleepTime(): string { return localStorage.getItem('notif_sleep_time') ?? '22:30' }
 export function setNotifSleepTime(t: string): void { localStorage.setItem('notif_sleep_time', t) }
+
+export function getNotifBillAlertEnabled(): boolean { return localStorage.getItem('notif_bill_enabled') !== '0' }
+export function setNotifBillAlertEnabled(v: boolean): void { localStorage.setItem('notif_bill_enabled', v ? '1' : '0') }
+export function getNotifBillAlertTime(): string { return localStorage.getItem('notif_bill_time') ?? '20:00' }
+export function setNotifBillAlertTime(t: string): void { localStorage.setItem('notif_bill_time', t) }

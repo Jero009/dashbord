@@ -127,6 +127,21 @@
               </label>
             </div>
           </div>
+
+          <!-- Bills due (finance) -->
+          <div class="notif-row">
+            <div class="notif-row__label">
+              <span class="notif-title">Bill alert</span>
+              <span class="notif-sub">Bills due within 3 days</span>
+            </div>
+            <div class="notif-row__controls">
+              <input v-if="notifBillEnabled" v-model="notifBillTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifBill" />
+              <label class="notif-toggle">
+                <input type="checkbox" v-model="notifBillEnabled" @change="saveNotifBill" />
+                <span class="notif-toggle__track"></span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- DATA & SYNC -->
@@ -179,6 +194,7 @@ import {
   getCurrency, setCurrency, getLastHcSyncAt, setLastHcSyncAt,
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
+  getNotifBillAlertEnabled, setNotifBillAlertEnabled, getNotifBillAlertTime, setNotifBillAlertTime,
   getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
 } from '@/shared/utils/userSettings'
 import type { CurrencyCode } from '@/shared/utils/userSettings'
@@ -309,6 +325,17 @@ const saveNotifSleep = async () => {
   setNotifSleepTime(notifSleepTime.value)
   if (notifSleepEnabled.value) await scheduleSleepReminder(notifSleepTime.value)
   else await cancelSleepReminder()
+}
+
+// Bill alert: toggle/time only persist the preference here — the notification
+// itself is armed on Home entry (it needs the DB to know what's due).
+const notifBillEnabled = ref(getNotifBillAlertEnabled())
+const notifBillTime = ref(getNotifBillAlertTime())
+
+const saveNotifBill = async () => {
+  hapticLight()
+  setNotifBillAlertEnabled(notifBillEnabled.value)
+  setNotifBillAlertTime(notifBillTime.value)
 }
 
 // --- Database: export / import ---

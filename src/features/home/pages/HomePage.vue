@@ -198,7 +198,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate} from '@/shared/db/app_db';
+import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, postDueSubscriptions, getFinanceSubscriptions} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
 import { computeTodayRecovery, type RecoveryRecommendation } from '@/shared/health/todayRecovery';
@@ -208,6 +208,10 @@ import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/model
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 import { restTimerState, cancelRestTimer, resumeRestTimer } from '@/shared/composables/useRestTimer';
+import { dueWithin, billAlertBody } from '@/features/finance/billAlerts';
+import { scheduleBillAlert, cancelBillAlert } from '@/shared/utils/notifications';
+import { getNotifBillAlertEnabled, getNotifBillAlertTime } from '@/shared/utils/userSettings';
+import { Capacitor } from '@capacitor/core';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
@@ -581,9 +585,32 @@ const loadAll = async () => {
     loadWeekDigest(),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
+    armFinance(),
   ]);
   await nextTick();
   buildBatteryChart();
+};
+
+// Finance housekeeping on every Home entry (T2/T3): auto-post due subscription
+// periods (idempotent — skipped days post late otherwise) and re-arm the
+// bill-due notification, which needs the DB to know what's due.
+const armFinance = async () => {
+  await postDueSubscriptions().catch(() => {});
+  try {
+    if (!getNotifBillAlertEnabled() || !Capacitor.isNativePlatform()) return;
+    const alerts = dueWithin(await getFinanceSubscriptions(), 3);
+    if (!alerts) {
+      await cancelBillAlert();
+      return;
+    }
+    const [h, m] = getNotifBillAlertTime().split(':').map(Number);
+    const at = new Date();
+    at.setHours(Number.isFinite(h) ? h : 20, Number.isFinite(m) ? m : 0, 0, 0);
+    if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1);
+    await scheduleBillAlert('Bills due soon', billAlertBody(alerts), at);
+  } catch {
+    // notification arming must never break the dashboard load
+  }
 };
 
 onIonViewWillEnter(loadAll);
