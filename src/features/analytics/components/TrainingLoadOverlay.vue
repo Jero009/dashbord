@@ -63,14 +63,15 @@
       <div class="chart-wrap">
         <div class="axis-label axis-label--left">Load · {{ loadMetricLabel }}</div>
         <div class="axis-label axis-label--right">{{ signalLabel }} z</div>
-        <!-- Scrub readout: defaults to the latest day, follows the finger -->
+        <!-- Scrub readout: defaults to the latest day, follows the finger.
+             Value styling mirrors TrendChart's readout (Doto numerals). -->
         <div class="chart-readout">
           <span class="chart-readout__date">{{ selectedDateLabel }}</span>
           <span class="chart-readout__value">
-            load <strong>{{ selectedLoadDisplay }}</strong>
+            load <strong class="readout-num readout-num--load">{{ selectedLoadDisplay }}</strong>
           </span>
           <span class="chart-readout__value">
-            {{ signalLabel }} z <strong :style="{ color: selectedZColor }">{{ selectedZDisplay }}</strong>
+            {{ signalLabel }} z <strong class="readout-num" :style="{ color: selectedZColor }">{{ selectedZDisplay }}</strong>
           </span>
         </div>
         <div class="chart-scroll">
@@ -86,6 +87,12 @@
             @pointerup="onUp"
             @pointercancel="onUp"
           >
+            <defs>
+              <linearGradient id="tloZFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="color-mix(in srgb, var(--nt-fg) 16%, transparent)" />
+                <stop offset="100%" stop-color="color-mix(in srgb, var(--nt-fg) 0%, transparent)" />
+              </linearGradient>
+            </defs>
             <!-- scrub hairline + markers -->
             <line v-if="selectedIdx !== null" :x1="selectedIdx * SLOT + SLOT / 2" :x2="selectedIdx * SLOT + SLOT / 2"
                   y1="0" :y2="svgH" class="chart-hairline" />
@@ -108,6 +115,12 @@
 
             <!-- recovery line — point for day N+1 sits at the left edge of its bar,
                  i.e. adjacent to bar N, to make the load→recovery lag visible -->
+            <polygon
+              v-if="recoveryPath.length > 1"
+              :points="recoveryAreaPoints"
+              fill="url(#tloZFill)"
+              stroke="none"
+            />
             <polyline
               v-if="recoveryPath.length > 1"
               :points="recoveryPolyline"
@@ -122,6 +135,14 @@
               :cy="p.y"
               r="2.6"
               :style="{ fill: p.low ? 'var(--ion-color-accent-red)' : 'var(--nt-fg)' }"
+            />
+            <!-- latest-day end dot (TrendChart-style marker on the newest point) -->
+            <circle
+              v-if="recoveryEnd && selectedIdx === null"
+              :cx="recoveryEnd.x"
+              :cy="recoveryEnd.y"
+              r="3.5"
+              :style="{ fill: recoveryEnd.low ? 'var(--ion-color-accent-red)' : 'var(--nt-accent)' }"
             />
 
           <!-- scrub marker on the recovery line -->
@@ -310,6 +331,22 @@ const recoveryPath = computed(() => {
 const recoveryPolyline = computed(() =>
   recoveryPath.value.map((p) => `${p.x},${p.y}`).join(' ')
 );
+
+// Area fill under the recovery line (TrendChart-style gradient polygon).
+const recoveryAreaPoints = computed(() => {
+  const pts = recoveryPath.value;
+  if (pts.length < 2) return '';
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  const line = pts.map((p) => `${p.x},${p.y}`).join(' ');
+  return `${first.x},${baseY} ${line} ${last.x},${baseY}`;
+});
+
+// Newest recovery point (for the TrendChart-style end dot).
+const recoveryEnd = computed(() => {
+  const pts = recoveryPath.value;
+  return pts.length ? pts[pts.length - 1] : null;
+});
 
 // ── scrub (mirrors TrendChart's select pattern: haptic only on CHANGE) ───────
 const selectedIdx = ref<number | null>(null);
@@ -710,6 +747,19 @@ onIonViewWillEnter(load);
   color: var(--nt-fg);
   font-weight: 600;
 }
+
+/* Doto numerals in the readout — mirrors TrendChart's .trend__value */
+.readout-num {
+  font-family: var(--nt-font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.readout-num--load {
+  color: var(--nt-fg);
+}
+
 .tick-text {
   fill: rgba(var(--nt-ink), 0.4);
   font-family: var(--nt-font-mono);
