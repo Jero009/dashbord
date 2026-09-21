@@ -6,6 +6,33 @@ import { Capacitor } from '@capacitor/core';
 
 const DashboardWidget = registerPlugin<{ sync(opts: { data: string }): Promise<void> }>('DashboardWidget');
 
+// The plugin's `sync` FULLY REPLACES the stored snapshot blob, and two
+// producers write different fields (healthConnect writes sleep fields, Home
+// writes briefing fields). Keep the last snapshot here and merge so one
+// producer never blanks the other's fields.
+const SNAPSHOT_MIRROR_KEY = 'widgetBridge.snapshot'
+
+function readSnapshotMirror(): Record<string, unknown> {
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_MIRROR_KEY)
+    const obj = raw ? JSON.parse(raw) : null
+    return obj && typeof obj === 'object' ? obj : {}
+  } catch {
+    return {}
+  }
+}
+
+function mergeAndBuild(fields: Record<string, unknown>): Record<string, unknown> {
+  const merged = { ...readSnapshotMirror(), ...fields }
+  // Drop null/undefined/NaN values — the Java side treats missing as fallback.
+  for (const k of Object.keys(merged)) {
+    const v = merged[k]
+    if (v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))) delete merged[k]
+  }
+  localStorage.setItem(SNAPSHOT_MIRROR_KEY, JSON.stringify(merged))
+  return merged
+}
+
 export interface SleepWidgetState {
   date: string;          // local date of the sleep night (YYYY-MM-DD)
   sleepScore: number | null;
@@ -44,6 +71,13 @@ function hmFromMinutes(min: number | null): string | null {
 
 export async function updateSleepWidget(state: SleepWidgetState, extra: BriefingWidgetFields | null = null): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
+  // Briefing fields ride along when provided (single native round-trip).
+  const merged = extra ? await updateWidgetFields({ ...sleepStateToFields(state) }, extra) : await updateWidgetFields(sleepStateToFields(state))
+  return merged
+}
+
+/** Sleep-state fields only (no `date` collision with briefing pushes). */
+function sleepStateToFields(state: SleepWidgetState): Record<string, unknown> {
   const payload: Record<string, unknown> = { date: state.date };
   if (state.sleepScore !== null) payload.sleepScore = state.sleepScore;
   if (state.sleepHours !== null) payload.sleepHours = state.sleepHours;
@@ -60,17 +94,32 @@ export async function updateSleepWidget(state: SleepWidgetState, extra: Briefing
   const rem = hmFromMinutes(state.remMinutes);
   if (rem) payload.remDuration = rem;
   if (state.stageSegments?.length) payload.stageSegments = state.stageSegments;
+  return payload
+}
 
+/**
+ * Merge arbitrary widget fields over the last snapshot and push. Use this for
+ * producers that don't own sleep data (briefing pulls from Home).
+ */
+export async function updateWidgetFields(
+  fields: Record<string, unknown>,
+  extra: BriefingWidgetFields | null = null,
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
   // Briefing widget fields — merge when the caller has them (Home's
   // loadBriefing passes them so the widget updates after each briefing pull).
   if (extra) {
-    if (extra.briefingTitle) payload.briefingTitle = extra.briefingTitle;
-    if (extra.briefingBody) payload.briefingBody = extra.briefingBody;
-    if (extra.briefingDate) payload.briefingDate = extra.briefingDate;
+    if (extra.briefingTitle) fields.briefingTitle = extra.briefingTitle;
+    if (extra.briefingBody) fields.briefingBody = extra.briefingBody;
+    if (extra.briefingDate) fields.briefingDate = extra.briefingDate;
   }
 
   try {
-    await DashboardWidget.sync({ data: JSON.stringify(payload) });
+    // Merge over the last snapshot (see readSnapshotMirror) — the plugin
+    // replaces the blob wholesale, and multiple producers write disjoint
+    // fields, so an unmerged push would blank the other widgets.
+    const merged = mergeAndBuild(fields);
+    await DashboardWidget.sync({ data: JSON.stringify(merged) });
   } catch (error) {
     console.error('Widget update failed:', error);
   }

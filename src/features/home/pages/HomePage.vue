@@ -229,7 +229,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Category
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { getCachedBriefing, syncBriefing, briefingIsToday, type Briefing } from '@/shared/sync/briefingStore';
 import { syncGrades, getCachedGrades, countNewAndMarkSeen, averageGrade } from '@/shared/sync/gradesStore';
-import { updateSleepWidget } from '@/shared/widget/widgetBridge';
+import { updateWidgetFields } from '@/shared/widget/widgetBridge';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 const router = useRouter();
@@ -272,11 +272,7 @@ const loadBriefing = async () => {
   // Refresh the widget snapshot so the briefing widget follows the card.
   if (briefing.value) {
     const b = briefing.value;
-    void updateSleepWidget({
-      date: todayStr,
-      sleepScore: null, sleepHours: null, delta7d: null,
-      bedtime: null, waketime: null, deepMinutes: null, remMinutes: null, stageSegments: null,
-    }, {
+    void updateWidgetFields({
       briefingTitle: b.title || 'Daily briefing',
       briefingBody: b.body,
       briefingDate: localDateISO(new Date(b.receivedAt * 1000)),
