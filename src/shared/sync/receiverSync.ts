@@ -15,6 +15,7 @@
 // fire-and-fail: offline use must never surface an error to the user — rows
 // stay dirty and ride the next flush.
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
+import { getReceiverWriteKey } from '@/shared/utils/userSettings'
 
 const STAMP_KEY = 'receiverSync.lastPullAt'
 
@@ -55,10 +56,14 @@ function receiverBase(): string {
  */
 async function pushRows(type: string, rows: unknown[]): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || rows.length === 0) return true
+  // POST /webhook is the one authed receiver endpoint (GET /latest is open).
+  // Key is provisioned once in Settings → stored locally; repo stays clean.
+  const key = getReceiverWriteKey()
+  if (!key) return false // queued rows retry once a key is set — no silent loss
   try {
     const res = await CapacitorHttp.post({
       url: `${receiverBase()}/webhook`,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
       // Keyed top level — see module docs. Extra wrapper field is tolerated.
       data: { [type]: rows },
       readTimeout: 8000,

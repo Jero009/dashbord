@@ -49,6 +49,21 @@
               @ionBlur="saveCoinGeckoKey"
             ></ion-input>
           </div>
+
+          <div class="set-row">
+            <div class="set-row__label">
+              <span class="set-row__title">Receiver write key</span>
+              <span class="set-row__sub">Required for gym sync &amp; Hermes logging</span>
+            </div>
+            <ion-input
+              v-model="receiverKey"
+              type="password"
+              placeholder="HC_SECRET"
+              class="form-input form-input--compact"
+              style="max-width: 140px"
+              @ionBlur="saveReceiverKey"
+            ></ion-input>
+          </div>
         </div>
 
         <!-- GOALS & TARGETS -->
@@ -205,6 +220,7 @@ import {
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
   getNotifBillAlertEnabled, setNotifBillAlertEnabled, getNotifBillAlertTime, setNotifBillAlertTime,
   getCoinGeckoApiKey, setCoinGeckoApiKey,
+  getReceiverWriteKey, setReceiverWriteKey,
   getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
 } from '@/shared/utils/userSettings'
 import type { CurrencyCode } from '@/shared/utils/userSettings'
@@ -219,6 +235,7 @@ import type { ThemeMode } from '@/shared/composables/useTheme'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
 import { buildAiExport } from '@/shared/utils/aiExport'
+import { flushDirtyWorkoutQueue } from '@/shared/sync/receiverSync'
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -297,6 +314,11 @@ const currency = ref<CurrencyCode>(getCurrency())
 watch(currency, (code) => setCurrency(code))
 const coinGeckoKey = ref(getCoinGeckoApiKey())
 const saveCoinGeckoKey = () => setCoinGeckoApiKey(coinGeckoKey.value)
+const receiverKey = ref(getReceiverWriteKey())
+const saveReceiverKey = () => {
+  setReceiverWriteKey(receiverKey.value)
+  if (receiverKey.value.trim()) void flushDirtyWorkoutQueue()
+}
 
 // --- Gym: weekly workout goal ---
 const weeklyGoalOptions = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12]

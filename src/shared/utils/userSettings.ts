@@ -91,3 +91,5 @@ export function setNotifBillAlertTime(t: string): void { localStorage.setItem('n
 
 export function getCoinGeckoApiKey(): string { return localStorage.getItem('coingecko_api_key') ?? '' }
 export function setCoinGeckoApiKey(key: string): void { localStorage.setItem('coingecko_api_key', key.trim()) }
+export function getReceiverWriteKey(): string { return localStorage.getItem('receiver_write_key') ?? '' }
+export function setReceiverWriteKey(key: string): void { localStorage.setItem('receiver_write_key', key.trim()) }
