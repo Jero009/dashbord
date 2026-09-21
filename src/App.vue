@@ -13,6 +13,7 @@ import HealthConnectAutoSync from '@/shared/health/HealthConnectAutoSync.vue';
 import { Capacitor } from '@capacitor/core'
 import { scheduleWeightReminder, scheduleSleepReminder } from '@/shared/utils/notifications'
 import { startHermesPolling } from '@/shared/hermes/hermesPush'
+import { flushDirtyWorkoutQueue } from '@/shared/sync/receiverSync'
 import { getNotifWeightEnabled, getNotifWeightTime, getNotifSleepEnabled, getNotifSleepTime } from '@/shared/utils/userSettings'
 import { initDB } from '@/shared/db/app_db'
 
@@ -31,6 +32,10 @@ onMounted(async () => {
     // Hermes push channel: poll the health receiver for new agent messages and
     // surface them as OS notifications (no-op on web/dev).
     startHermesPolling()
+
+    // Retry any gym-workout payloads queued while offline (dirty queue is a
+    // no-op when empty; failures stay queued for the next cycle).
+    void flushDirtyWorkoutQueue()
   } catch (error) {
     console.error('Startup notification scheduling failed:', error)
   }

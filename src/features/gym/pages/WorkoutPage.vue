@@ -515,6 +515,7 @@ import {
 } from '@/shared/composables/useRestTimer';
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
+import { mirrorWorkoutToReceiver } from '@/shared/sync/workoutMirror';
 import { formatRestTime } from '@/shared/utils/timeFormat';
 
 const router = useRouter();
@@ -708,6 +709,9 @@ const saveWorkout = async () => {
           const sessionRpe = await promptSessionRpe();
           if (sessionRpe != null) await setWorkoutSessionRpe(workoutId, sessionRpe);
           const achievedPRs = await endWorkout(workoutId);
+          // Mirror to the receiver (dirty-queued, retried offline) — background
+          // concern, must never block or break the end-workout flow.
+          void mirrorWorkoutToReceiver(workoutId);
           const durationStr = formatTime();
           if (interval) clearInterval(interval);
           interval = null;

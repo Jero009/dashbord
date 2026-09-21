@@ -125,6 +125,11 @@ export async function initDB() {
   }
 }
 
+/** Read access for shared sync modules (workoutMirror) — null before init/web. */
+export function getDbForSync(): SQLiteDBConnection | null {
+  return db;
+}
+
 async function doInitDB() {
   try {
     // The native CapacitorSQLite plugin keeps its connection pool alive across
