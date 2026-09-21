@@ -19,6 +19,16 @@ export interface SleepWidgetState {
   stageSegments: { stage: string; start: string; end: string; weight: number }[] | null;
 }
 
+// Briefing widget fields ride the SAME shared snapshot (one blob, many
+// providers) — they merge in on every sync so the briefing widget updates
+// whenever any widget sync runs after a briefing pull.
+export interface BriefingWidgetFields {
+  briefingTitle: string | null;
+  briefingBody: string | null;
+  /** Local date key of the briefing (YYYY-MM-DD) or formatted short date. */
+  briefingDate: string | null;
+}
+
 function hhmm(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -32,7 +42,7 @@ function hmFromMinutes(min: number | null): string | null {
   return `${Math.floor(total / 60)}H ${total % 60}M`;
 }
 
-export async function updateSleepWidget(state: SleepWidgetState): Promise<void> {
+export async function updateSleepWidget(state: SleepWidgetState, extra: BriefingWidgetFields | null = null): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   const payload: Record<string, unknown> = { date: state.date };
   if (state.sleepScore !== null) payload.sleepScore = state.sleepScore;
@@ -51,9 +61,18 @@ export async function updateSleepWidget(state: SleepWidgetState): Promise<void> 
   if (rem) payload.remDuration = rem;
   if (state.stageSegments?.length) payload.stageSegments = state.stageSegments;
 
+  // Briefing widget fields — merge when the caller has them (Home's
+  // loadBriefing passes them so the widget updates after each briefing pull).
+  if (extra) {
+    if (extra.briefingTitle) payload.briefingTitle = extra.briefingTitle;
+    if (extra.briefingBody) payload.briefingBody = extra.briefingBody;
+    if (extra.briefingDate) payload.briefingDate = extra.briefingDate;
+  }
+
   try {
     await DashboardWidget.sync({ data: JSON.stringify(payload) });
   } catch (error) {
     console.error('Widget update failed:', error);
   }
 }
+
