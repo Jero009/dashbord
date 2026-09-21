@@ -6,7 +6,7 @@ import {
   averageGrade,
   type GradeRow,
 } from '@/shared/sync/gradesStore'
-import { getCachedBriefing, syncBriefing, briefingIsToday, type Briefing } from '@/shared/sync/briefingStore'
+import { getCachedBriefing, syncBriefing, briefingIsToday } from '@/shared/sync/briefingStore'
 
 const store = new Map<string, string>()
 vi.stubGlobal('localStorage', {

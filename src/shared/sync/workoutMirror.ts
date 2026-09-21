@@ -12,8 +12,6 @@ import {
 } from '@/shared/sync/receiverSync'
 import { getDbForSync } from '@/shared/db/app_db'
 
-interface SetRow { weight?: unknown; reps?: unknown; completed?: unknown }
-
 export function localDateKey(d = new Date()): string {
   // Local date key — NEVER toISOString().slice(0,10) (UTC drift, see AGENTS.md).
   const y = d.getFullYear()
