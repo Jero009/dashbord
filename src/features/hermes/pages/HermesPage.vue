@@ -58,6 +58,22 @@
           <p v-else class="empty-copy">Not enough data yet</p>
         </div>
 
+        <!-- Grades (mirrored from eAsistent via the receiver) -->
+        <div v-if="grades.length > 0" class="card">
+          <p class="nt-kicker">Grades</p>
+          <div class="grades-head">
+            <strong class="grades-avg">{{ gradesAvg != null ? gradesAvg.toFixed(1) : '—' }}</strong>
+            <span class="grades-avg-label">avg · last {{ Math.min(10, grades.length) }}</span>
+          </div>
+          <div class="grades-list">
+            <div v-for="g in grades.slice(0, 8)" :key="`${g.receivedAt}-${g.subject}-${g.date}`" class="grade-row">
+              <strong class="grade-val">{{ g.grade }}</strong>
+              <span class="grade-subject">{{ g.subject }}</span>
+              <span class="grade-meta">{{ g.date?.slice(5) }}<template v-if="g.term"> · {{ g.term }}</template></span>
+            </div>
+          </div>
+        </div>
+
         <!-- Hermes push notifications -->
         <div class="card">
           <div class="card-header">
@@ -106,6 +122,8 @@ import { computeInsights, type DatedValue, type Insight } from '@/shared/health/
 import { localDateISO } from '@/shared/utils/timeFormat';
 import { hapticLight } from '@/shared/utils/haptics';
 import { fetchHermesMessages, type HermesMessage } from '@/shared/hermes/hermesPush';
+import { syncGrades, getCachedGrades, averageGrade, type GradeRow } from '@/shared/sync/gradesStore';
+import { syncBriefing, getCachedBriefing } from '@/shared/sync/briefingStore';
 
 const recovery = ref<RecoveryRecommendation | null>(null);
 const readinessVal = ref<number | null>(null);
@@ -184,13 +202,30 @@ const refreshPush = async () => {
   hapticLight();
   pushLoading.value = true;
   try {
-    pushMessages.value = await fetchHermesMessages(5);
+    const [push, briefing] = await Promise.all([
+      fetchHermesMessages(10),
+      syncBriefing().then(() => getCachedBriefing()).catch(() => null),
+    ]);
+    // Timeline = generic pushes + the latest daily briefing on top.
+    const merged: HermesMessage[] = push.slice();
+    if (briefing) {
+      merged.push({ receivedAt: briefing.receivedAt, title: briefing.title || 'Daily briefing', body: briefing.body });
+    }
+    pushMessages.value = merged.sort((a, b) => b.receivedAt - a.receivedAt);
+
+    await syncGrades().catch(() => 0);
+    grades.value = getCachedGrades();
   } finally {
     pushLoading.value = false;
   }
 };
 
+// Grades (cached first for offline, refreshed by the pull above)
+const grades = ref<GradeRow[]>([]);
+const gradesAvg = computed(() => averageGrade(grades.value, 10));
+
 onIonViewWillEnter(() => {
+  grades.value = getCachedGrades();
   loadAll();
   void refreshPush();
 });
@@ -332,6 +367,54 @@ onIonViewWillEnter(() => {
 }
 
 .push-time {
+  font-family: var(--nt-font-mono);
+  font-size: 0.72rem;
+  color: var(--nt-text-dim);
+}
+
+/* Grades */
+.grades-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.grades-avg {
+  font-family: var(--nt-font-display);
+  font-size: 1.8rem;
+}
+
+.grades-avg-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: var(--nt-tracking-label);
+  color: var(--nt-text-dim);
+}
+
+.grades-list {
+  display: grid;
+  gap: 8px;
+}
+
+.grade-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.grade-val {
+  font-family: var(--nt-font-display);
+  font-size: 1.1rem;
+  min-width: 1.4em;
+  text-align: center;
+}
+
+.grade-subject {
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.grade-meta {
   font-family: var(--nt-font-mono);
   font-size: 0.72rem;
   color: var(--nt-text-dim);

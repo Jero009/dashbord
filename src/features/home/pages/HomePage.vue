@@ -7,6 +7,19 @@
     <ion-content :fullscreen="true" class="home-content">
       <div class="home-shell">
 
+        <!-- Hermes daily briefing (local-first: cached, refreshed by pull) -->
+        <ion-card v-if="briefing" class="summary-card briefing-card" button @click="openHermes">
+          <div class="card-topline">
+            <p class="nt-kicker">Hermes briefing</p>
+            <span class="card-date">{{ briefingLabel }}</span>
+          </div>
+          <div class="briefing-head">
+            <strong class="briefing-title">{{ briefing.title || 'Daily briefing' }}</strong>
+            <span v-if="gradeLine" class="briefing-grade">{{ gradeLine }}</span>
+          </div>
+          <p class="briefing-body">{{ briefingExcerpt }}</p>
+        </ion-card>
+
         <!-- Active workout banner -->
         <ion-card v-if="activeWorkout" class="active-card" @click="backToWorkout">
           <div class="card-topline">
@@ -214,9 +227,48 @@ import { getNotifBillAlertEnabled, getNotifBillAlertTime } from '@/shared/utils/
 import { Capacitor } from '@capacitor/core';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
+import { getCachedBriefing, syncBriefing, briefingIsToday, type Briefing } from '@/shared/sync/briefingStore';
+import { syncGrades, getCachedGrades, countNewAndMarkSeen, averageGrade } from '@/shared/sync/gradesStore';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 const router = useRouter();
+
+// Hermes briefing + grades (receiver mirror; cached for offline, refreshed on load)
+const briefing = ref<Briefing | null>(null);
+const gradeLine = ref('');
+const briefingLabel = computed(() => {
+  if (!briefing.value) return '';
+  if (briefingIsToday(briefing.value)) {
+    return new Date(briefing.value.receivedAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return briefing.value.receivedAt
+    ? new Date(briefing.value.receivedAt * 1000).toLocaleDateString([], { day: 'numeric', month: 'short' })
+    : '';
+});
+const briefingExcerpt = computed(() => {
+  const body = briefing.value?.body ?? '';
+  const nl = body.indexOf('\n');
+  return nl > 0 ? body.slice(0, nl) : body.slice(0, 140);
+});
+const openHermes = () => {
+  hapticLight();
+  router.push('/hermes');
+};
+const loadBriefing = async () => {
+  briefing.value = getCachedBriefing();
+  await Promise.all([
+    syncBriefing().then((next) => { if (next) briefing.value = next; }),
+    syncGrades().catch(() => 0),
+  ]);
+  const grades = getCachedGrades();
+  if (grades.length > 0) {
+    const fresh = countNewAndMarkSeen();
+    const avg = averageGrade(grades, 10);
+    gradeLine.value = `Avg ${avg != null ? avg.toFixed(1) : '—'}${fresh > 0 ? ` · ${fresh} new` : ''}`;
+  } else {
+    gradeLine.value = '';
+  }
+};
 
 // Weight card
 const todayWeight = ref<number | null>(null);
@@ -587,6 +639,7 @@ const loadAll = async () => {
     loadTodayWeight(),
     loadRecovery(),
     loadWeekDigest(),
+    loadBriefing(),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
     armFinance(),
@@ -906,6 +959,44 @@ onMounted(() => {
   margin: 0;
   font-size: 0.72rem;
   color: rgba(var(--nt-ink), 0.5);
+}
+
+/* Hermes briefing card */
+.briefing-card {
+  cursor: pointer;
+}
+
+.briefing-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.briefing-title {
+  font-family: var(--nt-font-head);
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--nt-fg);
+}
+
+.briefing-grade {
+  flex: none;
+  font-family: var(--nt-font-mono);
+  font-size: 0.72rem;
+  color: var(--nt-text-dim);
+}
+
+.briefing-body {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--nt-text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .battery-timeline {
