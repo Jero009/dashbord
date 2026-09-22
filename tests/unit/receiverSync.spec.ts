@@ -118,8 +118,16 @@ describe('parsers', () => {
     expect(parseSchoolGrade(null)).toBeNull()
   })
 
-  it('parseBriefing accepts title+body, rejects empty', () => {
-    expect(parseBriefing({ title: 'T', body: 'B' })).toEqual({ title: 'T', body: 'B' })
+  it('parseBriefing accepts title+body+verdict+level, rejects empty', () => {
+    expect(parseBriefing({ title: 'T', body: 'B', verdict: 'PUSH', level: 'push' })).toEqual({
+      title: 'T', body: 'B', verdict: 'PUSH', level: 'push',
+    })
+    // Legacy row without the level fields still parses (level → null).
+    expect(parseBriefing({ title: 'T', body: 'B' })).toEqual({
+      title: 'T', body: 'B', verdict: null, level: null,
+    })
+    // Unknown level strings are kept by the parser (the store validates).
+    expect(parseBriefing({ title: 'T', body: 'B', level: 'bogus' })?.level).toBe('bogus')
     expect(parseBriefing({ title: '', body: '' })).toBeNull()
     expect(parseBriefing('text')).toBeNull()
   })

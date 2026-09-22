@@ -54,6 +54,8 @@ export interface BriefingWidgetFields {
   briefingBody: string | null;
   /** Local date key of the briefing (YYYY-MM-DD) or formatted short date. */
   briefingDate: string | null;
+  /** VU-glyph state: push | normal | recover | sick | deload (or null). */
+  briefingLevel: string | null;
 }
 
 function hhmm(iso: string | null | undefined): string | null {
@@ -112,6 +114,7 @@ export async function updateWidgetFields(
     if (extra.briefingTitle) fields.briefingTitle = extra.briefingTitle;
     if (extra.briefingBody) fields.briefingBody = extra.briefingBody;
     if (extra.briefingDate) fields.briefingDate = extra.briefingDate;
+    if (extra.briefingLevel) fields.briefingLevel = extra.briefingLevel;
   }
 
   try {

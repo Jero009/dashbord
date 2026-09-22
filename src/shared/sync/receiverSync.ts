@@ -203,13 +203,18 @@ export function parseSchoolGrade(raw: unknown): SchoolGradePayload | null {
   }
 }
 
-export function parseBriefing(raw: unknown): { title: string; body: string } | null {
+export function parseBriefing(raw: unknown): { title: string; body: string; verdict: string | null; level: string | null } | null {
   if (!raw || typeof raw !== 'object') return null
   const r = raw as Record<string, unknown>
   const title = typeof r.title === 'string' ? r.title : ''
   const body = typeof r.body === 'string' ? r.body : ''
   if (!title && !body) return null
-  return { title, body }
+  return {
+    title,
+    body,
+    verdict: typeof r.verdict === 'string' ? r.verdict : null,
+    level: typeof r.level === 'string' ? r.level : null,
+  }
 }
 
 // ---------------------------------------------------------------------------

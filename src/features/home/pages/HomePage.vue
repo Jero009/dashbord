@@ -14,8 +14,11 @@
             <span class="card-date">{{ briefingLabel }}</span>
           </div>
           <div class="briefing-head">
-            <strong class="briefing-title">{{ briefing.title || 'Daily briefing' }}</strong>
-            <span v-if="gradeLine" class="briefing-grade">{{ gradeLine }}</span>
+            <BriefingVuBar :level="briefing.level" class="briefing-vu" />
+            <div class="briefing-head-text">
+              <strong class="briefing-title">{{ briefing.title || 'Daily briefing' }}</strong>
+              <span v-if="gradeLine" class="briefing-grade">{{ gradeLine }}</span>
+            </div>
           </div>
           <p class="briefing-body">{{ briefingExcerpt }}</p>
         </ion-card>
@@ -211,6 +214,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
+import BriefingVuBar from '@/shared/components/BriefingVuBar.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, postDueSubscriptions, getFinanceSubscriptions} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
@@ -276,6 +280,7 @@ const loadBriefing = async () => {
       briefingTitle: b.title || 'Daily briefing',
       briefingBody: b.body,
       briefingDate: localDateISO(new Date(b.receivedAt * 1000)),
+      briefingLevel: b.level ?? null,
     });
   }
 };
@@ -978,10 +983,18 @@ onMounted(() => {
 
 .briefing-head {
   display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.briefing-head-text {
+  display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .briefing-title {

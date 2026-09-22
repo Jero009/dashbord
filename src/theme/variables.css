@@ -89,6 +89,11 @@
      hypnogram awake). Never use for live/active UI — that is red. */
   --ion-color-accent-yellow: var(--nt-data-goal);
 
+  /* Ionic maps bare text to this — dark default white; the light theme
+     re-points it to near-black below. Without it Ionic falls back to its
+     hard-coded `#000` and unstyled text renders black-on-dark. */
+  --ion-text-color: var(--nt-fg);
+
   /* Toolbar & background */
   --ion-toolbar-background: var(--nt-bg);
   --ion-content-background: var(--nt-bg);
@@ -149,6 +154,9 @@ html.theme-light {
      values), so it must track the ink — NOT stay white. Solid "light"
      buttons get their contrast from `--nt-bg` text in the rules below. */
   --ion-color-light: var(--nt-fg);
+
+  /* Ionic's bare-text default — flip to near-black ink in light theme. */
+  --ion-text-color: var(--nt-fg);
 
   --ion-toolbar-background: var(--nt-bg);
   --ion-content-background: var(--nt-bg);
