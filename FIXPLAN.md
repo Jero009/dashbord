@@ -11,6 +11,9 @@ Rules for every batch:
 - Hermes→phone push channel: DONE — `src/shared/hermes/hermesPush.ts`, contract in `docs/HERMES_PUSH.md` (app polls the existing health receiver, type=hermes; delivers via the shared LocalNotifications pipeline).
 - Homescreen widgets: STARTED — v3.9 ships the sleep-score widget (RemoteViews + DashboardWidget snapshot plugin, `SleepWidgetProvider`); more widgets deferred.
 
+## v3.14.x additions (Hermes sync, post-release debugging)
+- #30 Gym mirror timestamp consistency: WorkoutPage mirror payload mixes formats — `started_at` naive local (`2026-09-22 08:34:50`) vs `ended_at` ISO-with-Z (`...T...Z`). Receiver-side duration parsed wrong (showed 120 min for a seconds-long test). Fix: emit both as full ISO-8601 with timezone in `workoutMirror.ts`; verify `analysis/data.py` parses both (it did, but only by luck of fallback). Also surface `duration_minutes` from the app itself instead of receiver recompute, so the number survives even if timestamps drift.
+
 ## Batch 1 — HIGH bugs (code)
 - #2 Ghost rest-timer ding: DONE (v3.7) — shared `useRestTimer` composable (`src/shared/composables/useRestTimer.ts`); WorkoutPage owns start/adjust/skip/expiry and schedules the AlarmManager-backed ding at timer start; GymHomePage + HomePage read the same canonical localStorage record and clear via `cancelRestTimer()` (cancels the OS ding + countdown notification everywhere); unit-tested in `tests/unit/useRestTimer.spec.ts`.
 - #3 Session-RPE alert hang: `promptSessionRpe` (WorkoutPage.vue) must resolve on backdrop dismiss (onDidDismiss) so endWorkout always runs.
