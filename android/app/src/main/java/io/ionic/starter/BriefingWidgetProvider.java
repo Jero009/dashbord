@@ -22,10 +22,7 @@ public class BriefingWidgetProvider extends AppWidgetProvider {
     // VU-glyph levels pushed by daily_briefing.py. Fill bottom-up:
     // recover=1 (red), normal=2 (red+yellow), push=3 (red+yellow+green).
     // Overrides paint all three one color: sick=red, deload=yellow.
-    private static final int COLOR_RED = 0xFFD71A21;
-    private static final int COLOR_YELLOW = 0xFFFFD700;
-    private static final int COLOR_GREEN = 0xFF22C55E;
-    private static final int COLOR_DIM = 0xFF3A3A3A;
+    // (Colors live in the opaque widget_vu_seg_* drawables, not here.)
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
@@ -87,33 +84,26 @@ public class BriefingWidgetProvider extends AppWidgetProvider {
     }
 
     /**
-     * Paint the three VU segments. RemoteViews can't swap drawables per-view,
-     * so we tint the dim segment drawable via setBackgroundTintList. The tint
-     * API on RemoteViews is Android 12+ (the Nothing phones run 13+) — on
-     * older devices the segments just stay dim, which is the safe fallback.
+     * Paint the three VU segments by swapping the background drawable per
+     * segment. Drawables are fully OPAQUE (no tint, no alpha compositing —
+     * the earlier tint-over-dim-drawable approach rendered ~grey on black).
+     * `setBackgroundResource` is settable on RemoteViews on every API level.
      */
     private static void applyVuBar(RemoteViews views, String level) {
-        int red = COLOR_DIM, yellow = COLOR_DIM, green = COLOR_DIM;
+        int red = R.drawable.widget_vu_seg_dim, yellow = R.drawable.widget_vu_seg_dim, green = R.drawable.widget_vu_seg_dim;
         if ("push".equals(level)) {
-            red = COLOR_RED; yellow = COLOR_YELLOW; green = COLOR_GREEN;
+            red = R.drawable.widget_vu_seg_red; yellow = R.drawable.widget_vu_seg_yellow; green = R.drawable.widget_vu_seg_green;
         } else if ("normal".equals(level)) {
-            red = COLOR_RED; yellow = COLOR_YELLOW;
+            red = R.drawable.widget_vu_seg_red; yellow = R.drawable.widget_vu_seg_yellow;
         } else if ("recover".equals(level)) {
-            red = COLOR_RED;
+            red = R.drawable.widget_vu_seg_red;
         } else if ("sick".equals(level)) {
-            red = COLOR_RED; yellow = COLOR_RED; green = COLOR_RED;
+            red = R.drawable.widget_vu_seg_red; yellow = R.drawable.widget_vu_seg_red; green = R.drawable.widget_vu_seg_red;
         } else if ("deload".equals(level)) {
-            red = COLOR_YELLOW; yellow = COLOR_YELLOW; green = COLOR_YELLOW;
+            red = R.drawable.widget_vu_seg_yellow; yellow = R.drawable.widget_vu_seg_yellow; green = R.drawable.widget_vu_seg_yellow;
         }
-        tint(views, R.id.widget_vu_red, red);
-        tint(views, R.id.widget_vu_yellow, yellow);
-        tint(views, R.id.widget_vu_green, green);
-    }
-
-    private static void tint(RemoteViews views, int viewId, int color) {
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
-            views.setColorStateList(viewId, "setBackgroundTintList",
-                    android.content.res.ColorStateList.valueOf(color));
-        }
+        views.setInt(R.id.widget_vu_red, "setBackgroundResource", red);
+        views.setInt(R.id.widget_vu_yellow, "setBackgroundResource", yellow);
+        views.setInt(R.id.widget_vu_green, "setBackgroundResource", green);
     }
 }

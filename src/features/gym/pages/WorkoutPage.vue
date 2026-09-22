@@ -17,6 +17,7 @@
       </ion-header>
 
       <div class="exercises-list">
+        <p v-if="deloadBanner" class="deload-banner">{{ deloadBanner }}</p>
         <div v-for="(ex, index) in workoutExercises" :key="ex.id" class="exercise-sliding-item">
           <ion-card class="exercise-card">
             <ion-card-header>
@@ -517,6 +518,7 @@ import {
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 import { mirrorWorkoutToReceiver } from '@/shared/sync/workoutMirror';
 import { formatRestTime } from '@/shared/utils/timeFormat';
+import { isDeloadWeek, deloadWeightFor, deloadNotice } from '@/shared/utils/trainingPhase';
 
 const router = useRouter();
 // id from route
@@ -874,6 +876,12 @@ const addNewSet = async (exercise: any) => {
       const prevSet = previousSets.find((s: any) => Number(s.set_number) === nextSetNum) || previousSets[previousSets.length - 1];
       defaultReps = prevSet.reps;
       defaultWeight = prevSet.weight;
+      // Deload weeks default new sets to the scaled-down weight, not last
+      // time's number — the tap-through default IS the recommendation.
+      if (isDeloadWeek()) {
+        const deload = deloadWeightFor(Number(prevSet.weight) || 0);
+        if (deload) defaultWeight = deload;
+      }
     }
 
     const newSetId = await addSetToWorkoutExercise(
@@ -909,9 +917,18 @@ const overloadHint = (exercise: any): string => {
   if (maxWeight <= 0) return '';
   const maxWeightSet = sets.find((s: any) => Number(s.previous_weight) === maxWeight);
   const prevReps = Number(maxWeightSet?.previous_reps) || 0;
+  // Deload weeks scale the suggestion down instead of suggesting progression.
+  if (isDeloadWeek()) {
+    const deload = deloadWeightFor(maxWeight);
+    return deload ? `Deload — last ${maxWeight} kg × ${prevReps}, work around ${deload} kg` : `Deload week — keep it light`;
+  }
   const suggested = Math.round((maxWeight * 1.025) / 2.5) * 2.5;
   return `Last: ${maxWeight} kg × ${prevReps} — try ${suggested} kg`;
 };
+
+// True once per workout session (page-lifetime flag): a deload banner on the
+// first load is enough — repeating it per-exercise is noise.
+const deloadBanner = deloadNotice();
 
 const getSetPlaceholder = (exercise: any, currentSet: any, field: 'weight' | 'reps', fallback: string): string => {
   const prevKey = field === 'weight' ? 'previous_weight' : 'previous_reps';
