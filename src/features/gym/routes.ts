@@ -30,6 +30,16 @@ export const gymRoutes: Array<RouteRecordRaw> = [
         component: () => import('./pages/TemplatePage.vue')
       },
       {
+        path: 'Plan',
+        name: 'Plan',
+        component: () => import('./pages/PlanPage.vue')
+      },
+      {
+        path: 'PlanBuilder',
+        name: 'PlanBuilder',
+        component: () => import('./pages/flows/PlanBuilderPage.vue')
+      },
+      {
         path: 'Exercise',
         component: () => import('./pages/ExercisePage.vue')
       },

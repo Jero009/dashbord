@@ -14,6 +14,11 @@
           <ion-label>Template</ion-label>
         </ion-tab-button>
 
+        <ion-tab-button tab="Plan" href="/tabs/Plan" >
+          <ion-icon aria-hidden="true" :icon="calendarOutline" />
+          <ion-label>Plan</ion-label>
+        </ion-tab-button>
+
         <ion-tab-button tab="Exercise" href="/tabs/Exercise" >
           <ion-icon aria-hidden="true" :icon="body" />
           <ion-label>Exercise</ion-label>
@@ -31,7 +36,7 @@
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet, createAnimation } from '@ionic/vue';
 import type { AnimationBuilder } from '@ionic/vue';
-import { home, add, time, body } from 'ionicons/icons';
+import { home, add, time, body, calendarOutline } from 'ionicons/icons';
 
 const fadeTransition: AnimationBuilder = (_, opts) => {
   const enter = createAnimation()
