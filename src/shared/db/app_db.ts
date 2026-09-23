@@ -1237,6 +1237,8 @@ export async function deleteTemplate(id: number) {
 }
 // workout functions
 
+import { isDeloadWeek, deloadWeightFor } from '@/shared/utils/trainingPhase';
+
 export async function startWorkoutFromTemplate(templateId: number) {
   if (!db) return;
   const conn = db;
@@ -1273,6 +1275,12 @@ export async function startWorkoutFromTemplate(templateId: number) {
           const prevSet = previousSets[i] || previousSets[previousSets.length - 1];
           reps = prevSet.reps;
           weight = prevSet.weight;
+          // Deload weeks: the prefilled default IS the recommendation —
+          // scale down to the deload weight, same rule as addNewSet.
+          if (isDeloadWeek()) {
+            const deload = deloadWeightFor(Number(weight) || 0);
+            if (deload) weight = deload;
+          }
         }
 
         await conn.run(
@@ -1607,9 +1615,16 @@ export async function addExerciseToWorkout(
 
     if (previousSets.length > 0) {
       for (let i = 0; i < previousSets.length; i++) {
+        const reps = previousSets[i].reps;
+        let weight = previousSets[i].weight;
+        // Deload weeks: prefilled defaults are the recommendation (see startWorkoutFromTemplate).
+        if (isDeloadWeek()) {
+          const deload = deloadWeightFor(Number(weight) || 0);
+          if (deload) weight = deload;
+        }
         await conn.run(
           'INSERT INTO workout_exercise_sets (workout_exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?)',
-          [workoutExerciseId, i + 1, previousSets[i].reps, previousSets[i].weight]
+          [workoutExerciseId, i + 1, reps, weight]
         );
       }
     } else {
