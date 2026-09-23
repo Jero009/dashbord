@@ -11,6 +11,7 @@ import {
   flushDirtyWorkoutQueue,
 } from '@/shared/sync/receiverSync'
 import { getDbForSync } from '@/shared/db/app_db'
+import { localIsoWithOffset } from '@/shared/utils/timeFormat'
 
 export function localDateKey(d = new Date()): string {
   // Local date key — NEVER toISOString().slice(0,10) (UTC drift, see AGENTS.md).
@@ -65,18 +66,23 @@ export async function buildPayloadForWorkout(workoutId: number): Promise<GymWork
     }
   }
 
-  const start = w.time_start ? new Date(String(w.time_start)) : null
+  // FIXPLAN #30: started_at was naive-local (`2026-09-23 18:04:38`) while
+  // ended_at was ISO-Z — the receiver parsed the pair in one format and got
+  // nonsense durations (120 min for a seconds-long test). Emit BOTH as full
+  // ISO-8601 with the local offset, and compute duration_minutes app-side so
+  // the receiver never has to diff timestamps again.
+  const start = w.time_start ? new Date(String(w.time_start).includes('T') || String(w.time_start).endsWith('Z') ? String(w.time_start) : String(w.time_start).replace(' ', 'T')) : null
   const end = w.time_end ? new Date(String(w.time_end)) : null
   const duration =
-    start && end && end.getTime() > start.getTime()
+    start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end.getTime() > start.getTime()
       ? Math.round((end.getTime() - start.getTime()) / 60000)
       : null
   const rpeRaw = w.session_rpe == null ? null : Number(w.session_rpe)
 
   return buildGymWorkoutPayload({
-    dateKey: start ? localDateKey(start) : localDateKey(),
-    startedAt: String(w.time_start ?? ''),
-    endedAt: String(w.time_end ?? ''),
+    dateKey: start && !Number.isNaN(start.getTime()) ? localDateKey(start) : localDateKey(),
+    startedAt: localIsoWithOffset(start?.getTime() ?? ''),
+    endedAt: localIsoWithOffset(end?.getTime() ?? ''),
     name: w.name ? String(w.name) : null,
     durationMinutes: duration,
     sessionRpe: rpeRaw != null && Number.isFinite(rpeRaw) ? rpeRaw : null,

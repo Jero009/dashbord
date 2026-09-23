@@ -54,6 +54,26 @@ export const localMonthISO = (date: Date = new Date()): string =>
 // day west of UTC. Inverse of localDateISO for the round-trip.
 export const parseLocalDate = (dateStr: string): Date => new Date(`${dateStr}T12:00:00`);
 
+// Full ISO-8601 WITH local timezone offset (e.g. `2026-09-23T18:04:38+02:00`).
+// `toISOString()` gives UTC (Z) — correct as an instant but wrong as a wire
+// format when the receiver needs the local wall clock. Accepts Date or any
+// parseable string (naive-local `YYYY-MM-DD HH:MM:SS` is read as LOCAL).
+export const localIsoWithOffset = (value: Date | string | number): string => {
+  const d = value instanceof Date
+    ? value
+    : typeof value === 'string'
+      ? new Date(/T|Z/.test(value) ? value : value.replace(' ', 'T'))
+      : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offsetMin);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+    `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+};
+
 export const formatDuration = (start: string | undefined, end: string | undefined) => {
   if (!start || !end) return '0h 0m 0s';
 
