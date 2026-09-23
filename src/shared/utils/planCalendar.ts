@@ -42,6 +42,7 @@ function diffDays(a: string, b: string): number {
 }
 
 /** Total plan weeks (start..end inclusive ÷ 7). Expiry slides, the total doesn't. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function planWeeksTotal(cfg: PlanConfig, _pauses: PauseSpan[]): number {
   const days = diffDays(cfg.startDate, cfg.endDate) + 1;
   return Math.max(0, Math.round(days / 7));
