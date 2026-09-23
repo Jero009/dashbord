@@ -27,6 +27,9 @@ const EXPORT_DELETE_TABLES = [
   'finance_budget',
   'finance_account',
   'net_worth_snapshot',
+  'gym_plan_pause',
+  'gym_plan',
+  'life_event',
 ];
 
 const EXPORT_INSERT_TABLES = [
@@ -49,6 +52,9 @@ const EXPORT_INSERT_TABLES = [
   'finance_budget',
   'finance_transaction',
   'net_worth_snapshot',
+  'gym_plan',
+  'gym_plan_pause',
+  'life_event',
 ];
 
 function toSqlLiteral(value: unknown) {
@@ -932,6 +938,52 @@ async function doInitDB() {
       );
     `);
 
+    // ── Seasonal gym plan (v3.16) ────────────────────────────────────────────
+    // One active plan; deload weeks are DERIVED (never stored); pauses are
+    // plan-scoped rows that freeze the plan clock; life_event is the forever
+    // sickness/travel catalog (starts empty, grows forever, plan-independent)
+    // linked to pauses via id_plan_pause so the heatmap sees everything.
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS gym_plan (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        goal TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        deload_every_weeks INTEGER NOT NULL DEFAULT 3,
+        deload_factor REAL NOT NULL DEFAULT 0.675,
+        template_ids_json TEXT NOT NULL DEFAULT '[]',
+        archived INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS gym_plan_pause (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_plan INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        note TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_plan) REFERENCES gym_plan(id) ON DELETE CASCADE
+      );
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS life_event (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        severity TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        note TEXT,
+        id_plan_pause INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     return db;
   } catch (error) {
     console.error('initDB failed:', error);
@@ -939,6 +991,387 @@ async function doInitDB() {
     return null;
   }
 }
+// ── Seasonal gym plan ─────────────────────────────────────────────────────────
+
+import {
+  planDayIndex,
+  adherenceFor as calcAdherence,
+} from '@/shared/utils/planCalendar';
+import type { PlanConfig, PauseSpan } from '@/shared/utils/planCalendar';
+
+export interface Plan {
+  id: number;
+  name: string;
+  goal?: string | null;
+  start_date: string;
+  end_date: string;
+  deload_every_weeks: number;
+  deload_factor: number;
+  template_ids: number[]; // parsed from template_ids_json at the DB layer
+  archived: number;
+}
+
+export interface PlanPause {
+  id: number;
+  id_plan: number;
+  reason: string; // sick | recovery | school | travel | other
+  note?: string | null;
+  start_date: string;
+  end_date?: string | null; // null while paused
+}
+
+export interface LifeEvent {
+  id: number;
+  type: string; // sick | recovery | school | travel | other
+  severity?: string | null; // mild | knocked_out (sick)
+  start_date: string;
+  end_date?: string | null; // null = ongoing
+  note?: string | null;
+}
+
+function planFromRow(row: Record<string, unknown>): Plan {
+  let templateIds: number[] = [];
+  try {
+    const parsed = JSON.parse(String(row.template_ids_json ?? '[]'));
+    if (Array.isArray(parsed)) templateIds = parsed.map(Number).filter((n) => Number.isFinite(n));
+  } catch {
+    templateIds = [];
+  }
+  return {
+    id: Number(row.id),
+    name: String(row.name ?? ''),
+    goal: row.goal != null ? String(row.goal) : null,
+    start_date: String(row.start_date),
+    end_date: String(row.end_date),
+    deload_every_weeks: Number(row.deload_every_weeks) || 0,
+    deload_factor: Number(row.deload_factor) || 0.675,
+    template_ids: templateIds,
+    archived: Number(row.archived) || 0,
+  };
+}
+
+function pauseFromRow(row: Record<string, unknown>): PlanPause {
+  return {
+    id: Number(row.id),
+    id_plan: Number(row.id_plan),
+    reason: String(row.reason ?? 'other'),
+    note: row.note != null ? String(row.note) : null,
+    start_date: String(row.start_date),
+    end_date: row.end_date != null ? String(row.end_date) : null,
+  };
+}
+
+/** The plan config + spans the pure calendar helpers expect, from DB rows. */
+export function planConfigOf(plan: Plan): PlanConfig {
+  return { startDate: plan.start_date, endDate: plan.end_date, deloadEveryWeeks: plan.deload_every_weeks };
+}
+
+export function pauseSpansOf(pauses: PlanPause[]): PauseSpan[] {
+  return pauses.map((p) => ({ startDate: p.start_date, endDate: p.end_date ?? null }));
+}
+
+export async function createPlan(input: {
+  name: string;
+  goal?: string | null;
+  start_date: string;
+  end_date: string;
+  deload_every_weeks: number;
+  deload_factor: number;
+  template_ids: number[];
+}): Promise<number | undefined> {
+  if (!db) return undefined;
+  try {
+    const result = await db.run(
+      `INSERT INTO gym_plan (name, goal, start_date, end_date, deload_every_weeks, deload_factor, template_ids_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [
+        input.name,
+        input.goal ?? null,
+        input.start_date,
+        input.end_date,
+        input.deload_every_weeks,
+        input.deload_factor,
+        JSON.stringify(input.template_ids),
+      ]
+    );
+    return result.changes?.lastId;
+  } catch (error) {
+    console.error('Error creating plan:', error);
+    throw error;
+  }
+}
+
+export async function getPlans(includeArchived = false): Promise<Plan[]> {
+  if (!db) return [];
+  const result = await db.query(
+    includeArchived
+      ? 'SELECT * FROM gym_plan ORDER BY start_date DESC, id DESC;'
+      : 'SELECT * FROM gym_plan WHERE COALESCE(archived, 0) = 0 ORDER BY start_date DESC, id DESC;'
+  );
+  return (result.values ?? []).map(planFromRow);
+}
+
+export async function getPlanById(id: number): Promise<Plan | null> {
+  if (!db) return null;
+  const result = await db.query('SELECT * FROM gym_plan WHERE id = ? LIMIT 1;', [id]);
+  const row = result.values?.[0];
+  return row ? planFromRow(row as Record<string, unknown>) : null;
+}
+
+/**
+ * The one active plan: latest-starting, unarchived, whose (pause-slid) window
+ * covers today. Overlapping plans are impossible by convention.
+ */
+export async function getActivePlan(now: Date = new Date()): Promise<Plan | null> {
+  if (!db) return null;
+  const today = localDateISO(now);
+  const plans = await getPlans(false);
+  for (const plan of plans) {
+    if (plan.start_date > today) continue;
+    const pauses = await getPausesForPlan(plan.id);
+    const cfg = planConfigOf(plan);
+    if (planDayIndex(cfg, pauseSpansOf(pauses), today) !== null) return plan;
+  }
+  return null;
+}
+
+export async function updatePlan(
+  id: number,
+  input: Partial<{
+    name: string;
+    goal: string | null;
+    start_date: string;
+    end_date: string;
+    deload_every_weeks: number;
+    deload_factor: number;
+    template_ids: number[];
+  }>
+): Promise<void> {
+  if (!db) return;
+  try {
+    await db.run(
+      `UPDATE gym_plan SET
+         name = COALESCE(?, name),
+         goal = ?,
+         start_date = COALESCE(?, start_date),
+         end_date = COALESCE(?, end_date),
+         deload_every_weeks = COALESCE(?, deload_every_weeks),
+         deload_factor = COALESCE(?, deload_factor),
+         template_ids_json = COALESCE(?, template_ids_json)
+       WHERE id = ?;`,
+      [
+        input.name ?? null,
+        input.goal !== undefined ? input.goal : null,
+        input.start_date ?? null,
+        input.end_date ?? null,
+        input.deload_every_weeks ?? null,
+        input.deload_factor ?? null,
+        input.template_ids ? JSON.stringify(input.template_ids) : null,
+        id,
+      ]
+    );
+  } catch (error) {
+    console.error('Error updating plan:', error);
+    throw error;
+  }
+}
+
+export async function archivePlan(id: number): Promise<void> {
+  if (!db) return;
+  await db.run('UPDATE gym_plan SET archived = 1 WHERE id = ?;', [id]);
+}
+
+export async function getPausesForPlan(planId: number): Promise<PlanPause[]> {
+  if (!db) return [];
+  const result = await db.query(
+    'SELECT * FROM gym_plan_pause WHERE id_plan = ? ORDER BY start_date ASC, id ASC;',
+    [planId]
+  );
+  return (result.values ?? []).map((r) => pauseFromRow(r as Record<string, unknown>));
+}
+
+/** The open pause of a plan, if any (end_date IS NULL). */
+export async function getOpenPause(planId: number): Promise<PlanPause | null> {
+  if (!db) return null;
+  const result = await db.query(
+    'SELECT * FROM gym_plan_pause WHERE id_plan = ? AND end_date IS NULL ORDER BY id DESC LIMIT 1;',
+    [planId]
+  );
+  const row = result.values?.[0];
+  return row ? pauseFromRow(row as Record<string, unknown>) : null;
+}
+
+/**
+ * Pause a plan: inserts the pause row AND a linked life_event row so the
+ * forever-catalog (heatmap) sees the sickness/travel without joining to plans.
+ */
+export async function pausePlan(
+  planId: number,
+  reason: string,
+  note?: string | null,
+  startDate?: string
+): Promise<number | undefined> {
+  if (!db) return undefined;
+  try {
+    const start = startDate ?? localDateISO();
+    const result = await db.run(
+      `INSERT INTO gym_plan_pause (id_plan, reason, note, start_date) VALUES (?, ?, ?, ?);`,
+      [planId, reason, note ?? null, start]
+    );
+    const pauseId = result.changes?.lastId;
+    await db.run(
+      `INSERT INTO life_event (type, severity, start_date, end_date, note, id_plan_pause)
+       VALUES (?, NULL, ?, NULL, ?, ?);`,
+      [reason, start, note ?? null, pauseId ?? null]
+    );
+    return pauseId;
+  } catch (error) {
+    console.error('Error pausing plan:', error);
+    throw error;
+  }
+}
+
+/** Resume: stamp end_date on the pause row and its linked life_event row. */
+export async function resumePlan(pauseId: number, endDate?: string): Promise<void> {
+  if (!db) return;
+  const end = endDate ?? localDateISO();
+  try {
+    await db.run('UPDATE gym_plan_pause SET end_date = ? WHERE id = ?;', [end, pauseId]);
+    await db.run('UPDATE life_event SET end_date = ? WHERE id_plan_pause = ? AND end_date IS NULL;', [end, pauseId]);
+  } catch (error) {
+    console.error('Error resuming plan:', error);
+    throw error;
+  }
+}
+
+export async function getLifeEvents(type?: string, limit = 200): Promise<LifeEvent[]> {
+  if (!db) return [];
+  const result = await db.query(
+    type
+      ? 'SELECT * FROM life_event WHERE type = ? ORDER BY start_date DESC, id DESC LIMIT ?;'
+      : 'SELECT * FROM life_event ORDER BY start_date DESC, id DESC LIMIT ?;',
+    type ? [type, limit] : [limit]
+  );
+  return (result.values ?? []).map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      id: Number(row.id),
+      type: String(row.type),
+      severity: row.severity != null ? String(row.severity) : null,
+      start_date: String(row.start_date),
+      end_date: row.end_date != null ? String(row.end_date) : null,
+      note: row.note != null ? String(row.note) : null,
+    };
+  });
+}
+
+export async function createLifeEvent(input: {
+  type: string;
+  severity?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  note?: string | null;
+}): Promise<number | undefined> {
+  if (!db) return undefined;
+  try {
+    const result = await db.run(
+      `INSERT INTO life_event (type, severity, start_date, end_date, note) VALUES (?, ?, ?, ?, ?);`,
+      [input.type, input.severity ?? null, input.start_date, input.end_date ?? null, input.note ?? null]
+    );
+    return result.changes?.lastId;
+  } catch (error) {
+    console.error('Error creating life event:', error);
+    throw error;
+  }
+}
+
+export async function updateLifeEventEndDate(id: number, endDate: string | null): Promise<void> {
+  if (!db) return;
+  await db.run('UPDATE life_event SET end_date = ? WHERE id = ?;', [endDate, id]);
+}
+
+export interface PlanWorkout {
+  id: number;
+  id_workout_template: number | null;
+  name: string | null;
+  time_start: string;
+  time_end: string | null;
+  total_kg: number | null;
+  date: string; // local YYYY-MM-DD
+  planDayIndex: number;
+}
+
+/**
+ * Workouts inside the plan's pause-adjusted window. Fetched via getWorkouts and
+ * filtered in JS through planDayIndex — the pause clock is JS-only, and SQL
+ * date() can never reproduce it.
+ */
+export async function getWorkoutsForPlan(plan: Plan, pauses: PlanPause[]): Promise<PlanWorkout[]> {
+  const all = (await getWorkouts(1000)) as Array<Record<string, unknown>>;
+  const cfg = planConfigOf(plan);
+  const spans = pauseSpansOf(pauses);
+  const out: PlanWorkout[] = [];
+  for (const w of all) {
+    const timeStart = w.time_start ? String(w.time_start) : '';
+    if (!timeStart) continue;
+    const d = new Date(timeStart.includes('T') || /(?:Z|[+-]\d{2}:?\d{2})$/.test(timeStart) ? timeStart : timeStart.replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) continue;
+    const key = localDateISO(d);
+    const idx = planDayIndex(cfg, spans, key);
+    if (idx === null) continue;
+    out.push({
+      id: Number(w.id),
+      id_workout_template: w.id_workout_template != null ? Number(w.id_workout_template) : null,
+      name: w.name != null ? String(w.name) : null,
+      time_start: timeStart,
+      time_end: w.time_end != null ? String(w.time_end) : null,
+      total_kg: w.total_kg != null ? Number(w.total_kg) : null,
+      date: key,
+      planDayIndex: idx,
+    });
+  }
+  return out;
+}
+
+export interface PlanAdherence {
+  doneCounts: Array<{ templateId: number | null; done: number; tonnage: number }>; // null templateId = freeform
+  totalDone: number;
+  totalTonnage: number;
+  expectedByNow: number;
+  completion: number;
+}
+
+/** Per-template done counts + freeform count, with the pause-adjusted expectation. */
+export async function getPlanAdherence(
+  plan: Plan,
+  pauses: PlanPause[],
+  expectedPerWeek: number,
+  now: Date = new Date()
+): Promise<PlanAdherence> {
+  const workouts = await getWorkoutsForPlan(plan, pauses);
+  const byTemplate = new Map<string, { templateId: number | null; done: number; tonnage: number }>();
+  let totalTonnage = 0;
+  for (const w of workouts) {
+    const key = String(w.id_workout_template ?? 'freeform');
+    let entry = byTemplate.get(key);
+    if (!entry) {
+      entry = { templateId: w.id_workout_template, done: 0, tonnage: 0 };
+      byTemplate.set(key, entry);
+    }
+    entry.done += 1;
+    entry.tonnage += Number(w.total_kg) || 0;
+    totalTonnage += Number(w.total_kg) || 0;
+  }
+  const { expectedByNow, completion } = calcAdherence(workouts.length, expectedPerWeek, planConfigOf(plan), pauseSpansOf(pauses), now);
+  return {
+    doneCounts: [...byTemplate.values()],
+    totalDone: workouts.length,
+    totalTonnage,
+    expectedByNow,
+    completion,
+  };
+}
+
 // get muscle groups and equpment
 
 export async function getMuscleGroups() {
