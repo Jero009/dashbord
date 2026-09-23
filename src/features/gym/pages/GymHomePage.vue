@@ -74,6 +74,17 @@
               <div class="weekly-progress-bar__fill" :style="{ width: weeklyGoalProgress + '%' }" />
             </div>
           </div>
+
+          <!-- Plan strip: one line, only when a plan is active -->
+          <button v-if="activePlan" class="plan-strip nt-press" @click="router.push('/tabs/Plan')">
+            <span class="nt-chip__dot" />
+            <span class="plan-strip__text">
+              <template v-if="!openPause">
+                Plan: Week {{ currentWeek ?? '—' }}<template v-if="nextDeload"> · Deload {{ deloadCountdownLabel }}</template>
+              </template>
+              <template v-else>Plan paused · {{ pauseReasonLabel }} · day {{ pauseDay }}</template>
+            </span>
+          </button>
         </section>
 
         <section class="workout-section">
@@ -117,6 +128,26 @@
           </div>
         </ion-card>
 
+        <!-- Plan trend: per-workout weight/tonnage across the plan window -->
+        <ion-card v-if="activePlan && planTrendPts.length > 0" class="graph-card">
+          <div class="graph-card__header">
+            <p class="nt-kicker">Plan trend</p>
+            <div class="plan-trend__controls">
+              <ion-select placeholder="Template" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" v-model="planTrendTemplateId" class="app-select">
+                <ion-select-option :value="0">All</ion-select-option>
+                <ion-select-option v-for="t in planTemplates" :key="t.id" :value="t.id">
+                  {{ t.name }}
+                </ion-select-option>
+              </ion-select>
+              <ion-select placeholder="Metric" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" v-model="planTrendMetric" class="app-select">
+                <ion-select-option value="weight">Weight</ion-select-option>
+                <ion-select-option value="tonnage">Tonnage</ion-select-option>
+              </ion-select>
+            </div>
+          </div>
+          <TrendChart :pts="planTrendPts" :unit="planTrendMetric === 'weight' ? 'kg' : 'kg'" size="md" aria-label="Plan trend" />
+        </ion-card>
+
         <ion-card class="graph-card">
           <div class="graph-card__header">
             <ion-select placeholder="Template" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" v-model="selectedTemplateId" class="app-select">
@@ -145,6 +176,12 @@ import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, fo
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
 import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval } from '@/shared/composables/useRestTimer';
+import {
+  activePlan, openPause, currentWeek, nextDeload, pauseDay, loadPlan,
+} from '@/features/gym/planStore';
+import {
+  getWorkoutsForPlan, getPlanWorkoutSeries, getPausesForPlan,
+} from '@/shared/db/app_db';
 
 const activeWorkout = ref(false);
 // Countdown display is the shared rest-timer state (WorkoutPage owns start/stop;
@@ -345,9 +382,62 @@ const loadWeeklyData = async () => {
   }).length
 }
 
+// ── Plan strip + plan trend (T13) ────────────────────────────────────────────
+const pauseReasonLabel = computed(() => {
+  const r = openPause.value?.reason ?? 'other';
+  return r.charAt(0).toUpperCase() + r.slice(1);
+});
+
+const deloadCountdownLabel = computed(() => {
+  if (!nextDeload.value) return '';
+  const days = Math.round((new Date(`${nextDeload.value}T00:00:00`).getTime() - Date.now()) / 86_400_000);
+  if (days <= 0) return 'this week';
+  const wks = Math.ceil(days / 7);
+  return `in ${wks} ${wks === 1 ? 'wk' : 'wks'}`;
+});
+
+// Plan templates resolved to names for the filter select.
+const planTemplates = ref<Array<{ id: number; name: string }>>([]);
+const planTrendTemplateId = ref(0);
+const planTrendMetric = ref<'weight' | 'tonnage'>('weight');
+// Raw series loaded once per view entry; the pts computed re-filters locally.
+const planSeries = ref<Array<{ date: string; weight: number; tonnage: number; templateId: number | null }>>([]);
+
+const planTrendPts = computed(() =>
+  planSeries.value
+    .filter((d) => planTrendTemplateId.value === 0 || d.templateId === planTrendTemplateId.value)
+    .map((d) => ({
+      label: d.date.slice(5), // MM-DD — compact axis label
+      value: planTrendMetric.value === 'weight' ? d.weight : d.tonnage,
+    }))
+);
+
+const loadPlanData = async () => {
+  await loadPlan();
+  if (!activePlan.value) {
+    planSeries.value = [];
+    planTemplates.value = [];
+    return;
+  }
+  const plan = activePlan.value;
+  const pausesRows = await getPausesForPlan(plan.id);
+  const [workouts, series] = await Promise.all([
+    getWorkoutsForPlan(plan, pausesRows),
+    getPlanWorkoutSeries(plan, pausesRows),
+  ]);
+  void workouts;
+  planSeries.value = series;
+  planTemplates.value = await getTemplates().then((list: any[]) =>
+    (list ?? [])
+      .map((t: any) => ({ id: Number(t.id), name: String(t.name) }))
+      .filter((t) => activePlan.value?.template_ids.includes(t.id))
+  );
+};
+
 // ionViewWillEnter fires on the first entry too, so it covers initial load —
 // a separate onMounted loader ran everything twice on page open.
 onIonViewWillEnter(async () => {
+  await loadPlanData();
   await loadActiveWorkout();
   await loadTemplates();
   await loadLatestWorkout();
@@ -449,6 +539,34 @@ ion-content.home-content {
 
 .graph-card__header h3 {
   margin: 0;
+}
+
+/* Plan strip (one line under the weekly card) */
+.plan-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--ion-color-primary);
+  border: 1px solid var(--nt-border);
+  border-radius: var(--nt-radius-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-strip__text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(var(--nt-ink), 0.85);
+}
+
+.plan-trend__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.plan-trend__controls ion-select {
+  min-width: 110px;
 }
 
 

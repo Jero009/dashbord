@@ -108,7 +108,7 @@ import {
   onIonViewWillEnter,
   modalController,
 } from '@ionic/vue';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import {
@@ -138,12 +138,12 @@ const reasonLabel = (r: string) => REASON_LABELS[r] ?? 'Other';
 const templateRows = ref<Array<{ id: number; name: string; done: number; tonnage: number }>>([]);
 
 // v1 keeps it simple: expectation basis = one workout per week (done-counts only).
-const expectedPerWeek = (_p: Plan) => 1;
+const expectedPerWeek = () => 1;
 
 const loadTemplateRows = async (p: Plan) => {
   const pausesRows = await getPausesForPlan(p.id);
   const [adherence, templates] = await Promise.all([
-    getPlanAdherence(p, pausesRows, expectedPerWeek(p)) as Promise<PlanAdherence>,
+    getPlanAdherence(p, pausesRows, expectedPerWeek()) as Promise<PlanAdherence>,
     getTemplates(true),
   ]);
   const nameOf = new Map(templates.map((t: any) => [Number(t.id), String(t.name)]));

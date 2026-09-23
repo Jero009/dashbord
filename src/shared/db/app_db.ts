@@ -1333,6 +1333,38 @@ export async function getWorkoutsForPlan(plan: Plan, pauses: PlanPause[]): Promi
   return out;
 }
 
+/** One point per plan workout: top-set weight + day tonnage (plan trend chart). */
+export async function getPlanWorkoutSeries(
+  plan: Plan,
+  pauses: PlanPause[]
+): Promise<Array<{ date: string; weight: number; tonnage: number; templateId: number | null }>> {
+  const workouts = await getWorkoutsForPlan(plan, pauses);
+  if (workouts.length === 0) return [];
+  if (!db) return [];
+  const byWorkout = new Map<number, { weight: number; tonnage: number }>();
+  // Per workout: top set weight + completed-set tonnage.
+  const ids = workouts.map((w) => w.id);
+  for (const wid of ids) {
+    const res = await db.query(
+      `SELECT MAX(wes.weight) AS top, SUM(wes.weight * wes.reps) AS tonnage
+       FROM workout_exercise_sets wes
+       JOIN workout_exercise we ON we.id = wes.workout_exercise_id
+       WHERE we.workout_id = ? AND wes.completed = 1;`,
+      [wid]
+    );
+    const row = res.values?.[0];
+    byWorkout.set(wid, { weight: Number(row?.top) || 0, tonnage: Number(row?.tonnage) || 0 });
+  }
+  return workouts
+    .map((w) => ({
+      date: w.date,
+      weight: byWorkout.get(w.id)?.weight ?? 0,
+      tonnage: byWorkout.get(w.id)?.tonnage ?? 0,
+      templateId: w.id_workout_template,
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
 export interface PlanAdherence {
   doneCounts: Array<{ templateId: number | null; done: number; tonnage: number }>; // null templateId = freeform
   totalDone: number;
