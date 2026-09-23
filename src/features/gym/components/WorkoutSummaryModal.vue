@@ -23,6 +23,8 @@
           </div>
         </div>
 
+        <p v-if="planAttribution" class="attribution-line">{{ planAttribution }}</p>
+
         <div v-if="prs.length > 0" class="pr-card">
           <p class="pr-kicker">{{ prs.length === 1 ? 'PR' : `${prs.length} PRs` }}</p>
           <div class="pr-list">
@@ -45,8 +47,9 @@
 
 <script setup lang="ts">
 import { IonPage, IonContent, IonButton, modalController } from '@ionic/vue';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import type { AchievedPR } from '@/shared/db/app_db';
+import { getActivePlan, getPausesForPlan, getWorkoutsForPlan } from '@/shared/db/app_db';
 
 const props = defineProps<{
   duration: string;
@@ -54,6 +57,8 @@ const props = defineProps<{
   exerciseCount: number;
   setCount: number;
   prs: AchievedPR[];
+  /** Workout row id — used for read-only plan attribution. */
+  workoutId?: number;
 }>();
 
 const formattedVolume = computed(() => {
@@ -62,6 +67,29 @@ const formattedVolume = computed(() => {
 });
 
 const dismiss = () => modalController.dismiss();
+
+// Read-only attribution (T17): the workout counts toward the active plan when
+// its template is in the plan's membership list or it was freeform inside the
+// window. Derived from date + template — no manual tagging.
+const planAttribution = ref<string | null>(null);
+
+onMounted(async () => {
+  try {
+    const plan = await getActivePlan();
+    if (!plan || props.workoutId == null) return;
+    const pauses = await getPausesForPlan(plan.id);
+    const inPlan = await getWorkoutsForPlan(plan, pauses);
+    const row = inPlan.find((w) => w.id === props.workoutId);
+    if (!row) return;
+    // Template workouts count when the template is in the plan's membership;
+    // freeform workouts count by window membership alone (locked rule).
+    if (row.id_workout_template == null || plan.template_ids.includes(row.id_workout_template)) {
+      planAttribution.value = `Counts toward '${plan.name}'`;
+    }
+  } catch {
+    planAttribution.value = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -118,6 +146,15 @@ const dismiss = () => modalController.dismiss();
 
 .tile__value--display {
   font-family: var(--nt-font-display);
+}
+
+.attribution-line {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nt-text-dim);
 }
 
 .pr-card {

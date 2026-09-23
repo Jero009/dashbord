@@ -25,6 +25,12 @@
         </linearGradient>
       </defs>
 
+      <rect
+        v-for="(r, ri) in shadeRects"
+        :key="ri"
+        class="trend__shade"
+        :x="r.x" y="0" :width="Math.max(r.w, 4)" :height="svgH"
+      />
       <path v-if="areaD" class="trend__area" :d="areaD" :fill="`url(#${uid})`" />
       <line v-if="goalY !== null" class="trend__goal" x1="0" :y1="goalY" :x2="w" :y2="goalY" />
       <line v-if="avgY !== null" class="trend__avg" x1="0" :y1="avgY" :x2="w" :y2="avgY" />
@@ -64,6 +70,12 @@ const props = withDefaults(defineProps<{
   pts: { label: string; value: number; pos?: number }[];
   /** Secondary dim line sharing pts' x-axis and the same y-extent (e.g. est. 1RM over top set). */
   overlayPts?: { label: string; value: number }[];
+  /**
+   * Faint background bands behind the line, in point-index space (start..end
+   * inclusive, e.g. sick/pause spans). UNDEFINED ⇒ nothing renders — zero
+   * visual change for every existing consumer.
+   */
+  shadeSpans?: Array<{ start: number; end: number }>;
   unit?: string;
   size?: 'xs' | 'sm' | 'md';
   goal?: number | null;
@@ -73,6 +85,7 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string;
 }>(), {
   overlayPts: () => [],
+  shadeSpans: undefined,
   unit: '',
   size: 'sm',
   goal: null,
@@ -137,6 +150,22 @@ const yFor = (v: number) => {
 
 const lineD = computed(() =>
   props.pts.length >= 2 ? smoothPath(xs.value, ys.value) : '');
+
+// Shade bands: index-space → x positions, full plot height.
+const shadeRects = computed(() => {
+  if (!props.shadeSpans || props.shadeSpans.length === 0 || props.pts.length === 0) return [];
+  const out: Array<{ x: number; w: number }> = [];
+  for (const span of props.shadeSpans) {
+    const i0 = Math.max(0, Math.min(span.start, props.pts.length - 1));
+    const i1 = Math.max(0, Math.min(span.end, props.pts.length - 1));
+    if (i1 < i0) continue;
+    const x0 = xs.value[i0] ?? 0;
+    const x1 = xs.value[i1] ?? 0;
+    const half = Math.max(((x1 - x0) / Math.max(props.pts.length - 1, 1)) * 0.5, 2);
+    out.push({ x: x0 - half, w: x1 - x0 + half * 2 });
+  }
+  return out;
+});
 
 // Secondary dim line — same x grid as pts (index 1:1), plotted through the
 // shared extent so the two series are directly comparable.
@@ -289,6 +318,10 @@ const onUp = () => {
 .trend__range--max {
   top: 26px;
   bottom: auto;
+}
+
+.trend__shade {
+  fill: color-mix(in srgb, var(--ion-color-accent-red) 8%, transparent);
 }
 
 .trend__line {

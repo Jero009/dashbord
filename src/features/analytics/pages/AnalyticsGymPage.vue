@@ -100,29 +100,105 @@
           <p v-else class="nt-empty">Not enough history</p>
         </div>
 
-        <!-- Frequency heatmap -->
-        <div class="card">
-          <p class="nt-kicker">Training frequency</p>
-          <template v-if="frequency.length > 0">
-            <div class="freq-grid">
-              <div
-                v-for="(cell, idx) in heatCells"
-                :key="idx"
-                class="freq-cell"
-                :class="{ 'freq-cell--future': cell.future }"
-                :style="cell.future ? {} : { background: heatColor(cell.count) }"
-                :title="cell.future ? '' : `${cell.date}: ${cell.count} workout${cell.count === 1 ? '' : 's'}`"
-              ></div>
+        <!-- Plan progress (active plan + past-plan picker) -->
+        <div v-if="planPickerOptions.length > 0" class="card">
+          <div class="card-header">
+            <p class="nt-kicker">Plan progress</p>
+            <ion-select
+              v-model="selectedPlanId"
+              interface="action-sheet"
+              :interface-options="{ cssClass: 'app-action-sheet' }"
+              class="app-select time-select"
+            >
+              <ion-select-option v-for="opt in planPickerOptions" :key="opt.id" :value="opt.id">
+                {{ opt.label }}
+              </ion-select-option>
+            </ion-select>
+          </div>
+
+          <template v-if="planStats">
+            <div class="tile-grid tile-grid--4">
+              <div class="tile">
+                <span class="tile__label">Week</span>
+                <strong class="tile__value">{{ planStats.weekLabel }}</strong>
+              </div>
+              <div class="tile">
+                <span class="tile__label">Done / expected</span>
+                <strong class="tile__value">{{ planStats.totalDone }} / {{ planStats.expectedByNow }}</strong>
+              </div>
+              <div class="tile">
+                <span class="tile__label">Completion</span>
+                <strong class="tile__value">{{ Math.round(planStats.completion * 100) }}%</strong>
+              </div>
+              <div class="tile">
+                <span class="tile__label">Deloads</span>
+                <strong class="tile__value">{{ planStats.deloadsDone }} / {{ planStats.deloadsTotal }}</strong>
+              </div>
             </div>
-            <div class="freq-legend">
-              <span class="freq-legend__label">Less</span>
-              <i class="freq-cell freq-cell--legend" :style="{ background: heatColor(0) }"></i>
-              <i class="freq-cell freq-cell--legend" :style="{ background: heatColor(1) }"></i>
-              <i class="freq-cell freq-cell--legend" :style="{ background: heatColor(2) }"></i>
-              <span class="freq-legend__label">More</span>
+
+            <TrendChart
+              v-if="planTrendPts.length > 1"
+              :pts="planTrendPts"
+              :overlay-pts="planEst1rmPts"
+              unit="kg"
+              size="md"
+              show-range
+              :shade-spans="planShadeSpans"
+              aria-label="Plan tonnage trend"
+            />
+
+            <template v-if="planTemplateRows.length > 0">
+              <p class="nt-kicker">Per template</p>
+              <div class="plan-tpl-rows">
+                <span v-for="row in planTemplateRows" :key="row.id" class="plan-tpl-row">
+                  <span class="plan-tpl-row__name">{{ row.name }}</span>
+                  <span class="plan-tpl-row__meta">{{ row.done }}× · {{ Math.round(row.share * 100) }}% tonnage</span>
+                </span>
+              </div>
+            </template>
+
+            <template v-if="planBeforeAfter.length > 0">
+              <p class="nt-kicker">First vs last week top weight</p>
+              <div class="plan-tpl-rows">
+                <span v-for="row in planBeforeAfter" :key="row.name" class="plan-tpl-row">
+                  <span class="plan-tpl-row__name">{{ row.name }}</span>
+                  <span class="plan-tpl-row__meta">{{ row.first }} → {{ row.last }} kg</span>
+                </span>
+              </div>
+            </template>
+
+            <template v-if="planPauseLog.length > 0">
+              <p class="nt-kicker">Pause log</p>
+              <div class="plan-tpl-rows">
+                <span v-for="(p, pi) in planPauseLog" :key="pi" class="plan-tpl-row">
+                  <span class="plan-tpl-row__name">{{ p.label }}</span>
+                  <span class="plan-tpl-row__meta">{{ p.days }} {{ p.days === 1 ? 'day' : 'days' }}</span>
+                </span>
+              </div>
+            </template>
+          </template>
+        </div>
+
+        <!-- Layered health heatmap (Workouts / Sick / Readiness) + day detail -->
+        <health-heatmap :weeks="52" />
+
+        <!-- Life-event logging: standalone, forward-only catalog (T14) -->
+        <div class="card">
+          <div class="card-header">
+            <p class="nt-kicker">Life events</p>
+            <ion-button fill="clear" size="small" class="log-event-btn" @click="logLifeEvent">
+              Log event
+            </ion-button>
+          </div>
+          <template v-if="lifeEvents.length > 0">
+            <div class="plan-tpl-rows">
+              <span v-for="ev in lifeEvents.slice(0, 6)" :key="ev.id" class="plan-tpl-row">
+                <span class="plan-tpl-row__name">{{ lifeEventLabel(ev) }}</span>
+                <span class="plan-tpl-row__meta">{{ ev.start_date }}{{ ev.end_date ? ` → ${ev.end_date}` : ' → ongoing' }}</span>
+              </span>
             </div>
           </template>
-          <p v-else class="nt-empty">No workouts</p>
+          <p v-else class="nt-empty">Nothing logged yet</p>
         </div>
       </div>
     </ion-content>
@@ -136,6 +212,8 @@ import {
   IonContent,
   IonSelect,
   IonSelectOption,
+  IonButton,
+  modalController,
   onIonViewWillEnter
 } from '@ionic/vue';
 import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
@@ -145,9 +223,16 @@ import TrainingLoadOverlay from '@/features/analytics/components/TrainingLoadOve
 import {
   queryVolumeByMuscleGroup,
   queryWeeklyTonnage,
-  queryWorkoutFrequency
+  queryWorkoutFrequency,
+  getPlans, getPausesForPlan, getPlanWorkoutSeries, getPlanAdherence, getLifeEvents,
+  planConfigOf, pauseSpansOf,
 } from '@/shared/db/app_db';
-import type { MuscleVolume, WeeklyTonnage, WorkoutDayCount } from '@/shared/db/app_db';
+import type { MuscleVolume, WeeklyTonnage, WorkoutDayCount, Plan, PlanPause, LifeEvent } from '@/shared/db/app_db';
+import HealthHeatmap from '@/features/analytics/components/HealthHeatmap.vue';
+import PauseSheet from '@/features/gym/components/PauseSheet.vue';
+import { deloadWeekNumbers, planWeek, planWeeksTotal } from '@/shared/utils/planCalendar';
+import { localDateISO } from '@/shared/utils/timeFormat';
+import { showToast } from '@/shared/utils/toast';
 import {
   Chart,
   BarController, BarElement,
@@ -157,7 +242,6 @@ import { chartBarDataset, chartTicks, chartGrid } from '@/shared/utils/chartStyl
 import TrendChart from '@/shared/components/TrendChart.vue';
 import { useChartScrub } from '@/shared/composables/useChartScrub';
 import { hapticSelect } from '@/shared/utils/haptics';
-import { localDateISO } from '@/shared/utils/timeFormat';
 
 Chart.register(BarController, BarElement, LinearScale, CategoryScale, Tooltip);
 
@@ -209,44 +293,11 @@ const balanceSegments = computed(() => {
   ].filter((s) => s.pct > 0);
 });
 
-// Heatmap grid: HEATMAP_WEEKS columns × 7 rows, filled column-by-column.
-const heatCells = computed(() => {
-  const counts = new Map<string, number>();
-  for (const d of frequency.value) counts.set(d.date, Number(d.count) || 0);
-
-  const today = new Date();
-  const todayKey = toKey(today);
-  // Anchor to the start of the current week (Sunday), go back HEATMAP_WEEKS - 1 weeks.
-  const start = new Date(today);
-  start.setDate(start.getDate() - start.getDay() - (HEATMAP_WEEKS - 1) * 7);
-
-  const cells: { date: string; count: number; future: boolean }[] = [];
-  for (let week = 0; week < HEATMAP_WEEKS; week++) {
-    for (let day = 0; day < 7; day++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + week * 7 + day);
-      const key = toKey(d);
-      cells.push({ date: key, count: counts.get(key) || 0, future: key > todayKey });
-    }
-  }
-  return cells;
-});
-
-function toKey(d: Date): string {
-  return localDateISO(d);
-}
-
 function withinWindow(dateKey: string): boolean {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - windowDays.value);
-  return dateKey >= toKey(cutoff);
+  return dateKey >= localDateISO(cutoff);
 }
-
-const heatColor = (count: number): string => {
-  if (count <= 0) return 'rgba(var(--nt-ink), 0.06)';
-  if (count === 1) return 'color-mix(in srgb, var(--ion-color-accent-red) 55%, transparent)';
-  return 'var(--ion-color-accent-red)';
-};
 
 const formatVolume = (volume: number) => {
   if (volume >= 10000) return `${Math.round(volume / 100) / 10}k`;
@@ -265,6 +316,7 @@ const loadAll = async () => {
   muscleVolume.value = volume;
   weeklyTonnage.value = tonnage;
   frequency.value = freq;
+  await loadPlanProgress();
   await nextTick();
   renderCharts();
 };
@@ -354,6 +406,186 @@ const tonnagePts = computed(() =>
 const weekLabel = (week: string) => {
   const parts = week.split('-');
   return parts.length === 2 ? `W${Number(parts[1])}` : week;
+};
+
+// ── Plan progress card (T16) + life-event log (T14) ──────────────────────────
+interface PlanSelection {
+  plan: Plan;
+  pauses: PlanPause[];
+  series: Array<{ date: string; weight: number; tonnage: number; templateId: number | null }>;
+  adherence: Awaited<ReturnType<typeof getPlanAdherence>>;
+}
+const planSelections = ref<Map<number, PlanSelection>>(new Map());
+const templateNames = ref<Map<number, string>>(new Map());
+const selectedPlanId = ref<number | null>(null);
+const lifeEvents = ref<LifeEvent[]>([]);
+
+const planPickerOptions = computed(() =>
+  [...planSelections.value.values()]
+    .sort((a, b) => (a.plan.start_date < b.plan.start_date ? 1 : -1))
+    .map((s) => ({
+      id: s.plan.id,
+      label: `${s.plan.name}${s.plan.archived ? ' (past)' : ''}`,
+    }))
+);
+
+const selected = computed(() =>
+  selectedPlanId.value != null ? planSelections.value.get(selectedPlanId.value) ?? null : null
+);
+
+const planStats = computed(() => {
+  const s = selected.value;
+  if (!s) return null;
+  const cfg = planConfigOf(s.plan);
+  const spans = pauseSpansOf(s.pauses);
+  const todayKey = localDateISO();
+  const elapsed = s.plan.archived || s.plan.end_date < todayKey;
+  const week = planWeek(cfg, spans, new Date());
+  const total = planWeeksTotal(cfg, spans);
+  const deloads = deloadWeekNumbers(cfg);
+  return {
+    weekLabel: elapsed ? `${total}w final` : `${week ?? '—'} / ${total}`,
+    totalDone: s.adherence.totalDone,
+    expectedByNow: s.adherence.expectedByNow,
+    completion: s.adherence.completion,
+    deloadsDone: elapsed ? deloads.size : [...deloads].filter((w) => (week ?? 0) > w).length,
+    deloadsTotal: deloads.size,
+  };
+});
+
+const planTrendPts = computed(() =>
+  (selected.value?.series ?? []).map((d) => ({ label: d.date.slice(5), value: d.tonnage }))
+);
+
+// est-1RM dashed overlay lives on the same series in the weight view; with
+// tonnage points the overlay reuses top-set weight (comparable effort shape).
+const planEst1rmPts = computed(() =>
+  (selected.value?.series ?? []).map((d) => ({ label: d.date.slice(5), value: d.weight }))
+);
+
+/** Point-index spans of paused days (incl. open pauses) for the red shading. */
+const planShadeSpans = computed(() => {
+  const s = selected.value;
+  if (!s) return undefined;
+  const dates = s.series.map((d) => d.date);
+  if (dates.length === 0) return undefined;
+  const spans: Array<{ start: number; end: number }> = [];
+  for (const p of s.pauses) {
+    const startKey = p.start_date;
+    const endKey = p.end_date ?? localDateISO();
+    let startIdx = dates.findIndex((d) => d >= startKey);
+    if (startIdx < 0) startIdx = dates.length; // pause entirely before first workout point
+    let endIdx = dates.length - 1;
+    for (let i = 0; i < dates.length; i++) {
+      if (dates[i] > endKey) { endIdx = i - 1; break; }
+    }
+    if (endIdx >= startIdx && startIdx < dates.length) {
+      spans.push({ start: Math.max(0, startIdx), end: Math.max(0, endIdx) });
+    }
+  }
+  return spans.length > 0 ? spans : undefined;
+});
+
+const planTemplateRows = computed(() => {
+  const s = selected.value;
+  if (!s || s.adherence.totalTonnage <= 0) return [];
+  return s.adherence.doneCounts
+    .filter((d) => d.templateId !== null)
+    .map((d) => ({
+      id: d.templateId as number,
+      name: templateNames.value.get(d.templateId as number) ?? `Template ${d.templateId}`,
+      done: d.done,
+      share: d.tonnage / s.adherence.totalTonnage,
+    }))
+    .sort((a, b) => b.share - a.share);
+});
+
+const planBeforeAfter = computed(() => {
+  const s = selected.value;
+  if (!s || s.series.length < 2) return [];
+  const first = s.series.slice(0, 7);
+  const last = s.series.slice(-7);
+  const firstWeek = new Map<number, number>();
+  for (const d of first) {
+    if (d.templateId == null) continue;
+    firstWeek.set(d.templateId, Math.max(firstWeek.get(d.templateId) ?? 0, d.weight));
+  }
+  const lastWeek = new Map<number, number>();
+  for (const d of last) {
+    if (d.templateId == null) continue;
+    lastWeek.set(d.templateId, Math.max(lastWeek.get(d.templateId) ?? 0, d.weight));
+  }
+  const rows: Array<{ name: string; first: number; last: number }> = [];
+  for (const [id, fw] of firstWeek) {
+    const lw = lastWeek.get(id);
+    if (lw == null) continue;
+    rows.push({ name: templateNames.value.get(id) ?? `Template ${id}`, first: Math.round(fw), last: Math.round(lw) });
+  }
+  return rows;
+});
+
+const planPauseLog = computed(() => {
+  const s = selected.value;
+  if (!s) return [];
+  return s.pauses.map((p) => {
+    const end = p.end_date ?? localDateISO();
+    const days = Math.max(1, Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${p.start_date}T00:00:00`).getTime()) / 86_400_000) + 1);
+    return { label: `${p.reason.charAt(0).toUpperCase() + p.reason.slice(1)}${p.end_date ? '' : ' (open)'}`, days };
+  });
+});
+
+const loadPlanProgress = async () => {
+  const [plans, templates] = await Promise.all([getPlans(true), Promise.resolve([])]);
+  void templates;
+  templateNames.value = new Map(
+    (await import('@/shared/db/app_db').then((m) => m.getTemplates(true)) as any[])
+      .map((t) => [Number(t.id), String(t.name)])
+  );
+  const next = new Map<number, PlanSelection>();
+  for (const plan of plans.slice(0, 12)) {
+    const pauses = await getPausesForPlan(plan.id);
+    const [series, adherence] = await Promise.all([
+      getPlanWorkoutSeries(plan, pauses),
+      getPlanAdherence(plan, pauses, 1),
+    ]);
+    next.set(plan.id, { plan, pauses, series, adherence });
+  }
+  planSelections.value = next;
+  // Default to the active plan; keep a past selection if still present.
+  if (selectedPlanId.value == null || !next.has(selectedPlanId.value)) {
+    const active = [...next.values()].find((s) => !s.plan.archived && s.plan.end_date >= localDateISO());
+    selectedPlanId.value = active?.plan.id ?? [...next.keys()][0] ?? null;
+  }
+  lifeEvents.value = await getLifeEvents(undefined, 50).catch(() => []);
+};
+
+const lifeEventLabel = (ev: LifeEvent) => {
+  const base = ev.type.charAt(0).toUpperCase() + ev.type.slice(1);
+  return ev.severity ? `${base} (${ev.severity === 'knocked_out' ? 'knocked out' : ev.severity})` : base;
+};
+
+const logLifeEvent = async () => {
+  hapticSelect();
+  const modal = await modalController.create({
+    component: PauseSheet,
+    componentProps: { title: 'Log event', mode: 'life-event' },
+    breakpoints: [0, 0.7, 1],
+    initialBreakpoint: 0.7,
+    cssClass: 'pause-sheet-modal',
+  });
+  await modal.present();
+  const { data, role } = await modal.onDidDismiss<{ reason: string; note: string | null; startDate: string; endDate: string | null; severity: string | null }>();
+  if (role !== 'confirm' || !data) return;
+  const { createLifeEvent } = await import('@/shared/db/app_db');
+  await createLifeEvent({
+    type: data.reason,
+    severity: data.severity,
+    start_date: data.startDate,
+    end_date: data.endDate,
+    note: data.note,
+  });
+  lifeEvents.value = await getLifeEvents(undefined, 50).catch(() => []);
+  showToast('event logged', 'success');
 };
 
 watch(windowDays, async () => {
@@ -476,43 +708,43 @@ onUnmounted(() => {
   border-radius: 3px;
 }
 
-/* Frequency heatmap */
-.freq-grid {
+/* Plan progress rows */
+.plan-tpl-rows {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(7, 1fr);
-  grid-auto-columns: 1fr;
-  gap: 3px;
+  gap: 8px;
 }
 
-.freq-cell {
-  aspect-ratio: 1;
-  border-radius: 3px;
-  background: rgba(var(--nt-ink), 0.06);
-}
-
-.freq-cell--future {
-  background: transparent !important;
-}
-
-.freq-cell--legend {
-  width: 10px;
-  height: 10px;
-  aspect-ratio: auto;
-  border-radius: 2px;
-}
-
-.freq-legend {
+.plan-tpl-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(var(--nt-ink), 0.05);
+  border-radius: 10px;
 }
 
-.freq-legend__label {
-  font-size: 0.65rem;
-  color: rgba(var(--nt-ink), 0.35);
-  margin: 0 4px;
+.plan-tpl-row__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(var(--nt-ink), 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-tpl-row__meta {
+  font-family: var(--nt-font-mono);
+  font-size: 0.75rem;
+  color: var(--nt-text-dim);
+  white-space: nowrap;
+}
+
+.log-event-btn {
+  --color: var(--ion-color-accent-red);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
 }
 
 /* Chart.js scrub readout (mirrors TrendChart's readout row) */

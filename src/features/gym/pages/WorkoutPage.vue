@@ -739,6 +739,7 @@ const saveWorkout = async () => {
               exerciseCount: workoutExercises.value.length,
               setCount: completedSets.length,
               prs: achievedPRs,
+              workoutId,
             },
           });
           await modal.present();
