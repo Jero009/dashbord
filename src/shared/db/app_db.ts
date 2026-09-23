@@ -1670,13 +1670,51 @@ export async function deleteTemplate(id: number) {
 }
 // workout functions
 
-import { isDeloadWeek, deloadWeightFor } from '@/shared/utils/trainingPhase';
+import { resolvedDeloadConfig } from '@/shared/utils/trainingPhase';
+import { addDays } from '@/shared/utils/planCalendar';
+
+/**
+ * The ≥10-day layoff ramp check (locked): true when the newest completed sets
+ * for the exercise are at least 10 days old AND the gap is not covered by an
+ * open/recent school/travel pause or life event (missing school isn't
+ * detraining). The 85% cap itself is applied by the caller.
+ */
+export async function returnRampApplies(exerciseId: number, excludeWorkoutId?: number): Promise<boolean> {
+  if (!db) return false;
+  const end = await getLatestCompletedWorkoutEndForExercise(exerciseId, excludeWorkoutId);
+  if (!end) return false;
+  const ended = new Date(/T|Z/.test(end) ? end : end.replace(' ', 'T'));
+  if (Number.isNaN(ended.getTime())) return false;
+  const daysSince = Math.floor((Date.now() - ended.getTime()) / 86_400_000);
+  if (daysSince < 10) return false;
+  return !(await hasSchoolTravelCovering(addDays(localDateISO(ended), 1), localDateISO()));
+}
+
+/** True when a school/travel pause or life_event overlaps [fromKey, todayKey]. */
+async function hasSchoolTravelCovering(fromKey: string, todayKey: string): Promise<boolean> {
+  if (!db) return false;
+  const result = await db.query(
+    `SELECT
+       (SELECT COUNT(*) FROM gym_plan_pause
+          WHERE reason IN ('school','travel')
+            AND start_date <= ?
+            AND (end_date IS NULL OR end_date >= ?)) AS p,
+       (SELECT COUNT(*) FROM life_event
+          WHERE type IN ('school','travel')
+            AND start_date <= ?
+            AND (end_date IS NULL OR end_date >= ?)) AS e;`,
+    [todayKey, fromKey, todayKey, fromKey]
+  );
+  const r = result.values?.[0];
+  return (Number(r?.p) || 0) > 0 || (Number(r?.e) || 0) > 0;
+}
 
 export async function startWorkoutFromTemplate(templateId: number) {
   if (!db) return;
   const conn = db;
 
   try {
+    const deloadCfg = await resolvedDeloadConfig();
     const template = await getTemplateById(templateId);
     const result = await conn.run(
       `INSERT INTO workout (id_workout_template, name) VALUES (?, ?)`,
@@ -1700,6 +1738,9 @@ export async function startWorkoutFromTemplate(templateId: number) {
 
       const previousSets = await getLatestCompletedSetsForExercise(ex.id_exercise);
 
+      // ≥10-day layoff ⇒ capped ~85% ramp (school/travel gaps exempt).
+      const rampApplies = await returnRampApplies(ex.id_exercise, workoutId);
+
       for (let i = 0; i < ex.set_number; i++) {
         let reps = ex.rep_number;
         let weight = 0;
@@ -1708,11 +1749,16 @@ export async function startWorkoutFromTemplate(templateId: number) {
           const prevSet = previousSets[i] || previousSets[previousSets.length - 1];
           reps = prevSet.reps;
           weight = prevSet.weight;
-          // Deload weeks: the prefilled default IS the recommendation —
-          // scale down to the deload weight, same rule as addNewSet.
-          if (isDeloadWeek()) {
-            const deload = deloadWeightFor(Number(weight) || 0);
-            if (deload) weight = deload;
+          // ≥10-day layoff: conservative return ramp BEFORE the deload scale —
+          // a deload week on top of a long break would double-discount.
+          if (rampApplies) {
+            const capped = Math.max(2.5, Math.floor(((Number(weight) || 0) * 0.85) / 2.5) * 2.5);
+            if (capped > 0 && capped < Number(weight)) weight = capped;
+          } else if (deloadCfg.isDeload) {
+            // Deload weeks: the prefilled default IS the recommendation —
+            // scale down to the deload weight at the RESOLVED factor.
+            const deload = Math.max(2.5, Math.floor(((Number(weight) || 0) * deloadCfg.factor) / 2.5) * 2.5);
+            if ((Number(weight) || 0) > 0) weight = deload;
           }
         }
 
@@ -1787,6 +1833,33 @@ export async function getLatestCompletedSetsForExercise(exerciseId: number, excl
   );
 
   return result.values || [];
+}
+
+/** time_end of the newest completed workout containing `exerciseId` (null if none). */
+export async function getLatestCompletedWorkoutEndForExercise(exerciseId: number, excludeWorkoutId?: number): Promise<string | null> {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT w.time_end
+     FROM workout w
+     JOIN workout_exercise we ON we.workout_id = w.id
+     WHERE we.exercise_id = ?
+       AND w.time_end IS NOT NULL
+       AND (? IS NULL OR w.id <> ?)
+     ORDER BY w.time_end DESC
+     LIMIT 1;`,
+    [exerciseId, excludeWorkoutId ?? null, excludeWorkoutId ?? null]
+  );
+  const v = result.values?.[0]?.time_end;
+  return v != null ? String(v) : null;
+}
+
+/** True when the newest completed sets for the exercise are ≥ `minDays` old. */
+export async function exerciseLayoffDays(exerciseId: number, excludeWorkoutId?: number): Promise<number> {
+  const end = await getLatestCompletedWorkoutEndForExercise(exerciseId, excludeWorkoutId);
+  if (!end) return 0;
+  const ended = new Date(/T|Z/.test(end) ? end : end.replace(' ', 'T'));
+  if (Number.isNaN(ended.getTime())) return 0;
+  return Math.max(0, Math.floor((Date.now() - ended.getTime()) / 86_400_000));
 }
 
 export async function getLatestCompletedSetDefaultsForExercise(exerciseId: number, excludeWorkoutId?: number) {
@@ -2046,14 +2119,15 @@ export async function addExerciseToWorkout(
 
     const previousSets = await getLatestCompletedSetsForExercise(exerciseId, workoutId);
 
+    const deloadCfg = await resolvedDeloadConfig();
     if (previousSets.length > 0) {
       for (let i = 0; i < previousSets.length; i++) {
         const reps = previousSets[i].reps;
         let weight = previousSets[i].weight;
-        // Deload weeks: prefilled defaults are the recommendation (see startWorkoutFromTemplate).
-        if (isDeloadWeek()) {
-          const deload = deloadWeightFor(Number(weight) || 0);
-          if (deload) weight = deload;
+        // Deload weeks: prefilled defaults are the recommendation at the
+        // RESOLVED factor (see startWorkoutFromTemplate).
+        if (deloadCfg.isDeload && (Number(weight) || 0) > 0) {
+          weight = Math.max(2.5, Math.floor(((Number(weight) || 0) * deloadCfg.factor) / 2.5) * 2.5);
         }
         await conn.run(
           'INSERT INTO workout_exercise_sets (workout_exercise_id, set_number, reps, weight) VALUES (?, ?, ?, ?)',

@@ -518,7 +518,8 @@ import {
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 import { mirrorWorkoutToReceiver } from '@/shared/sync/workoutMirror';
 import { formatRestTime } from '@/shared/utils/timeFormat';
-import { isDeloadWeek, deloadWeightFor, deloadNotice } from '@/shared/utils/trainingPhase';
+import { resolvedDeloadConfig, type ResolvedDeloadConfig } from '@/shared/utils/trainingPhase';
+import { exerciseLayoffDays } from '@/shared/db/app_db';
 
 const router = useRouter();
 // id from route
@@ -541,10 +542,14 @@ const loadWorkout = async () => {
   const data = await getWorkoutExercises(workoutId);
   const bodyWeight = await getLatestBodyWeight();
 
-  const [setsArray, previousSetsArray] = await Promise.all([
+  const [setsArray, previousSetsArray, layoffDaysArray] = await Promise.all([
     Promise.all(data.map((ex: any) => getWorkoutSets(ex.id))),
     Promise.all(data.map((ex: any) => getLatestCompletedSetsForExercise(ex.exercise_id, workoutId))),
+    Promise.all(data.map((ex: any) => exerciseLayoffDays(ex.exercise_id, workoutId))),
   ]);
+  // ≥10-day layoff on any exercise ⇒ the ramp hint shows once for the session.
+  const maxLayoff = Math.max(0, ...layoffDaysArray);
+  if (maxLayoff >= 10) rampHint.value = maxLayoff;
 
   for (let i = 0; i < data.length; i++) {
     const isBodyweight = data[i].equipment === 'bodyweight';
@@ -867,7 +872,11 @@ const addNewSet = async (exercise: any) => {
   try {
     hapticLight();
     const nextSetNum = await getNextSetNumber(exercise.id);
-    const previousSets = await getLatestCompletedSetsForExercise(exercise.exercise_id, workoutId);
+    const [previousSets, deloadCfg, layoffDays] = await Promise.all([
+      getLatestCompletedSetsForExercise(exercise.exercise_id, workoutId),
+      resolvedDeloadConfig(),
+      exerciseLayoffDays(exercise.exercise_id, workoutId),
+    ]);
 
     let defaultReps = 10;
     let defaultWeight = 0;
@@ -876,11 +885,15 @@ const addNewSet = async (exercise: any) => {
       const prevSet = previousSets.find((s: any) => Number(s.set_number) === nextSetNum) || previousSets[previousSets.length - 1];
       defaultReps = prevSet.reps;
       defaultWeight = prevSet.weight;
-      // Deload weeks default new sets to the scaled-down weight, not last
-      // time's number — the tap-through default IS the recommendation.
-      if (isDeloadWeek()) {
-        const deload = deloadWeightFor(Number(prevSet.weight) || 0);
-        if (deload) defaultWeight = deload;
+      // ≥10-day layoff: conservative return ramp beats the deload scale.
+      if (layoffDays >= 10) {
+        const capped = Math.max(2.5, Math.floor(((Number(prevSet.weight) || 0) * 0.85) / 2.5) * 2.5);
+        if (capped > 0 && capped < Number(prevSet.weight)) defaultWeight = capped;
+      } else if (deloadCfg.isDeload) {
+        // Deload weeks default new sets to the scaled-down weight at the
+        // resolved factor — the tap-through default IS the recommendation.
+        const deload = Math.max(2.5, Math.floor(((Number(prevSet.weight) || 0) * deloadCfg.factor) / 2.5) * 2.5);
+        if ((Number(prevSet.weight) || 0) > 0) defaultWeight = deload;
       }
     }
 
@@ -911,15 +924,28 @@ const addNewSet = async (exercise: any) => {
   }
 };
 
+// Return-ramp flag (T7): set when ANY exercise in this workout had a ≥10-day
+// layoff — one hint per session is enough. Cleared per page load.
+const rampHint = ref<number | null>(null);
+
+// Resolved once per page (cache-hit after app-start init): sync hint/banner
+// paths read this instead of calling isDeloadWeek() ad hoc.
+const phaseCfg = ref<ResolvedDeloadConfig | null>(null);
+resolvedDeloadConfig().then((c) => { phaseCfg.value = c; });
+
 const overloadHint = (exercise: any): string => {
   const sets: any[] = exercise?.sets ?? [];
   const maxWeight = Math.max(...sets.map((s: any) => Number(s.previous_weight) || 0));
   if (maxWeight <= 0) return '';
   const maxWeightSet = sets.find((s: any) => Number(s.previous_weight) === maxWeight);
   const prevReps = Number(maxWeightSet?.previous_reps) || 0;
+  // ≥10-day layoff: the ramp hint overrides progression suggestions.
+  if (rampHint.value) {
+    return `Back after ${rampHint.value} days — ramp up over ~2 sessions`;
+  }
   // Deload weeks scale the suggestion down instead of suggesting progression.
-  if (isDeloadWeek()) {
-    const deload = deloadWeightFor(maxWeight);
+  if (phaseCfg.value?.isDeload) {
+    const deload = Math.max(2.5, Math.floor((maxWeight * phaseCfg.value.factor) / 2.5) * 2.5);
     return deload ? `Deload — last ${maxWeight} kg × ${prevReps}, work around ${deload} kg` : `Deload week — keep it light`;
   }
   const suggested = Math.round((maxWeight * 1.025) / 2.5) * 2.5;
@@ -928,7 +954,15 @@ const overloadHint = (exercise: any): string => {
 
 // True once per workout session (page-lifetime flag): a deload banner on the
 // first load is enough — repeating it per-exercise is noise.
-const deloadBanner = deloadNotice();
+const deloadBanner = ref<string | null>(null);
+resolvedDeloadConfig().then((c) => {
+  const pos = c.weekOfPlan;
+  if (c.isDeload) {
+    deloadBanner.value = pos !== null
+      ? `Deload week (plan week ${pos}) — suggest ~${Math.round(c.factor * 100)}% of last time`
+      : `Deload week — suggest ~${Math.round(c.factor * 100)}% of last time`;
+  }
+});
 
 const getSetPlaceholder = (exercise: any, currentSet: any, field: 'weight' | 'reps', fallback: string): string => {
   const prevKey = field === 'weight' ? 'previous_weight' : 'previous_reps';
