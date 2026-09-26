@@ -39,6 +39,7 @@
 
   /* ---- Typography ---- */
   --nt-font-display: 'Doto', 'Space Grotesk', monospace; /* dot-matrix face */
+  --nt-font-accent-display: 'Doto', 'Space Grotesk', monospace; /* classic: accent display = the dot-matrix face itself */
   --nt-font-head: 'Space Grotesk', system-ui, sans-serif;
   --nt-font-body: 'Space Grotesk', system-ui, sans-serif;
   --nt-font-mono: 'Space Mono', ui-monospace, monospace;
@@ -169,6 +170,117 @@ html.theme-light {
   --ion-background-color: var(--nt-bg);
 
   color-scheme: light;
+}
+
+/* =========================================================
+   NOTHING OS 5 STYLE (2026 redesign)
+   Applied via the `theme-os5` class on <html> (set by useTheme's
+   style axis). Orthogonal to light/dark: OS 5 exists in both.
+   What Nothing changed in OS 5.0 and how it maps here:
+   - Geist replaces Space Grotesk as body/head face; Geist Mono
+     replaces Space Mono. Doto (dot-matrix) is demoted to ACCENT
+     duty — hero display numerals only (--nt-font-accent-display).
+   - New software material: translucency + frost on surfaces
+     (backdrop-filter) instead of flat fills → depth & hierarchy.
+   - Bigger, rounder corners (radius scale grows ~50%).
+   - Dot-matrix *texture* (the .nt-dotgrid substrate) reads as
+     OS<5; in OS 5 it becomes a barely-there depth cue.
+   - Red accent, data colors, motion tokens: UNCHANGED (the
+     predominantly monochrome character is the guardrail).
+   Every rule below only re-points tokens — pages never rewrite.
+   ========================================================= */
+html.theme-os5 {
+  /* ---- Typography: Geist system ---- */
+  --nt-font-display: 'Geist Mono', 'Space Mono', ui-monospace, monospace; /* numerics */
+  --nt-font-head: 'Geist', 'Space Grotesk', system-ui, sans-serif;
+  --nt-font-body: 'Geist', 'Space Grotesk', system-ui, sans-serif;
+  --nt-font-mono: 'Geist Mono', 'Space Mono', ui-monospace, monospace;
+  /* Dot-matrix demoted to accent: hero numerals only (OS 5 keeps it
+     as character, not as the numeric workhorse). */
+  --nt-font-accent-display: 'Doto', 'Geist Mono', monospace;
+  /* Slightly tighter label tracking — Geist runs wider than Space Grotesk */
+  --nt-tracking-label: 0.1em;
+  --nt-tracking-kicker: 0.16em;
+
+  /* ---- Radius: bigger, rounder panels ---- */
+  --nt-radius-sm: 12px;
+  --nt-radius-md: 20px;
+  --nt-radius-lg: 28px;
+
+  /* ---- Frosted translucent surfaces (OS 5 software material) ----
+     Surfaces become translucent panels; content scrolling under a
+     card shows through as a subtle blur. --nt-surface-fallback is
+     the solid colour for any context without backdrop-filter (all
+     current WebViews have it; kept for safety). */
+  --nt-surface-fallback: #141414;
+  --nt-surface: rgba(20, 20, 20, 0.66);
+  --nt-surface-2: rgba(44, 44, 44, 0.72);
+  --nt-frost: blur(24px) saturate(1.4);
+  --nt-border: rgba(255, 255, 255, 0.1);
+  --nt-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Softer ink hierarchy (OS 5 calmer text scale) */
+  --nt-text-dim: rgba(255, 255, 255, 0.55);
+}
+
+/* Frosted panel treatment — global for OS 5. The canonical card
+   surfaces (.card via --ion-card-background / --ion-color-primary,
+   ion-item, modals, sheets) get the material; anything reading
+   --nt-surface inherits the translucency. One directional light
+   hairline gives the "panel floating over depth" read. */
+html.theme-os5 ion-card,
+html.theme-os5 .card {
+  background: var(--nt-surface);
+  -webkit-backdrop-filter: var(--nt-frost);
+  backdrop-filter: var(--nt-frost);
+  border: 1px solid var(--nt-border);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  html.theme-os5 ion-card,
+  html.theme-os5 .card {
+    background: var(--nt-surface-fallback);
+  }
+}
+
+html.theme-os5 ion-modal {
+  --background: var(--nt-surface);
+}
+html.theme-os5 ion-alert .alert-wrapper {
+  background: var(--nt-surface-fallback) !important;
+}
+html.theme-os5 ion-action-sheet::part(content) {
+  background: var(--nt-surface-fallback);
+}
+html.theme-os5 ion-popover {
+  --background: var(--nt-surface-fallback);
+}
+html.theme-os5 ion-popover::part(content) {
+  background: var(--nt-surface-fallback);
+}
+html.theme-os5 ion-popover ion-list,
+html.theme-os5 ion-popover ion-item {
+  --background: var(--nt-surface-fallback);
+  background: var(--nt-surface-fallback);
+}
+
+/* OS 5 + LIGHT: frost works over light grey — panels go white
+   translucent, ink stays near-black (flipped by .theme-light). */
+html.theme-os5.theme-light {
+  --nt-surface-fallback: #FFFFFF;
+  --nt-surface: rgba(255, 255, 255, 0.72);
+  --nt-surface-2: rgba(255, 255, 255, 0.9);
+  --nt-border: rgba(0, 0, 0, 0.08);
+  --nt-border-strong: rgba(0, 0, 0, 0.14);
+  --nt-text-dim: rgba(0, 0, 0, 0.5);
+}
+
+/* Dot-matrix substrate nearly invisible in OS 5 (texture demoted
+   with the font — depth cue, not pattern). */
+html.theme-os5 .nt-dotgrid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+html.theme-os5.theme-light .nt-dotgrid {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
 }
 
 /* ---- Dot-matrix display face (OFL) ---- */

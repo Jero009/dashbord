@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nothing OS 5 skin: Geist throughout, frosted panel. Same IDs as
+     widget_briefing; VU bar unchanged (data encoding, not chrome). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_os5"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="18dp">
+
+    <!-- VU-meter verdict bar: 3 stacked segments; BriefingWidgetProvider tints
+         each from the snapshot `briefingLevel`. Order top→bottom is green,
+         yellow, red (VU meter); level fills bottom-up (recover=1, normal=2,
+         push=3) or paints all three one color (sick=red, deload=yellow). -->
+    <LinearLayout
+        android:id="@+id/widget_vu_bar"
+        android:layout_width="10dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/widget_vu_track"
+        android:gravity="bottom"
+        android:orientation="vertical"
+        android:padding="2dp">
+
+        <TextView
+            android:id="@+id/widget_vu_green"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="1dp"
+            android:background="@drawable/widget_vu_seg_dim" />
+
+        <TextView
+            android:id="@+id/widget_vu_yellow"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="1dp"
+            android:background="@drawable/widget_vu_seg_dim" />
+
+        <TextView
+            android:id="@+id/widget_vu_red"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="1dp"
+            android:background="@drawable/widget_vu_seg_dim" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_briefing_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/geist"
+                android:letterSpacing="0.1"
+                android:text="HERMES BRIEFING"
+                android:textAllCaps="true"
+                android:textColor="#969696"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/widget_briefing_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/geist"
+                android:textColor="#969696"
+                android:textSize="11sp"
+                android:text="" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_briefing_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/geist"
+            android:fontWeight="600"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="No briefing yet" />
+
+        <TextView
+            android:id="@+id/widget_briefing_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="@font/geist"
+            android:textColor="#C9C9C9"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="Opens with the app after the first sync" />
+    </LinearLayout>
+</LinearLayout>

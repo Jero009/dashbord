@@ -33,7 +33,9 @@ public class SleepBatteryWidgetProvider extends AppWidgetProvider {
     }
 
     static RemoteViews buildViews(Context context, String json) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_sleep_battery);
+        boolean os5 = WidgetTheme.isOs5(json);
+        RemoteViews views = new RemoteViews(context.getPackageName(),
+                os5 ? R.layout.widget_sleep_battery_os5 : R.layout.widget_sleep_battery);
 
         double pct = -1;
         String duration = "--";
@@ -58,7 +60,7 @@ public class SleepBatteryWidgetProvider extends AppWidgetProvider {
 
         int bitmapSize = (int) (context.getResources().getDisplayMetrics().density * 120);
         views.setImageViewBitmap(R.id.battery_ring,
-                drawRing(bitmapSize, pct < 0 ? 0 : (float) pct));
+                drawRing(bitmapSize, pct < 0 ? 0 : (float) pct, WidgetTheme.trackColor(os5)));
 
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (intent != null) {
@@ -72,10 +74,10 @@ public class SleepBatteryWidgetProvider extends AppWidgetProvider {
 
     /**
      * Ring gauge: 270° sweep starting at the top-left (7 o'clock position,
-     * speedometer style), clockwise. Track at 15% white; progress arc gold,
-     * red when under 40.
+     * speedometer style), clockwise. Track alpha is theme-aware (lighter
+     * under the OS 5 frost); progress arc gold, red when under 40.
      */
-    static Bitmap drawRing(int size, float pct) {
+    static Bitmap drawRing(int size, float pct, int trackColor) {
         Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         float stroke = size * 0.075f;
@@ -86,7 +88,7 @@ public class SleepBatteryWidgetProvider extends AppWidgetProvider {
         track.setStyle(Paint.Style.STROKE);
         track.setStrokeWidth(stroke);
         track.setStrokeCap(Paint.Cap.ROUND);
-        track.setColor(0x26FFFFFF); // ~15% white
+        track.setColor(trackColor);
         canvas.drawArc(oval, 135f, 270f, false, track);
 
         if (pct > 0) {

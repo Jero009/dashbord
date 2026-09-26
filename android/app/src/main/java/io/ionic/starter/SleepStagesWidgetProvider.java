@@ -44,7 +44,9 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
     }
 
     static RemoteViews buildViews(Context context, String json) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_sleep_stages);
+        boolean os5 = WidgetTheme.isOs5(json);
+        RemoteViews views = new RemoteViews(context.getPackageName(),
+                os5 ? R.layout.widget_sleep_stages_os5 : R.layout.widget_sleep_stages);
 
         String total = "--";
         String deep = "--";
@@ -72,7 +74,7 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
 
         int density = (int) context.getResources().getDisplayMetrics().density;
         views.setImageViewBitmap(R.id.stages_bar_bitmap,
-                drawTimeline(segments, 400 * density, 14 * density, density));
+                drawTimeline(segments, 400 * density, 14 * density, density, WidgetTheme.trackColor(os5)));
 
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (intent != null) {
@@ -85,7 +87,7 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
     }
 
     /** Stacked stage timeline as a bitmap; 1dp gaps between segments, 2dp corner radius. */
-    static Bitmap drawTimeline(JSONArray segments, int width, int height, int density) {
+    static Bitmap drawTimeline(JSONArray segments, int width, int height, int density, int emptyTrackColor) {
         Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         canvas.drawColor(0x00000000, android.graphics.PorterDuff.Mode.CLEAR);
@@ -93,7 +95,7 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
         float gapPx = density;
         if (segments == null || segments.length() == 0) {
             Paint dim = new Paint(Paint.ANTI_ALIAS_FLAG);
-            dim.setColor(0x1AFFFFFF);
+            dim.setColor(emptyTrackColor);
             canvas.drawRoundRect(new RectF(0, 0, width, height), 2f * density, 2f * density, dim);
             return bmp;
         }

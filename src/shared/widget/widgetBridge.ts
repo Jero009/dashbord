@@ -29,6 +29,10 @@ function mergeAndBuild(fields: Record<string, unknown>): Record<string, unknown>
     const v = merged[k]
     if (v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))) delete merged[k]
   }
+  // Keep the persisted style in every pushed snapshot so any producer's
+  // sync re-renders widgets in the right skin. Always explicit — the Java
+  // side treats missing as classic defensively, but every real push says it.
+  merged.themeStyle = localStorage.getItem('app_theme_style') === 'os5' ? 'os5' : 'classic'
   localStorage.setItem(SNAPSHOT_MIRROR_KEY, JSON.stringify(merged))
   return merged
 }

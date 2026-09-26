@@ -35,7 +35,9 @@ public class BriefingWidgetProvider extends AppWidgetProvider {
     }
 
     static RemoteViews buildViews(Context context, String json) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_briefing);
+        boolean os5 = WidgetTheme.isOs5(json);
+        RemoteViews views = new RemoteViews(context.getPackageName(),
+                os5 ? R.layout.widget_briefing_os5 : R.layout.widget_briefing);
 
         String title = "No briefing yet";
         String body = "Opens with the app after the first sync";

@@ -24,6 +24,21 @@
             </div>
           </div>
 
+          <div class="set-stack">
+            <span class="set-row__title">Style</span>
+            <div class="theme-seg">
+              <button
+                v-for="opt in styleOptions"
+                :key="opt.value"
+                type="button"
+                class="theme-seg__btn"
+                :class="{ 'theme-seg__btn--active': themeStyle === opt.value }"
+                @click="selectStyle(opt.value)"
+              >{{ opt.label }}</button>
+            </div>
+            <span class="set-row__sub">Nothing OS 5 — Geist type, frosted panels, rounder corners</span>
+          </div>
+
           <div class="set-row">
             <div class="set-row__label">
               <span class="set-row__title">Currency</span>
@@ -231,7 +246,8 @@ import {
 } from '@/shared/utils/notifications'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
 import { useTheme } from '@/shared/composables/useTheme'
-import type { ThemeMode } from '@/shared/composables/useTheme'
+import type { ThemeMode, ThemeStyle } from '@/shared/composables/useTheme'
+import { updateWidgetFields } from '@/shared/widget/widgetBridge'
 import { syncHealthConnectMetrics } from '@/shared/health/healthConnect'
 import { exportDatabaseToSQL, importDatabaseFromSQL } from '@/shared/db/app_db'
 import { buildAiExport } from '@/shared/utils/aiExport'
@@ -242,7 +258,7 @@ import { Share } from '@capacitor/share'
 import { FilePicker } from '@capawesome/capacitor-file-picker'
 
 // --- Appearance ---
-const { mode: themeMode, setThemeMode } = useTheme()
+const { mode: themeMode, setThemeMode, style: themeStyle, setThemeStyle } = useTheme()
 const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
@@ -251,6 +267,16 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
 const selectTheme = (value: ThemeMode) => {
   hapticSelect()
   setThemeMode(value)
+}
+const styleOptions: { value: ThemeStyle; label: string }[] = [
+  { value: 'classic', label: 'Nothing OS' },
+  { value: 'os5', label: 'Nothing OS 5' },
+]
+const selectStyle = (value: ThemeStyle) => {
+  hapticSelect()
+  setThemeStyle(value)
+  // Re-render native widgets in the new skin (no-op off-device).
+  updateWidgetFields({ themeStyle: value })
 }
 
 // --- Health Targets ---

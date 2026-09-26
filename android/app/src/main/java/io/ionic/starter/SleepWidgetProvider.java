@@ -28,7 +28,9 @@ public class SleepWidgetProvider extends AppWidgetProvider {
     }
 
     static RemoteViews buildViews(Context context, String json) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_sleep);
+        boolean os5 = WidgetTheme.isOs5(json);
+        RemoteViews views = new RemoteViews(context.getPackageName(),
+                os5 ? R.layout.widget_sleep_os5 : R.layout.widget_sleep);
 
         String score = "--";
         String meta = "NO DATA";

@@ -1,15 +1,24 @@
 import { computed, ref } from 'vue'
 
 /**
- * Global light/dark theme state for the Nothing design system.
+ * Global theme state for the Nothing design system.
  *
- * The whole skin lives in CSS tokens (`src/theme/variables.css`): the light
- * theme is just the `theme-light` class on <html>, which re-points the surface
- * and "ink" tokens. So flipping the class re-skins every page automatically.
+ * The whole skin lives in CSS tokens (`src/theme/variables.css`):
+ *  - dark/light is the `theme-light` class on <html> re-pointing the
+ *    surface/ink tokens,
+ *  - the STYLE axis (classic vs the Nothing OS 5 look) is the
+ *    `theme-os5` class re-pointing fonts/radii/surface-material tokens.
+ * Flipping the classes re-skins every page automatically.
  *
- * Three user modes:
+ * Three colour modes:
  *   - 'system' (default) — follow the OS `prefers-color-scheme`, live.
  *   - 'light' / 'dark'   — pin a theme regardless of the OS.
+ *
+ * Two styles (what Nothing OS 5.0 itself ships as — an additional theme
+ * alongside the classic one):
+ *   - 'classic' (default) — dot-matrix numerics, flat surfaces.
+ *   - 'os5'               — Geist type, frosted translucent panels,
+ *                           bigger radii; Doto demoted to accent duty.
  *
  * The exception to the token approach is colour that CSS variables can't reach:
  * <canvas> (Chart.js) and SVG presentation attributes (`fill="…"`). For those,
@@ -17,12 +26,15 @@ import { computed, ref } from 'vue'
  * for the *effective* theme so chart/SVG colours track the choice too.
  */
 export type ThemeMode = 'dark' | 'light' | 'system'
+export type ThemeStyle = 'classic' | 'os5'
 
 const THEME_KEY = 'app_theme'
+const STYLE_KEY = 'app_theme_style'
 
 // Module-level singletons so every importer shares one reactive source.
-const mode = ref<ThemeMode>('system')        // the user's chosen mode
-const systemDark = ref(true)                  // current OS preference
+const mode = ref<ThemeMode>('system')        // the user's chosen colour mode
+const style = ref<ThemeStyle>('classic')     // the user's chosen style skin
+const systemDark = ref(true)                 // current OS preference
 
 function systemPrefersDark(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -36,9 +48,10 @@ function resolve(m: ThemeMode): 'dark' | 'light' {
   return m
 }
 
-function applyClass(): void {
+function applyClasses(): void {
   if (typeof document !== 'undefined') {
     document.documentElement.classList.toggle('theme-light', resolve(mode.value) === 'light')
+    document.documentElement.classList.toggle('theme-os5', style.value === 'os5')
   }
 }
 
@@ -47,26 +60,38 @@ export function getStoredTheme(): ThemeMode {
   return v === 'light' || v === 'dark' || v === 'system' ? v : 'system'
 }
 
+export function getStoredStyle(): ThemeStyle {
+  const v = localStorage.getItem(STYLE_KEY)
+  return v === 'os5' ? 'os5' : 'classic'
+}
+
 export function setThemeMode(m: ThemeMode): void {
   mode.value = m
   localStorage.setItem(THEME_KEY, m)
-  applyClass()
+  applyClasses()
+}
+
+export function setThemeStyle(s: ThemeStyle): void {
+  style.value = s
+  localStorage.setItem(STYLE_KEY, s)
+  applyClasses()
 }
 
 /**
- * Apply the persisted theme and start following the OS when in 'system' mode.
- * Call once, before mount, to avoid a flash.
+ * Apply the persisted theme + style and start following the OS when in
+ * 'system' mode. Call once, before mount, to avoid a flash.
  */
 export function initTheme(): void {
   mode.value = getStoredTheme()
+  style.value = getStoredStyle()
   systemDark.value = systemPrefersDark()
-  applyClass()
+  applyClasses()
 
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = (e: MediaQueryListEvent) => {
       systemDark.value = e.matches
-      if (mode.value === 'system') applyClass()
+      if (mode.value === 'system') applyClasses()
     }
     // addEventListener is the modern API; fall back for older WebViews.
     if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange)
@@ -85,5 +110,5 @@ export function useTheme() {
   const inkRGB = computed(() => (isLight.value ? '10, 10, 10' : '255, 255, 255'))
   const ink = (alpha: number) => `rgba(${inkRGB.value}, ${alpha})`
 
-  return { mode, effective, isLight, inkRGB, ink, setThemeMode }
+  return { mode, style, effective, isLight, inkRGB, ink, setThemeMode, setThemeStyle }
 }

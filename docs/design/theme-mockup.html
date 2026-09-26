@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  dashbord — Nothing OS style comparison mockup (NOT the app; a design artifact).
+  Renders the SAME dashboard composition in all four theme combinations:
+  classic-dark · os5-dark · classic-light · os5-light
+  Tokens mirror src/theme/variables.css exactly. Fonts load from the repo's
+  own @fontsource files so screenshots show the real typefaces.
+  Screenshot: docs/design/theme-comparison.png
+-->
+<head>
+<meta charset="utf-8">
+<title>dashbord — Nothing OS vs Nothing OS 5</title>
+<style>
+  /* Real fonts from the repo (paths relative to docs/design/) */
+  @font-face { font-family:'Space Grotesk'; src:url('../../node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-500-normal.woff2') format('woff2'); font-weight:500; }
+  @font-face { font-family:'Space Grotesk'; src:url('../../node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2') format('woff2'); font-weight:700; }
+  @font-face { font-family:'Space Mono'; src:url('../../node_modules/@fontsource/space-mono/files/space-mono-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family:'Geist'; src:url('../../node_modules/@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2') format('woff2'); font-weight:500; }
+  @font-face { font-family:'Geist'; src:url('../../node_modules/@fontsource/geist-sans/files/geist-sans-latin-700-normal.woff2') format('woff2'); font-weight:700; }
+  @font-face { font-family:'Geist Mono'; src:url('../../node_modules/@fontsource/geist-mono/files/geist-mono-latin-500-normal.woff2') format('woff2'); font-weight:500; }
+  @font-face { font-family:'Doto'; src:url('../../src/components/assets/fonts/Doto_Rounded-Black.ttf') format('truetype'); }
+
+  :root {
+    --nt-accent:#D71A21; --nt-black:#000; --nt-white:#FFF;
+    --nt-bg:#000; --nt-surface:#1A1A1A; --nt-surface-2:#242424;
+    --nt-border:rgba(255,255,255,.08); --nt-border-strong:rgba(255,255,255,.12);
+    --nt-ink:255,255,255; --nt-fg:#FFF; --nt-text-dim:rgba(255,255,255,.5);
+    --nt-data-positive:rgb(34,197,94); --nt-data-goal:#FFD700;
+    --nt-font-display:'Doto',monospace; --nt-font-accent-display:'Doto',monospace;
+    --nt-font-head:'Space Grotesk',sans-serif; --nt-font-body:'Space Grotesk',sans-serif;
+    --nt-font-mono:'Space Mono',monospace;
+    --nt-radius-sm:8px; --nt-radius-md:16px; --nt-radius-lg:24px;
+    --nt-frost:none;
+  }
+  .f.theme-light {
+    --nt-bg:#EBEBEB; --nt-surface:#FFF; --nt-surface-2:#E2E2E2;
+    --nt-border:rgba(0,0,0,.08); --nt-border-strong:rgba(0,0,0,.14);
+    --nt-ink:10,10,10; --nt-fg:#0A0A0A; --nt-text-dim:rgba(0,0,0,.5);
+    --nt-data-positive:rgb(21,128,61); --nt-data-goal:#B8860B;
+  }
+  .f.os5 {
+    --nt-font-display:'Geist Mono',monospace;
+    --nt-font-accent-display:'Doto','Geist Mono',monospace;
+    --nt-font-head:'Geist',sans-serif; --nt-font-body:'Geist',sans-serif;
+    --nt-font-mono:'Geist Mono',monospace;
+    --nt-radius-sm:12px; --nt-radius-md:20px; --nt-radius-lg:28px;
+    --nt-surface-fallback:#141414;
+    --nt-surface:rgba(20,20,20,.66); --nt-surface-2:rgba(44,44,44,.72);
+    --nt-frost:blur(24px) saturate(1.4);
+    --nt-border:rgba(255,255,255,.1); --nt-border-strong:rgba(255,255,255,.16);
+    --nt-text-dim:rgba(255,255,255,.55);
+  }
+  .f.os5.theme-light {
+    --nt-surface-fallback:#FFF;
+    --nt-surface:rgba(255,255,255,.72); --nt-surface-2:rgba(255,255,255,.9);
+    --nt-border:rgba(0,0,0,.08); --nt-border-strong:rgba(0,0,0,.14);
+    --nt-text-dim:rgba(0,0,0,.5);
+  }
+
+  body { margin:0; padding:28px; background:#050505; display:flex; gap:24px; font-family:var(--nt-font-body); }
+  .col { display:flex; flex-direction:column; gap:12px; align-items:center; }
+  .col h2 { color:#777; font:500 11px/1 'Space Grotesk',sans-serif; letter-spacing:.18em; text-transform:uppercase; }
+
+  /* phone frame */
+  .f { width:340px; height:700px; background:var(--nt-bg); border-radius:36px; padding:20px 16px 16px; box-sizing:border-box;
+       display:flex; flex-direction:column; gap:12px; overflow:hidden; position:relative; color:var(--nt-fg); }
+  /* scrolling "content" under the OS5 frosted cards — the blur has something to bite on */
+  .f.os5::before { content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(360px 200px at 85% 8%, rgba(215,26,33,.14), transparent 70%),
+      radial-gradient(300px 260px at 10% 75%, rgba(120,140,180,.10), transparent 70%); }
+  .f > * { position:relative; }
+
+  .seg { display:flex; gap:4px; padding:4px; background:rgba(var(--nt-ink),.05); border-radius:999px; }
+  .seg span { flex:1; text-align:center; padding:8px 0; font:500 10px/1 var(--nt-font-head); letter-spacing:.1em; text-transform:uppercase; color:var(--nt-text-dim); }
+  .seg span.on { background:var(--nt-surface-2); color:var(--nt-fg); border-radius:999px; }
+
+  .card { background:var(--nt-surface); border-radius:var(--nt-radius-md); padding:18px; border:1px solid transparent; }
+  .f.os5 .card { -webkit-backdrop-filter:var(--nt-frost); backdrop-filter:var(--nt-frost); border-color:var(--nt-border); }
+
+  .kicker { font:500 10px/1 var(--nt-font-head); letter-spacing:.16em; text-transform:uppercase; color:var(--nt-text-dim); margin:0 0 12px; }
+  .hero-num { font-family:var(--nt-font-accent-display); font-size:64px; line-height:1; }
+  .hero-num small { font-family:var(--nt-font-display); font-size:20px; color:var(--nt-text-dim); }
+  .hero-sub { display:flex; justify-content:space-between; margin-top:14px; }
+  .hero-sub div { font:500 9px/1 var(--nt-font-head); letter-spacing:.12em; text-transform:uppercase; color:var(--nt-text-dim); }
+  .hero-sub div b { display:block; font-family:var(--nt-font-display); font-size:15px; letter-spacing:0; text-transform:none; color:var(--nt-fg); margin-top:5px; }
+
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tile { border-radius:10px; padding:12px 14px; background:rgba(var(--nt-ink),.05); }
+  .tile span { display:block; font:500 9px/1 var(--nt-font-head); letter-spacing:.1em; text-transform:uppercase; color:var(--nt-text-dim); margin-bottom:6px; }
+  .tile strong { font-family:var(--nt-font-display); font-size:16px; font-weight:500; color:var(--nt-fg); }
+  .tile .pos { color:var(--nt-data-positive); } .tile .goal { color:var(--nt-data-goal); }
+
+  svg { display:block; width:100%; }
+  .readout { display:flex; justify-content:space-between; margin-top:8px; font-family:var(--nt-font-mono); font-size:10px; color:var(--nt-text-dim); }
+
+  .row { display:flex; gap:10px; align-items:center; }
+  .chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--nt-border); border-radius:999px; padding:5px 10px;
+          font:500 9px/1 var(--nt-font-head); letter-spacing:.1em; text-transform:uppercase; color:var(--nt-text-dim); }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--nt-accent); }
+  .btn { margin-left:auto; padding:10px 18px; border-radius:var(--nt-radius-sm); background:var(--nt-accent); color:#FFF;
+         font:600 10px/1 var(--nt-font-head); letter-spacing:.1em; text-transform:uppercase; }
+</style>
+</head>
+<body>
+
+<!-- 1 · CLASSIC DARK -->
+<div class="col">
+  <h2>Classic · Dark</h2>
+  <div class="f" id="classic-dark">
+    <div class="seg"><span class="on">Home</span><span>Finance</span><span>Health</span><span>Gym</span></div>
+    <div class="card">
+      <p class="kicker">Battery</p>
+      <div class="hero-num">72<small>%</small></div>
+      <div class="hero-sub"><div>Ready by<b>21:30</b></div><div>Drain rate<b>3.1%/h</b></div><div>Recovery<b>+2 σ</b></div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span>Sleep score</span><strong>84</strong></div>
+      <div class="tile"><span>Steps</span><strong>8,412</strong></div>
+      <div class="tile"><span>RHR</span><strong class="pos">52 bpm</strong></div>
+      <div class="tile"><span>Weight goal</span><strong class="goal">75.0 kg</strong></div>
+    </div>
+    <div class="card">
+      <p class="kicker">Sleep trend</p>
+      <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(215,26,33,.15)"/><stop offset="1" stop-color="rgba(215,26,33,0)"/></linearGradient></defs>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20 L300,80 L0,80 Z" fill="url(#g1)"/>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20" fill="none" stroke="#D71A21" stroke-width="2"/>
+        <circle cx="300" cy="20" r="3" fill="#D71A21"/>
+        <line x1="0" y1="12" x2="300" y2="12" stroke="rgba(255,215,0,.6)" stroke-width="1" stroke-dasharray="4 4"/>
+      </svg>
+      <div class="readout"><span>Sep 20 — 7.4 h</span><span>Sep 26 — 8.1 h</span></div>
+    </div>
+    <div class="row"><span class="chip"><span class="dot"></span>Live · Rest 1:30</span><span class="btn">Start workout</span></div>
+  </div>
+</div>
+
+<!-- 2 · OS5 DARK -->
+<div class="col">
+  <h2>Nothing OS 5 · Dark</h2>
+  <div class="f os5" id="os5-dark">
+    <div class="seg"><span class="on">Home</span><span>Finance</span><span>Health</span><span>Gym</span></div>
+    <div class="card">
+      <p class="kicker">Battery</p>
+      <div class="hero-num">72<small>%</small></div>
+      <div class="hero-sub"><div>Ready by<b>21:30</b></div><div>Drain rate<b>3.1%/h</b></div><div>Recovery<b>+2 σ</b></div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span>Sleep score</span><strong>84</strong></div>
+      <div class="tile"><span>Steps</span><strong>8,412</strong></div>
+      <div class="tile"><span>RHR</span><strong class="pos">52 bpm</strong></div>
+      <div class="tile"><span>Weight goal</span><strong class="goal">75.0 kg</strong></div>
+    </div>
+    <div class="card">
+      <p class="kicker">Sleep trend</p>
+      <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+        <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(215,26,33,.15)"/><stop offset="1" stop-color="rgba(215,26,33,0)"/></linearGradient></defs>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20 L300,80 L0,80 Z" fill="url(#g2)"/>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20" fill="none" stroke="#D71A21" stroke-width="2"/>
+        <circle cx="300" cy="20" r="3" fill="#D71A21"/>
+        <line x1="0" y1="12" x2="300" y2="12" stroke="rgba(255,215,0,.6)" stroke-width="1" stroke-dasharray="4 4"/>
+      </svg>
+      <div class="readout"><span>Sep 20 — 7.4 h</span><span>Sep 26 — 8.1 h</span></div>
+    </div>
+    <div class="row"><span class="chip"><span class="dot"></span>Live · Rest 1:30</span><span class="btn">Start workout</span></div>
+  </div>
+</div>
+
+<!-- 3 · CLASSIC LIGHT -->
+<div class="col">
+  <h2>Classic · Light</h2>
+  <div class="f theme-light" id="classic-light">
+    <div class="seg"><span class="on">Home</span><span>Finance</span><span>Health</span><span>Gym</span></div>
+    <div class="card">
+      <p class="kicker">Battery</p>
+      <div class="hero-num">72<small>%</small></div>
+      <div class="hero-sub"><div>Ready by<b>21:30</b></div><div>Drain rate<b>3.1%/h</b></div><div>Recovery<b>+2 σ</b></div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span>Sleep score</span><strong>84</strong></div>
+      <div class="tile"><span>Steps</span><strong>8,412</strong></div>
+      <div class="tile"><span>RHR</span><strong class="pos">52 bpm</strong></div>
+      <div class="tile"><span>Weight goal</span><strong class="goal">75.0 kg</strong></div>
+    </div>
+    <div class="card">
+      <p class="kicker">Sleep trend</p>
+      <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+        <defs><linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(215,26,33,.15)"/><stop offset="1" stop-color="rgba(215,26,33,0)"/></linearGradient></defs>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20 L300,80 L0,80 Z" fill="url(#g3)"/>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20" fill="none" stroke="#D71A21" stroke-width="2"/>
+        <circle cx="300" cy="20" r="3" fill="#D71A21"/>
+        <line x1="0" y1="12" x2="300" y2="12" stroke="rgba(184,134,11,.7)" stroke-width="1" stroke-dasharray="4 4"/>
+      </svg>
+      <div class="readout"><span>Sep 20 — 7.4 h</span><span>Sep 26 — 8.1 h</span></div>
+    </div>
+    <div class="row"><span class="chip"><span class="dot"></span>Live · Rest 1:30</span><span class="btn">Start workout</span></div>
+  </div>
+</div>
+
+<!-- 4 · OS5 LIGHT -->
+<div class="col">
+  <h2>Nothing OS 5 · Light</h2>
+  <div class="f os5 theme-light" id="os5-light">
+    <div class="seg"><span class="on">Home</span><span>Finance</span><span>Health</span><span>Gym</span></div>
+    <div class="card">
+      <p class="kicker">Battery</p>
+      <div class="hero-num">72<small>%</small></div>
+      <div class="hero-sub"><div>Ready by<b>21:30</b></div><div>Drain rate<b>3.1%/h</b></div><div>Recovery<b>+2 σ</b></div></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span>Sleep score</span><strong>84</strong></div>
+      <div class="tile"><span>Steps</span><strong>8,412</strong></div>
+      <div class="tile"><span>RHR</span><strong class="pos">52 bpm</strong></div>
+      <div class="tile"><span>Weight goal</span><strong class="goal">75.0 kg</strong></div>
+    </div>
+    <div class="card">
+      <p class="kicker">Sleep trend</p>
+      <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+        <defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(215,26,33,.15)"/><stop offset="1" stop-color="rgba(215,26,33,0)"/></linearGradient></defs>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20 L300,80 L0,80 Z" fill="url(#g4)"/>
+        <path d="M0,60 C25,55 40,30 65,35 S110,50 135,42 S180,18 205,25 S250,40 300,20" fill="none" stroke="#D71A21" stroke-width="2"/>
+        <circle cx="300" cy="20" r="3" fill="#D71A21"/>
+        <line x1="0" y1="12" x2="300" y2="12" stroke="rgba(184,134,11,.7)" stroke-width="1" stroke-dasharray="4 4"/>
+      </svg>
+      <div class="readout"><span>Sep 20 — 7.4 h</span><span>Sep 26 — 8.1 h</span></div>
+    </div>
+    <div class="row"><span class="chip"><span class="dot"></span>Live · Rest 1:30</span><span class="btn">Start workout</span></div>
+  </div>
+</div>
+
+</body>
+</html>
