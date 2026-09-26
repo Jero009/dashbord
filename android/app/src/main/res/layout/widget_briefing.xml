@@ -22,7 +22,7 @@
         android:orientation="vertical"
         android:padding="2dp">
 
-        <View
+        <TextView
             android:id="@+id/widget_vu_green"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -30,7 +30,7 @@
             android:layout_marginTop="1dp"
             android:background="@drawable/widget_vu_seg_dim" />
 
-        <View
+        <TextView
             android:id="@+id/widget_vu_yellow"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -38,7 +38,7 @@
             android:layout_marginTop="1dp"
             android:background="@drawable/widget_vu_seg_dim" />
 
-        <View
+        <TextView
             android:id="@+id/widget_vu_red"
             android:layout_width="match_parent"
             android:layout_height="0dp"

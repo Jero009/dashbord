@@ -131,7 +131,7 @@
             android:textColor="#888888"
             android:textSize="10sp" />
 
-        <Space
+        <TextView
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
@@ -152,7 +152,7 @@
         android:layout_marginTop="8dp"
         android:orientation="horizontal">
 
-        <View
+        <TextView
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_gravity="center_vertical"
@@ -168,7 +168,7 @@
             android:textColor="#888888"
             android:textSize="9sp" />
 
-        <View
+        <TextView
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_gravity="center_vertical"
@@ -185,7 +185,7 @@
             android:textColor="#888888"
             android:textSize="9sp" />
 
-        <View
+        <TextView
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_gravity="center_vertical"
@@ -202,7 +202,7 @@
             android:textColor="#888888"
             android:textSize="9sp" />
 
-        <View
+        <TextView
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_gravity="center_vertical"
