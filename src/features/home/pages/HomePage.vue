@@ -232,6 +232,8 @@ import { Capacitor } from '@capacitor/core';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
 import { getCachedBriefing, syncBriefing, briefingIsToday, type Briefing } from '@/shared/sync/briefingStore';
+import { resolvedDeloadConfig } from '@/shared/utils/trainingPhase';
+import { resolveBriefingVerdict } from '@/shared/utils/briefingVerdict';
 import { syncGrades, getCachedGrades, countNewAndMarkSeen, averageGrade } from '@/shared/sync/gradesStore';
 import { updateWidgetFields } from '@/shared/widget/widgetBridge';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
@@ -273,6 +275,25 @@ const loadBriefing = async () => {
   } else {
     gradeLine.value = '';
   }
+  // The ACTIVE PLAN is the source of truth for the verdict: a deload week
+  // overrides whatever the Hermes briefing said (plan > pushed level).
+  const plan = await resolvedDeloadConfig();
+  const resolved = resolveBriefingVerdict({
+    plan: { isDeload: plan.isDeload, weekOfPlan: plan.weekOfPlan },
+    hermesLevel: briefing.value?.level ?? null,
+  });
+  if (briefing.value) {
+    briefing.value = { ...briefing.value, level: resolved.level, verdict: resolved.verdict };
+  } else if (resolved.level) {
+    // No briefing row yet but the plan has a say — render a minimal card.
+    briefing.value = {
+      receivedAt: Math.floor(Date.now() / 1000),
+      title: resolved.verdict ?? 'Daily briefing',
+      body: resolved.verdict ?? '',
+      verdict: resolved.verdict,
+      level: resolved.level,
+    };
+  }
   // Refresh the widget snapshot so the briefing widget follows the card.
   if (briefing.value) {
     const b = briefing.value;
@@ -280,7 +301,7 @@ const loadBriefing = async () => {
       briefingTitle: b.title || 'Daily briefing',
       briefingBody: b.body,
       briefingDate: localDateISO(new Date(b.receivedAt * 1000)),
-      briefingLevel: b.level ?? null,
+      briefingLevel: resolved.level,
     });
   }
 };

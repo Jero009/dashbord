@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glyph-LED dim yellow — OPAQUE (never alpha-composite in RemoteViews). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#5A4A10" />
+    <corners android:radius="2dp" />
+</shape>

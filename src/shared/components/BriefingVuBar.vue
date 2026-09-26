@@ -61,6 +61,17 @@ const litSegments = computed(() => {
 .vu-seg:nth-child(2).is-lit { background: var(--vu-yellow); }
 .vu-seg:nth-child(3).is-lit { background: var(--vu-green); }
 
+/* Glyph-LED unlit state: each segment keeps its HUE at low intensity —
+   like Nothing's Glyph lights powered down. Never grey: the color IS the
+   data encoding (which segment is which), dim only encodes off/on.
+   Implemented via the token's literal rgb at low alpha so both themes read. */
+.vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(1) { background: rgba(215, 26, 33, 0.22); }
+.vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(2) { background: rgba(255, 215, 0, 0.16); }
+.vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(3) { background: rgba(34, 197, 94, 0.18); }
+/* dim levels track the lit data colors in light theme (darker hues) */
+html.theme-light .vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(2) { background: rgba(184, 134, 11, 0.2); }
+html.theme-light .vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(3) { background: rgba(21, 128, 61, 0.22); }
+
 /* Overrides: the whole bar reads as one signal color */
 .vu-bar--sick .vu-seg.is-lit { background: var(--vu-red); }
 .vu-bar--deload .vu-seg.is-lit { background: var(--vu-yellow); }

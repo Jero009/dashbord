@@ -90,9 +90,13 @@ public class BriefingWidgetProvider extends AppWidgetProvider {
      * segment. Drawables are fully OPAQUE (no tint, no alpha compositing —
      * the earlier tint-over-dim-drawable approach rendered ~grey on black).
      * `setBackgroundResource` is settable on RemoteViews on every API level.
+     *
+     * Glyph-LED unlit state: an unlit segment shows its own color DIMMED
+     * (dim red / dim yellow / dim green), never grey — the hue encodes
+     * WHICH segment it is, brightness encodes off/on.
      */
     private static void applyVuBar(RemoteViews views, String level) {
-        int red = R.drawable.widget_vu_seg_dim, yellow = R.drawable.widget_vu_seg_dim, green = R.drawable.widget_vu_seg_dim;
+        int red = R.drawable.widget_vu_seg_red_dim, yellow = R.drawable.widget_vu_seg_yellow_dim, green = R.drawable.widget_vu_seg_green_dim;
         if ("push".equals(level)) {
             red = R.drawable.widget_vu_seg_red; yellow = R.drawable.widget_vu_seg_yellow; green = R.drawable.widget_vu_seg_green;
         } else if ("normal".equals(level)) {

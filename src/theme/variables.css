@@ -295,6 +295,14 @@ ion-header::after {
   display: none !important;
 }
 
+/* Ionic ships a material drop-shadow under every ion-header — it reads as a
+   grey band across the page on ALL styles (esp. visible over flat black).
+   The Nothing design has borderless, shadowless headers: kill it. */
+ion-header {
+  --box-shadow: none;
+  box-shadow: none !important;
+}
+
 /* ─── Alerts — global (confirm / destructive / prompt / select popups) ───
    Generalised from opt-in cssClass to the bare element so EVERY ion-alert
    (incl. default-interface ion-select popups) follows the Nothing-OS theme.
