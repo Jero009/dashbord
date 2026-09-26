@@ -517,6 +517,7 @@ import {
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 import { mirrorWorkoutToReceiver } from '@/shared/sync/workoutMirror';
+import { pushActivityWidgetSnapshot } from '@/shared/health/healthConnect';
 import { formatRestTime } from '@/shared/utils/timeFormat';
 import { resolvedDeloadConfig, type ResolvedDeloadConfig } from '@/shared/utils/trainingPhase';
 import { exerciseLayoffDays } from '@/shared/db/app_db';
@@ -719,6 +720,9 @@ const saveWorkout = async () => {
           // Mirror to the receiver (dirty-queued, retried offline) — background
           // concern, must never block or break the end-workout flow.
           void mirrorWorkoutToReceiver(workoutId);
+          // Refresh the activity widget so today's cell lights up immediately
+          // (same best-effort contract as the mirror).
+          void pushActivityWidgetSnapshot();
           const durationStr = formatTime();
           if (interval) clearInterval(interval);
           interval = null;

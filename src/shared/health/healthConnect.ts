@@ -11,11 +11,12 @@ import {
   toChronologicalHrSamples,
   calculateSpo2Score,
 } from '@/shared/health/sleepJoin';
-import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore, getLatestHealthMetric, getHealthMetricDailySeries } from '@/shared/db/app_db';
-import { updateSleepWidget } from '@/shared/widget/widgetBridge';
+import { replaceHealthMetric, upsertReadinessScore, upsertSleepSession, getSleepSession, getSleepSessionsBefore, getHealthMetricValuesBefore, getLatestHealthMetric, getHealthMetricDailySeries, queryWorkoutFrequency } from '@/shared/db/app_db';
+import { updateSleepWidget, updateActivityWidget, ACTIVITY_WIDGET_DAYS } from '@/shared/widget/widgetBridge';
 import { averageByDay } from '@/shared/health/vitalsAggregate';
 import { getSleepGoalHours } from '@/shared/utils/userSettings';
 import { clamp } from '@/shared/utils/math';
+import { localDateISO } from '@/shared/utils/timeFormat';
 
 type HealthConnectDataType =
   | 'steps' | 'sleep' | 'restingHeartRate' | 'heartRate' | 'respiratoryRate'
@@ -940,6 +941,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   }
 
   await pushSleepWidgetSnapshot();
+  await pushActivityWidgetSnapshot();
 
   return {
     available: true,
@@ -996,6 +998,33 @@ async function pushSleepWidgetSnapshot(): Promise<void> {
     });
   } catch (error) {
     console.error('Sleep widget snapshot failed:', error);
+  }
+}
+
+/**
+ * Push the 8-week workout activity grid to the home-screen widget. Same
+ * best-effort contract as the sleep snapshot (never fails the sync). Counts
+ * come from queryWorkoutFrequency — the same source as the in-app
+ * HealthHeatmap workouts layer, so widget and app can never disagree. The
+ * array is aligned so the LAST entry is today. Exported for the immediate
+ * refresh after ending a workout (WorkoutPage).
+ */
+export async function pushActivityWidgetSnapshot(): Promise<void> {
+  try {
+    const freq = await queryWorkoutFrequency(Math.ceil(ACTIVITY_WIDGET_DAYS / 7) + 1);
+    const byDate = new Map<string, number>();
+    for (const d of freq) byDate.set(d.date, Number(d.count) || 0);
+
+    const counts: number[] = [];
+    const cursor = new Date();
+    cursor.setDate(cursor.getDate() - (ACTIVITY_WIDGET_DAYS - 1));
+    for (let i = 0; i < ACTIVITY_WIDGET_DAYS; i++) {
+      counts.push(byDate.get(localDateISO(cursor)) ?? 0);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    await updateActivityWidget({ counts });
+  } catch (error) {
+    console.error('Activity widget snapshot failed:', error);
   }
 }
 

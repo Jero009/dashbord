@@ -62,6 +62,15 @@ export interface BriefingWidgetFields {
   briefingLevel: string | null;
 }
 
+// Activity (GitHub-style) widget fields. `activityCounts` carries exactly
+// ACTIVITY_WIDGET_DAYS per-local-day workout counts, oldest→newest, aligned
+// so the LAST entry is today (the Java provider renders right-to-left).
+export const ACTIVITY_WIDGET_DAYS = 8 * 7;
+
+export interface ActivityWidgetState {
+  counts: number[];
+}
+
 function hhmm(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -101,6 +110,22 @@ function sleepStateToFields(state: SleepWidgetState): Record<string, unknown> {
   if (rem) payload.remDuration = rem;
   if (state.stageSegments?.length) payload.stageSegments = state.stageSegments;
   return payload
+}
+
+/** Push the activity-heatmap widget fields (see updateActivityWidget). */
+function activityStateToFields(state: ActivityWidgetState): Record<string, unknown> {
+  return { activityCounts: state.counts.slice(-ACTIVITY_WIDGET_DAYS) };
+}
+
+/**
+ * Push the GitHub-style workout activity grid. Counts are per-local-day
+ * workout counts (0 | 1 | 2+) ordered oldest→newest; the Java side maps
+ * count → shade with the app's fixed level colors. Merges over the shared
+ * snapshot like every other producer. No-op off-device.
+ */
+export async function updateActivityWidget(state: ActivityWidgetState): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  await updateWidgetFields(activityStateToFields(state));
 }
 
 /**

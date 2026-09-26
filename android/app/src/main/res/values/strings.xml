@@ -8,4 +8,5 @@
     <string name="widget_battery_desc">Sleep battery ring gauge</string>
     <string name="widget_stages_desc">Last night\'s sleep stages timeline</string>
     <string name="widget_briefing_desc">Hermes daily briefing</string>
+    <string name="widget_activity_desc">Workout activity grid (8 weeks)</string>
 </resources>

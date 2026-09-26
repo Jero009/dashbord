@@ -179,9 +179,6 @@
           </template>
         </div>
 
-        <!-- Layered health heatmap (Workouts / Sick / Readiness) + day detail -->
-        <health-heatmap :weeks="52" />
-
         <!-- Life-event logging: standalone, forward-only catalog (T14) -->
         <div class="card">
           <div class="card-header">
@@ -228,7 +225,6 @@ import {
   planConfigOf, pauseSpansOf,
 } from '@/shared/db/app_db';
 import type { MuscleVolume, WeeklyTonnage, WorkoutDayCount, Plan, PlanPause, LifeEvent } from '@/shared/db/app_db';
-import HealthHeatmap from '@/features/analytics/components/HealthHeatmap.vue';
 import PauseSheet from '@/features/gym/components/PauseSheet.vue';
 import { deloadWeekNumbers, planWeek, planWeeksTotal } from '@/shared/utils/planCalendar';
 import { localDateISO } from '@/shared/utils/timeFormat';

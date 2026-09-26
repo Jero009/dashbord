@@ -26,6 +26,7 @@ public class DashboardWidgetPlugin extends Plugin {
             SleepBatteryWidgetProvider.class,
             SleepStagesWidgetProvider.class,
             BriefingWidgetProvider.class,
+            ActivityWidgetProvider.class,
     };
 
     @PluginMethod

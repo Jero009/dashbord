@@ -56,6 +56,9 @@
           </template>
           <p v-else class="empty-copy">Not enough data yet</p>
         </div>
+
+        <!-- Layered health heatmap (Workouts / Sick / Readiness) + day detail -->
+        <health-heatmap :weeks="52" />
       </div>
     </ion-content>
   </ion-page>
@@ -66,6 +69,7 @@ import { IonPage, IonHeader, IonContent, onIonViewWillEnter } from '@ionic/vue';
 import { ref, computed } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSectionTabs.vue';
+import HealthHeatmap from '@/features/analytics/components/HealthHeatmap.vue';
 import {
   getRecentSleepSessionSummaries,
   getRecentHealthMetrics,

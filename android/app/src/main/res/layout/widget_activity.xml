@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GitHub-style activity widget (classic skin). Grid is one pre-rendered
+     bitmap (ActivityWidgetProvider.drawGrid); stats are static TextViews. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/activity_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/activity_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="@font/space_grotesk"
+            android:letterSpacing="0.12"
+            android:text="ACTIVITY"
+            android:textAllCaps="true"
+            android:textColor="#888888"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/activity_streak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/space_grotesk"
+            android:textColor="#888888"
+            android:textSize="11sp"
+            android:text="--d" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/activity_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="Workout activity grid" />
+
+    <TextView
+        android:id="@+id/activity_total"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:fontFamily="@font/doto"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:text="--" />
+</LinearLayout>
