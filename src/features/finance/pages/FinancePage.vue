@@ -142,6 +142,11 @@
           <p v-else-if="failed['recent']" class="empty-state card-error">Couldn't load transactions</p>
           <p v-else class="nt-empty">No transactions yet</p>
         </ion-card>
+
+        <!-- Danger zone: wipe all finance data (gym/health untouched) -->
+        <ion-button expand="block" class="reset-btn" :disabled="resetting" @click="confirmReset">
+          {{ resetting ? 'Resetting…' : 'Reset finance data' }}
+        </ion-button>
       </div>
     </ion-content>
   </ion-page>
@@ -153,7 +158,9 @@ import {
   IonHeader,
   IonContent,
   IonCard,
+  IonButton,
   IonIcon,
+  alertController,
   onIonViewWillEnter,
 } from '@ionic/vue';
 import { chevronForwardOutline, trendingUpOutline, trendingDownOutline } from 'ionicons/icons';
@@ -172,11 +179,13 @@ import {
   queryCategorySpending,
   recordNetWorthSnapshot,
   postDueSubscriptions,
+  resetFinanceData,
   type NetWorthPoint,
   type CategorySpending,
 } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
-import { hapticLight } from '@/shared/utils/haptics';
+import { hapticLight, hapticHeavy, hapticSuccess } from '@/shared/utils/haptics';
+import { showToast } from '@/shared/utils/toast';
 import { localMonthISO } from '@/shared/utils/timeFormat';
 import {
   computeNetWorth,
@@ -248,6 +257,38 @@ const formatDay = (date: string) => {
 const go = (path: string) => {
   hapticLight();
   router.push(path);
+};
+
+const resetting = ref(false);
+
+const confirmReset = async () => {
+  const alert = await alertController.create({
+    header: 'Reset finance data',
+    message: 'Delete ALL finance data? Accounts, investments, subscriptions, transactions, budgets and net-worth history are removed. Gym and health data is untouched. This cannot be undone.',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Delete all',
+        role: 'destructive',
+        handler: async () => {
+          hapticHeavy();
+          resetting.value = true;
+          try {
+            await resetFinanceData();
+          } catch {
+            resetting.value = false;
+            await showToast('reset failed', 'warning');
+            return;
+          }
+          resetting.value = false;
+          await loadFinance();
+          hapticSuccess();
+          await showToast('finance data reset', 'success');
+        },
+      },
+    ],
+  });
+  await alert.present();
 };
 
 const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> => {
@@ -625,6 +666,21 @@ onIonViewWillEnter(loadFinance);
   height: 100%;
   border-radius: var(--nt-radius-pill);
   background: var(--ion-color-accent-red);
+}
+
+/* Danger zone: destructive outline button (red text, hairline border). */
+.reset-btn {
+  --background: transparent;
+  --background-activated: var(--nt-surface-2);
+  --border-radius: 8px;
+  --box-shadow: none;
+  --color: var(--ion-color-accent-red);
+  --border-color: var(--ion-color-accent-red);
+  --border-style: solid;
+  --border-width: 1px;
+  font-weight: 600;
+  margin: 0;
+  text-transform: none;
 }
 
 

@@ -2746,6 +2746,29 @@ export async function deleteFinanceInvestment(id: number) {
   }
 }
 
+/**
+ * Wipes ALL finance data (accounts, investments, subscriptions, transactions,
+ * budgets, net-worth snapshots) in one transaction. Gym/health tables are
+ * untouched. Intentionally does NOT reset the sqlite_sequence counters —
+ * AUTOINCREMENT ids keep counting up, which is harmless.
+ */
+export async function resetFinanceData() {
+  if (!db) return;
+  try {
+    await db.executeSet([
+      { statement: 'DELETE FROM finance_transaction;', values: [] },
+      { statement: 'DELETE FROM finance_budget;', values: [] },
+      { statement: 'DELETE FROM finance_subscription;', values: [] },
+      { statement: 'DELETE FROM finance_investment;', values: [] },
+      { statement: 'DELETE FROM net_worth_snapshot;', values: [] },
+      { statement: 'DELETE FROM finance_account;', values: [] },
+    ]);
+  } catch (error) {
+    console.error('Error resetting finance data:', error);
+    throw error;
+  }
+}
+
 export async function getFinanceInvestments() {
   if (!db) return [];
   const result = await db.query(
