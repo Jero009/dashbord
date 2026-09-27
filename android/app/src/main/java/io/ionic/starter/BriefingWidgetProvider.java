@@ -11,11 +11,10 @@ import android.widget.RemoteViews;
 import org.json.JSONObject;
 
 /**
- * Hermes daily-briefing widget. Renders the last snapshot JS pushed via
- * DashboardWidgetPlugin (fields: briefingTitle, briefingBody, briefingDate,
- * briefingLevel); tap opens the app. Static text views + a VU-meter verdict
- * bar (3 segments tinted from briefingLevel) — no nested RemoteViews, no
- * bitmap.
+ * Hermes daily-briefing widget — MINIMALIST. Renders the last snapshot JS
+ * pushed via DashboardWidgetPlugin (briefingLevel, briefingDate); tap opens
+ * the app. Layout: big square VU verdict bar + ONE verdict word (GO / OK /
+ * REST / SICK / DELOAD) + date. No title, no body text.
  */
 public class BriefingWidgetProvider extends AppWidgetProvider {
 
@@ -34,44 +33,44 @@ public class BriefingWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    // One-word verdict per VU-glyph level (the widget is deliberately
+    // minimalist: bar + one word + date, nothing else).
+    private static String verdictWord(String level) {
+        if (level == null) return "—";
+        switch (level) {
+            case "push":    return "GO";
+            case "normal":  return "OK";
+            case "recover": return "REST";
+            case "sick":    return "SICK";
+            case "deload":  return "DELOAD";
+            default:        return "—";
+        }
+    }
+
     static RemoteViews buildViews(Context context, String json) {
         boolean os5 = WidgetTheme.isOs5(json);
         RemoteViews views = new RemoteViews(context.getPackageName(),
                 os5 ? R.layout.widget_briefing_os5 : R.layout.widget_briefing);
 
-        String title = "No briefing yet";
-        String body = "Opens with the app after the first sync";
+        String verdict = "—";
         String date = "";
         String level = null;
         try {
             JSONObject data = new JSONObject(json);
-            if (data.has("briefingTitle")) {
-                String t = data.getString("briefingTitle");
-                if (t != null && !t.isEmpty()) title = t;
-            }
-            if (data.has("briefingBody")) {
-                String b = data.getString("briefingBody");
-                if (b != null && !b.isEmpty()) {
-                    // First line only — the widget shows two body lines max and
-                    // Android ellipsizes, but a leading blank line looks broken.
-                    int nl = b.indexOf('\n');
-                    body = nl > 0 ? b.substring(0, nl) : b;
-                }
+            if (data.has("briefingLevel")) {
+                String l = data.getString("briefingLevel");
+                if (l != null && !l.isEmpty()) level = l;
             }
             if (data.has("briefingDate")) {
                 String d = data.getString("briefingDate");
                 if (d != null) date = d.toUpperCase();
             }
-            if (data.has("briefingLevel")) {
-                String l = data.getString("briefingLevel");
-                if (l != null && !l.isEmpty()) level = l;
-            }
         } catch (Exception ignored) {
             // Malformed snapshot → keep the fallback strings
         }
+        verdict = verdictWord(level);
 
-        views.setTextViewText(R.id.widget_briefing_title, title);
-        views.setTextViewText(R.id.widget_briefing_body, body);
+        views.setTextViewText(R.id.widget_briefing_verdict, verdict);
         views.setTextViewText(R.id.widget_briefing_date, date);
         applyVuBar(views, level);
 

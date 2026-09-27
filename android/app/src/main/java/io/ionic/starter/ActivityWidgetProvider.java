@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Bundle;
 import android.widget.RemoteViews;
 
 import org.json.JSONArray;
@@ -38,11 +39,38 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
                 DashboardWidgetPlugin.PREFS, Context.MODE_PRIVATE)
                 .getString("snapshot", "{}");
         for (int id : appWidgetIds) {
-            manager.updateAppWidget(id, buildViews(context, json));
+            manager.updateAppWidget(id, buildViews(context, json,
+                    widgetGridSize(manager, context, id)));
         }
     }
 
-    static RemoteViews buildViews(Context context, String json) {
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+            int appWidgetId, Bundle newOptions) {
+        // Re-render on resize so the grid keeps filling the widget.
+        String json = context.getSharedPreferences(
+                DashboardWidgetPlugin.PREFS, Context.MODE_PRIVATE)
+                .getString("snapshot", "{}");
+        manager.updateAppWidget(appWidgetId, buildViews(context, json,
+                widgetGridSize(manager, context, appWidgetId)));
+    }
+
+    /** Actual allocated size of the grid ImageView, in px (dp fallback). */
+    private static int[] widgetGridSize(AppWidgetManager manager, Context context, int id) {
+        Bundle opts = manager.getAppWidgetOptions(id);
+        int w = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH); // dp, portrait width
+        int h = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT); // dp, portrait height
+        float density = context.getResources().getDisplayMetrics().density;
+        if (w <= 0 || h <= 0) {
+            w = 250; h = 110; // match the provider xml default (4x2 cells)
+        }
+        // Reserve ~24dp for the label row + total row around the grid.
+        int gridW = Math.round(w * density);
+        int gridH = Math.max(Math.round(30f * density), Math.round(h * density) - Math.round(48f * density));
+        return new int[]{Math.max(gridW, Math.round(80f * density)), gridH};
+    }
+
+    static RemoteViews buildViews(Context context, String json, int[] gridSize) {
         boolean os5 = WidgetTheme.isOs5(json);
         RemoteViews views = new RemoteViews(context.getPackageName(),
                 os5 ? R.layout.widget_activity_os5 : R.layout.widget_activity);
@@ -71,7 +99,7 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.activity_total, String.valueOf(total));
         views.setTextViewText(R.id.activity_streak, streak + "d");
 
-        views.setImageViewBitmap(R.id.activity_grid, drawGrid(context, counts, os5));
+        views.setImageViewBitmap(R.id.activity_grid, drawGrid(context, counts, gridSize[0], gridSize[1]));
 
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (intent != null) {
@@ -84,36 +112,42 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
     }
 
     /**
-     * 8 columns (weeks, oldest→newest, left→right) × 7 rows (Sun–Sat, top→
-     * bottom), rounded-square cells. Mirrors the HealthHeatmap grid layout;
-     * one bitmap inflates on every launcher. The bitmap is sized for EIGHT
-     * columns — sizing it for 7 clipped the newest (rightmost) column, which
-     * holds today.
+     * GitHub-style activity grid — FILLS the widget. Cell size is computed
+     * from the widget's actual allocated size (passed from onUpdate via
+     * onAppWidgetOptionsChanged), so the 8×7 grid stretches edge to edge
+     * instead of sitting as a small square with dead space around it.
+     * 8 columns (weeks, oldest→newest, left→right) × 7 rows (Sun–Sat).
      */
-    static Bitmap drawGrid(Context context, int[] counts, boolean os5) {
+    static Bitmap drawGrid(Context context, int[] counts, int gridW, int gridH) {
         float density = context.getResources().getDisplayMetrics().density;
-        float cell = 12f * density;
         float gap = 3f * density;
-        // 8 columns (weeks) wide, 7 rows (day-of-week) tall.
-        int width = (int) ((cell + gap) * 8 - gap + 2 * 4 * density);
-        int height = (int) ((cell + gap) * 7 - gap + 2 * 4 * density);
+        float pad = 2f * density;
+        // Cell size from the ACTUAL view size, capped so cells stay square
+        // when the widget is very wide (grid letterboxes centered).
+        float cellW = (gridW - 2 * pad - 7 * gap) / 8f;
+        float cellH = (gridH - 2 * pad - 6 * gap) / 7f;
+        float cell = Math.max(4f * density, Math.min(cellW, cellH));
 
-        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        int width = (int) (cell * 8 + gap * 7 + pad * 2);
+        int height = (int) (cell * 7 + gap * 6 + pad * 2);
+        float ox = (gridW - width) / 2f;
+        float oy = (gridH - height) / 2f;
+
+        Bitmap bmp = Bitmap.createBitmap(Math.max(1, (int) gridW), Math.max(1, (int) gridH), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
-        float pad = 4f * density;
 
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.FILL);
 
-        float radius = 3f * density;
+        float radius = Math.max(2f * density, cell * 0.25f);
         for (int week = 0; week < 8; week++) {
             for (int dow = 0; dow < 7; dow++) {
                 int idx = week * 7 + dow;
                 if (idx >= counts.length) continue;
                 int c = counts[idx];
                 paint.setColor(c >= 2 ? CELL_L2 : c == 1 ? CELL_L1 : CELL_DIM);
-                float left = pad + week * (cell + gap);
-                float top = pad + dow * (cell + gap);
+                float left = ox + pad + week * (cell + gap);
+                float top = oy + pad + dow * (cell + gap);
                 canvas.drawRoundRect(new RectF(left, top, left + cell, top + cell), radius, radius, paint);
             }
         }
