@@ -8,37 +8,38 @@
     android:background="@drawable/widget_bg_os5"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="18dp">
+    android:padding="12dp">
 
-    <!-- Glyph-LED verdict bar: 3 SQUARE segments (20dp, uniform size, 3dp
-         gaps) in a 66dp column — the widget's focal point. Order top→bottom
-         is green, yellow, red; BriefingWidgetProvider paints by level. -->
+    <!-- Glyph-LED verdict bar: 3 SQUARE segments (14dp, uniform size, 3dp
+         gaps) in a 48dp column — the widget's focal point, sized for a
+         1-cell (40dp) tall widget. Order top→bottom is green, yellow, red;
+         BriefingWidgetProvider paints by level. -->
     <LinearLayout
         android:id="@+id/widget_vu_bar"
         android:layout_width="wrap_content"
-        android:layout_height="66dp"
-        android:layout_marginEnd="18dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="14dp"
         android:gravity="center"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/widget_vu_green"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:layout_marginBottom="3dp"
             android:background="@drawable/widget_vu_seg_dim" />
 
         <TextView
             android:id="@+id/widget_vu_yellow"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:layout_marginBottom="3dp"
             android:background="@drawable/widget_vu_seg_dim" />
 
         <TextView
             android:id="@+id/widget_vu_red"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:background="@drawable/widget_vu_seg_dim" />
     </LinearLayout>
 
@@ -55,7 +56,7 @@
             android:fontFamily="@font/geist"
             android:fontWeight="700"
             android:textColor="#FFFFFF"
-            android:textSize="30sp"
+            android:textSize="24sp"
             android:maxLines="1"
             android:ellipsize="end"
             android:text="—" />
@@ -64,11 +65,11 @@
             android:id="@+id/widget_briefing_date"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:fontFamily="@font/geist"
             android:letterSpacing="0.12"
             android:textColor="#969696"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:text="" />
     </LinearLayout>
 </LinearLayout>

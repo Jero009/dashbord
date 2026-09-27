@@ -64,9 +64,9 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
         if (w <= 0 || h <= 0) {
             w = 250; h = 110; // match the provider xml default (4x2 cells)
         }
-        // Reserve ~24dp for the label row + total row around the grid.
+        // Reserve ~30dp for the label row + total row around the grid.
         int gridW = Math.round(w * density);
-        int gridH = Math.max(Math.round(30f * density), Math.round(h * density) - Math.round(48f * density));
+        int gridH = Math.max(Math.round(20f * density), Math.round(h * density) - Math.round(30f * density));
         return new int[]{Math.max(gridW, Math.round(80f * density)), gridH};
     }
 
@@ -112,24 +112,30 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
     }
 
     /**
-     * GitHub-style activity grid — FILLS the widget. Cell size is computed
-     * from the widget's actual allocated size (passed from onUpdate via
-     * onAppWidgetOptionsChanged), so the 8×7 grid stretches edge to edge
-     * instead of sitting as a small square with dead space around it.
-     * 8 columns (weeks, oldest→newest, left→right) × 7 rows (Sun–Sat).
+     * GitHub-style activity grid — FILLS the widget. The 56 days wrap into a
+     * column-major grid (days run DOWN each column, columns left→right,
+     * today = last column bottom) whose ROW COUNT adapts to the widget's
+     * actual aspect ratio: tall widget → 7 rows × 8 cols (classic weekly
+     * layout), wide widget → 4 rows × 14 cols so the grid stretches edge to
+     * edge instead of letterboxing a near-square block in the middle.
      */
     static Bitmap drawGrid(Context context, int[] counts, int gridW, int gridH) {
         float density = context.getResources().getDisplayMetrics().density;
         float gap = 3f * density;
         float pad = 2f * density;
-        // Cell size from the ACTUAL view size, capped so cells stay square
-        // when the widget is very wide (grid letterboxes centered).
-        float cellW = (gridW - 2 * pad - 7 * gap) / 8f;
-        float cellH = (gridH - 2 * pad - 6 * gap) / 7f;
-        float cell = Math.max(4f * density, Math.min(cellW, cellH));
 
-        int width = (int) (cell * 8 + gap * 7 + pad * 2);
-        int height = (int) (cell * 7 + gap * 6 + pad * 2);
+        int n = counts.length;
+        // Pick row count so the cols:rows ratio matches the view aspect.
+        float aspect = (float) gridW / (float) Math.max(1, gridH);
+        int rows = Math.round((float) Math.sqrt(n / Math.max(0.4f, aspect)));
+        rows = Math.max(3, Math.min(7, rows));
+        int cols = (int) Math.ceil((double) n / rows);
+
+        float cell = Math.max(3f * density, Math.min(
+                (gridW - 2 * pad - (cols - 1) * gap) / cols,
+                (gridH - 2 * pad - (rows - 1) * gap) / rows));
+        int width = (int) (cell * cols + gap * (cols - 1) + pad * 2);
+        int height = (int) (cell * rows + gap * (rows - 1) + pad * 2);
         float ox = (gridW - width) / 2f;
         float oy = (gridH - height) / 2f;
 
@@ -140,16 +146,14 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
         paint.setStyle(Paint.Style.FILL);
 
         float radius = Math.max(2f * density, cell * 0.25f);
-        for (int week = 0; week < 8; week++) {
-            for (int dow = 0; dow < 7; dow++) {
-                int idx = week * 7 + dow;
-                if (idx >= counts.length) continue;
-                int c = counts[idx];
-                paint.setColor(c >= 2 ? CELL_L2 : c == 1 ? CELL_L1 : CELL_DIM);
-                float left = ox + pad + week * (cell + gap);
-                float top = oy + pad + dow * (cell + gap);
-                canvas.drawRoundRect(new RectF(left, top, left + cell, top + cell), radius, radius, paint);
-            }
+        for (int idx = 0; idx < n; idx++) {
+            int col = idx / rows;          // day → column (down first)
+            int row = idx % rows;          // day → row within column
+            int c = counts[idx];
+            paint.setColor(c >= 2 ? CELL_L2 : c == 1 ? CELL_L1 : CELL_DIM);
+            float left = ox + pad + col * (cell + gap);
+            float top = oy + pad + row * (cell + gap);
+            canvas.drawRoundRect(new RectF(left, top, left + cell, top + cell), radius, radius, paint);
         }
         return bmp;
     }
