@@ -454,7 +454,7 @@ onIonViewWillEnter(loadFinance);
   height: 8px;
   border-radius: var(--nt-radius-pill);
   overflow: hidden;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
 }
 
 .split__seg {
@@ -524,7 +524,7 @@ onIonViewWillEnter(loadFinance);
 .flow-cell {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   display: grid;
   gap: 6px;
 }
@@ -571,7 +571,7 @@ onIonViewWillEnter(loadFinance);
 .savings__bar {
   height: 6px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   overflow: hidden;
 }
 
@@ -658,7 +658,7 @@ onIonViewWillEnter(loadFinance);
 .cat-bar {
   height: 6px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   overflow: hidden;
 }
 

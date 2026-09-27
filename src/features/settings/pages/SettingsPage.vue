@@ -751,7 +751,7 @@ const handleImportFile = async (event: Event) => {
 }
 
 .form-input {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   padding: 10px 12px;
@@ -804,7 +804,7 @@ const handleImportFile = async (event: Event) => {
 }
 
 .settings-select {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   color: var(--nt-fg);
@@ -832,7 +832,7 @@ const handleImportFile = async (event: Event) => {
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: var(--nt-radius-pill);
 }
 

@@ -637,7 +637,7 @@ onIonViewWillEnter(load);
   gap: 12px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border: 1px solid transparent;
 }
 .status--yellow { border-color: color-mix(in srgb, var(--nt-data-goal) 40%, transparent); }
@@ -669,7 +669,7 @@ onIonViewWillEnter(load);
   align-items: center;
   gap: 3px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   text-align: center;
 }
@@ -778,7 +778,7 @@ onIonViewWillEnter(load);
   display: grid;
   gap: 8px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.04);
+  background: var(--nt-tile);
   border-radius: 10px;
 }
 .rec-list {

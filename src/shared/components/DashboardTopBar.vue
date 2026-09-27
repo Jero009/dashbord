@@ -89,7 +89,7 @@ const goToSettings = () => {
 }
 
 .seg-pill {
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   border-radius: 999px;
   padding: 6px;
   overflow: hidden;

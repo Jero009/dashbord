@@ -342,14 +342,14 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   padding: 12px 16px;
   border-radius: var(--nt-radius-md);
 }
 
 .time-input {
   width: 80px;
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.12);
   border-radius: 8px;
   padding: 8px 12px;
@@ -383,7 +383,7 @@ defineExpose({
 
 .preset-btn {
   padding: 10px;
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.12);
   border-radius: 8px;
   color: var(--ion-color-light);
@@ -418,7 +418,7 @@ defineExpose({
 }
 
 .btn-cancel {
-  --background: rgba(var(--nt-ink), 0.08);
+  --background: var(--nt-tile);
   --border-color: rgba(var(--nt-ink), 0.12);
 }
 

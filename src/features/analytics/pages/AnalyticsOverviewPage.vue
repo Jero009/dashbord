@@ -251,7 +251,7 @@ onIonViewWillEnter(() => {
   letter-spacing: 0.1em;
   padding: 4px 12px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   color: rgba(var(--nt-ink), 0.7);
 }
 
@@ -278,7 +278,7 @@ onIonViewWillEnter(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   text-align: center;
 }
@@ -324,7 +324,7 @@ onIonViewWillEnter(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
 }
 

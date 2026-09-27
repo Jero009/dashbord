@@ -600,7 +600,7 @@ const handleConnect = async () => {
 }
 
 .badge--green { background: rgba(34,197,94,0.15); color: rgb(34,197,94); }
-.badge--muted { background: rgba(var(--nt-ink), 0.08); color: rgba(var(--nt-ink), 0.35); }
+.badge--muted { background: var(--nt-tile); color: rgba(var(--nt-ink), 0.35); }
 
 .readiness-bar-track {
   height: 3px;
@@ -636,7 +636,7 @@ const handleConnect = async () => {
   gap: 10px;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   padding: 14px 16px;
   flex-shrink: 0;
@@ -670,7 +670,7 @@ const handleConnect = async () => {
   color: rgba(var(--nt-ink), 0.85);
   line-height: 1.5;
   padding: 10px 12px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   border-left: 2px solid color-mix(in srgb, var(--ion-color-accent-red) 50%, transparent);
 }

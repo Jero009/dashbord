@@ -355,7 +355,7 @@ onIonViewWillEnter(async () => {
 .summary-cell {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   display: grid;
   gap: 6px;
 }
@@ -405,7 +405,7 @@ onIonViewWillEnter(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: var(--nt-radius-pill);
   padding: 4px;
 }
@@ -453,7 +453,7 @@ onIonViewWillEnter(async () => {
 
 .styled-input,
 .styled-select {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   color: var(--nt-fg);
@@ -493,7 +493,7 @@ onIonViewWillEnter(async () => {
   gap: 12px;
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border: 1px solid transparent;
 }
 
@@ -543,7 +543,7 @@ onIonViewWillEnter(async () => {
 
 .due-badge--paused {
   color: rgba(var(--nt-ink), 0.6);
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
 }
 
 .list-item__name {
@@ -579,7 +579,7 @@ onIonViewWillEnter(async () => {
   height: 28px;
   border-radius: var(--nt-radius-pill);
   border: none;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   color: rgba(var(--nt-ink), 0.6);
   font-size: 0.95rem;
 }

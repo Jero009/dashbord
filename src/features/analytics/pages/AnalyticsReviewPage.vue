@@ -159,7 +159,7 @@ onIonViewWillEnter(load);
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: var(--nt-radius-pill);
 }
 
@@ -201,7 +201,7 @@ onIonViewWillEnter(load);
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   text-align: center;
 }
@@ -253,7 +253,7 @@ onIonViewWillEnter(load);
 .prog-bar {
   height: 8px;
   border-radius: var(--nt-radius-pill);
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   overflow: hidden;
 }
 

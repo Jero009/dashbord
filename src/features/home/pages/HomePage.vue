@@ -830,7 +830,7 @@ onMounted(() => {
 .score-tile {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -892,7 +892,7 @@ onMounted(() => {
 }
 
 .ready-chip--off {
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   color: rgba(var(--nt-ink), 0.35);
   border: 1px solid rgba(var(--nt-ink), 0.08);
 }
@@ -906,7 +906,7 @@ onMounted(() => {
   padding: 10px 12px;
   border-radius: 10px;
   text-align: left;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.08);
   cursor: pointer;
   transition: opacity 150ms ease;
@@ -1071,7 +1071,7 @@ onMounted(() => {
 .active-card__timer {
   border-radius: 10px;
   padding: 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
 }
 
 .active-card__timer span {
@@ -1195,7 +1195,7 @@ onMounted(() => {
 .weight-input {
   width: 70px;
   padding: 6px 10px;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   color: var(--nt-fg);

@@ -177,7 +177,7 @@
 }
 
 .exercise-item__meta span {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   color: rgba(var(--nt-ink), 0.84);
   padding: 4px 10px;
   border-radius: 999px;

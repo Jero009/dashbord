@@ -640,7 +640,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   text-align: center;
 }
@@ -674,7 +674,7 @@ onUnmounted(() => {
   height: 14px;
   border-radius: var(--nt-radius-pill);
   overflow: hidden;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
 }
 
 .balance-bar__seg {
@@ -716,7 +716,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
 }
 

@@ -90,7 +90,7 @@ const select = (value: number | null) => {
 }
 
 .rpe-row:active {
-  background: rgba(var(--nt-ink), 0.04);
+  background: var(--nt-tile);
 }
 
 .rpe-row--active {

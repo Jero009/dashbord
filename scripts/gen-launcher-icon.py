@@ -6,10 +6,9 @@ Draws the master 1024x1024 foreground + background source PNGs with Pillow
 artwork lives inside the 66dp safe zone (centered 66/108 of canvas) so
 launchers don't clip it.
 
-Design (classic skin): true-black background, a 2px white stroked rounded
-square Nothing glyph, 9mm-style dot perforations along the top+left inner
-edge, white "dashbord" wordmark in Space Grotesk (repo-resident font), and
-the single Nothing-red accent as one filled dot.
+Design (classic skin): true-black background, minimal white LINE-ONLY
+glyph — three concentric rounded squares (Nothing's layered-outline motif),
+monochrome: no red, no dot-matrix, no wordmark.
 """
 import os
 from PIL import Image, ImageDraw, ImageFont
@@ -22,7 +21,6 @@ PREVIEW_DIR = os.path.join(RES, "icon-preview")
 
 WHITE = (255, 255, 255, 255)
 BLACK = (0, 0, 0, 255)
-RED = (215, 26, 33, 255)  # --nt-accent Nothing red
 
 M = 1024  # master canvas (foreground layer: full 108dp canvas)
 
@@ -58,51 +56,26 @@ def rounded_rect(dr, box, radius, outline=None, width=1, fill=None):
 def draw_foreground(size):
     """Full-canvas foreground layer; artwork inside centered 66/108 safe zone.
 
-    Glyph-only (Nothing icons carry no wordmark — text is illegible at
-    launcher sizes): a hand-placed dot-matrix lowercase 'd' (5x7 grid),
-    with the ascender's top dot in Nothing red as the single accent.
+    Minimal, line-only, monochrome: three concentric rounded-square
+    outlines (layered Nothing motif), equal stroke weight, even gaps.
+    No fill, no dots, no text, no accent color.
     """
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     safe = 66.0 / 108.0 * size  # safe-zone side length
     m = (size - safe) / 2.0     # safe-zone margin
 
-    # --- tile: 2px-style white stroked rounded square ---
-    tint = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    tdr = ImageDraw.Draw(tint)
-    inset = m + safe * 0.02
-    box = (inset, inset, size - inset, size - inset)
-    radius = safe * 0.18
-    tdr.rounded_rectangle(box, radius=radius, fill=(255, 255, 255, 8))
-    im = Image.alpha_composite(im, tint)
     dr = ImageDraw.Draw(im)
-    stroke = round(46 * size / 1024.0)
-    rounded_rect(dr, box, radius, outline=WHITE, width=stroke)
+    stroke = round(30 * size / 1024.0)
+    gap = safe * 0.115          # gap between the three outlines
 
-    # --- dot-matrix 'd': 5 cols x 7 rows ---
-    glyph = [
-        "..X..",
-        "..X..",
-        ".XXX.",
-        "X..X.",
-        "X..X.",
-        "X..X.",
-        ".XXX.",
-    ]
-    cols, rows = 5, 7
-    pitch = safe * 0.122               # dot-center spacing
-    dot_r = pitch * 0.40
-    gw = (cols - 1) * pitch
-    gh = (rows - 1) * pitch
-    ox = (size - gw) / 2.0
-    oy = (size - gh) / 2.0
-    for r, row in enumerate(glyph):
-        for c, ch in enumerate(row):
-            if ch != "X":
-                continue
-            cx, cy = ox + c * pitch, oy + r * pitch
-            col = RED if (r == 0 and c == 2) else WHITE  # red ascender cap
-            dr.ellipse((cx - dot_r, cy - dot_r, cx + dot_r, cy + dot_r),
-                       fill=col)
+    # Three concentric rounded squares, outer→inner.
+    half_outer = safe / 2.0 - m * 0.02
+    for i in range(3):
+        half = half_outer - i * gap
+        box = (size / 2.0 - half, size / 2.0 - half,
+               size / 2.0 + half, size / 2.0 + half)
+        radius = half * 0.34
+        dr.rounded_rectangle(box, radius=radius, outline=WHITE, width=stroke)
     return im
 
 

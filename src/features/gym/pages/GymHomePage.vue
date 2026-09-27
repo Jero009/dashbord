@@ -526,7 +526,7 @@ ion-content.home-content {
 
 .weekly-progress-bar {
   height: 3px;
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -632,7 +632,7 @@ ion-content.home-content {
 .active-card__timer {
   border-radius: 10px;
   padding: 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
 }
 
 .active-card__timer span,
@@ -751,7 +751,7 @@ ion-content.home-content {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border: none;
   border-radius: 10px;
   text-align: left;

@@ -206,7 +206,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   padding: 10px 12px;
   border-radius: 999px;
   font-size: 0.9rem;
@@ -218,7 +218,7 @@
 }
 
 .rest-settings:active {
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   border-color: rgba(var(--nt-ink), 0.12);
 }
 .set{
@@ -230,7 +230,7 @@
   --inner-border-width: 0;
   --inner-padding-end: 0;
   --padding-start: 0;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -246,7 +246,7 @@
   height: 54px;
   --padding-start: 0;
   --padding-end: 0;
-  --background: rgba(var(--nt-ink), 0.06);
+  --background: var(--nt-tile);
   --border-color: rgba(var(--nt-ink), 0.1);
   --border-radius: 8px;
   text-align: center;
@@ -275,7 +275,7 @@
   min-width: 52px;
   height: 54px;
   padding: 0 12px;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   cursor: pointer;

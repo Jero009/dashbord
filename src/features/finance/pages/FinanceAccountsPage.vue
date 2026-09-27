@@ -308,7 +308,7 @@ onIonViewWillEnter(loadAccounts);
 .summary-cell {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   display: grid;
   gap: 6px;
 }
@@ -380,7 +380,7 @@ onIonViewWillEnter(loadAccounts);
 
 .styled-input,
 .styled-select {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   color: var(--nt-fg);
@@ -420,7 +420,7 @@ onIonViewWillEnter(loadAccounts);
   gap: 12px;
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
 }
 
 .account-item__info {
@@ -462,7 +462,7 @@ onIonViewWillEnter(loadAccounts);
   height: 28px;
   border-radius: var(--nt-radius-pill);
   border: none;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   color: rgba(var(--nt-ink), 0.6);
   font-size: 0.95rem;
 }

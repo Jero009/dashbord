@@ -382,7 +382,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .form-input {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   padding: 10px 12px;
@@ -431,7 +431,7 @@ onIonViewWillEnter(loadEntries)
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 10px 12px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
 }
 
@@ -459,7 +459,7 @@ onIonViewWillEnter(loadEntries)
 }
 
 .entry-row {
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;

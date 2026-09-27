@@ -174,7 +174,7 @@ onIonViewWillEnter(async () => {
 }
 
 .field {
-  --background: rgba(var(--nt-ink), 0.05);
+  --background: var(--nt-tile);
   border: 1px solid var(--nt-border);
   border-radius: var(--nt-radius-sm);
   margin: 0;
@@ -224,7 +224,7 @@ onIonViewWillEnter(async () => {
   gap: 12px;
   width: 100%;
   padding: 10px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border: 1px solid transparent;
   border-radius: 10px;
   text-align: left;

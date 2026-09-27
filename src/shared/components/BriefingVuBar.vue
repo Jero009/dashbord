@@ -1,12 +1,13 @@
 <template>
   <!--
-    Verdict VU bar — single vertical audio-visualizer-style meter encoding the
-    daily briefing level. Segments bottom→top: red / yellow / green (VU-meter
-    order). Bottom-up fill = how hard the day is:
+    Verdict VU bar — Glyph-LED meter encoding the daily briefing level, styled
+    after the Nothing Glyph Bar: SQUARE segments, uniform size, small gaps,
+    each lit in its own color. Segments bottom→top: red / yellow / green.
+    Bottom-up fill = how hard the day is:
       recover → 1 lit (red) · normal → 2 lit (red+yellow) · push → 3 lit
     Overrides paint the WHOLE bar in one color: sick → solid red, deload →
-    solid yellow. Null level → dim bar (legacy briefing / no data).
-    Colors are data encoding (goal-red/green semantics), same tokens app-wide.
+    solid yellow. Null level → all segments unlit (powered-down LEDs).
+    Unlit = the SAME hue at very low intensity (a dim LED, never grey).
   -->
   <div class="vu-bar" :class="`vu-bar--${level ?? 'none'}`" aria-hidden="true">
     <i v-for="seg in 3" :key="seg" class="vu-seg" :class="litSegments >= seg ? 'is-lit' : ''" />
@@ -36,41 +37,35 @@ const litSegments = computed(() => {
   --vu-red: var(--nt-accent);
   --vu-yellow: var(--nt-data-goal);
   --vu-green: var(--nt-data-positive);
-  --vu-dim: rgba(var(--nt-ink), 0.12);
 
   flex: none;
   display: flex;
   flex-direction: column-reverse; /* red at the bottom, green on top */
-  gap: 2px;
-  width: 10px;
-  height: 34px;
-  padding: 2px;
+  gap: 3px;
+  padding: 3px;
   background: rgba(var(--nt-ink), 0.05);
-  border-radius: var(--nt-radius-pill);
+  border-radius: var(--nt-radius-sm);
 }
 
+/* Glyph-LED segments: squares with just-off-square corners, uniform size.
+   No pill rounding — the Nothing Glyph Bar is square blocks. */
 .vu-seg {
   flex: 1;
+  aspect-ratio: 1;
+  width: 14px;
   border-radius: 3px;
-  background: var(--vu-dim);
+  /* Unlit = same hue at ~14% — a powered-down LED, still readable as
+     red/yellow/green, clearly dimmer than any lit segment. */
   transition: background var(--nt-dur-std) var(--nt-ease-std);
 }
+.vu-seg:nth-child(1) { background: rgba(215, 26, 33, 0.14); }
+.vu-seg:nth-child(2) { background: rgba(255, 215, 0, 0.12); }
+.vu-seg:nth-child(3) { background: rgba(34, 197, 94, 0.13); }
 
-/* Bottom-up fill: red → yellow → green */
+/* Lit = FULL brightness, unmistakable against the unlit tint */
 .vu-seg:nth-child(1).is-lit { background: var(--vu-red); }
 .vu-seg:nth-child(2).is-lit { background: var(--vu-yellow); }
 .vu-seg:nth-child(3).is-lit { background: var(--vu-green); }
-
-/* Glyph-LED unlit state: each segment keeps its HUE at low intensity —
-   like Nothing's Glyph lights powered down. Never grey: the color IS the
-   data encoding (which segment is which), dim only encodes off/on.
-   Implemented via the token's literal rgb at low alpha so both themes read. */
-.vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(1) { background: rgba(215, 26, 33, 0.22); }
-.vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(2) { background: rgba(255, 215, 0, 0.16); }
-.vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(3) { background: rgba(34, 197, 94, 0.18); }
-/* dim levels track the lit data colors in light theme (darker hues) */
-html.theme-light .vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(2) { background: rgba(184, 134, 11, 0.2); }
-html.theme-light .vu-bar:not(.vu-bar--sick):not(.vu-bar--deload) .vu-seg:nth-child(3) { background: rgba(21, 128, 61, 0.22); }
 
 /* Overrides: the whole bar reads as one signal color */
 .vu-bar--sick .vu-seg.is-lit { background: var(--vu-red); }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Glyph-LED dim red — OPAQUE (never alpha-composite in RemoteViews). -->
+<!-- Glyph-LED dim red — OPAQUE (never alpha-composite in RemoteViews).
+     Same hue at low intensity: a powered-down LED, never grey. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="#5A1216" />
-    <corners android:radius="2dp" />
+    <solid android:color="#3D0A0C" />
+    <corners android:radius="3dp" />
 </shape>

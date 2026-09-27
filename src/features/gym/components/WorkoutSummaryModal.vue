@@ -123,7 +123,7 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   padding: 16px 12px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   text-align: center;
 }
@@ -186,7 +186,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(var(--nt-ink), 0.04);
+  background: var(--nt-tile);
   border-radius: 8px;
 }
 

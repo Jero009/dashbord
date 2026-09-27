@@ -22,6 +22,11 @@
   --nt-text-dim: rgba(var(--nt-ink), 0.5);
   --nt-glow: rgba(var(--nt-ink), 0.18); /* Glyph-style white bloom */
 
+  /* Unified inset-tile surface. ONE grey for every metric tile / cell /
+     inset panel in the app — per-page rgba(var(--nt-ink), 0.04–0.08)
+     copies drifted into visibly different shades. Use this token. */
+  --nt-tile: rgba(var(--nt-ink), 0.055);
+
   /* ---- Theme-aware foreground "ink" ----
      The whole UI paints its text/borders/fills as the foreground colour
      over a surface. `--nt-ink` is that colour as a raw RGB triplet so it
@@ -219,6 +224,7 @@ html.theme-os5 {
   --nt-border: rgba(255, 255, 255, 0.1);
   --nt-border-strong: rgba(255, 255, 255, 0.16);
 
+
   /* Softer ink hierarchy (OS 5 calmer text scale) */
   --nt-text-dim: rgba(255, 255, 255, 0.55);
 }
@@ -355,7 +361,7 @@ ion-alert .alert-input-group {
 }
 
 ion-alert .alert-input {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid var(--nt-border-strong);
   border-radius: var(--nt-radius-sm);
   color: var(--nt-fg);
@@ -731,7 +737,7 @@ html, body, ion-app ion-content {
 .nt-metric-tile {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
 }
 .nt-metric-tile span {
   display: block;

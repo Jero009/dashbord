@@ -425,7 +425,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   text-align: center;
 }
@@ -481,7 +481,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
 }
 
@@ -541,7 +541,7 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: rgba(var(--nt-ink), 0.7);
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   padding: 3px 10px;
   border-radius: var(--nt-radius-pill);
 }

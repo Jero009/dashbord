@@ -344,7 +344,7 @@ onIonViewWillEnter(async () => {
   gap: 12px;
   width: 100%;
   padding: 10px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border: none;
   border-radius: 10px;
   text-align: left;

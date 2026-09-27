@@ -693,7 +693,7 @@ onIonViewWillEnter(async () => {
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   color: var(--nt-fg);
   display: flex;

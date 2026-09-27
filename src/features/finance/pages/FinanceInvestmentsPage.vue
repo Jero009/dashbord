@@ -452,7 +452,7 @@ onIonViewWillEnter(loadAll);
 .summary-cell {
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   display: grid;
   gap: 6px;
 }
@@ -527,7 +527,7 @@ onIonViewWillEnter(loadAll);
 
 .styled-input,
 .styled-select {
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   border-radius: 8px;
   color: var(--nt-fg);
@@ -567,7 +567,7 @@ onIonViewWillEnter(loadAll);
   gap: 12px;
   border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
 }
 
 .list-item__info {
@@ -621,7 +621,7 @@ onIonViewWillEnter(loadAll);
   height: 28px;
   border-radius: var(--nt-radius-pill);
   border: none;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   color: rgba(var(--nt-ink), 0.6);
   font-size: 0.95rem;
 }
@@ -635,7 +635,7 @@ onIonViewWillEnter(loadAll);
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   border: none;
   border-radius: var(--nt-radius-pill);
   padding: 5px 12px;
@@ -684,7 +684,7 @@ onIonViewWillEnter(loadAll);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: rgba(var(--nt-ink), 0.6);
-  background: rgba(var(--nt-ink), 0.08);
+  background: var(--nt-tile);
   border-radius: 4px;
   padding: 1px 5px;
 }

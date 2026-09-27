@@ -261,7 +261,7 @@ onUnmounted(() => { cancelled = true; });
   border-radius: 3px;
   border: none;
   padding: 0;
-  background: rgba(var(--nt-ink), 0.06);
+  background: var(--nt-tile);
   cursor: pointer;
 }
 
@@ -297,7 +297,7 @@ onUnmounted(() => { cancelled = true; });
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  background: rgba(var(--nt-ink), 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   font-size: 0.82rem;
   color: var(--nt-text-dim);
