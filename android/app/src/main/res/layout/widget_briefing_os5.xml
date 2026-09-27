@@ -56,7 +56,7 @@
             android:fontFamily="@font/geist"
             android:fontWeight="700"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:maxLines="1"
             android:ellipsize="end"
             android:text="—" />
@@ -69,7 +69,7 @@
             android:fontFamily="@font/geist"
             android:letterSpacing="0.12"
             android:textColor="#969696"
-            android:textSize="10sp"
+            android:textSize="9sp"
             android:text="" />
     </LinearLayout>
 </LinearLayout>
