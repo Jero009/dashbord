@@ -179,24 +179,6 @@
           </template>
         </div>
 
-        <!-- Life-event logging: standalone, forward-only catalog (T14) -->
-        <div class="card">
-          <div class="card-header">
-            <p class="nt-kicker">Life events</p>
-            <ion-button fill="clear" size="small" class="log-event-btn" @click="logLifeEvent">
-              Log event
-            </ion-button>
-          </div>
-          <template v-if="lifeEvents.length > 0">
-            <div class="plan-tpl-rows">
-              <span v-for="ev in lifeEvents.slice(0, 6)" :key="ev.id" class="plan-tpl-row">
-                <span class="plan-tpl-row__name">{{ lifeEventLabel(ev) }}</span>
-                <span class="plan-tpl-row__meta">{{ ev.start_date }}{{ ev.end_date ? ` → ${ev.end_date}` : ' → ongoing' }}</span>
-              </span>
-            </div>
-          </template>
-          <p v-else class="nt-empty">Nothing logged yet</p>
-        </div>
       </div>
     </ion-content>
   </ion-page>
@@ -209,8 +191,6 @@ import {
   IonContent,
   IonSelect,
   IonSelectOption,
-  IonButton,
-  modalController,
   onIonViewWillEnter
 } from '@ionic/vue';
 import { ref, computed, nextTick, watch, onUnmounted } from 'vue';
@@ -221,14 +201,12 @@ import {
   queryVolumeByMuscleGroup,
   queryWeeklyTonnage,
   queryWorkoutFrequency,
-  getPlans, getPausesForPlan, getPlanWorkoutSeries, getPlanAdherence, getLifeEvents,
+  getPlans, getPausesForPlan, getPlanWorkoutSeries, getPlanAdherence,
   planConfigOf, pauseSpansOf,
 } from '@/shared/db/app_db';
-import type { MuscleVolume, WeeklyTonnage, WorkoutDayCount, Plan, PlanPause, LifeEvent } from '@/shared/db/app_db';
-import PauseSheet from '@/features/gym/components/PauseSheet.vue';
+import type { MuscleVolume, WeeklyTonnage, WorkoutDayCount, Plan, PlanPause } from '@/shared/db/app_db';
 import { deloadWeekNumbers, planWeek, planWeeksTotal } from '@/shared/utils/planCalendar';
 import { localDateISO } from '@/shared/utils/timeFormat';
-import { showToast } from '@/shared/utils/toast';
 import {
   Chart,
   BarController, BarElement,
@@ -414,7 +392,6 @@ interface PlanSelection {
 const planSelections = ref<Map<number, PlanSelection>>(new Map());
 const templateNames = ref<Map<number, string>>(new Map());
 const selectedPlanId = ref<number | null>(null);
-const lifeEvents = ref<LifeEvent[]>([]);
 
 const planPickerOptions = computed(() =>
   [...planSelections.value.values()]
@@ -552,36 +529,6 @@ const loadPlanProgress = async () => {
     const active = [...next.values()].find((s) => !s.plan.archived && s.plan.end_date >= localDateISO());
     selectedPlanId.value = active?.plan.id ?? [...next.keys()][0] ?? null;
   }
-  lifeEvents.value = await getLifeEvents(undefined, 50).catch(() => []);
-};
-
-const lifeEventLabel = (ev: LifeEvent) => {
-  const base = ev.type.charAt(0).toUpperCase() + ev.type.slice(1);
-  return ev.severity ? `${base} (${ev.severity === 'knocked_out' ? 'knocked out' : ev.severity})` : base;
-};
-
-const logLifeEvent = async () => {
-  hapticSelect();
-  const modal = await modalController.create({
-    component: PauseSheet,
-    componentProps: { title: 'Log event', mode: 'life-event' },
-    breakpoints: [0, 0.7, 1],
-    initialBreakpoint: 0.7,
-    cssClass: 'pause-sheet-modal',
-  });
-  await modal.present();
-  const { data, role } = await modal.onDidDismiss<{ reason: string; note: string | null; startDate: string; endDate: string | null; severity: string | null }>();
-  if (role !== 'confirm' || !data) return;
-  const { createLifeEvent } = await import('@/shared/db/app_db');
-  await createLifeEvent({
-    type: data.reason,
-    severity: data.severity,
-    start_date: data.startDate,
-    end_date: data.endDate,
-    note: data.note,
-  });
-  lifeEvents.value = await getLifeEvents(undefined, 50).catch(() => []);
-  showToast('event logged', 'success');
 };
 
 watch(windowDays, async () => {
@@ -734,13 +681,6 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--nt-text-dim);
   white-space: nowrap;
-}
-
-.log-event-btn {
-  --color: var(--ion-color-accent-red);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.72rem;
 }
 
 /* Chart.js scrub readout (mirrors TrendChart's readout row) */

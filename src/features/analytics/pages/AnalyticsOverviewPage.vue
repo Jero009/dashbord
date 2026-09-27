@@ -59,31 +59,56 @@
 
         <!-- Layered health heatmap (Workouts / Sick / Readiness) + day detail -->
         <health-heatmap :weeks="52" />
+
+        <!-- Life-event logging: standalone, forward-only catalog (moved from Gym) -->
+        <div class="card">
+          <div class="card-header">
+            <p class="nt-kicker">Life events</p>
+            <ion-button fill="clear" size="small" class="log-event-btn" @click="logLifeEvent">
+              Log event
+            </ion-button>
+          </div>
+          <template v-if="lifeEvents.length > 0">
+            <div class="event-rows">
+              <span v-for="ev in lifeEvents.slice(0, 6)" :key="ev.id" class="event-row">
+                <span class="event-row__name">{{ lifeEventLabel(ev) }}</span>
+                <span class="event-row__meta">{{ ev.start_date }}{{ ev.end_date ? ` → ${ev.end_date}` : ' → ongoing' }}</span>
+              </span>
+            </div>
+          </template>
+          <p v-else class="empty-copy">Nothing logged yet</p>
+        </div>
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent, onIonViewWillEnter } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonButton, modalController, onIonViewWillEnter } from '@ionic/vue';
 import { ref, computed } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSectionTabs.vue';
 import HealthHeatmap from '@/features/analytics/components/HealthHeatmap.vue';
+import PauseSheet from '@/features/gym/components/PauseSheet.vue';
 import {
   getRecentSleepSessionSummaries,
   getRecentHealthMetrics,
   queryReadinessHistory,
   getSessionLoads,
+  getLifeEvents,
 } from '@/shared/db/app_db';
+import type { LifeEvent } from '@/shared/db/app_db';
 import { computeInsights, type DatedValue, type TrainingLoad, type RecoveryRecommendation, type Insight } from '@/shared/health/insights';
 import { computeTodayRecovery } from '@/shared/health/todayRecovery';
 import { computeDailyLoads, computeAcwrSeries, type DailyLoad } from '@/shared/health/trainingLoad';
 import { localDateISO } from '@/shared/utils/timeFormat';
+import { showToast } from '@/shared/utils/toast';
+import { hapticSelect } from '@/shared/utils/haptics';
 
 const load = ref<TrainingLoad>({ acuteTotal: 0, chronicWeeklyAvg: 0, acwr: 0, status: 'insufficient' });
 const recovery = ref<RecoveryRecommendation | null>(null);
 const insights = ref<Insight[]>([]);
+const lifeEvents = ref<LifeEvent[]>([]);
 
 const recoveryLabel = computed(() => ({
   train: 'Train hard',
@@ -154,6 +179,37 @@ const loadAll = async () => {
   load.value = loadFromSeries(dailyLoads);
 
   insights.value = computeInsights({ sleepHours, rhr, readiness, dailyVolume: dailyVolumeFromLoads(dailyLoads) });
+
+  lifeEvents.value = await getLifeEvents(undefined, 50).catch(() => []);
+};
+
+const lifeEventLabel = (ev: LifeEvent) => {
+  const base = ev.type.charAt(0).toUpperCase() + ev.type.slice(1);
+  return ev.severity ? `${base} (${ev.severity === 'knocked_out' ? 'knocked out' : ev.severity})` : base;
+};
+
+const logLifeEvent = async () => {
+  hapticSelect();
+  const modal = await modalController.create({
+    component: PauseSheet,
+    componentProps: { title: 'Log event', mode: 'life-event' },
+    breakpoints: [0, 0.7, 1],
+    initialBreakpoint: 0.7,
+    cssClass: 'pause-sheet-modal',
+  });
+  await modal.present();
+  const { data, role } = await modal.onDidDismiss<{ reason: string; note: string | null; startDate: string; endDate: string | null; severity: string | null }>();
+  if (role !== 'confirm' || !data) return;
+  const { createLifeEvent } = await import('@/shared/db/app_db');
+  await createLifeEvent({
+    type: data.reason,
+    severity: data.severity,
+    start_date: data.startDate,
+    end_date: data.endDate,
+    note: data.note,
+  });
+  lifeEvents.value = await getLifeEvents(undefined, 50).catch(() => []);
+  showToast('event logged', 'success');
 };
 
 /** Summarise the shared EWMA ACWR series into the tile values. */
@@ -211,6 +267,45 @@ onIonViewWillEnter(() => {
 }
 
 
+
+/* Life-event rows (moved from AnalyticsGymPage, renamed) */
+.event-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.event-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--nt-tile);
+  border-radius: 10px;
+}
+
+.event-row__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(var(--nt-ink), 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-row__meta {
+  font-family: var(--nt-font-mono);
+  font-size: 0.75rem;
+  color: var(--nt-text-dim);
+  white-space: nowrap;
+}
+
+.log-event-btn {
+  --color: var(--ion-color-accent-red);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
 
 /* Recovery hero */
 .recovery-card {

@@ -86,15 +86,19 @@ public class ActivityWidgetProvider extends AppWidgetProvider {
     /**
      * 8 columns (weeks, oldest→newest, left→right) × 7 rows (Sun–Sat, top→
      * bottom), rounded-square cells. Mirrors the HealthHeatmap grid layout;
-     * one bitmap inflates on every launcher.
+     * one bitmap inflates on every launcher. The bitmap is sized for EIGHT
+     * columns — sizing it for 7 clipped the newest (rightmost) column, which
+     * holds today.
      */
     static Bitmap drawGrid(Context context, int[] counts, boolean os5) {
         float density = context.getResources().getDisplayMetrics().density;
         float cell = 12f * density;
         float gap = 3f * density;
-        int size = (int) ((cell + gap) * 7 - gap + 2 * 4 * density); // 7 columns + padding
+        // 8 columns (weeks) wide, 7 rows (day-of-week) tall.
+        int width = (int) ((cell + gap) * 8 - gap + 2 * 4 * density);
+        int height = (int) ((cell + gap) * 7 - gap + 2 * 4 * density);
 
-        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         float pad = 4f * density;
 
