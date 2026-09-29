@@ -278,6 +278,10 @@ const loadBriefing = async () => {
   // The verdict is fully LOCAL: sick (life_event) > deload (plan) > the
   // shared recovery engine. The pushed briefing row only supplies text
   // (title/body); its level is ignored.
+  //
+  // Sequence after loadRecovery (loadAll awaits it first) so the briefing
+  // card never resolves on a stale recovery snapshot — the card must read
+  // the same verdict the chip does.
   const [plan, lifeEvents] = await Promise.all([
     resolvedDeloadConfig(),
     getLifeEvents('sick', 50).catch(() => []),
@@ -285,30 +289,21 @@ const loadBriefing = async () => {
   const resolved = resolveBriefingVerdict({
     plan: { isDeload: plan.isDeload, weekOfPlan: plan.weekOfPlan },
     sick: isSickToday(lifeEvents, localDateISO()),
-    recovery: recovery.value,
+    recovery: recovery.value, // guaranteed set by loadRecovery before this runs
   });
   const localTitle = resolved.reason ? `${resolved.verdict} — ${resolved.reason}` : resolved.verdict;
-  if (briefing.value) {
-    briefing.value = {
-      ...briefing.value,
-      title: localTitle,
-      level: resolved.level,
-      verdict: resolved.verdict,
-    };
-  } else {
-    // No briefing row (no receiver configured / offline): the local verdict
-    // IS the card.
-    briefing.value = {
-      receivedAt: Math.floor(Date.now() / 1000),
-      title: localTitle,
-      body: resolved.reason ?? '',
-      verdict: resolved.verdict,
-      level: resolved.level,
-    };
-  }
+  briefing.value = briefing.value
+    ? { ...briefing.value, title: localTitle, level: resolved.level, verdict: resolved.verdict }
+    : {
+        receivedAt: Math.floor(Date.now() / 1000),
+        title: localTitle,
+        body: resolved.reason ?? '',
+        verdict: resolved.verdict,
+        level: resolved.level,
+      };
   // Refresh the widget snapshot so the briefing widget follows the card.
-  // Always send a level (even after a sick→healthy flip) — updateWidgetFields
-  // drops null fields, which would leave the widget on the stale glyph.
+  // Always send a level (even unchanged) — updateWidgetFields drops null
+  // fields, which would leave the widget on the stale glyph.
   const b = briefing.value;
   void updateWidgetFields({
     briefingTitle: b.title || 'Daily briefing',
@@ -681,11 +676,13 @@ const buildBatteryChart = () => {
 
 const loadAll = async () => {
   todayStr = localDateISO();
+  // Recovery FIRST: loadBriefing resolves the verdict from recovery.value and
+  // must never read a stale/null snapshot (they share the same engine).
+  await loadRecovery();
   await Promise.all([
     loadSummary(),
     loadActiveWorkout(),
     loadTodayWeight(),
-    loadRecovery(),
     loadWeekDigest(),
     loadBriefing(),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
