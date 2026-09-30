@@ -1,7 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
-import { localDateISO } from '@/shared/utils/timeFormat';
+import { localDateISO, localIsoWithOffset } from '@/shared/utils/timeFormat';
 import { nextDueAfter } from '@/shared/db/financeDates';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
@@ -1748,9 +1748,13 @@ export async function startWorkoutFromTemplate(templateId: number) {
   try {
     const deloadCfg = await resolvedDeloadConfig();
     const template = await getTemplateById(templateId);
+    // Write time_start EXPLICITLY as a full local ISO-8601 string. The column
+    // default is CURRENT_TIMESTAMP (UTC-naive `YYYY-MM-DD HH:MM:SS`), which the
+    // mirror parsed as LOCAL — durations inflated by the UTC offset and
+    // started_at shifted 2h early (a 37-min session mirrored as 157 min).
     const result = await conn.run(
-      `INSERT INTO workout (id_workout_template, name) VALUES (?, ?)`,
-      [templateId, template?.name || null]
+      `INSERT INTO workout (id_workout_template, name, time_start) VALUES (?, ?, ?)`,
+      [templateId, template?.name || null, localIsoWithOffset(new Date())]
     );
     const workoutId = result.changes?.lastId;
 
