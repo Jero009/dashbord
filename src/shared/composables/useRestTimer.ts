@@ -65,6 +65,17 @@ export function restTimerRemaining(record: ParsedRestTimer): number {
   return Math.max(0, Math.ceil((record.endTime - Date.now()) / 1000))
 }
 
+// Finalise an EXPIRED timer without cancelling the alarm: stops the shared
+// interval, resets state and wipes the stale record. Deliberately does NOT
+// cancel the scheduled OS ding or the countdown notification — expiry is the
+// alarm's moment, not a user cancel. Expiry handlers on any page route through
+// this so the alarm never dies just because the user isn't on WorkoutPage.
+export function finalizeExpiredTimer(): void {
+  stopInterval()
+  restTimerState.value = { isActive: false, remaining: 0, total: 0 }
+  localStorage.removeItem(REST_TIMER_KEY)
+}
+
 // Clear the timer everywhere: stop the shared interval, wipe canonical state,
 // and cancel the OS-level ding + countdown notification. Every path that ends
 // the rest early goes through this — the scheduled ding must never outlive a
@@ -130,6 +141,9 @@ export function resumeRestTimer(
   }
   const remaining = restTimerRemaining(record)
   if (remaining <= 0) {
+    // Already dead — wipe the stale record (it used to survive restarts) but
+    // leave the OS ding alone: it may still be the one alarm that fires.
+    finalizeExpiredTimer()
     restTimerState.value = { isActive: false, remaining: 0, total: record.total }
     return restTimerState.value
   }

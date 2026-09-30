@@ -224,7 +224,7 @@ import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, pa
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
-import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval } from '@/shared/composables/useRestTimer';
+import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval, finalizeExpiredTimer } from '@/shared/composables/useRestTimer';
 import { dueWithin, billAlertBody } from '@/features/finance/billAlerts';
 import { scheduleBillAlert, cancelBillAlert } from '@/shared/utils/notifications';
 import { getNotifBillAlertEnabled, getNotifBillAlertTime } from '@/shared/utils/userSettings';
@@ -384,7 +384,9 @@ const clearRestTimer = () => {
 const formatWorkoutTimer = () => formatElapsed(workoutSeconds.value);
 
 const restoreRestTimer = () => {
-  resumeRestTimer(undefined, () => clearRestTimer());
+  // Expiry is NOT a cancel — the scheduled OS ding must still fire (the old
+  // path cancelled the alarm: resting while on Home meant it never dinged).
+  resumeRestTimer(undefined, () => finalizeExpiredTimer());
 };
 
 const loadActiveWorkout = async () => {

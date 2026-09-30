@@ -175,7 +175,7 @@ import type { WorkoutTemplate, Workout, WorkoutHistory } from '@/features/gym/ty
 import { formatDuration, localDateISO, normalizeDateInput, formatWorkoutDate, formatTime as formatElapsed, formatRestTime } from '@/shared/utils/timeFormat';
 import { hapticHeavy, hapticLight } from '@/shared/utils/haptics';
 import { getWeeklyWorkoutGoal } from '@/shared/utils/userSettings';
-import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval } from '@/shared/composables/useRestTimer';
+import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval, finalizeExpiredTimer } from '@/shared/composables/useRestTimer';
 import {
   activePlan, openPause, currentWeek, nextDeload, pauseDay, loadPlan,
 } from '@/features/gym/planStore';
@@ -270,8 +270,11 @@ const clearActiveRestTimer = () => {
   cancelRestTimer();
 };
 
+// Expiry is NOT a cancel — the scheduled OS ding must still fire, so only
+// finalise the state (the old path cancelled the alarm: resting while on this
+// page meant the rest never dinged at all).
 const restoreActiveRestTimer = () => {
-  resumeRestTimer(undefined, () => clearActiveRestTimer());
+  resumeRestTimer(undefined, () => finalizeExpiredTimer());
 };
 
 
