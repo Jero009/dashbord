@@ -2876,6 +2876,13 @@ export async function deleteFinanceSubscription(id: number) {
 // re-exported here for existing import sites.
 export { nextDueAfter };
 
+// One in-flight postDueSubscriptions at a time. Home and Finance both fire it
+// on view-enter; interleaved read→read→insert→insert between two concurrent
+// calls double-posted a period (the last_posted_date stamp ends up correct but
+// a duplicate finance_transaction row remains). A shared in-flight promise
+// makes concurrent callers await the same pass instead.
+let postDueSubscriptionsInFlight: Promise<number> | null = null;
+
 /**
  * Post due unpaid subscription periods as finance_transaction rows.
  * Idempotent per period via last_posted_date: a subscription with
@@ -2886,6 +2893,14 @@ export { nextDueAfter };
  * start / finance page entry.
  */
 export async function postDueSubscriptions(today?: string): Promise<number> {
+  if (postDueSubscriptionsInFlight) return postDueSubscriptionsInFlight;
+  postDueSubscriptionsInFlight = postDueSubscriptionsInner(today).finally(() => {
+    postDueSubscriptionsInFlight = null;
+  });
+  return postDueSubscriptionsInFlight;
+}
+
+async function postDueSubscriptionsInner(today?: string): Promise<number> {
   if (!db) return 0;
   // Local calendar date — never toISOString().slice(0,10), which is the UTC
   // date and lags a day behind Slovenia in the evening (due-date drift bug).
