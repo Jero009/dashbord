@@ -194,28 +194,31 @@ const workouts = ref<(WorkoutHistory & { exercises: WorkoutHistoryExercise[] })[
 // Pagination: full-history render does an N+1 exercise query per workout and
 // bloats the DOM; load in windows as the user scrolls.
 const PAGE_SIZE = 20;
-let allWorkouts: (WorkoutHistory & { exercises?: WorkoutHistoryExercise[] })[] = [];
-let nextIndex = 0;
+// Refs, not plain `let` — the canLoadMore computed must see pagination move or
+// Vue caches its first (empty) evaluation forever and the infinite scroll
+// never arms (history pinned to the first page).
+const allWorkouts = ref<(WorkoutHistory & { exercises?: WorkoutHistoryExercise[] })[]>([]);
+const nextIndex = ref(0);
 let loadingMore = false;
 
 const loadMoreWorkouts = async (count = PAGE_SIZE) => {
-  if (loadingMore || nextIndex >= allWorkouts.length) return;
+  if (loadingMore || nextIndex.value >= allWorkouts.value.length) return;
   loadingMore = true;
   try {
-    const slice = allWorkouts.slice(nextIndex, nextIndex + count);
+    const slice = allWorkouts.value.slice(nextIndex.value, nextIndex.value + count);
     const withExercises = await Promise.all(
       slice.map(async (w) => ({ ...w, exercises: await getWorkoutHistoryExercises(w.id) }))
     );
     workouts.value = [...workouts.value, ...withExercises];
-    nextIndex += slice.length;
+    nextIndex.value += slice.length;
   } finally {
     loadingMore = false;
   }
 };
 
 const LoadHistory = async () => {
-  allWorkouts = await getWorkouts();
-  nextIndex = 0;
+  allWorkouts.value = await getWorkouts();
+  nextIndex.value = 0;
   workouts.value = [];
   await loadMoreWorkouts();
 };
@@ -225,7 +228,7 @@ const handleInfiniteScroll = async (event: InfiniteScrollCustomEvent) => {
   event.target.complete();
 };
 
-const canLoadMore = computed(() => nextIndex < allWorkouts.length);
+const canLoadMore = computed(() => nextIndex.value < allWorkouts.value.length);
 //time calculation
 const toTimestamp = (value: unknown): number => {
   if (value === null || value === undefined) return NaN;
