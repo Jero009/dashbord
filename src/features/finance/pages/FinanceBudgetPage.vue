@@ -295,6 +295,9 @@ const transactionCategory = ref('food');
 const transactionType = ref<'expense' | 'income'>('expense');
 const transactionAccountId = ref<number | null>(null);
 const editingTransactionId = ref<number | null>(null);
+// Notes captured when the edit opens and written back unchanged on save — the
+// form doesn't expose them, but they must survive the UPDATE.
+const editingNotes = ref<string | null>(null);
 
 const budgetCategory = ref('food');
 const budgetLimit = ref('');
@@ -382,6 +385,7 @@ const setType = (type: 'expense' | 'income') => {
 
 const resetTransactionForm = () => {
   editingTransactionId.value = null;
+  editingNotes.value = null;
   transactionName.value = '';
   transactionAmount.value = '';
   transactionDate.value = toLocalDateKey(new Date());
@@ -393,6 +397,7 @@ const resetTransactionForm = () => {
 const beginEditTransaction = (transaction: Record<string, any>) => {
   hapticLight();
   editingTransactionId.value = Number(transaction.id);
+  editingNotes.value = transaction.notes != null ? String(transaction.notes) : null;
   transactionName.value = String(transaction.name ?? '');
   transactionAmount.value = String(transaction.amount ?? '');
   transactionDate.value = String(transaction.date ?? toLocalDateKey(new Date()));
@@ -422,6 +427,9 @@ const saveTransaction = async () => {
   const category = transactionType.value === 'income' ? 'income' : transactionCategory.value;
   try {
     if (editingTransactionId.value) {
+      // Carry the existing notes through — the edit form has no notes field,
+      // and updateFinanceTransaction stores `undefined` as NULL, which used to
+      // silently wipe imported notes (e.g. "PayPal fee 1.20") on every save.
       await updateFinanceTransaction(
         editingTransactionId.value,
         transactionDate.value,
@@ -429,7 +437,7 @@ const saveTransaction = async () => {
         category,
         amount,
         transactionType.value,
-        undefined,
+        editingNotes.value,
         transactionAccountId.value
       );
     } else {

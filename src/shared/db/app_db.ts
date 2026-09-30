@@ -2955,7 +2955,7 @@ export async function updateFinanceTransaction(
   category: string,
   amount: number,
   type: 'expense' | 'income',
-  notes?: string,
+  notes?: string | null,
   accountId?: number | null
 ) {
   if (!db) return;

@@ -77,7 +77,10 @@ const markSeenAt = (t: number) => localStorage.setItem(SEEN_KEY, String(t))
 /** Post one message as an OS notification (immediate, no schedule). */
 async function deliverNotification(msg: HermesMessage, seq: number): Promise<void> {
   const { display } = await LocalNotifications.checkPermissions()
-  if (display !== 'granted') return
+  // Not granted is a FAILURE, not a silent skip — the caller must not advance
+  // the seen stamp past a message that was never shown (it would be lost
+  // forever once permission arrives).
+  if (display !== 'granted') throw new Error('notification permission not granted')
   await LocalNotifications.schedule({
     notifications: [{
       // Stable per-message id: arrival second + seq keeps distinct messages from
@@ -102,14 +105,22 @@ export async function pollAndDeliverHermes(): Promise<number> {
   // messages deliver (same-second arrivals use the ordering the receiver gave).
   const fresh = messages.filter((m) => m.receivedAt > seen).sort((a, b) => a.receivedAt - b.receivedAt)
   let delivered = 0
+  // Stamp only up to the LAST SUCCESSFULLY DELIVERED message. Advancing past a
+  // failed/skipped delivery (schedule throw, permission missing) would lose
+  // that message forever — the next poll would filter it out as seen.
+  let lastDeliveredAt = seen
   for (const msg of fresh) {
     try {
       await deliverNotification(msg, delivered)
       delivered += 1
-    } catch { /* keep polling even if one delivery fails */ }
+      lastDeliveredAt = msg.receivedAt
+    } catch {
+      // Retry this message (and anything after it) on the next poll — a later
+      // success must not advance the stamp past a failed delivery.
+      break
+    }
   }
-  const newest = messages.reduce((max, m) => Math.max(max, m.receivedAt), seen)
-  if (newest > seen) markSeenAt(newest)
+  if (lastDeliveredAt > seen) markSeenAt(lastDeliveredAt)
   return delivered
 }
 
