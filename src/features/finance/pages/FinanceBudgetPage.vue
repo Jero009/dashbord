@@ -635,6 +635,9 @@ const doRemoveBudget = async (id: number) => {
 };
 
 onIonViewWillEnter(async () => {
+  // Kept-alive page: recompute the month on every entry so a month rollover
+  // while the app sat idle doesn't silently show the previous month as current.
+  viewedMonth.value = toLocalDateKey(new Date()).slice(0, 7);
   await loadBudgetData();
 });
 </script>

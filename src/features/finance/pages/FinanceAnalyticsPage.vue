@@ -279,7 +279,11 @@ const monthShort = (key: string) => {
   return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'short' });
 };
 
-onIonViewWillEnter(loadAll);
+onIonViewWillEnter(() => {
+  // Recompute on entry — kept-alive page must follow month rollovers.
+  viewedMonth.value = localMonthKey(new Date());
+  loadAll();
+});
 
 onUnmounted(() => {
   if (donutChart) { donutChart.destroy(); donutChart = null; }

@@ -146,7 +146,7 @@ import {
   onIonViewWillEnter
 } from '@ionic/vue';
 import type { RefresherCustomEvent } from '@ionic/vue';
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import type { MuscleGroup } from '@/features/gym/types/models';
 import {
   getExercises,
@@ -237,11 +237,8 @@ const handleRefresh = async (event: RefresherCustomEvent) => {
   }
 };
 
-onMounted(() => {
-  LoadExercises();
-  getMuscleGroups().then((data) => (muscleGroups.value = data));
-});
-
+// ionViewWillEnter fires on first entry too — a separate onMounted loader ran
+// everything twice on page open.
 onIonViewWillEnter(() => {
   LoadExercises();
   getMuscleGroups().then((data) => (muscleGroups.value = data));

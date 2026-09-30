@@ -20,6 +20,12 @@ describe('parseCSV', () => {
     const rows = parseCSV('a,b\r\n1,2\r\n\r\n');
     expect(rows).toEqual([['a', 'b'], ['1', '2']]);
   });
+
+  test('lone CR line endings terminate rows', () => {
+    // CR-only exports used to collapse into a single giant row (no pushRow on \r).
+    const rows = parseCSV('a,b\r1,2\r');
+    expect(rows).toEqual([['a', 'b'], ['1', '2']]);
+  });
 });
 
 describe('normalizeImportDate / Amount', () => {

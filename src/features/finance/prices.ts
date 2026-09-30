@@ -104,22 +104,23 @@ const fetchCrypto = async (items: PriceableHolding[], out: Map<number, PriceQuot
 // free frankfurter.app FX endpoint (ECB reference rates, no key), with a tiny
 // in-memory cache so N holdings sharing a quote currency = 1 request.
 
-const fxCache = new Map<string, number>(); // "EUR->USD" → rate
+const fxCache = new Map<string, { rate: number; at: number }>(); // "EUR->USD" → {rate, fetched at}
 const FX_TTL_MS = 60 * 60 * 1000;
-let fxCacheAt = 0;
 
 export async function fxRate(from: string, to: string): Promise<number | null> {
   const f = from.toUpperCase();
   const t = to.toUpperCase();
   if (f === t) return 1;
   const key = `${f}->${t}`;
-  if (fxCache.has(key) && Date.now() - fxCacheAt < FX_TTL_MS) return fxCache.get(key)!;
+  // Per-pair timestamps — a single shared one let the first-cached pair's clock
+  // reset on every later fetch, keeping stale rates alive for a whole session.
+  const cached = fxCache.get(key);
+  if (cached && Date.now() - cached.at < FX_TTL_MS) return cached.rate;
   try {
     const data = await getJson(`https://api.frankfurter.app/latest?from=${f}&to=${t}`);
     const rate = typeof data?.rates?.[t] === 'number' ? data.rates[t] : null;
     if (rate != null) {
-      fxCache.set(key, rate);
-      fxCacheAt = Date.now();
+      fxCache.set(key, { rate, at: Date.now() });
     }
     return rate;
   } catch {

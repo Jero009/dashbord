@@ -65,7 +65,15 @@ export function parseCSV(raw: string, delimiter?: Delimiter): string[][] {
       pushCell();
       i++;
     } else if (ch === '\r') {
-      i++; // consume \r\n or lone \r as row end
+      if (raw[i + 1] === '\n') {
+        // \r\n — skip the \r only; the \n branch pushes the row.
+        i++;
+      } else {
+        // Lone \r (old Mac exports) IS a row end — without pushRow() here a
+        // CR-only file collapses into one giant row.
+        pushRow();
+        i++;
+      }
     } else if (ch === '\n') {
       pushRow();
       i++;

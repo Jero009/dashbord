@@ -202,7 +202,7 @@
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonCard, IonCardHeader, IonCardContent, IonCardSubtitle, IonCardTitle, IonList, IonItem, IonButton, IonIcon, IonButtons, IonRefresher, IonRefresherContent, onIonViewWillEnter, alertController } from '@ionic/vue';
 import type { RefresherCustomEvent } from '@ionic/vue';
 import { add } from 'ionicons/icons';
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { getTemplates, getTemplateExercises, deleteTemplate, setTemplateArchived } from '@/shared/db/app_db';
 import { hapticLight } from '@/shared/utils/haptics';
@@ -306,10 +306,7 @@ const handleRefresh = async (event: RefresherCustomEvent) => {
 };
 
 
-onMounted(() => {
-    loadTemplates();
-});
-
+// ionViewWillEnter fires on first entry too — no separate onMounted loader.
 onIonViewWillEnter(() => {
   loadTemplates();
 });

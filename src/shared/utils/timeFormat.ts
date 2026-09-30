@@ -57,12 +57,17 @@ export const parseLocalDate = (dateStr: string): Date => new Date(`${dateStr}T12
 // Full ISO-8601 WITH local timezone offset (e.g. `2026-09-23T18:04:38+02:00`).
 // `toISOString()` gives UTC (Z) — correct as an instant but wrong as a wire
 // format when the receiver needs the local wall clock. Accepts Date or any
-// parseable string (naive-local `YYYY-MM-DD HH:MM:SS` is read as LOCAL).
+// parseable string: naive-local `YYYY-MM-DD HH:MM:SS` is read as LOCAL, and a
+// DATE-ONLY string (`YYYY-MM-DD`) is anchored at LOCAL NOON — `new Date(
+// 'YYYY-MM-DD')` is UTC midnight per spec and would render the previous day
+// in any UTC− timezone (same reason parseLocalDate anchors at noon).
 export const localIsoWithOffset = (value: Date | string | number): string => {
   const d = value instanceof Date
     ? value
     : typeof value === 'string'
-      ? new Date(/T|Z/.test(value) ? value : value.replace(' ', 'T'))
+      ? /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T12:00:00`)
+        : new Date(/T|Z/.test(value) ? value : value.replace(' ', 'T'))
       : new Date(value);
   if (Number.isNaN(d.getTime())) return '';
   const offsetMin = -d.getTimezoneOffset();

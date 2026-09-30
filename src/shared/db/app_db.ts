@@ -1152,7 +1152,7 @@ export async function updatePlan(
     await db.run(
       `UPDATE gym_plan SET
          name = COALESCE(?, name),
-         goal = ?,
+         goal = COALESCE(?, goal),
          start_date = COALESCE(?, start_date),
          end_date = COALESCE(?, end_date),
          deload_every_weeks = COALESCE(?, deload_every_weeks),
@@ -1161,7 +1161,7 @@ export async function updatePlan(
        WHERE id = ?;`,
       [
         input.name ?? null,
-        input.goal !== undefined ? input.goal : null,
+        input.goal ?? null, // COALESCE-guarded in the UPDATE like every other field
         input.start_date ?? null,
         input.end_date ?? null,
         input.deload_every_weeks ?? null,
