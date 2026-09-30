@@ -378,6 +378,40 @@ function localDayWindow(daysAgo: number): { startISO: string; endISO: string; da
 
 // Pure window-join logic lives in sleepJoin.ts (unit-tested); these thin
 // wrappers keep every existing call site untouched.
+
+// Continuous HR ~1440 samples/day; 3-day chunks keep each read safely under
+// the 5000-sample bridge cap while covering the whole sync window.
+const HR_CHUNK_DAYS = 3;
+const HR_CHUNK_LIMIT = 5000;
+
+async function fetchHeartRateSamples(startISO: string, endISO: string): Promise<{ samples: HealthSample[] }> {
+  const endMs = new Date(endISO).getTime();
+  const startMs = new Date(startISO).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return { samples: [] };
+  }
+  const chunkMs = HR_CHUNK_DAYS * 24 * 60 * 60 * 1000;
+  const samples: HealthSample[] = [];
+  // Oldest chunk first so the concat stays time-ordered for the window joins.
+  for (let chunkStart = startMs; chunkStart < endMs; chunkStart += chunkMs) {
+    const chunkEnd = Math.min(chunkStart + chunkMs, endMs);
+    try {
+      const res = await Health.readSamples({
+        dataType: 'heartRate',
+        startDate: new Date(chunkStart).toISOString(),
+        endDate: new Date(chunkEnd).toISOString(),
+        limit: HR_CHUNK_LIMIT,
+        ascending: true,
+      });
+      samples.push(...(res.samples ?? []));
+    } catch (error) {
+      // A failed chunk must not kill the sync — same contract as the other
+      // reads; the affected nights just keep whatever they already had.
+      console.error('HR chunk fetch failed', error);
+    }
+  }
+  return { samples };
+}
 function pickPrimarySleepSample(samples: HealthSample[]): HealthSample | null {
   return pickPrimarySleepSamplePure(samples, getSleepHours);
 }
@@ -536,18 +570,15 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
       bucket: 'day',
       aggregation: 'min',
     }).catch(() => ({ samples: [] as import('@capgo/capacitor-health').AggregatedSample[] })),
-    // HR: continuous HR is ~1440 samples/day (Amazfit). A 30-day read exceeds any
-    // bridge limit, so fetch oldest->newest with the max limit and let the newest
-    // days win when truncated — then per-night windows pick whatever exists.
-    // (The previous fixed 7-day window meant nights older than 7 days could never
-    // get sleep HR, even after a manual 30-day re-sync.)
-    Health.readSamples({
-      dataType: 'heartRate',
-      startDate,
-      endDate,
-      limit: 5000,
-      ascending: true,
-    }),
+    // HR: continuous HR is ~1440 samples/day (Amazfit). The plugin pages Health
+    // Connect records from the START of the window and stops at `limit`, then
+    // keeps the first `limit` samples — so a single 30-day read with limit 5000
+    // silently keeps only the OLDEST ~3.5 days (the comment here once claimed
+    // the opposite). Chunk the window into ≤3-day slices and concat: every
+    // chunk fits the bridge cap, so all nights keep their sleep HR.
+    // (The original fixed 7-day window meant nights older than 7 days could
+    // never get sleep HR, even after a manual 30-day re-sync.)
+    fetchHeartRateSamples(startDate, endDate),
     Health.readSamples({
       dataType: 'respiratoryRate',
       startDate,
