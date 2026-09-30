@@ -78,6 +78,30 @@ describe('workoutMirror timestamps (FIXPLAN #30)', () => {
     expect(new Date(p!.ended_at).getTime()).toBe(Date.UTC(2026, 8, 23, 18, 15, 0))
   })
 
+  it('ISO-offset time_start (the shape startWorkoutFromTemplate now writes) round-trips exactly', async () => {
+    // Regression for the UTC-column-default bug: time_start used to be
+    // UTC-naive from CURRENT_TIMESTAMP and got parsed as local, inflating
+    // duration by the UTC offset (37 min mirrored as 157). New rows carry
+    // full ISO-8601 with offset — the mirror must keep the instant verbatim.
+    h.results.push([
+      {
+        name: 'push a 12',
+        time_start: '2026-09-29T14:39:46+02:00',
+        time_end: '2026-09-29T13:16:23.000Z',
+        session_rpe: null,
+      },
+    ])
+    h.results.push([])
+
+    const p = await buildPayloadForWorkout(6)
+    expect(p).not.toBeNull()
+    // Same instant in → same instant out.
+    expect(new Date(p!.started_at).getTime()).toBe(new Date('2026-09-29T14:39:46+02:00').getTime())
+    expect(new Date(p!.ended_at).getTime()).toBe(Date.UTC(2026, 8, 29, 13, 16, 23))
+    // 12:39:46Z → 13:16:23Z = 37 min, NOT 157.
+    expect(p!.duration_minutes).toBe(37)
+  })
+
   it('duration_minutes is computed app-side and sane (no receiver parsing)', async () => {
     // 18:04:38 local start, 18:15:00Z end — the real elapsed time, whatever
     // the local offset is, is (18:15Z − start) minutes.
