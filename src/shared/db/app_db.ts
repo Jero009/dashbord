@@ -2540,11 +2540,15 @@ export async function getRecentHealthMetrics(type: string, limit: number = 30) {
 
 export async function queryReadinessHistory(days = 14): Promise<{ date: string; score: number }[]> {
   if (!db) return [];
+  // Cutoff computed in TS on the LOCAL clock — `date('now')` is UTC and ends
+  // the window one day early between local midnight and the UTC offset
+  // (Slovenia: 00:00–02:00). Keys stored in this table are local (localDateISO).
+  const since = addDays(localDateISO(), -days);
   const result = await db.query(
     `SELECT date, score FROM readiness_score
-     WHERE date >= date('now', ?)
+     WHERE date >= ?
      ORDER BY date ASC;`,
-    [`-${days} days`]
+    [since]
   );
   return ((result.values ?? []) as { date: string; score: number }[]);
 }
@@ -2570,22 +2574,27 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
   };
   if (!db) return empty;
 
-  const since = `-${days} days`;
-  const prevSince = `-${days * 2} days`;
+  // Cutoffs computed in TS on the LOCAL clock — `date('now')` is UTC and ends
+  // the window one day early between local midnight and the UTC offset. The
+  // workout/volume subqueries keep 'localtime' (they filter wall-clock
+  // timestamps); the rest compare stored local date keys.
+  const todayKey = localDateISO();
+  const since = addDays(todayKey, -days);
+  const prevSince = addDays(todayKey, -days * 2);
 
   const [
     workoutsR, volumeR, sleepR, readinessR, prevReadinessR,
     spentR, budgetR, netNowR, netThenR,
   ] = await Promise.all([
-    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start, 'localtime') >= date('now', ?, 'localtime');`, [since]),
-    db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at, 'localtime') >= date('now', ?, 'localtime');`, [since]),
-    db.query(`SELECT AVG(score) AS v FROM sleep_session WHERE score IS NOT NULL AND date >= date('now', ?);`, [since]),
-    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?);`, [since]),
-    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= date('now', ?) AND date < date('now', ?);`, [prevSince, since]),
-    db.query(`SELECT SUM(amount) AS v FROM finance_transaction WHERE type = 'expense' AND date >= date('now', ?);`, [since]),
+    db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start, 'localtime') >= date('now', ?, 'localtime');`, [`-${days} days`]),
+    db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at, 'localtime') >= date('now', ?, 'localtime');`, [`-${days} days`]),
+    db.query(`SELECT AVG(score) AS v FROM sleep_session WHERE score IS NOT NULL AND date >= ?;`, [since]),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= ?;`, [since]),
+    db.query(`SELECT AVG(score) AS v FROM readiness_score WHERE date >= ? AND date < ?;`, [prevSince, since]),
+    db.query(`SELECT SUM(amount) AS v FROM finance_transaction WHERE type = 'expense' AND date >= ?;`, [since]),
     db.query(`SELECT SUM(monthly_limit) AS v FROM finance_budget;`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`),
-    db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot WHERE date <= date('now', ?) ORDER BY date DESC LIMIT 1;`, [since]),
+    db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot WHERE date <= ? ORDER BY date DESC LIMIT 1;`, [since]),
   ]);
 
   const num = (r: any, key = 'v') => {
@@ -3097,12 +3106,15 @@ export interface NetWorthPoint {
 // Daily net-worth snapshots over the last N days (oldest first) for the trend chart.
 export async function getNetWorthHistory(days = 90): Promise<NetWorthPoint[]> {
   if (!db) return [];
+  // Local cutoff key — `date('now')` is UTC and starts the window a day late
+  // between local midnight and the UTC offset.
+  const since = addDays(localDateISO(), -days);
   const result = await db.query(
     `SELECT date, total_assets, total_liabilities
      FROM net_worth_snapshot
-     WHERE date >= date('now', ?)
+     WHERE date >= ?
      ORDER BY date ASC;`,
-    [`-${days} days`]
+    [since]
   );
   return ((result.values ?? []) as { date: string; total_assets: number; total_liabilities: number }[]).map(
     (r) => {
@@ -3115,16 +3127,25 @@ export async function getNetWorthHistory(days = 90): Promise<NetWorthPoint[]> {
 
 export async function queryMonthlySpending(months = 6): Promise<MonthlySpending[]> {
   if (!db) return [];
+  // Window start = first day of (months-1) months ago, on the LOCAL calendar.
+  // `date('now','start of month', ?)` resolves in UTC and picks the previous
+  // local month's start between local midnight and the UTC offset on the 1st.
+  // Year overflow normalized (Nov + 6 months → previous-year June).
+  const [y, m] = localDateISO().split('-').map(Number);
+  const zero = m - 1 - (months - 1);
+  const year = y + Math.floor(zero / 12);
+  const month = ((zero % 12) + 12) % 12;
+  const since = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const result = await db.query(
     `SELECT
        strftime('%Y-%m', date) AS month,
        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense,
        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income
      FROM finance_transaction
-     WHERE date >= date('now', 'start of month', ?)
+     WHERE date >= ?
      GROUP BY month
      ORDER BY month ASC;`,
-    [`-${months - 1} months`]
+    [since]
   );
   return ((result.values ?? []) as { month: string; expense: number; income: number }[])
     .map((r) => ({ month: r.month, expense: Number(r.expense) || 0, income: Number(r.income) || 0 }));
