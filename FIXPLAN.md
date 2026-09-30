@@ -12,7 +12,18 @@ Rules for every batch:
 - Homescreen widgets: STARTED — v3.9 ships the sleep-score widget (RemoteViews + DashboardWidget snapshot plugin, `SleepWidgetProvider`); more widgets deferred.
 
 ## v3.14.x additions (Hermes sync, post-release debugging)
-- #30 Gym mirror timestamp consistency: WorkoutPage mirror payload mixes formats — `started_at` naive local (`2026-09-22 08:34:50`) vs `ended_at` ISO-with-Z (`...T...Z`). Receiver-side duration parsed wrong (showed 120 min for a seconds-long test). Fix: emit both as full ISO-8601 with timezone in `workoutMirror.ts`; verify `analysis/data.py` parses both (it did, but only by luck of fallback). Also surface `duration_minutes` from the app itself instead of receiver recompute, so the number survives even if timestamps drift.
+- #30 Gym mirror timestamp consistency: DONE (two-part fix). v3.14 fixed the FORMAT (both sides ISO-8601); v3.19 fixed the root cause the format fix missed — `startWorkoutFromTemplate` omitted `time_start`, so SQLite's UTC `CURRENT_TIMESTAMP` filled it and the mirror parsed it as local (durations inflated by the UTC offset, started_at 2h early). `time_start` is now written as full local ISO-8601 at insert; regression test pins the ISO-offset round-trip (`workoutMirrorFormat.spec.ts`). NOTE: workouts logged BEFORE v3.19 keep their wrong mirrored started_at/duration in the receiver (true start was 2h later than shown).
+
+## v3.19 debug-pass additions (2026-09-30, full-repo parallel audit — evidence in AUDIT_*.md, untracked)
+- HistoryPage infinite scroll: DONE — pagination state was non-reactive, scroll never armed (only first 20 workouts ever shown).
+- HR backfill truncation: DONE — plugin keeps the OLDEST samples at the cap; fetch now chunked into 3-day windows so every night gets sleep HR.
+- UTC `date('now')` window boundaries: DONE — readiness history, review digest (sleep/readiness/spend/netThen), net-worth trend, monthly spending now take TS-computed local cutoff keys as SQL params.
+- Rest-timer expiry off WorkoutPage: DONE — expiry no longer cancels the scheduled OS ding (`finalizeExpiredTimer`); Home/GymHome expiry handlers route through it.
+- Hermes push seen-stamp: DONE — advances only to the last DELIVERED message; delivery stops at first failure; missing permission throws (messages were being lost forever).
+- Transaction edit notes wipe: DONE — existing notes round-trip through the edit form.
+- Subscription auto-post double-fire race: DONE — single in-flight pass shared across Home/Finance entry hooks.
+- Low batch: CSV lone-CR rows (+test), per-pair FX TTL, `updatePlan` goal COALESCE, `localIsoWithOffset` date-only noon anchor, viewedMonth rollover resets (Budget/Analytics), ExercisePicker/Template double loaders, raw color literals → tokens (sweep complete, zero left).
+- DEFERRED (verified, not fixed — see AUDIT_*.md): widget mirror keeps yesterday's values when a night is missing (needs Java-side "missing = fallback" redesign); O(n·m) sleep-HR window join (perf only); unscoped `<style>` blocks on 5 gym pages (collision risk, big diff); stale `todayKey` captures in TrainingLoadOverlay/HealthHeatmap after midnight; hermes notification-id collisions (~15-min congruence); `todayEvents` dead ref; ACWR 1500-day guard truncation.
 
 ## Batch 1 — HIGH bugs (code)
 - #2 Ghost rest-timer ding: DONE (v3.7) — shared `useRestTimer` composable (`src/shared/composables/useRestTimer.ts`); WorkoutPage owns start/adjust/skip/expiry and schedules the AlarmManager-backed ding at timer start; GymHomePage + HomePage read the same canonical localStorage record and clear via `cancelRestTimer()` (cancels the OS ding + countdown notification everywhere); unit-tested in `tests/unit/useRestTimer.spec.ts`.
