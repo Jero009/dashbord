@@ -287,7 +287,7 @@ onIonViewWillEnter(() => {
 }
 
 .tile {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--nt-tile);
   border-radius: 10px;
   padding: 12px;
   display: grid;

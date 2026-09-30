@@ -111,10 +111,10 @@
 }
 
 .exercise-search {
-  --background: rgba(255, 255, 255, 0.06);
+  --background: rgba(var(--nt-ink), 0.06);
   --color: var(--nt-text);
-  --placeholder-color: rgba(255, 255, 255, 0.4);
-  --icon-color: rgba(255, 255, 255, 0.4);
+  --placeholder-color: rgba(var(--nt-ink), 0.4);
+  --icon-color: rgba(var(--nt-ink), 0.4);
   --border-radius: var(--nt-radius-sm);
   --box-shadow: none;
   padding: 0;

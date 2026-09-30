@@ -258,7 +258,7 @@ onIonViewWillEnter(loadData);
 
 .range-btn {
   background: transparent;
-  border: 1px solid var(--nt-border, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--nt-border);
   border-radius: var(--nt-radius-sm, 6px);
   color: var(--nt-text-dim);
   font-size: 0.72rem;

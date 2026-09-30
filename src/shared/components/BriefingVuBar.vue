@@ -58,9 +58,9 @@ const litSegments = computed(() => {
      red/yellow/green, clearly dimmer than any lit segment. */
   transition: background var(--nt-dur-std) var(--nt-ease-std);
 }
-.vu-seg:nth-child(1) { background: rgba(215, 26, 33, 0.14); }
-.vu-seg:nth-child(2) { background: rgba(255, 215, 0, 0.12); }
-.vu-seg:nth-child(3) { background: rgba(34, 197, 94, 0.13); }
+.vu-seg:nth-child(1) { background: color-mix(in srgb, var(--vu-red) 14%, transparent); }
+.vu-seg:nth-child(2) { background: color-mix(in srgb, var(--vu-yellow) 12%, transparent); }
+.vu-seg:nth-child(3) { background: color-mix(in srgb, var(--vu-green) 13%, transparent); }
 
 /* Lit = FULL brightness, unmistakable against the unlit tint */
 .vu-seg:nth-child(1).is-lit { background: var(--vu-red); }
