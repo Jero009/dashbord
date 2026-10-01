@@ -28,20 +28,20 @@
           />
           <p v-else class="hero-hint">Net worth trend builds as you use the app daily.</p>
 
-          <!-- Assets vs liabilities split -->
+          <!-- Income vs spend split (this month) -->
           <div class="split">
             <div class="split__bar">
-              <div class="split__seg split__seg--asset" :style="{ width: `${assetPct}%` }"></div>
-              <div class="split__seg split__seg--liab" :style="{ width: `${100 - assetPct}%` }"></div>
+              <div class="split__seg split__seg--income" :style="{ width: `${incomePct}%` }"></div>
+              <div class="split__seg split__seg--spend" :style="{ width: `${100 - incomePct}%` }"></div>
             </div>
             <div class="split__legend">
               <div class="split__item">
-                <span class="split__label"><i class="dot dot--asset"></i>Assets</span>
-                <strong>{{ formatCurrency(totalAssets) }}</strong>
+                <span class="split__label"><i class="dot dot--income"></i>Income</span>
+                <strong>{{ formatCurrency(monthIncome) }}</strong>
               </div>
               <div class="split__item split__item--end">
-                <span class="split__label"><i class="dot dot--liab"></i>Liabilities</span>
-                <strong>{{ formatCurrency(liabilities) }}</strong>
+                <span class="split__label"><i class="dot dot--spend"></i>Spend</span>
+                <strong>{{ formatCurrency(monthExpense) }}</strong>
               </div>
             </div>
           </div>
@@ -189,8 +189,6 @@ import { showToast } from '@/shared/utils/toast';
 import { localMonthISO } from '@/shared/utils/timeFormat';
 import {
   computeNetWorth,
-  computeTotalAssets,
-  accountLiabilitiesTotal,
   upcomingBills,
   savingsRate,
   categoryLabel,
@@ -215,11 +213,10 @@ const loading = ref(true);
 const failed = ref<Record<string, boolean>>({});
 
 const netWorth = computed(() => computeNetWorth(accounts.value, investments.value));
-const totalAssets = computed(() => computeTotalAssets(accounts.value, investments.value));
-const liabilities = computed(() => accountLiabilitiesTotal(accounts.value));
-const assetPct = computed(() => {
-  const denom = totalAssets.value + liabilities.value;
-  return denom > 0 ? (totalAssets.value / denom) * 100 : 100;
+// Income vs spend split (replaced the assets-vs-liabilities bar).
+const incomePct = computed(() => {
+  const denom = monthIncome.value + monthExpense.value;
+  return denom > 0 ? (monthIncome.value / denom) * 100 : 100;
 });
 
 // Delta vs the first snapshot in the trend window.
@@ -461,11 +458,11 @@ onIonViewWillEnter(loadFinance);
   height: 100%;
 }
 
-.split__seg--asset {
+.split__seg--income {
   background: rgba(var(--nt-ink), 0.85);
 }
 
-.split__seg--liab {
+.split__seg--spend {
   background: var(--ion-color-accent-red);
 }
 
@@ -506,11 +503,11 @@ onIonViewWillEnter(loadFinance);
   border-radius: 2px;
 }
 
-.dot--asset {
+.dot--income {
   background: rgba(var(--nt-ink), 0.85);
 }
 
-.dot--liab {
+.dot--spend {
   background: var(--ion-color-accent-red);
 }
 

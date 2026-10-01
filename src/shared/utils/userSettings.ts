@@ -96,5 +96,12 @@ export function setCoinGeckoApiKey(key: string): void { localStorage.setItem('co
 // Defaults OFF (opt-in): never light up hardware the user hasn't asked for.
 export function getGlyphMatrixEnabled(): boolean { return localStorage.getItem('glyph_matrix_enabled') === '1' }
 export function setGlyphMatrixEnabled(v: boolean): void { localStorage.setItem('glyph_matrix_enabled', v ? '1' : '0') }
+
+// Hermes integration kill switch — full cut when off: no Hermes tab, no push
+// polling/notifications, no briefing/grades pull, no gym-workout mirror.
+// Defaults ON: the integration is the established behavior; this is an escape
+// hatch, not an opt-in feature.
+export function getHermesIntegrationEnabled(): boolean { return localStorage.getItem('hermes_integration_enabled') !== '0' }
+export function setHermesIntegrationEnabled(v: boolean): void { localStorage.setItem('hermes_integration_enabled', v ? '1' : '0') }
 export function getReceiverWriteKey(): string { return localStorage.getItem('receiver_write_key') ?? '' }
 export function setReceiverWriteKey(key: string): void { localStorage.setItem('receiver_write_key', key.trim()) }

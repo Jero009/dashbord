@@ -2861,6 +2861,37 @@ export async function setFinanceSubscriptionStatus(id: number, status: 'active' 
   }
 }
 
+/**
+ * Mark the current due period as paid: stamps last_posted_date with
+ * next_due_date (so the auto-poster skips it) and rolls next_due_date forward
+ * one cadence step. Same invariant as postDueSubscriptions: one transaction
+ * per period, catch-up-safe. Returns the new due date.
+ */
+export async function markSubscriptionPaid(id: number): Promise<string | null> {
+  if (!db) return null;
+  const res = await db.query(`SELECT name, amount, cadence, next_due_date, account_id, direction, last_posted_date FROM finance_subscription WHERE id = ?;`, [id]);
+  const sub = res.values?.[0];
+  if (!sub) return null;
+  const due = sub.next_due_date ? String(sub.next_due_date) : null;
+  if (!due) return null;
+  // Period already posted → just roll forward (matches the auto-poster's
+  // already-posted branch, no double transaction).
+  const nextDue = nextDueAfter(due, String(sub.cadence));
+  if (sub.last_posted_date !== due) {
+    await addFinanceTransaction(
+      due,
+      String(sub.name),
+      'subscriptions',
+      Number(sub.amount) || 0,
+      sub.direction === 'income' ? 'income' : 'expense',
+      'Marked paid',
+      sub.account_id != null ? Number(sub.account_id) : undefined
+    );
+  }
+  await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDue, id]);
+  return nextDue;
+}
+
 export async function deleteFinanceSubscription(id: number) {
   if (!db) return;
   try {

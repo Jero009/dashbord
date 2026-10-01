@@ -6,6 +6,10 @@
 
     <ion-content :fullscreen="true">
       <div class="hermes-shell">
+        <template v-if="!hermesOn">
+          <p class="nt-empty">Hermes integration is off. Enable it in Settings → Hardware.</p>
+        </template>
+        <template v-else>
         <!-- Today verdict hero -->
         <div class="card recovery-card" :class="recovery ? `recovery-card--${recovery.level}` : ''">
           <div class="card-header">
@@ -99,6 +103,7 @@
           </p>
           <p class="hint-copy">Polled from the health receiver (type <span class="mono">hermes</span>).</p>
         </div>
+        </template>
       </div>
     </ion-content>
   </ion-page>
@@ -122,6 +127,7 @@ import { computeInsights, type DatedValue, type Insight } from '@/shared/health/
 import { localDateISO } from '@/shared/utils/timeFormat';
 import { hapticLight } from '@/shared/utils/haptics';
 import { fetchHermesMessages, type HermesMessage } from '@/shared/hermes/hermesPush';
+import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 import { syncGrades, getCachedGrades, averageGrade, type GradeRow } from '@/shared/sync/gradesStore';
 import { syncBriefing, getCachedBriefing } from '@/shared/sync/briefingStore';
 
@@ -132,6 +138,8 @@ const acwrVal = ref<string | null>(null);
 const recoveryZVal = ref<string | null>(null);
 const insights = ref<Insight[]>([]);
 const pushMessages = ref<HermesMessage[]>([]);
+// Kill switch — this page is still deep-linkable with the tab hidden.
+const hermesOn = ref(getHermesIntegrationEnabled());
 const pushLoading = ref(false);
 
 const recoveryLabel = computed(() => ({
@@ -225,7 +233,9 @@ const grades = ref<GradeRow[]>([]);
 const gradesAvg = computed(() => averageGrade(grades.value, 10));
 
 onIonViewWillEnter(() => {
+  hermesOn.value = getHermesIntegrationEnabled();
   grades.value = getCachedGrades();
+  if (!hermesOn.value) return;
   loadAll();
   void refreshPush();
 });

@@ -199,6 +199,19 @@
               </label>
             </div>
           </div>
+
+          <div class="notif-row">
+            <div class="notif-row__label">
+              <span class="notif-title">Hermes integration</span>
+              <span class="notif-sub">Agent tab, briefings, gym sync &amp; push messages</span>
+            </div>
+            <div class="notif-row__controls">
+              <label class="notif-toggle">
+                <input type="checkbox" v-model="hermesEnabled" @change="saveHermes" />
+                <span class="notif-toggle__track"></span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- DATA & SYNC -->
@@ -243,6 +256,7 @@
 import { ref, computed, watch } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, IonInput, toastController, alertController } from '@ionic/vue'
 import { showToast } from '@/shared/utils/toast';
+import { stopHermesPolling } from '@/shared/hermes/hermesPush';
 import { downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
@@ -253,6 +267,7 @@ import {
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
   getNotifBillAlertEnabled, setNotifBillAlertEnabled, getNotifBillAlertTime, setNotifBillAlertTime,
   getGlyphMatrixEnabled, setGlyphMatrixEnabled,
+  getHermesIntegrationEnabled, setHermesIntegrationEnabled,
   getCoinGeckoApiKey, setCoinGeckoApiKey,
   getReceiverWriteKey, setReceiverWriteKey,
   getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
@@ -423,6 +438,15 @@ const saveNotifBill = async () => {
 const glyphMatrixEnabled = ref(getGlyphMatrixEnabled())
 const saveGlyphMatrix = () => {
   setGlyphMatrixEnabled(glyphMatrixEnabled.value)
+  hapticLight()
+}
+
+// Hermes integration kill switch (full cut): stops the push poll immediately
+// when disabled; every other gate re-reads on its next entry point.
+const hermesEnabled = ref(getHermesIntegrationEnabled())
+const saveHermes = () => {
+  setHermesIntegrationEnabled(hermesEnabled.value)
+  if (!hermesEnabled.value) stopHermesPolling()
   hapticLight()
 }
 

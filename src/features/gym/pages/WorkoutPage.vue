@@ -517,6 +517,7 @@ import {
 
 import { getWorkoutExercises,getWorkoutSets,updateWorkoutSet,getWorkoutById,endWorkout,cancelWorkout, addSetToWorkoutExercise, getNextSetNumber, deleteWorkoutSet, deleteWorkoutExercise, getLatestCompletedSetsForExercise, updateWorkoutExerciseOrders, updateExerciseRestSeconds, getLatestBodyWeight, setWorkoutSessionRpe, resequenceWorkoutSetNumbers } from '@/shared/db/app_db';
 import { mirrorWorkoutToReceiver } from '@/shared/sync/workoutMirror';
+import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 import { pushActivityWidgetSnapshot } from '@/shared/health/healthConnect';
 import { formatRestTime } from '@/shared/utils/timeFormat';
 import { resolvedDeloadConfig, type ResolvedDeloadConfig } from '@/shared/utils/trainingPhase';
@@ -718,8 +719,9 @@ const saveWorkout = async () => {
           if (sessionRpe != null) await setWorkoutSessionRpe(workoutId, sessionRpe);
           const achievedPRs = await endWorkout(workoutId);
           // Mirror to the receiver (dirty-queued, retried offline) — background
-          // concern, must never block or break the end-workout flow.
-          void mirrorWorkoutToReceiver(workoutId);
+          // concern, must never block or break the end-workout flow. Kill
+          // switch: when Hermes is off, nothing leaves the phone.
+          if (getHermesIntegrationEnabled()) void mirrorWorkoutToReceiver(workoutId);
           // Refresh the activity widget so today's cell lights up immediately
           // (same best-effort contract as the mirror).
           void pushActivityWidgetSnapshot();

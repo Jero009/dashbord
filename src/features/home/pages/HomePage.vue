@@ -8,7 +8,7 @@
       <div class="home-shell">
 
         <!-- Hermes daily briefing (local-first: cached, refreshed by pull) -->
-        <ion-card v-if="briefing" class="summary-card briefing-card" button @click="openHermes">
+        <ion-card v-if="briefing && hermesOn" class="summary-card briefing-card" button @click="openHermes">
           <div class="card-topline">
             <p class="nt-kicker">Hermes briefing</p>
             <span class="card-date">{{ briefingLabel }}</span>
@@ -227,7 +227,7 @@ import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics
 import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval, finalizeExpiredTimer } from '@/shared/composables/useRestTimer';
 import { dueWithin, billAlertBody } from '@/features/finance/billAlerts';
 import { scheduleBillAlert, cancelBillAlert } from '@/shared/utils/notifications';
-import { getNotifBillAlertEnabled, getNotifBillAlertTime } from '@/shared/utils/userSettings';
+import { getNotifBillAlertEnabled, getNotifBillAlertTime, getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 import { Capacitor } from '@capacitor/core';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
@@ -261,7 +261,14 @@ const openHermes = () => {
   hapticLight();
   router.push('/hermes');
 };
+// Kill switch: re-read on view enter via loadAll — kept-alive page.
+const hermesOn = ref(getHermesIntegrationEnabled());
 const loadBriefing = async () => {
+  if (!hermesOn.value) {
+    briefing.value = null;
+    gradeLine.value = '';
+    return;
+  }
   briefing.value = getCachedBriefing();
   await Promise.all([
     syncBriefing().then((next) => { if (next) briefing.value = next; }),
@@ -678,6 +685,7 @@ const buildBatteryChart = () => {
 
 const loadAll = async () => {
   todayStr = localDateISO();
+  hermesOn.value = getHermesIntegrationEnabled(); // kill switch re-read on every entry
   // Recovery FIRST: loadBriefing resolves the verdict from recovery.value and
   // must never read a stale/null snapshot (they share the same engine).
   await loadRecovery();

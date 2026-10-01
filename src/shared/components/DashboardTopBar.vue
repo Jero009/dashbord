@@ -17,7 +17,7 @@
       <ion-segment-button value="analytics">
         <ion-label>Analytics</ion-label>
       </ion-segment-button>
-      <ion-segment-button value="hermes">
+      <ion-segment-button v-if="hermesEnabled" value="hermes">
         <ion-label>Hermes</ion-label>
       </ion-segment-button>
       </ion-segment>
@@ -36,9 +36,19 @@ import { hapticLight } from '@/shared/utils/haptics';
 import { settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 
 const router = useRouter();
 const route = useRoute();
+
+// Kill switch: the Hermes tab exists only while the integration is on.
+// computed keyed on the route so it re-reads localStorage on every navigation —
+// top bars live inside kept-alive pages, a setup-time ref would go stale after
+// toggling in Settings and navigating back.
+const hermesEnabled = computed(() => {
+  void route.fullPath;
+  return getHermesIntegrationEnabled();
+});
 
 const activeTab = computed(() => {
   if (route.path.startsWith('/analytics')) return 'analytics';

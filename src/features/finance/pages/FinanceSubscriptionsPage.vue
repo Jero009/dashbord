@@ -101,6 +101,9 @@
                 <span class="list-item__value" :class="{ 'metric-positive': sub.direction === 'income' }">
                   {{ sub.direction === 'income' ? '+' : '' }}{{ formatCurrency(Number(sub.amount) || 0) }}
                 </span>
+                <button class="row-icon" aria-label="Mark paid" @click="markPaid(sub)">
+                  <ion-icon :icon="checkmarkOutline" />
+                </button>
                 <button class="row-icon" :aria-label="isActive(sub) ? 'Pause' : 'Resume'" @click="toggleStatus(sub)">
                   <ion-icon :icon="isActive(sub) ? pauseOutline : playOutline" />
                 </button>
@@ -135,7 +138,7 @@ import {
   alertController,
 } from '@ionic/vue';
 import { showToast } from '@/shared/utils/toast';
-import { createOutline, trashOutline, pauseOutline, playOutline } from 'ionicons/icons';
+import { createOutline, trashOutline, pauseOutline, playOutline, checkmarkOutline } from 'ionicons/icons';
 import { computed, ref } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
@@ -144,6 +147,7 @@ import {
   updateFinanceSubscription,
   deleteFinanceSubscription,
   setFinanceSubscriptionStatus,
+  markSubscriptionPaid,
   getFinanceSubscriptions,
   getFinanceAccounts,
 } from '@/shared/db/app_db';
@@ -278,6 +282,21 @@ const toggleStatus = async (sub: SubscriptionRow) => {
     return;
   }
   await loadSubscriptions();
+};
+
+// Accept the current period as paid: logs the transaction (unless the
+// auto-poster already did) and rolls the due date forward one cadence.
+const markPaid = async (sub: SubscriptionRow) => {
+  hapticLight();
+  try {
+    await markSubscriptionPaid(Number(sub.id));
+  } catch {
+    await showToast('update failed', 'warning');
+    return;
+  }
+  await loadSubscriptions();
+  hapticSuccess();
+  await showToast(`${sub.name} marked paid`, 'success');
 };
 
 const confirmDelete = async (sub: SubscriptionRow) => {
