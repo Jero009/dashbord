@@ -91,5 +91,10 @@ export function setNotifBillAlertTime(t: string): void { localStorage.setItem('n
 
 export function getCoinGeckoApiKey(): string { return localStorage.getItem('coingecko_api_key') ?? '' }
 export function setCoinGeckoApiKey(key: string): void { localStorage.setItem('coingecko_api_key', key.trim()) }
+
+// Glyph Matrix (Nothing back LED grid) — rest-timer countdown dial.
+// Defaults OFF (opt-in): never light up hardware the user hasn't asked for.
+export function getGlyphMatrixEnabled(): boolean { return localStorage.getItem('glyph_matrix_enabled') === '1' }
+export function setGlyphMatrixEnabled(v: boolean): void { localStorage.setItem('glyph_matrix_enabled', v ? '1' : '0') }
 export function getReceiverWriteKey(): string { return localStorage.getItem('receiver_write_key') ?? '' }
 export function setReceiverWriteKey(key: string): void { localStorage.setItem('receiver_write_key', key.trim()) }

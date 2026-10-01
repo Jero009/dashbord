@@ -6,11 +6,27 @@
 
 import { glyphInit, glyphDraw, glyphClear, glyphDeinit } from './glyphMatrix'
 import { restRingFrame, fullFrame, blankFrame } from './glyphFrames'
+import { getGlyphMatrixEnabled } from './userSettings'
 
 // One lazy bind per page session. `ready` is null until the first attempt
 // resolves, then true (bound) or false (no matrix — stop trying).
 let initPromise: Promise<boolean> | null = null
 let ready: boolean | null = null
+
+// Toggled per-set: flipping OFF mid-rest drops any existing binding on the
+// next call; flipping ON re-binds lazily via ensureReady() (ready reset to null).
+function glyphEnabled(): boolean {
+  if (!getGlyphMatrixEnabled()) {
+    if (ready !== null) {
+      ready = null
+      initPromise = null
+      void glyphClear()
+      void glyphDeinit()
+    }
+    return false
+  }
+  return true
+}
 
 // Bumped by every entry point that wants to drive the matrix. The end-flash loop
 // (and any awaiting draw) captures the current value and bails if it's been
@@ -32,6 +48,7 @@ function sleep(ms: number): Promise<void> {
 // Draw the depleting dial for `fraction` of rest remaining (0..1). Safe to call
 // every tick — binding happens once, later calls are a single draw.
 export async function glyphRestDraw(fraction: number): Promise<void> {
+  if (!glyphEnabled()) return
   const gen = ++drawGen
   if (!(await ensureReady())) return
   if (gen !== drawGen) return // a newer draw started while we were binding
@@ -41,7 +58,7 @@ export async function glyphRestDraw(fraction: number): Promise<void> {
 // End-of-rest flourish: a couple of full-grid flashes (companion to the audible
 // ding), then hand the matrix back to the system.
 export async function glyphRestEnd(): Promise<void> {
-  if (ready !== true) return
+  if (!glyphEnabled()) return
   const gen = ++drawGen
   for (let i = 0; i < 2; i++) {
     if (gen !== drawGen) return // a new rest dial superseded us — abandon the flash
@@ -58,7 +75,7 @@ export async function glyphRestEnd(): Promise<void> {
 // Stop drawing immediately (skip/stop) and hand the matrix back.
 export async function glyphRestStop(): Promise<void> {
   drawGen++ // abort any in-flight end-flash
-  if (ready !== true) return
+  if (!glyphEnabled()) return
   await glyphClear()
 }
 

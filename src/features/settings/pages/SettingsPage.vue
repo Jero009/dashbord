@@ -183,6 +183,24 @@
           </div>
         </div>
 
+        <!-- HARDWARE -->
+        <div class="card">
+          <p class="nt-kicker">Hardware</p>
+
+          <div class="notif-row">
+            <div class="notif-row__label">
+              <span class="notif-title">Glyph Matrix</span>
+              <span class="notif-sub">Rest-timer dial on the back display · Nothing phones</span>
+            </div>
+            <div class="notif-row__controls">
+              <label class="notif-toggle">
+                <input type="checkbox" v-model="glyphMatrixEnabled" @change="saveGlyphMatrix" />
+                <span class="notif-toggle__track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <!-- DATA & SYNC -->
         <div class="card">
           <p class="nt-kicker">Data &amp; sync</p>
@@ -234,6 +252,7 @@ import {
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
   getNotifBillAlertEnabled, setNotifBillAlertEnabled, getNotifBillAlertTime, setNotifBillAlertTime,
+  getGlyphMatrixEnabled, setGlyphMatrixEnabled,
   getCoinGeckoApiKey, setCoinGeckoApiKey,
   getReceiverWriteKey, setReceiverWriteKey,
   getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
@@ -398,6 +417,13 @@ const saveNotifBill = async () => {
   setNotifBillAlertTime(notifBillTime.value)
   // Toggle-off must also disarm a notification armed by an earlier Home entry.
   if (!notifBillEnabled.value) await cancelBillAlert()
+}
+
+// --- Hardware ---
+const glyphMatrixEnabled = ref(getGlyphMatrixEnabled())
+const saveGlyphMatrix = () => {
+  setGlyphMatrixEnabled(glyphMatrixEnabled.value)
+  hapticLight()
 }
 
 // --- Database: export / import ---
