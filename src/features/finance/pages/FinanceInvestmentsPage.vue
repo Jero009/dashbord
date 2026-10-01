@@ -300,8 +300,6 @@ const refreshPrices = async (silent: boolean) => {
   }
 };
 
-
-
 const resetForm = () => {
   editingId.value = null;
   investmentName.value = '';
@@ -414,76 +412,6 @@ onIonViewWillEnter(loadAll);
   --padding-bottom: 24px;
 }
 
-.finance-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  gap: 16px;
-}
-
-.finance-card {
-  margin: 0;
-  border-radius: var(--nt-radius-md);
-  background: var(--ion-color-primary);
-  padding: 18px;
-  display: grid;
-  gap: 16px;
-}
-
-.summary-card {
-  gap: 14px;
-}
-
-.summary-value {
-  font-family: var(--nt-font-display);
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--nt-fg);
-  line-height: 1;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.summary-cell {
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--nt-tile);
-  display: grid;
-  gap: 6px;
-}
-
-.summary-cell span {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.summary-cell strong {
-  font-family: var(--nt-font-mono);
-  font-size: 0.95rem;
-  color: var(--nt-fg);
-}
-
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-
-
-.card-count {
-  font-size: 0.72rem;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
 .metric-positive {
   color: var(--nt-data-positive);
 }
@@ -560,53 +488,12 @@ onIonViewWillEnter(loadAll);
   gap: 10px;
 }
 
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--nt-tile);
-}
-
-.list-item__info {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.list-item__name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--nt-fg);
-}
-
-.list-item__meta {
-  font-size: 0.72rem;
-  text-transform: capitalize;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.list-item__end {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .list-item__figs {
   display: grid;
   gap: 3px;
   justify-items: end;
 }
 
-.list-item__value {
-  font-family: var(--nt-font-mono);
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--nt-fg);
-  white-space: nowrap;
-}
 
 .list-item__gain {
   font-family: var(--nt-font-mono);
@@ -614,17 +501,6 @@ onIonViewWillEnter(loadAll);
   white-space: nowrap;
 }
 
-.row-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--nt-radius-pill);
-  border: none;
-  background: var(--nt-tile);
-  color: rgba(var(--nt-ink), 0.6);
-  font-size: 0.95rem;
-}
 
 .field-hint {
   font-size: 0.68rem;
@@ -671,12 +547,6 @@ onIonViewWillEnter(loadAll);
   color: rgba(var(--nt-ink), 0.4);
 }
 
-.list-item__name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 
 .ticker {
   font-family: var(--nt-font-mono);

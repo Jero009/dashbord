@@ -19,7 +19,7 @@
         </div>
 
         <!-- Category breakdown -->
-        <div class="card">
+        <div class="finance-card">
           <p class="nt-kicker">Spending by category</p>
           <template v-if="categories.length > 0">
             <div class="donut-wrap">
@@ -41,7 +41,7 @@
         </div>
 
         <!-- Budget vs actual -->
-        <div class="card">
+        <div class="finance-card">
           <p class="nt-kicker">Budget vs actual</p>
           <template v-if="budgetRows.length > 0">
             <div class="budget-list">
@@ -67,7 +67,7 @@
         </div>
 
         <!-- Monthly trend -->
-        <div class="card">
+        <div class="finance-card">
           <p class="nt-kicker">Income vs spending</p>
           <template v-if="monthly.length > 1">
             <div class="chart-readout">
@@ -292,24 +292,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.finance-shell {
-  padding: 16px;
-  display: grid;
-  gap: 16px;
-  max-width: 760px;
-  margin: 0 auto;
-  width: min(100%, 760px);
-}
-
-.card {
-  background: var(--ion-color-primary);
-  border-radius: var(--nt-radius-md);
-  padding: 18px;
-  display: grid;
-  gap: 14px;
-}
-
-
 
 /* Month nav */
 .month-nav {

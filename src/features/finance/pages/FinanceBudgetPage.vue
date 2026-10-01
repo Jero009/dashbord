@@ -406,8 +406,6 @@ const beginEditTransaction = (transaction: Record<string, any>) => {
   transactionAccountId.value = transaction.account_id != null ? Number(transaction.account_id) : null;
 };
 
-
-
 const saveTransaction = async () => {
   if (!transactionName.value.trim()) {
     await showToast('name required', 'warning');
@@ -646,35 +644,6 @@ onIonViewWillEnter(async () => {
 .finance-content {
   --padding-top: 16px;
   --padding-bottom: 24px;
-}
-
-.finance-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  gap: 16px;
-}
-
-.finance-card {
-  margin: 0;
-  border-radius: var(--nt-radius-md);
-  background: var(--ion-color-primary);
-  padding: 18px;
-  display: grid;
-  gap: 16px;
-}
-
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.card-count {
-  font-size: 0.72rem;
-  color: var(--nt-text-dim);
 }
 
 .month-nav {
@@ -925,58 +894,7 @@ onIonViewWillEnter(async () => {
   gap: 10px;
 }
 
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--nt-tile);
-}
-
-.list-item__info {
-  display: grid;
-  gap: 6px;
-}
-
-.list-item__name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--nt-fg);
-}
-
-.list-item__meta {
-  font-size: 0.72rem;
-  color: var(--nt-text-dim);
-}
-
-.list-item__end {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.list-item__value {
-  font-family: var(--nt-font-mono);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--nt-fg);
-  white-space: nowrap;
-}
-
 .row-delete,
-.row-icon {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--nt-radius-pill);
-  border: none;
-  background: var(--nt-tile);
-  color: var(--nt-text-dim);
-  font-size: 0.9rem;
-}
 
 .link-btn {
   background: none;

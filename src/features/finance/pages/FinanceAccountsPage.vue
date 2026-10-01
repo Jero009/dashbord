@@ -177,8 +177,6 @@ const loadAccounts = async () => {
   investments.value = inv;
 };
 
-
-
 const resetForm = () => {
   editingId.value = null;
   accountName.value = '';
@@ -268,77 +266,6 @@ onIonViewWillEnter(loadAccounts);
 .finance-content {
   --padding-top: 16px;
   --padding-bottom: 24px;
-}
-
-.finance-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  gap: 16px;
-}
-
-.finance-card {
-  margin: 0;
-  border-radius: var(--nt-radius-md);
-  background: var(--ion-color-primary);
-  padding: 18px;
-  display: grid;
-  gap: 16px;
-}
-
-.summary-card {
-  gap: 14px;
-}
-
-.summary-value {
-  font-family: var(--nt-font-display);
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--nt-fg);
-  line-height: 1;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.summary-cell {
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--nt-tile);
-  display: grid;
-  gap: 6px;
-}
-
-.summary-cell span {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.summary-cell strong {
-  font-family: var(--nt-font-mono);
-  font-size: 0.95rem;
-  color: var(--nt-fg);
-}
-
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-
-
-.card-count {
-  font-family: var(--nt-font-mono);
-  font-size: 0.82rem;
-  color: rgba(var(--nt-ink), 0.85);
 }
 
 .metric-negative {
@@ -454,18 +381,5 @@ onIonViewWillEnter(loadAccounts);
   color: var(--nt-fg);
   white-space: nowrap;
 }
-
-.row-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--nt-radius-pill);
-  border: none;
-  background: var(--nt-tile);
-  color: rgba(var(--nt-ink), 0.6);
-  font-size: 0.95rem;
-}
-
 
 </style>

@@ -334,13 +334,6 @@ onIonViewWillEnter(loadFinance);
   --padding-bottom: 24px;
 }
 
-.finance-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  gap: 16px;
-}
 
 .page-loading {
   display: flex;
@@ -357,32 +350,9 @@ onIonViewWillEnter(loadFinance);
   color: var(--ion-color-accent-red);
 }
 
-.finance-card {
-  margin: 0;
-  border-radius: var(--nt-radius-md);
-  background: var(--ion-color-primary);
-  padding: 18px;
-  display: grid;
-  gap: 16px;
-}
 
 .tappable {
   cursor: pointer;
-}
-
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-
-
-.card-count {
-  font-family: var(--nt-font-mono);
-  font-size: 0.82rem;
-  color: rgba(var(--nt-ink), 0.85);
 }
 
 .chev {
