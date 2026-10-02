@@ -25,6 +25,12 @@ Rules for every batch:
 - Low batch: CSV lone-CR rows (+test), per-pair FX TTL, `updatePlan` goal COALESCE, `localIsoWithOffset` date-only noon anchor, viewedMonth rollover resets (Budget/Analytics), ExercisePicker/Template double loaders, raw color literals → tokens (sweep complete, zero left).
 - DEFERRED (verified, not fixed — see AUDIT_*.md): widget mirror keeps yesterday's values when a night is missing (needs Java-side "missing = fallback" redesign); O(n·m) sleep-HR window join (perf only); unscoped `<style>` blocks on 5 gym pages (collision risk, big diff); stale `todayKey` captures in TrainingLoadOverlay/HealthHeatmap after midnight; hermes notification-id collisions (~15-min congruence); `todayEvents` dead ref; ACWR 1500-day guard truncation.
 
+## v3.23.0 finance polish (2026-10-02)
+- Finance data honesty: DONE — Accounts, Investments, Budget and Finance Analytics now distinguish database errors from true empty states; net-worth range errors remain visible even when a stale chart is retained.
+- Budget pacing: DONE — projected month-end spend per budget, including invalid/zero/day-boundary guards and no fabricated forecast for a closed month.
+- Finance simplification: DONE — Overview duplicate income/spend split and Analytics duplicate budget-vs-actual list removed; category labels and local calendar display helpers centralized.
+- Finance insight: DONE — Analytics Review shows Health & Fitness spend per logged workout, null-safe when no workouts exist; net-worth history supports 30/90/365-day ranges with stale-response protection.
+
 ## Batch 1 — HIGH bugs (code)
 - #2 Ghost rest-timer ding: DONE (v3.7) — shared `useRestTimer` composable (`src/shared/composables/useRestTimer.ts`); WorkoutPage owns start/adjust/skip/expiry and schedules the AlarmManager-backed ding at timer start; GymHomePage + HomePage read the same canonical localStorage record and clear via `cancelRestTimer()` (cancels the OS ding + countdown notification everywhere); unit-tested in `tests/unit/useRestTimer.spec.ts`.
 - #3 Session-RPE alert hang: `promptSessionRpe` (WorkoutPage.vue) must resolve on backdrop dismiss (onDidDismiss) so endWorkout always runs.
