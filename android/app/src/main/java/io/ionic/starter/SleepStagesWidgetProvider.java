@@ -31,7 +31,7 @@ public class SleepStagesWidgetProvider extends AppWidgetProvider {
     // purpose: the timeline renders into an ARGB_8888 bitmap via Canvas/Paint,
     // so the fractional alphas of the web rgba() values carry over as-is
     // (deep 0.97 → F7, light/REM/awake 0.95 → F2); no flattening to opaque.
-    private static final int COLOR_DEEP = 0xF74560D8;   // rgba(58,99,216,0.97)
+    private static final int COLOR_DEEP = 0xF73A63D8;   // rgba(58,99,216,0.97)
     private static final int COLOR_LIGHT = 0xF282AAFA;  // rgba(130,170,250,0.95)
     private static final int COLOR_REM = 0xF22DD4EE;    // rgba(45,212,238,0.95)
     private static final int COLOR_AWAKE = 0xF2FFD700;  // goal gold #FFD700 at 0.95

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { calculateBattery, type ActivitySummary } from '@/shared/health/healthConnect';
 
-const now = new Date('2026-10-02T12:00:00Z');
+const now = new Date(2026, 9, 2, 12, 0, 0);
 
 const activity = (overrides: Partial<ActivitySummary> = {}): ActivitySummary => ({
   workoutType: 'walking',
-  startDate: '2026-10-02T10:00:00Z',
-  endDate: '2026-10-02T10:30:00Z',
+  startDate: '2026-10-02T10:00:00',
+  endDate: '2026-10-02T10:30:00',
   durationMinutes: 30,
   calories: 250,
   distanceKm: null,
@@ -28,8 +28,8 @@ describe('calculateBattery live inputs', () => {
 
   it('preserves workout drain and suppresses activity drain', () => {
     const workouts = [{
-      time_start: '2026-10-02T09:00:00Z',
-      time_end: '2026-10-02T10:00:00Z',
+      time_start: '2026-10-02T09:00:00',
+      time_end: '2026-10-02T10:00:00',
       total_kg: 3000,
     }];
 

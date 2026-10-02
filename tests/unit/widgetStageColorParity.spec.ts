@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 // the alpha channel is preserved — we deliberately keep the same fractional
 // alpha as the web rgba() values instead of flattening to opaque ARGB.
 const CANONICAL_ARGB: Record<string, number> = {
-  deep: 0xF74560D8, // alpha 0.97 → F7, rgb(58,99,216)
+  deep: 0xF73A63D8, // alpha 0.97 → F7, rgb(58,99,216)
   light: 0xF282AAFA, // alpha 0.95 → F2, rgb(130,170,250)
   rem: 0xF22DD4EE, // alpha 0.95 → F2, rgb(45,212,238)
 };
