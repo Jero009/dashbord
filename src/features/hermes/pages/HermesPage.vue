@@ -10,43 +10,6 @@
           <p class="nt-empty">Hermes integration is off. Enable it in Settings → Hardware.</p>
         </template>
         <template v-else>
-        <!-- Today verdict hero -->
-        <div class="card recovery-card" :class="recovery ? `recovery-card--${recovery.level}` : ''">
-          <div class="card-header nt-card-topline">
-            <p class="nt-kicker">Today</p>
-            <span v-if="recovery" class="recovery-pill" :class="`recovery-pill--${recovery.level}`">
-              {{ recoveryLabel }}
-            </span>
-          </div>
-          <strong class="recovery-headline">{{ recovery ? recoveryLabel : 'No verdict yet' }}</strong>
-          <p class="recovery-reason">
-            {{ recovery?.reason ?? 'Not enough recovery history — sync Health Connect and log a few workouts.' }}
-          </p>
-        </div>
-
-        <!-- Summary tiles Hermes reads -->
-        <div class="card">
-          <p class="nt-kicker">Signals</p>
-          <div class="tile-grid">
-            <div class="tile">
-              <span class="tile__label">Readiness</span>
-              <strong class="tile__value">{{ readinessVal ?? '—' }}</strong>
-            </div>
-            <div class="tile">
-              <span class="tile__label">Sleep score</span>
-              <strong class="tile__value">{{ sleepVal ?? '—' }}</strong>
-            </div>
-            <div class="tile">
-              <span class="tile__label">ACWR</span>
-              <strong class="tile__value">{{ acwrVal ?? '—' }}</strong>
-            </div>
-            <div class="tile">
-              <span class="tile__label">Recovery z</span>
-              <strong class="tile__value">{{ recoveryZVal ?? '—' }}</strong>
-            </div>
-          </div>
-          <p class="hint-copy">Same numbers Hermes reads when drafting your briefings.</p>
-        </div>
 
         <!-- Cross-domain insights -->
         <div class="card">
@@ -120,9 +83,7 @@ import {
   queryReadinessHistory,
   getSessionLoads,
 } from '@/shared/db/app_db';
-import { computeTodayRecovery, type RecoveryRecommendation } from '@/shared/health/todayRecovery';
-import { computeDailyLoads, computeAcwrSeries, type AcwrPoint } from '@/shared/health/trainingLoad';
-import { computeRecoverySeries, type RecoveryPoint } from '@/shared/health/recoveryBaseline';
+import { computeDailyLoads } from '@/shared/health/trainingLoad';
 import { computeInsights, type DatedValue, type Insight } from '@/shared/health/insights';
 import { localDateISO } from '@/shared/utils/timeFormat';
 import { hapticLight } from '@/shared/utils/haptics';
@@ -131,22 +92,12 @@ import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 import { syncGrades, getCachedGrades, averageGrade, type GradeRow } from '@/shared/sync/gradesStore';
 import { syncBriefing, getCachedBriefing } from '@/shared/sync/briefingStore';
 
-const recovery = ref<RecoveryRecommendation | null>(null);
-const readinessVal = ref<number | null>(null);
-const sleepVal = ref<number | null>(null);
-const acwrVal = ref<string | null>(null);
-const recoveryZVal = ref<string | null>(null);
 const insights = ref<Insight[]>([]);
 const pushMessages = ref<HermesMessage[]>([]);
 // Kill switch — this page is still deep-linkable with the tab hidden.
 const hermesOn = ref(getHermesIntegrationEnabled());
 const pushLoading = ref(false);
 
-const recoveryLabel = computed(() => ({
-  train: 'Train hard',
-  maintain: 'Maintain',
-  recover: 'Recover',
-}[recovery.value?.level ?? 'maintain']));
 
 const formatPushTime = (unixSec: number) => {
   if (!unixSec) return '';
@@ -165,7 +116,6 @@ const loadAll = async () => {
     getSessionLoads(28).catch(() => []),
   ]);
 
-  const today = localDateISO();
   const rhr: DatedValue[] = rhrRows
     .map((r: { date: string; value: number }) => ({ date: r.date, value: Number(r.value) }))
     .filter((r: DatedValue) => Number.isFinite(r.value));
@@ -183,20 +133,6 @@ const loadAll = async () => {
     sessionRpe: s.session_rpe,
   }));
 
-  recovery.value = computeTodayRecovery({ sessions: sessionInputs, rhr, readiness, today });
-
-  // Same series the TrainingLoadOverlay charts — one ACWR number, one recovery z.
-  const acwrSeries = computeAcwrSeries(computeDailyLoads(sessionInputs), { endDate: today });
-  const latestAcwr = [...acwrSeries].reverse().find((p: AcwrPoint) => p.acwr != null);
-  acwrVal.value = latestAcwr?.acwr != null ? latestAcwr.acwr.toFixed(2) : null;
-
-  const recoverySeries = computeRecoverySeries(rhr, 'rhr');
-  const latestZ = [...recoverySeries].reverse().find((p: RecoveryPoint) => p.recoveryZ != null);
-  recoveryZVal.value = latestZ?.recoveryZ != null ? latestZ.recoveryZ.toFixed(2) : null;
-
-  readinessVal.value = [...readiness].reverse().find((r: DatedValue) => r.date === today)?.value
-    ?? readinessRows[readinessRows.length - 1]?.score ?? null;
-  sleepVal.value = sleep[0]?.score ?? null;
 
   insights.value = computeInsights({
     sleepHours,
@@ -266,56 +202,6 @@ onIonViewWillEnter(() => {
   flex-wrap: wrap;
 }
 
-.recovery-headline {
-  font-family: var(--nt-font-head);
-  font-size: 1.4rem;
-  letter-spacing: var(--nt-tracking-label);
-  text-transform: uppercase;
-}
-
-.recovery-pill {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: var(--nt-tracking-label);
-  padding: 4px 10px;
-  border-radius: var(--nt-radius-pill);
-}
-
-.recovery-card--train .recovery-pill { color: var(--nt-data-positive); }
-.recovery-card--maintain .recovery-pill { color: var(--nt-text); }
-.recovery-card--recover .recovery-pill { color: var(--nt-accent); }
-
-.recovery-reason {
-  color: var(--nt-text-dim);
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.tile-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.tile {
-  background: var(--nt-tile);
-  border-radius: 10px;
-  padding: 12px;
-  display: grid;
-  gap: 4px;
-}
-
-.tile__label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: var(--nt-tracking-label);
-  color: var(--nt-text-dim);
-}
-
-.tile__value {
-  font-family: var(--nt-font-display);
-  font-size: 1.5rem;
-}
 
 .insight-list {
   display: grid;

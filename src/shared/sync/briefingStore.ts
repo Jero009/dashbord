@@ -70,11 +70,3 @@ export async function syncBriefing(): Promise<Briefing | null> {
   localStorage.setItem(CACHE_KEY, JSON.stringify(next))
   return next
 }
-
-/** Day key (local) for a unix-seconds arrival — is this briefing from today? */
-export function briefingIsToday(b: Briefing, now = new Date()): boolean {
-  const d = new Date(b.receivedAt * 1000)
-  const key = (x: Date) =>
-    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
-  return key(d) === key(now)
-}

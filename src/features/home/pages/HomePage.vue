@@ -7,20 +7,16 @@
     <ion-content :fullscreen="true" class="home-content">
       <div class="home-shell">
 
-        <!-- Local training signal; Hermes only adds optional briefing text. -->
-        <ion-card v-if="briefing" class="summary-card briefing-card" :button="hermesOn" @click="hermesOn && openHermes()">
-          <div class="nt-card-topline">
-            <p class="nt-kicker">Training signal</p>
-            <span class="card-date">{{ briefingLabel }}</span>
-          </div>
+        <!-- Local-only verdict. Detail lives in Analytics; Hermes is the inbox. -->
+        <ion-card v-if="briefing" class="summary-card briefing-card">
+          <p class="nt-kicker">Training signal</p>
           <div class="briefing-head">
             <BriefingVuBar :level="briefing.level" class="briefing-vu" />
             <div class="briefing-head-text">
-              <strong class="briefing-title">{{ briefing.title || 'Daily briefing' }}</strong>
-              <span v-if="gradeLine" class="briefing-grade">{{ gradeLine }}</span>
+              <strong class="briefing-title">{{ trainingSignalVerdict }}</strong>
+              <span v-if="trainingSignalReason" class="briefing-reason">{{ trainingSignalReason }}</span>
             </div>
           </div>
-          <p class="briefing-body">{{ briefingExcerpt }}</p>
         </ion-card>
 
         <!-- Active workout banner -->
@@ -227,66 +223,28 @@ import { getNotifBillAlertEnabled, getNotifBillAlertTime, getHermesIntegrationEn
 import { Capacitor } from '@capacitor/core';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
-import { getCachedBriefing, syncBriefing, briefingIsToday, type Briefing } from '@/shared/sync/briefingStore';
+import { getCachedBriefing, syncBriefing, type Briefing } from '@/shared/sync/briefingStore';
 import { resolvedDeloadConfig } from '@/shared/utils/trainingPhase';
 import { resolveBriefingVerdict, isSickToday } from '@/shared/utils/briefingVerdict';
-import { syncGrades, getCachedGrades, countNewAndMarkSeen, averageGrade } from '@/shared/sync/gradesStore';
+
 import { updateWidgetFields } from '@/shared/widget/widgetBridge';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 const router = useRouter();
 
-// Hermes briefing + grades (receiver mirror; cached for offline, refreshed on load)
+// The receiver copy is retained for the native widget, but Home renders only
+// the local verdict so stale push prose can never contradict current recovery.
 const briefing = ref<Briefing | null>(null);
-const gradeLine = ref('');
-const briefingLabel = computed(() => {
-  if (!briefing.value) return '';
-  if (briefingIsToday(briefing.value)) {
-    return new Date(briefing.value.receivedAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  return briefing.value.receivedAt
-    ? new Date(briefing.value.receivedAt * 1000).toLocaleDateString([], { day: 'numeric', month: 'short' })
-    : '';
-});
-const briefingExcerpt = computed(() => {
-  const body = briefing.value?.body ?? '';
-  const nl = body.indexOf('\n');
-  return nl > 0 ? body.slice(0, nl) : body.slice(0, 140);
-});
-const openHermes = () => {
-  hapticLight();
-  router.push('/hermes');
-};
+const trainingSignalReason = ref('');
+const trainingSignalVerdict = computed(() => briefing.value?.verdict?.split(' · ')[0] ?? 'OK');
 // Kill switch: re-read on view enter via loadAll — kept-alive page.
 const hermesOn = ref(getHermesIntegrationEnabled());
 const loadBriefing = async () => {
-  if (hermesOn.value) {
-    briefing.value = getCachedBriefing();
-    await Promise.all([
-      syncBriefing().then((next) => { if (next) briefing.value = next; }),
-      syncGrades().catch(() => 0),
-    ]);
-    const grades = getCachedGrades();
-    if (grades.length > 0) {
-      const fresh = countNewAndMarkSeen();
-      const avg = averageGrade(grades, 10);
-      gradeLine.value = `Avg ${avg != null ? avg.toFixed(1) : '—'}${fresh > 0 ? ` · ${fresh} new` : ''}`;
-    } else {
-      gradeLine.value = '';
-    }
-  } else {
-    // The traffic light remains fully functional with Hermes disabled.
-    // Only remote briefing copy and grades depend on the integration.
-    briefing.value = null;
-    gradeLine.value = '';
-  }
+  const cached = hermesOn.value ? getCachedBriefing() : null;
+
   // The verdict is fully LOCAL: sick (life_event) > deload (plan) > the
-  // shared recovery engine. The pushed briefing row only supplies text
-  // (title/body); its level is ignored.
-  //
-  // Sequence after loadRecovery (loadAll awaits it first) so the briefing
-  // card never resolves on a stale recovery snapshot — the card must read
-  // the same verdict the chip does.
+  // shared recovery engine. Resolve it before any receiver request so the
+  // card still appears immediately while Hermes is offline.
   const [plan, lifeEvents] = await Promise.all([
     resolvedDeloadConfig(),
     getLifeEvents('sick', 50).catch(() => []),
@@ -294,28 +252,42 @@ const loadBriefing = async () => {
   const resolved = resolveBriefingVerdict({
     plan: { isDeload: plan.isDeload, weekOfPlan: plan.weekOfPlan },
     sick: isSickToday(lifeEvents, localDateISO()),
-    recovery: recovery.value, // guaranteed set by loadRecovery before this runs
+    recovery: recovery.value, // loadAll awaits loadRecovery before this runs
   });
   const localTitle = resolved.reason ? `${resolved.verdict} — ${resolved.reason}` : resolved.verdict;
-  briefing.value = briefing.value
-    ? { ...briefing.value, title: localTitle, level: resolved.level, verdict: resolved.verdict }
-    : {
-        receivedAt: Math.floor(Date.now() / 1000),
-        title: localTitle,
-        body: resolved.reason ?? '',
-        verdict: resolved.verdict,
-        level: resolved.level,
-      };
-  // Refresh the widget snapshot so the briefing widget follows the card.
-  // Always send a level (even unchanged) — updateWidgetFields drops null
-  // fields, which would leave the widget on the stale glyph.
-  const b = briefing.value;
-  void updateWidgetFields({
-    briefingTitle: b.title || 'Daily briefing',
-    briefingBody: b.body,
-    briefingDate: localDateISO(new Date(b.receivedAt * 1000)),
-    briefingLevel: resolved.level,
-  });
+  trainingSignalReason.value = resolved.reason?.split(' — ')[0] ?? '';
+
+  const applyLocalVerdict = (remote: Briefing | null) => {
+    briefing.value = remote
+      ? { ...remote, title: localTitle, level: resolved.level, verdict: resolved.verdict }
+      : {
+          receivedAt: Math.floor(Date.now() / 1000),
+          title: localTitle,
+          body: resolved.reason ?? '',
+          verdict: resolved.verdict,
+          level: resolved.level,
+        };
+
+    // Always send a level — updateWidgetFields drops null fields, which would
+    // leave the native widget on a stale glyph.
+    const b = briefing.value;
+    void updateWidgetFields({
+      briefingTitle: b.title || 'Daily briefing',
+      briefingBody: b.body,
+      briefingDate: localDateISO(new Date(b.receivedAt * 1000)),
+      briefingLevel: resolved.level,
+    });
+  };
+
+  applyLocalVerdict(cached);
+
+  // Remote copy is optional enrichment for the widget/inbox. Never block the
+  // local Home signal on an offline receiver.
+  if (hermesOn.value) {
+    void syncBriefing()
+      .then((next) => { if (next) applyLocalVerdict(next); })
+      .catch(() => {});
+  }
 };
 
 // Weight card
@@ -999,11 +971,6 @@ onMounted(() => {
   color: rgba(var(--nt-ink), 0.5);
 }
 
-/* Hermes briefing card */
-.briefing-card {
-  cursor: pointer;
-}
-
 .briefing-head {
   display: flex;
   align-items: center;
@@ -1012,10 +979,8 @@ onMounted(() => {
 }
 
 .briefing-head-text {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
@@ -1025,24 +990,12 @@ onMounted(() => {
   font-size: 1rem;
   line-height: 1.3;
   color: var(--nt-fg);
+  text-transform: uppercase;
 }
 
-.briefing-grade {
-  flex: none;
-  font-family: var(--nt-font-mono);
-  font-size: 0.72rem;
-  color: var(--nt-text-dim);
-}
-
-.briefing-body {
-  margin: 6px 0 0;
+.briefing-reason {
   font-size: 0.82rem;
-  line-height: 1.45;
   color: var(--nt-text-dim);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .battery-timeline {

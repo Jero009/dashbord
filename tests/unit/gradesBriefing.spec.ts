@@ -6,7 +6,7 @@ import {
   averageGrade,
   type GradeRow,
 } from '@/shared/sync/gradesStore'
-import { getCachedBriefing, syncBriefing, briefingIsToday } from '@/shared/sync/briefingStore'
+import { getCachedBriefing, syncBriefing } from '@/shared/sync/briefingStore'
 
 const store = new Map<string, string>()
 vi.stubGlobal('localStorage', {
@@ -118,11 +118,4 @@ describe('briefingStore', () => {
     expect(getCachedBriefing()?.title).toBe('D2')
   })
 
-  it('briefingIsToday uses local day', () => {
-    const now = new Date()
-    const todaySec = Math.floor(now.getTime() / 1000)
-    const yesterday = new Date(now.getTime() - 86400_000)
-    expect(briefingIsToday({ receivedAt: todaySec, title: '', body: '' }, now)).toBe(true)
-    expect(briefingIsToday({ receivedAt: Math.floor(yesterday.getTime() / 1000), title: '', body: '' }, now)).toBe(false)
-  })
 })
