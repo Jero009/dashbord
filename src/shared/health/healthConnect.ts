@@ -1063,8 +1063,6 @@ export interface BatteryDrains {
   time: number;
   workout: number;
   activity: number;
-  event: number;
-  circadian: number;
 }
 
 export interface BatteryResult {
@@ -1080,15 +1078,9 @@ export function calculateBattery(
   baseline: number,
   now: Date,
   workouts: { time_start: string; time_end: string; total_kg: number | null }[],
-  activities: ActivitySummary[],
-  events: { type: string; date: string; time_start: string | null; time_end: string | null }[],
-  circadianScore: number | null = null
+  activities: ActivitySummary[]
 ): BatteryResult {
-  // Circadian modifier: irregular rhythm reduces effective baseline by up to 10%
-  // (score 0 → ×0.90, score 100 → ×1.00). Matches the documented 0.90–1.00 range.
-  const circMod = circadianScore !== null ? (0.90 + 0.10 * circadianScore / 100) : 1.0;
-  const adjustedBaseline = Math.round(clamp(baseline * circMod, 0, 100));
-  const circadianDrain = Math.round(baseline - adjustedBaseline);
+  const adjustedBaseline = Math.round(clamp(baseline, 0, 100));
 
   // 1. Time drain — gradual fatigue through the day
   const timeDrain = Math.max(0, adjustedBaseline - applyReadinessDrain(adjustedBaseline, now));
@@ -1121,32 +1113,8 @@ export function calculateBattery(
     0, 30
   );
 
-  // 4. Event drain — calendar events that have already started.
-  // Anchor the window to TODAY (recurring events carry their original past date,
-  // so using e.date would always count the full historical duration regardless of
-  // how much of today's occurrence has actually elapsed).
-  const eventDrain = clamp(
-    events.reduce((sum, e) => {
-      if (!e.time_start) return sum;
-      const start = new Date(`${todayStr}T${e.time_start}`);
-      if (start > now) return sum; // future event, no drain yet
-      let endTime = e.time_end ? new Date(`${todayStr}T${e.time_end}`) : new Date(start.getTime() + 3600000);
-      // Overnight window (e.g. sleep 23:00→07:00): end rolls into the next day.
-      if (endTime.getTime() <= start.getTime()) endTime = new Date(endTime.getTime() + 24 * 3600000);
-      const durationHours = Math.max(0, (Math.min(endTime.getTime(), now.getTime()) - start.getTime()) / 3600000);
-      const drainPerHour =
-        e.type === 'sleep'    ? -5 :
-        e.type === 'recovery' ? -2 :
-        e.type === 'workout'  ?  6 :
-        e.type === 'school'   ?  2 :
-        e.type === 'reminder' ?  0 : 4;
-      return sum + clamp(durationHours * drainPerHour, -5, 15);
-    }, 0),
-    -20, 25
-  );
-
   const effectiveActivityDrain = workoutDrain > 0 ? 0 : activityDrain;
-  const score = clamp(Math.round(adjustedBaseline - timeDrain - workoutDrain - effectiveActivityDrain - eventDrain), 0, 100);
+  const score = clamp(Math.round(adjustedBaseline - timeDrain - workoutDrain - effectiveActivityDrain), 0, 100);
 
   return {
     score,
@@ -1155,8 +1123,6 @@ export function calculateBattery(
       time: Math.round(timeDrain),
       workout: Math.round(workoutDrain),
       activity: Math.round(effectiveActivityDrain),
-      event: Math.round(eventDrain),
-      circadian: circadianDrain,
     },
     readyToTrain: score >= 60,
     readyToStudy: score >= 40,

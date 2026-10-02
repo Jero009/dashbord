@@ -436,7 +436,6 @@ const repeatLastWorkout = async () => {
 // Refreshed on each load so a view kept alive across midnight doesn't keep
 // serving yesterday's data.
 let todayStr = localDateISO();
-const todayEvents = ref<Record<string, any>[]>([]);
 const todayWorkouts = ref<{ id: number; name: string | null; time_start: string; time_end: string; total_kg: number | null }[]>([]);
 const todayActivities = ref<ActivitySummary[]>([]);
 
@@ -465,8 +464,7 @@ const battery = computed<BatteryResult | null>(() => {
     baseline.value,
     new Date(nowTick.value),
     todayWorkouts.value,
-    todayActivities.value,
-    todayEvents.value as { type: string; date: string; time_start: string | null; time_end: string | null }[]
+    todayActivities.value
   );
 });
 
@@ -494,7 +492,6 @@ const drainParts = computed(() => {
     d.time > 0 ? `−${d.time} rest` : null,
     d.workout > 0 ? `−${d.workout} workout` : null,
     d.activity > 0 ? `−${d.activity} activity` : null,
-    d.event > 0 ? `−${d.event} events` : null,
   ].filter(Boolean) as string[];
 });
 
@@ -618,13 +615,12 @@ const buildBatteryChart = () => {
   const nowHour = now.getHours() + now.getMinutes() / 60;
   const hours = Array.from({ length: 18 }, (_, i) => i + 6); // 06:00–23:00
   const labels = hours.map(h => `${String(h).padStart(2, '0')}:00`);
-  const evs = todayEvents.value as { type: string; date: string; time_start: string | null; time_end: string | null }[];
   const wks = todayWorkouts.value;
   const acts = todayActivities.value;
 
   const allScores = hours.map(h => {
     const t = new Date(todayStr + 'T' + String(h).padStart(2, '0') + ':00:00');
-    return calculateBattery(baseline.value as number, t, wks, acts, evs).score;
+    return calculateBattery(baseline.value as number, t, wks, acts).score;
   });
 
   // Split at current hour index

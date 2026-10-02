@@ -44,12 +44,7 @@
               <span class="metric-label">Activity</span>
               <span class="metric-value drain-val">-{{ batteryResult.drains.activity }}</span>
             </div>
-            <div class="nt-metric-tile">
-              <span class="metric-label">Events</span>
-              <span class="metric-value" :class="batteryResult.drains.event < 0 ? 'drain-val--positive' : 'drain-val'">
-                {{ batteryResult.drains.event <= 0 ? '+' : '-' }}{{ Math.abs(batteryResult.drains.event) }}
-              </span>
-            </div>
+
           </div>
           <div v-else class="metric-grid readiness-mini-grid">
             <div class="nt-metric-tile">
@@ -387,7 +382,7 @@ const loadReadiness = async () => {
         hrvBaseline:              hrvBaseline.value,
       });
 
-  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value, []);
+  const result = calculateBattery(baseline, new Date(), todayWorkouts.value, activities.value);
   batteryResult.value  = result;
   readinessScore.value = result.score;
 };
