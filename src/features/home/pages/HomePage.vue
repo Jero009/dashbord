@@ -61,18 +61,13 @@
           <div class="summary-card__body">
 
             <div class="battery-ring">
-              <svg viewBox="0 0 120 120" class="readiness-ring__svg" aria-hidden="true">
-                <circle class="readiness-ring__track" cx="60" cy="60" r="46" />
-                <circle
-                  class="readiness-ring__progress"
-                  cx="60" cy="60" r="46"
-                  :style="{ strokeDashoffset: batteryDashOffset, stroke: batteryColor }"
-                />
-              </svg>
-              <div class="readiness-ring__content">
+              <nt-progress-ring
+                :ratio="batteryRatio"
+                :color="batteryColor"
+              >
                 <strong>{{ batteryScore !== null ? batteryScore : '—' }}</strong>
                 <span>{{ battery?.status ?? 'No data' }}</span>
-              </div>
+              </nt-progress-ring>
             </div>
 
             <div class="battery-right">
@@ -215,6 +210,7 @@ import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import BriefingVuBar from '@/shared/components/BriefingVuBar.vue';
+import NtProgressRing from '@/shared/components/NtProgressRing.vue';
 import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, postDueSubscriptions, getFinanceSubscriptions, getLifeEvents} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
@@ -476,7 +472,6 @@ const battery = computed<BatteryResult | null>(() => {
 
 const batteryScore = computed(() => battery.value?.score ?? null);
 const batteryRatio = computed(() => batteryScore.value === null ? 0 : batteryScore.value / 100);
-const batteryDashOffset = computed(() => 289 - 289 * batteryRatio.value);
 const batteryColor = computed(() => {
   const s = batteryScore.value;
   if (s === null) return 'rgba(var(--nt-ink), 0.25)';
@@ -872,10 +867,7 @@ onMounted(() => {
 }
 
 .battery-ring {
-  --score: 0;
-  position: relative;
   width: min(100%, 200px);
-  aspect-ratio: 1;
   margin: 0 auto;
 }
 
@@ -1110,59 +1102,16 @@ onMounted(() => {
   border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 25%, transparent);
 }
 
-.readiness-ring {
-  --score: 0;
-  position: relative;
-  width: min(100%, 260px);
-  aspect-ratio: 1;
-  margin: 0 auto;
-}
+/* Battery ring — shared NtProgressRing; page keeps sizing + center typography */
 
-.readiness-ring__svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.readiness-ring__track,
-.readiness-ring__progress {
-  fill: none;
-  stroke-width: 12;
-  cx: 60;
-  cy: 60;
-  r: 46;
-}
-
-.readiness-ring__track {
-  stroke: rgba(var(--nt-ink), 0.08);
-}
-
-.readiness-ring__progress {
-  stroke: var(--ion-color-accent-red);
-  stroke-linecap: round;
-  stroke-dasharray: 289;
-}
-
-.readiness-ring__content {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 6px;
-  text-align: center;
-  color: var(--nt-fg);
-}
-
-.readiness-ring__content strong {
+.battery-ring :deep(strong) {
   font-size: 3rem;
   font-weight: 700;
   line-height: 1;
   color: var(--nt-fg);
 }
 
-.readiness-ring__content span {
+.battery-ring :deep(span) {
   color: rgba(var(--nt-ink), 0.5);
 }
 

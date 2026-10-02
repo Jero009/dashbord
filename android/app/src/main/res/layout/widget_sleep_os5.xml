@@ -7,7 +7,7 @@
     android:background="@drawable/widget_bg_os5"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="18dp">
+    android:padding="16dp">
 
     <TextView
         android:id="@+id/widget_score"
@@ -16,7 +16,7 @@
         android:fontFamily="@font/geist_mono"
         android:fontWeight="600"
         android:textColor="#FFFFFF"
-        android:textSize="48sp"
+        android:textSize="56sp"
         android:text="--" />
 
     <LinearLayout

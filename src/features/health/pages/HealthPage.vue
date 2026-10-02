@@ -296,7 +296,7 @@ const readinessLabelClass = computed(() => {
 const batteryBarColor = computed(() => {
   const s = readinessScore.value;
   if (s === null) return 'rgba(var(--nt-ink), 0.25)';
-  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 70) return 'var(--nt-data-positive)';
   if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
   return 'var(--ion-color-accent-red)';
 });
@@ -599,7 +599,10 @@ const handleConnect = async () => {
   border-radius: 999px;
 }
 
-.badge--green { background: rgba(34,197,94,0.15); color: rgb(34,197,94); }
+.badge--green {
+  background: color-mix(in srgb, var(--nt-data-positive) 15%, transparent);
+  color: var(--nt-data-positive);
+}
 .badge--muted { background: var(--nt-tile); color: rgba(var(--nt-ink), 0.35); }
 
 .readiness-bar-track {
@@ -802,21 +805,22 @@ const handleConnect = async () => {
   cursor: pointer;
 }
 
+/* Sync button — outline variant, same action/variant as SleepPage + Settings */
 .sync-btn {
   width: 100%;
   padding: 12px;
-  background: var(--ion-color-accent-red);
-  color: var(--nt-on-accent);
-  border: none;
+  background: transparent;
+  border: 1px solid rgba(var(--nt-ink), 0.1);
+  color: rgba(var(--nt-ink), 0.85);
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: border-color 150ms ease;
 }
 
 .sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.sync-btn:not(:disabled):active { background: var(--nt-accent-press); }
+.sync-btn:not(:disabled):active { border-color: rgba(var(--nt-ink), 0.12); }
 
 /* ── Responsive ── */
 @media (min-width: 600px) {

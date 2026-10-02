@@ -13,11 +13,11 @@
           <div class="nt-card-topline vitals-card__topline nt-card-topline--tight">
             <p class="nt-kicker">Heart rate variability</p>
             <div class="range-selector">
-              <button 
+              <button
                 v-for="r in ([30, 90] as const)"
-                :key="r" 
-                class="range-btn" 
-                :class="{ active: hrvRange === r }" 
+                :key="r"
+                class="range-btn"
+                :class="{ 'range-btn--active': hrvRange === r }"
                 @click="hrvRange = r"
               >
                 {{ r }}d
@@ -258,17 +258,20 @@ onIonViewWillEnter(loadData);
   gap: 6px;
 }
 
+/* Neutral selected state — shared convention with BodyPage range filters:
+   foreground border + foreground text, no color fill. */
 .range-btn {
   background: transparent;
-  border: 1px solid var(--nt-border);
-  border-radius: var(--nt-radius-sm, 6px);
-  color: var(--nt-text-dim);
+  border: 1px solid rgba(var(--nt-ink), 0.1);
+  border-radius: var(--nt-radius-sm, 8px);
+  color: rgba(var(--nt-ink), 0.5);
   font-size: 0.72rem;
-  padding: 3px 8px;
-  transition: color var(--nt-ease-std, ease) 140ms, border-color var(--nt-ease-std, ease) 140ms;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
 }
 
-.range-btn.active {
+.range-btn--active {
   color: var(--nt-fg);
   border-color: var(--nt-fg);
 }

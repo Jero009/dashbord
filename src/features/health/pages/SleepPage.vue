@@ -20,16 +20,10 @@
           </div>
 
           <div :key="selectedDate ?? 'none'" class="hero-body nt-enter">
-            <div class="sleep-ring" :style="{ '--score': sleepScoreRatio }">
-              <svg viewBox="0 0 120 120" class="sleep-ring__svg" aria-hidden="true">
-                <circle class="sleep-ring__track" cx="60" cy="60" r="46" />
-                <circle class="sleep-ring__progress" cx="60" cy="60" r="46" />
-              </svg>
-              <div class="sleep-ring__content">
-                <strong>{{ sleepScoreDisplay }}</strong>
-                <span>{{ sleepSubtitle }}</span>
-              </div>
-            </div>
+            <nt-progress-ring class="sleep-ring" :ratio="sleepScoreRatio">
+              <strong>{{ sleepScoreDisplay }}</strong>
+              <span>{{ sleepSubtitle }}</span>
+            </nt-progress-ring>
 
             <div class="hero-stats">
               <div class="nt-metric-tile">
@@ -88,18 +82,19 @@
               <!-- step connectors -->
               <line
                 v-for="(c, i) in hypGeo.connectors" :key="`c${i}`"
-                class="hyp-conn" :x1="c.x" :y1="c.y1" :x2="c.x" :y2="c.y2" :stroke="c.color"
+                class="hyp-conn" :x1="c.x" :y1="c.y1" :x2="c.x" :y2="c.y2"
+                :style="{ stroke: c.color }"
               />
               <!-- stage bars -->
               <line
                 v-for="(b, i) in hypGeo.bars" :key="`b${i}`"
-                class="hyp-bar" :x1="b.x1" :y1="b.y" :x2="b.x2" :y2="b.y" :stroke="b.color"
+                class="hyp-bar" :x1="b.x1" :y1="b.y" :x2="b.x2" :y2="b.y" :style="{ stroke: b.color }"
               />
               <!-- awake spikes -->
               <line
                 v-for="(s, i) in hypGeo.spikes" :key="`s${i}`"
                 class="hyp-spike" :x1="s.x" :y1="HYP_SPIKE_TOP" :x2="s.x" :y2="HYP_SPIKE_BOTTOM"
-                :stroke="s.color" :stroke-width="s.w"
+                :style="{ stroke: s.color }" :stroke-width="s.w"
               />
             </svg>
             <div class="axis-row hyp-axis">
@@ -107,7 +102,7 @@
             </div>
             <div class="hyp-legend">
               <span v-for="st in HYP_LEGEND" :key="st.key" class="hyp-legend__item">
-                <i class="stage-dot" :class="`stage-dot--${st.key}`" />{{ st.label }}
+                <i class="stage-dot" :style="{ background: stageDotColor(st.key) }" />{{ st.label }}
               </span>
             </div>
           </div>
@@ -121,7 +116,7 @@
             <p class="nt-kicker">Stages</p>
             <div v-if="stageRows.length" class="stage-list">
               <div v-for="stage in stageRows" :key="stage.stage" class="stage-row">
-                <div class="stage-dot" :class="`stage-dot--${stage.stage}`"></div>
+                <div class="stage-dot" :style="{ background: stageDotColor(stage.stage) }"></div>
                 <span>{{ stageLabel(stage.stage) }}</span>
                 <strong>{{ stage.minutes }}m</strong>
                 <small>{{ Math.round(stage.share * 100) }}%</small>
@@ -219,7 +214,9 @@ import { computed, ref, toRef } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import StageBarsChart from '@/shared/components/StageBarsChart.vue';
+import NtProgressRing from '@/shared/components/NtProgressRing.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
+import { STAGE_COLORS } from '@/shared/utils/stageBarsGeom';
 import { useCountUp } from '@/shared/composables/useCountUp';
 import type { SleepStageTimeline, SleepHeartRatePoint, SleepStageSummary, SleepSummary } from '@/shared/health/healthConnect';
 import { requestHealthConnectPermissions, syncHealthConnectMetrics } from '@/shared/health/healthConnect';
@@ -540,13 +537,17 @@ type HypMeta =
 function hypStageMeta(raw: string | undefined): HypMeta {
   const k = (raw ?? '').toLowerCase();
   if (k === 'awake' || k === 'inbed' || k === 'in_bed' || k === 'out_of_bed' || k === 'unknown') {
-    return { kind: 'awake', color: 'rgba(255,215,0,0.95)' };
+    return { kind: 'awake', color: STAGE_COLORS.awake };
   }
-  if (k === 'rem') return { kind: 'bar', y: HYP_BAND.rem, color: 'rgba(45,212,238,0.95)' };
-  if (k === 'deep') return { kind: 'bar', y: HYP_BAND.deep, color: 'rgba(58,99,216,0.97)' };
+  if (k === 'rem') return { kind: 'bar', y: HYP_BAND.rem, color: STAGE_COLORS.rem };
+  if (k === 'deep') return { kind: 'bar', y: HYP_BAND.deep, color: STAGE_COLORS.deep };
   // light / asleep / sleeping default to the light band
-  return { kind: 'bar', y: HYP_BAND.light, color: 'rgba(130,170,250,0.95)' };
+  return { kind: 'bar', y: HYP_BAND.light, color: STAGE_COLORS.light };
 }
+
+/** Legend/stage-list dot color for a stage key (canonical map; asleep ≈ light). */
+const stageDotColor = (stage: string): string =>
+  (STAGE_COLORS as Record<string, string>)[stage] ?? STAGE_COLORS.light;
 
 const hypGeo = computed(() => {
   const segs = [...(summary.value?.timeline ?? [])]
@@ -710,57 +711,21 @@ onIonViewWillEnter(async () => {
   gap: 16px;
 }
 
-/* Sleep ring */
+/* Sleep ring — shared NtProgressRing; page keeps sizing + center typography */
 
 .sleep-ring {
-  --score: 0;
-  position: relative;
   width: min(100%, 200px);
-  aspect-ratio: 1;
   margin: 0 auto;
 }
 
-.sleep-ring__svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.sleep-ring__track,
-.sleep-ring__progress {
-  fill: none;
-  stroke-width: 12;
-}
-
-.sleep-ring__track { stroke: rgba(var(--nt-ink), 0.08); }
-
-.sleep-ring__progress {
-  stroke: var(--ion-color-accent-red);
-  stroke-linecap: round;
-  stroke-dasharray: 289;
-  stroke-dashoffset: calc(289 - (289 * var(--score)));
-  transition: stroke-dashoffset var(--nt-dur-emph) var(--nt-ease-decel);
-}
-
-.sleep-ring__content {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 6px;
-  text-align: center;
-}
-
-.sleep-ring__content strong {
+.sleep-ring :deep(strong) {
   font-size: 2.8rem;
   line-height: 1;
   font-weight: 700;
   color: var(--nt-fg);
 }
 
-.sleep-ring__content span {
+.sleep-ring :deep(span) {
   font-size: 0.72rem;
   color: rgba(var(--nt-ink), 0.5);
 }
@@ -841,12 +806,6 @@ onIonViewWillEnter(async () => {
   border-radius: 999px;
   flex-shrink: 0;
 }
-
-.stage-dot--awake  { background: color-mix(in srgb, var(--nt-data-goal) 95%, transparent); }
-.stage-dot--rem    { background: rgba(45, 212, 238, 0.95); }
-.stage-dot--light  { background: rgba(130, 170, 250, 0.95); }
-.stage-dot--deep   { background: rgba(58, 99, 216, 0.97); }
-.stage-dot--asleep { background: rgba(130, 170, 250, 0.6); }
 
 .stage-row span {
   flex: 1;

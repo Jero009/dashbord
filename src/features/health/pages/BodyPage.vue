@@ -559,21 +559,22 @@ onIonViewWillEnter(loadEntries)
   gap: 6px;
 }
 
+/* Neutral selected state — shared convention with VitalsPage range filters:
+   foreground border + foreground text, no color fill. */
 .range-btn {
   padding: 3px 10px;
-  border-radius: 8px;
+  border-radius: var(--nt-radius-sm, 8px);
   border: 1px solid rgba(var(--nt-ink), 0.1);
   background: transparent;
   color: rgba(var(--nt-ink), 0.5);
   font-size: 0.72rem;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: color 150ms ease, border-color 150ms ease;
 }
 
 .range-btn--active {
-  background: var(--ion-color-accent-red);
-  border-color: var(--ion-color-accent-red);
-  color: var(--nt-on-accent);
+  color: var(--nt-fg);
+  border-color: var(--nt-fg);
 }
 
 </style>

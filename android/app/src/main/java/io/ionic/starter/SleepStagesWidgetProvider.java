@@ -25,13 +25,18 @@ import org.json.JSONObject;
  */
 public class SleepStagesWidgetProvider extends AppWidgetProvider {
 
-    // Fixed app-wide stage colors (match the Vue charts)
-    private static final int COLOR_DEEP = 0xFF384860;
-    private static final int COLOR_LIGHT = 0xFF71717A;
-    private static final int COLOR_REM = 0xFFE5C158;
-    private static final int COLOR_AWAKE = 0xFFD71A21;
-    private static final int COLOR_ASLEEP = 0xFF555555;
-    private static final int COLOR_INBED = 0xFF333333;
+    // Fixed app-wide stage colors — canonical source is STAGE_COLORS in
+    // src/shared/utils/stageBarsGeom.ts (kept in lockstep by
+    // tests/unit/widgetStageColorParity.spec.ts). Alpha is preserved on
+    // purpose: the timeline renders into an ARGB_8888 bitmap via Canvas/Paint,
+    // so the fractional alphas of the web rgba() values carry over as-is
+    // (deep 0.97 → F7, light/REM/awake 0.95 → F2); no flattening to opaque.
+    private static final int COLOR_DEEP = 0xF74560D8;   // rgba(58,99,216,0.97)
+    private static final int COLOR_LIGHT = 0xF282AAFA;  // rgba(130,170,250,0.95)
+    private static final int COLOR_REM = 0xF22DD4EE;    // rgba(45,212,238,0.95)
+    private static final int COLOR_AWAKE = 0xF2FFD700;  // goal gold #FFD700 at 0.95
+    private static final int COLOR_ASLEEP = 0x9982AAFA; // light at ~0.6
+    private static final int COLOR_INBED = 0xF2FFD700;  // in-bed behaves as awake (goal gold)
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {

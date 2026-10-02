@@ -43,7 +43,7 @@
     <!-- Legend: same four stage-dot pairs as the Stages card -->
     <div class="stagebars__legend">
       <span v-for="stage in LEGEND" :key="stage.key" class="stagebars__legend-item">
-        <i class="stage-dot" :class="`stage-dot--${stage.key}`" />{{ stage.label }}
+        <i class="stage-dot" :style="{ background: STAGE_COLORS[stage.key] }" />{{ stage.label }}
       </span>
     </div>
   </div>
@@ -239,5 +239,14 @@ const onUp = () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Legend dots are colored via the STAGE_COLORS binding on each <i>, so this
+   component does not depend on parent scoped CSS for the stage encoding. */
+.stagebars__legend .stage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 </style>
