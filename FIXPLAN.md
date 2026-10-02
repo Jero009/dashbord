@@ -61,3 +61,10 @@ Rules for every batch:
 - #28 Single bulk UPDATE for adjacent reorder (or per-row but batched in one transaction).
 - #29 recordNetWorthSnapshot: once per day (compare last snapshot date).
 - #1 AGENTS.md: full rewrite against ACTUAL current code (post-debloat). Verify every documented module exists; document Plan/Cardio/Circadian removal, real tab bar, real feature list. Include useRestTimer + useCrudList conventions added above.
+
+## Redundancy & visual audit — Batch 4 (2026-10-02, branch audit-fix-b4)
+- Dead wrappers: DONE — unused `NtCard.vue`/`NtMetric.vue` deleted (`.nt-kicker`/`.nt-metric-tile` CSS kept).
+- Dead exports: DONE — `getPlanById`, `updatePlan`, `archivePlan`, `getOpenPause`, `updateLifeEventEndDate`, singular `updateWorkoutExerciseOrder`, `chartGoalDataset`, `hapticWarning`, `glyphIsReady` deleted after zero-caller searches. Plural `updateWorkoutExerciseOrders` and native GlyphMatrix `isReady` transport preserved.
+- Habit residue: DONE — `habitStats.ts` + spec deleted; live `shiftDate` moved to `timeFormat.ts` (TDD: `tests/unit/timeFormat.spec.ts`), `aiExport.ts` repointed.
+- Unused plugins: DONE — `@capacitor/camera`, `@capacitor/status-bar` removed; `android.permission.CAMERA` dropped from manifest; `npx cap sync android` run. `@capacitor/keyboard` kept (needs device QA).
+- Docs: DONE — AGENTS.md Plan-feature/routes corrections (this section). Battery simplification deferred to Batch 2 owners (Home/Health).

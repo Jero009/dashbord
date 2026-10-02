@@ -1111,13 +1111,6 @@ export async function getPlans(includeArchived = false): Promise<Plan[]> {
   return (result.values ?? []).map(planFromRow);
 }
 
-export async function getPlanById(id: number): Promise<Plan | null> {
-  if (!db) return null;
-  const result = await db.query('SELECT * FROM gym_plan WHERE id = ? LIMIT 1;', [id]);
-  const row = result.values?.[0];
-  return row ? planFromRow(row as Record<string, unknown>) : null;
-}
-
 /**
  * The one active plan: latest-starting, unarchived, whose (pause-slid) window
  * covers today. Overlapping plans are impossible by convention.
@@ -1135,52 +1128,6 @@ export async function getActivePlan(now: Date = new Date()): Promise<Plan | null
   return null;
 }
 
-export async function updatePlan(
-  id: number,
-  input: Partial<{
-    name: string;
-    goal: string | null;
-    start_date: string;
-    end_date: string;
-    deload_every_weeks: number;
-    deload_factor: number;
-    template_ids: number[];
-  }>
-): Promise<void> {
-  if (!db) return;
-  try {
-    await db.run(
-      `UPDATE gym_plan SET
-         name = COALESCE(?, name),
-         goal = COALESCE(?, goal),
-         start_date = COALESCE(?, start_date),
-         end_date = COALESCE(?, end_date),
-         deload_every_weeks = COALESCE(?, deload_every_weeks),
-         deload_factor = COALESCE(?, deload_factor),
-         template_ids_json = COALESCE(?, template_ids_json)
-       WHERE id = ?;`,
-      [
-        input.name ?? null,
-        input.goal ?? null, // COALESCE-guarded in the UPDATE like every other field
-        input.start_date ?? null,
-        input.end_date ?? null,
-        input.deload_every_weeks ?? null,
-        input.deload_factor ?? null,
-        input.template_ids ? JSON.stringify(input.template_ids) : null,
-        id,
-      ]
-    );
-  } catch (error) {
-    console.error('Error updating plan:', error);
-    throw error;
-  }
-}
-
-export async function archivePlan(id: number): Promise<void> {
-  if (!db) return;
-  await db.run('UPDATE gym_plan SET archived = 1 WHERE id = ?;', [id]);
-}
-
 export async function getPausesForPlan(planId: number): Promise<PlanPause[]> {
   if (!db) return [];
   const result = await db.query(
@@ -1188,17 +1135,6 @@ export async function getPausesForPlan(planId: number): Promise<PlanPause[]> {
     [planId]
   );
   return (result.values ?? []).map((r) => pauseFromRow(r as Record<string, unknown>));
-}
-
-/** The open pause of a plan, if any (end_date IS NULL). */
-export async function getOpenPause(planId: number): Promise<PlanPause | null> {
-  if (!db) return null;
-  const result = await db.query(
-    'SELECT * FROM gym_plan_pause WHERE id_plan = ? AND end_date IS NULL ORDER BY id DESC LIMIT 1;',
-    [planId]
-  );
-  const row = result.values?.[0];
-  return row ? pauseFromRow(row as Record<string, unknown>) : null;
 }
 
 /**
@@ -1283,11 +1219,6 @@ export async function createLifeEvent(input: {
     console.error('Error creating life event:', error);
     throw error;
   }
-}
-
-export async function updateLifeEventEndDate(id: number, endDate: string | null): Promise<void> {
-  if (!db) return;
-  await db.run('UPDATE life_event SET end_date = ? WHERE id = ?;', [endDate, id]);
 }
 
 export interface PlanWorkout {
@@ -2002,15 +1933,6 @@ export async function deleteWorkoutExercise(workoutExerciseId: number) {
   return await db.run(
     'DELETE FROM workout_exercise WHERE id = ?',
     [workoutExerciseId]
-  );
-}
-
-export async function updateWorkoutExerciseOrder(workoutExerciseId: number, orderIndex: number) {
-  if (!db) return;
-
-  return await db.run(
-    'UPDATE workout_exercise SET order_index = ? WHERE id = ?',
-    [orderIndex, workoutExerciseId]
   );
 }
 

@@ -25,16 +25,16 @@ npm run test:e2e      # Cypress (requires dev server running separately)
 
 `src/features/` — isolated modules: **gym**, **health**, **home**, **finance**, **analytics**, **settings**. Each has `routes.ts`, `pages/`, and most have `components/`. Routes are lazy-loaded and merged in `src/router/index.ts`.
 
-There is **no Plan/Calendar/Habits/Goals feature, no Circadian module, and no Cardio page** — these were removed in earlier debloat passes. Don't reintroduce them or reference them in docs/code.
+The **Plan feature is live inside the gym module** (`/tabs/Plan`, `/tabs/PlanBuilder` — `PlanPage.vue`, `PlanBuilderPage.vue`, `planStore.ts`, `planCalendar.ts`). There is **no Calendar/Habits/Goals feature, no Circadian module, and no Cardio page** — these were removed in earlier debloat passes. Don't reintroduce them or reference them in docs/code.
 
 ### Shared Layer
 
 `src/shared/` for cross-feature concerns:
 - `db/app_db.ts` — single SQLite instance, all DB functions exported from here
 - `health/` — Health Connect sync + pure-TS compute services (`healthConnect.ts`, `trainingLoad.ts`, `recoveryBaseline.ts`, `overtraining.ts`, `recoveryTime.ts`, `todayRecovery.ts`, `insights.ts`), plus `HealthConnectAutoSync.vue` (mounted in `App.vue`, syncs on startup)
-- `utils/` — formatting (`timeFormat.ts`, `currency.ts`), user settings accessors (`userSettings.ts`), toasts (`toast.ts`), haptics, notifications, AI export (`aiExport.ts`), rest-timer support (`restTimerAudio.ts`, `restTimerGlyph.ts`), Glyph bridge (`glyphMatrix.ts`, `glyphFrames.ts`), chart helpers (`chartStyle.ts`, `chartGeom.ts`), `math.ts` (clamp etc.), `habitStats.ts`
+- `utils/` — formatting (`timeFormat.ts` incl. `shiftDate`, `currency.ts`), user settings accessors (`userSettings.ts`), toasts (`toast.ts`), haptics, notifications, AI export (`aiExport.ts`), rest-timer support (`restTimerAudio.ts`, `restTimerGlyph.ts`), Glyph bridge (`glyphMatrix.ts`, `glyphFrames.ts`), chart helpers (`chartStyle.ts`, `chartGeom.ts`), `math.ts` (clamp etc.), plan-phase helpers (`planCalendar.ts`, `trainingPhase.ts`)
 - `composables/useTheme.ts` — light/dark/system theme
-- `components/` — `DashboardTopBar.vue` (global tab bar), `TrendChart.vue` (standard SVG trend chart)
+- `src/shared/components/` — `DashboardTopBar.vue` (global tab bar), `TrendChart.vue` (standard SVG trend chart)
 
 ### Top Bar (the app's only tab navigation)
 
@@ -46,7 +46,7 @@ There is **no Plan/Calendar/Habits/Goals feature, no Circadian module, and no Ca
 - `/finance` (+ `/budget`, `/analytics`, `/accounts`, `/investments`, `/subscriptions`)
 - `/health` (+ `/sleep`, `/body`)
 - `/workout/:id`, `/exercise/:id` — workout player, exercise detail
-- `/tabs/` (gym): Home (GymHomePage), Template, Exercise, History, ExercisePicker, TemplateBuilder, TemplateEditor/:id
+- `/tabs/` (gym): Home (GymHomePage), Template, Plan (`/tabs/Plan`), PlanBuilder (`/tabs/PlanBuilder`), Exercise, History, ExercisePicker, TemplateBuilder, TemplateEditor/:id
 - `/analytics` (+ `/gym`, `/review`)
 - `/settings`
 

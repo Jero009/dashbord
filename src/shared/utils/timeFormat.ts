@@ -54,6 +54,15 @@ export const localMonthISO = (date: Date = new Date()): string =>
 // day west of UTC. Inverse of localDateISO for the round-trip.
 export const parseLocalDate = (dateStr: string): Date => new Date(`${dateStr}T12:00:00`);
 
+// Shift a YYYY-MM-DD calendar date by N days, returning a YYYY-MM-DD string.
+// Reads back through localDateISO: `toISOString().slice(0, 10)` would
+// re-introduce the UTC off-by-one the noon anchor exists to avoid.
+export const shiftDate = (dateStr: string, deltaDays: number): string => {
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() + deltaDays);
+  return localDateISO(d);
+};
+
 // Full ISO-8601 WITH local timezone offset (e.g. `2026-09-23T18:04:38+02:00`).
 // `toISOString()` gives UTC (Z) — correct as an instant but wrong as a wire
 // format when the receiver needs the local wall clock. Accepts Date or any

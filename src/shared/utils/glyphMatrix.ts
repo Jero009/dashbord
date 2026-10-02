@@ -88,17 +88,6 @@ export async function glyphMatrixLength(): Promise<number> {
   }
 }
 
-// Whether the matrix is bound and registered (i.e. draw() will work).
-export async function glyphIsReady(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) return false
-  try {
-    const { ready } = await GlyphMatrix.isReady()
-    return ready
-  } catch {
-    return false
-  }
-}
-
 // Release the binding. Call when you're done driving the matrix.
 export async function glyphDeinit(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return

@@ -32,8 +32,7 @@ import { computeRecoverySeries } from '@/shared/health/recoveryBaseline';
 import { aggregateLatestTrainingDay, recoveryTimeStatus } from '@/shared/health/recoveryTime';
 import { evaluateOvertraining, acwrZoneLabel } from '@/shared/health/overtraining';
 import { getSleepGoalHours, getStepGoal, getGoalWeightKg } from '@/shared/utils/userSettings';
-import { shiftDate } from '@/shared/utils/habitStats';
-import { localDateISO } from '@/shared/utils/timeFormat';
+import { localDateISO, shiftDate } from '@/shared/utils/timeFormat';
 
 // ── small formatting helpers ──────────────────────────────────────────────────
 

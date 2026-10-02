@@ -60,13 +60,6 @@ export const chartBarDataset = {
   maxBarThickness: 32,
 }
 
-// Goal/budget reference line: gold dashes (data-encoding gold survives).
-export const chartGoalDataset = {
-  ...chartDimDataset,
-  get borderColor() { return chartColors.goal },
-  tension: 0,
-}
-
 // Tooltip is always a dark floating overlay in both themes, so its text
 // stays light regardless of the active theme.
 export const chartTooltip = {
