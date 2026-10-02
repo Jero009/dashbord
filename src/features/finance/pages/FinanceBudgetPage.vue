@@ -53,7 +53,8 @@
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="nt-kicker">Budgets</p>
-            <span class="card-count">{{ budgets.length }}</span>
+            <span v-if="failed['budgets']" class="card-error">Couldn't load</span>
+            <span v-else class="card-count">{{ budgets.length }}</span>
           </div>
           <div v-if="budgetRows.length" class="budget-list">
             <div v-for="row in budgetRows" :key="row.id" class="budget-row">
@@ -74,6 +75,12 @@
               <div class="budget-row__foot">
                 <span v-if="row.over" class="budget-over-text">{{ formatCurrency(row.spent - row.limit) }} over</span>
                 <span v-else>{{ formatCurrency(row.limit - row.spent) }} left</span>
+                <span
+                  v-if="row.projected !== null"
+                  class="budget-row__pace"
+                  :class="{ 'budget-over-text': row.paceOver }"
+                >{{ row.paceOver ? 'Pace: ' + formatCurrency(row.projected) + ' by month-end' : 'Pace: ' + formatCurrency(row.projected) }}</span>
+                <span v-else class="budget-row__pace">Month closed</span>
                 <button class="row-delete" aria-label="Remove budget" @click="removeBudget(row.id)">
                   <ion-icon :icon="closeOutline" />
                 </button>
@@ -202,7 +209,8 @@
         <ion-card class="finance-card">
           <div class="card-topline">
             <p class="nt-kicker">Transactions</p>
-            <span class="card-count">{{ transactions.length }}</span>
+            <span v-if="failed['transactions']" class="card-error">Couldn't load</span>
+            <span v-else class="card-count">{{ transactions.length }}</span>
           </div>
           <div v-if="transactions.length" class="item-list">
             <div v-for="transaction in transactions" :key="transaction.id" class="list-item">
@@ -225,6 +233,7 @@
               </div>
             </div>
           </div>
+          <p v-else-if="failed['transactions']" class="nt-empty card-error">Couldn't load transactions</p>
           <p v-else class="nt-empty">No transactions</p>
         </ion-card>
       </div>
@@ -253,7 +262,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import { hapticLight, hapticMedium, hapticHeavy, hapticSuccess, hapticSelect } from '@/shared/utils/haptics';
 import { formatCurrency } from '@/shared/utils/currency';
-import { localDateISO } from '@/shared/utils/timeFormat';
+import { localDateISO, formatLocalDay } from '@/shared/utils/timeFormat';
 import {
   addFinanceTransaction,
   addFinanceTransactionsBulk,
@@ -270,7 +279,7 @@ import { detectProfile, type NewTransaction } from '@/features/finance/import/pr
 import { splitDuplicates, type ExistingTx } from '@/features/finance/import/dedupe';
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { Capacitor } from '@capacitor/core';
-import { EXPENSE_CATEGORIES as expenseCategories, categoryLabel } from '@/features/finance/finance';
+import { EXPENSE_CATEGORIES as expenseCategories, categoryLabel, projectMonthlySpend } from '@/features/finance/finance';
 
 // Local-date keys: toISOString would shift the month near midnight in UTC+ timezones.
 const toLocalDateKey = localDateISO;
@@ -302,11 +311,7 @@ const editingNotes = ref<string | null>(null);
 const budgetCategory = ref('food');
 const budgetLimit = ref('');
 
-const formatDay = (date: string) => {
-  const [year, month, day] = String(date).split('-').map(Number);
-  if (!year || !month || !day) return date;
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
+const formatDay = formatLocalDay;
 
 const expenseTotal = computed(() =>
   transactions.value
@@ -355,19 +360,65 @@ const spentByCategory = computed(() => {
   return totals;
 });
 
+// Month pacing facts for the currently viewed local month. For the current
+// month the projection runs from today's local calendar day; a completed past
+// month is "closed" — the row shows final spend rather than a pace forecast.
+const viewedMonthFacts = computed(() => {
+  const [year, month] = viewedMonth.value.split('-').map(Number);
+  if (!year || !month) return { daysInMonth: 0, elapsedDays: 0, isCurrent: false };
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const now = new Date();
+  const isCurrent = viewedMonth.value === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return { daysInMonth, elapsedDays: isCurrent ? now.getDate() : daysInMonth, isCurrent };
+});
+
 const budgetRows = computed(() =>
   budgets.value.map((b) => {
     const limit = Number(b.monthly_limit) || 0;
     const spent = spentByCategory.value[String(b.category)] ?? 0;
     const ratio = limit > 0 ? spent / limit : spent > 0 ? 1 : 0;
-    return { id: Number(b.id), category: String(b.category), limit, spent, ratio, over: spent > limit };
+    const { daysInMonth, elapsedDays, isCurrent } = viewedMonthFacts.value;
+    // No projection before the month has days elapsed or for an unparseable
+    // month key — those rows fall back to the neutral "Month closed" label.
+    const projected =
+      isCurrent && daysInMonth > 0 && elapsedDays > 0
+        ? projectMonthlySpend(spent, elapsedDays, daysInMonth)
+        : null;
+    return {
+      id: Number(b.id),
+      category: String(b.category),
+      limit,
+      spent,
+      ratio,
+      over: spent > limit,
+      projected,
+      paceOver: projected !== null && limit > 0 && projected > limit,
+    };
   })
 );
 
+const failed = ref<Record<string, boolean>>({});
+
+const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    const v = await p;
+    failed.value[key] = false;
+    return v;
+  } catch {
+    failed.value[key] = true;
+    return fallback;
+  }
+};
+
 const loadBudgetData = async () => {
-  transactions.value = await getFinanceTransactionsForMonth(viewedMonth.value);
-  budgets.value = await getFinanceBudgets();
-  accounts.value = await getFinanceAccounts();
+  const [txs, buds, accs] = await Promise.all([
+    settled('transactions', getFinanceTransactionsForMonth(viewedMonth.value), []),
+    settled('budgets', getFinanceBudgets(), []),
+    settled('accounts', getFinanceAccounts(), []),
+  ]);
+  transactions.value = txs;
+  budgets.value = buds;
+  accounts.value = accs;
 };
 
 const shiftMonth = async (delta: number) => {
@@ -461,6 +512,22 @@ const saveTransaction = async () => {
 };
 
 const removeTransaction = async (id: number) => {
+  const alert = await alertController.create({
+    header: 'Delete transaction?',
+    cssClass: 'app-confirm-alert',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Delete',
+        role: 'destructive',
+        handler: () => doRemoveTransaction(id),
+      },
+    ],
+  });
+  await alert.present();
+};
+
+const doRemoveTransaction = async (id: number) => {
   hapticHeavy();
   try {
     await deleteFinanceTransaction(Number(id));
@@ -777,13 +844,27 @@ onIonViewWillEnter(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   font-size: 0.72rem;
   color: var(--nt-text-dim);
+}
+
+.budget-row__pace {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .budget-over-text {
   color: var(--ion-color-accent-red);
   font-weight: 600;
+}
+
+.card-error {
+  margin-left: auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ion-color-accent-red);
 }
 
 .type-toggle {

@@ -88,10 +88,35 @@ export const savingsRate = (income: number, expense: number): number | null => {
   return Math.max(-1, Math.min(1, (income - expense) / income));
 };
 
+// Budget pacing: project month-end spend from the current daily rate. Pure
+// math with explicit inputs (no clock, no rounding — round at display time).
+// elapsedDays is clamped to daysInMonth so a stale elapsed count can never
+// inflate the projection past actual spend at month close.
+export const projectMonthlySpend = (
+  spent: number,
+  elapsedDays: number,
+  daysInMonth: number
+): number => {
+  const safeSpent = Number.isFinite(spent) ? Math.max(0, spent) : 0;
+  if (!Number.isFinite(elapsedDays) || elapsedDays <= 0 || !Number.isFinite(daysInMonth) || daysInMonth <= 0) return 0;
+  const elapsed = Math.min(elapsedDays, daysInMonth);
+  return (safeSpent / elapsed) * daysInMonth;
+};
+
 export interface CategoryMeta {
   value: string;
   label: string;
 }
+
+// Review crossover metric: Health & Fitness spend per workout for a period.
+// Null when no workouts were logged — the UI must show a neutral "no workouts"
+// state, never currency divided by zero. Invalid/numerically impossible inputs
+// degrade to 0/null rather than NaN.
+export const spendPerWorkout = (spend: number, workoutCount: number): number | null => {
+  const safeSpend = Number.isFinite(spend) ? Math.max(0, spend) : 0;
+  if (!Number.isFinite(workoutCount) || workoutCount <= 0) return null;
+  return safeSpend / workoutCount;
+};
 
 // Canonical expense categories (shared by Budget add-transaction + budgets).
 export const EXPENSE_CATEGORIES: CategoryMeta[] = [

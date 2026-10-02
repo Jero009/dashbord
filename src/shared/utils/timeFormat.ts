@@ -54,6 +54,27 @@ export const localMonthISO = (date: Date = new Date()): string =>
 // day west of UTC. Inverse of localDateISO for the round-trip.
 export const parseLocalDate = (dateStr: string): Date => new Date(`${dateStr}T12:00:00`);
 
+const DAY_FMT = { month: 'short', day: 'numeric' } as const;
+const MONTH_FMT = { month: 'long', year: 'numeric' } as const;
+const MONTH_FMT_SHORT = { month: 'short' } as const;
+
+// "2026-06-28" -> "Jun 28", parsed as a LOCAL calendar date (see
+// parseLocalDate). Malformed keys return the input unchanged rather than
+// "Invalid Date".
+export const formatLocalDay = (dateStr: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return String(dateStr ?? '');
+  return parseLocalDate(String(dateStr)).toLocaleDateString('en-US', DAY_FMT);
+};
+
+// "2026-06" -> "June 2026" (long) or "Jun" (short). Malformed keys return the
+// input unchanged.
+export const formatLocalMonth = (monthKey: string, style: 'short' | 'long' = 'long'): string => {
+  const key = String(monthKey ?? '');
+  if (!/^\d{4}-\d{2}$/.test(key)) return key;
+  const [year, month] = key.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-US', style === 'short' ? MONTH_FMT_SHORT : MONTH_FMT);
+};
+
 // Shift a YYYY-MM-DD calendar date by N days, returning a YYYY-MM-DD string.
 // Reads back through localDateISO: `toISOString().slice(0, 10)` would
 // re-introduce the UTC off-by-one the noon anchor exists to avoid.

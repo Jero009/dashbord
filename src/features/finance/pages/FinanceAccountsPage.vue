@@ -10,6 +10,7 @@
         <ion-card class="finance-card summary-card">
           <div class="card-topline">
             <p class="nt-kicker">Net worth</p>
+            <span v-if="failed['accounts'] || failed['investments']" class="card-error">Couldn't load</span>
           </div>
           <div class="summary-value">{{ formatCurrency(netWorth) }}</div>
           <div class="summary-grid">
@@ -109,7 +110,8 @@
         </ion-card>
 
         <ion-card v-if="!accounts.length" class="finance-card">
-          <p class="nt-empty">No accounts yet</p>
+          <p v-if="failed['accounts']" class="nt-empty card-error">Couldn't load accounts</p>
+          <p v-else class="nt-empty">No accounts yet</p>
         </ion-card>
       </div>
     </ion-content>
@@ -168,10 +170,24 @@ const assetsTotal = computed(() => accountAssetsTotal(accounts.value));
 const liabilitiesTotal = computed(() => accountLiabilitiesTotal(accounts.value));
 const netWorth = computed(() => computeNetWorth(accounts.value, investments.value));
 
+// Per-card failure flags: a DB error must not look like "no data".
+const failed = ref<Record<string, boolean>>({});
+
+const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    const v = await p;
+    failed.value[key] = false;
+    return v;
+  } catch {
+    failed.value[key] = true;
+    return fallback;
+  }
+};
+
 const loadAccounts = async () => {
   const [acc, inv] = await Promise.all([
-    getFinanceAccounts().catch(() => []),
-    getFinanceInvestments().catch(() => []),
+    settled('accounts', getFinanceAccounts(), []),
+    settled('investments', getFinanceInvestments(), []),
   ]);
   accounts.value = acc;
   investments.value = inv;
@@ -266,6 +282,14 @@ onIonViewWillEnter(loadAccounts);
 /* Shared finance primitives (.finance-content, .form-fields*, .field-*, .styled-*,
    .add-btn, .metric-*, .link-btn) live in theme/finance.css — do not re-declare
    them here; a scoped copy silently shadows the global (v3.21.1 contract). */
+
+.card-error {
+  margin-left: auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ion-color-accent-red);
+}
 
 .account-list {
   display: grid;

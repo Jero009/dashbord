@@ -73,6 +73,11 @@
               <template v-else>—</template>
             </span>
           </div>
+          <div class="bar-row">
+            <span class="bar-row__label">Health &amp; Fitness</span>
+            <span v-if="perWorkout !== null" class="bar-row__value">{{ formatCurrency(perWorkout) }} per workout</span>
+            <span v-else class="bar-row__value bar-row__value--dim">No workouts logged</span>
+          </div>
         </div>
       </div>
     </ion-content>
@@ -87,11 +92,12 @@ import AnalyticsSectionTabs from '@/features/analytics/components/AnalyticsSecti
 import { getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
 import { hapticLight } from '@/shared/utils/haptics';
+import { spendPerWorkout } from '@/features/finance/finance';
 
 const period = ref<'week' | 'month'>('week');
 const digest = ref<ReviewDigest>({
   period: 'week', workoutCount: 0, totalVolume: 0, avgSleepScore: null, avgReadiness: null,
-  readinessTrend: null, netWorthDelta: null, spent: 0, budget: null,
+  readinessTrend: null, netWorthDelta: null, spent: 0, budget: null, healthFitnessSpend: 0,
 });
 
 const trendClass = computed(() => ({
@@ -100,6 +106,8 @@ const trendClass = computed(() => ({
 }));
 
 const overBudget = computed(() => digest.value.budget !== null && digest.value.spent > digest.value.budget);
+// Null when no workouts in the period — the row then shows "No workouts logged".
+const perWorkout = computed(() => spendPerWorkout(digest.value.healthFitnessSpend, digest.value.workoutCount));
 const spendPct = computed(() => {
   if (!digest.value.budget) return '0%';
   return `${Math.min(100, (digest.value.spent / digest.value.budget) * 100)}%`;
@@ -249,6 +257,7 @@ onIonViewWillEnter(load);
 
 .bar-row__value--pos { color: var(--nt-data-positive); }
 .bar-row__value--over { color: var(--ion-color-accent-red); }
+.bar-row__value--dim { color: var(--nt-text-dim); }
 
 .prog-bar {
   height: 8px;

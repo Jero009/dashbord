@@ -16,6 +16,8 @@ import {
   categoryLabel,
   dueLabel,
   daysFromToday,
+  projectMonthlySpend,
+  spendPerWorkout,
 } from '@/features/finance/finance';
 import { nextDueAfter } from '@/shared/db/financeDates';
 
@@ -175,6 +177,74 @@ describe('nextDueAfter (local-date safe cadence roll)', () => {
       expect(nextDueAfter(key, 'weekly') >= key).toBe(true);
       expect(nextDueAfter(key, 'yearly') >= key).toBe(true);
     }
+  });
+});
+
+describe('projectMonthlySpend (budget pacing)', () => {
+  test('projects current spend across the number of days in a month', () => {
+    expect(projectMonthlySpend(120, 10, 30)).toBe(360);
+  });
+
+  test('returns zero at the month start instead of dividing by zero', () => {
+    expect(projectMonthlySpend(0, 0, 31)).toBe(0);
+  });
+
+  test('does not turn invalid inputs into NaN', () => {
+    expect(projectMonthlySpend(Number.NaN, 12, 31)).toBe(0);
+    expect(projectMonthlySpend(100, Number.NaN, 31)).toBe(0);
+    expect(projectMonthlySpend(100, 12, Number.NaN)).toBe(0);
+    expect(projectMonthlySpend(100, 12, 0)).toBe(0);
+  });
+
+  test('handles a February-like 28-day month', () => {
+    expect(projectMonthlySpend(84, 3, 28)).toBe(784);
+  });
+
+  test('a projection equal to the limit is on track, not over', () => {
+    // 10/day over 20 of 30 days projects exactly 300 — the UI must read it as
+    // "not over" (projected > limit is false), which this equality enables.
+    expect(projectMonthlySpend(200, 20, 30)).toBe(300);
+  });
+
+  test('spend already over budget projects above the limit', () => {
+    expect(projectMonthlySpend(400, 10, 30)).toBe(1200);
+    expect(projectMonthlySpend(400, 10, 30) > 400).toBe(true);
+  });
+
+  test('elapsedDays beyond daysInMonth clamps the projection to actual spend', () => {
+    // Documented contract: callers pass elapsedDays <= daysInMonth; the helper
+    // clamps so a stale elapsed count can never inflate the projection.
+    expect(projectMonthlySpend(120, 35, 30)).toBe(120);
+  });
+
+  test('negative spend is clamped to zero', () => {
+    expect(projectMonthlySpend(-50, 10, 30)).toBe(0);
+  });
+});
+
+describe('spendPerWorkout (Review: Health & Fitness)', () => {
+  test('splits the period health spend across logged workouts', () => {
+    expect(spendPerWorkout(60, 2)).toBe(30);
+    expect(spendPerWorkout(100, 3)).toBeCloseTo(33.3333, 4);
+  });
+
+  test('one workout returns the whole spend', () => {
+    expect(spendPerWorkout(40, 1)).toBe(40);
+  });
+
+  test('zero workouts is null — never a currency divided by zero', () => {
+    expect(spendPerWorkout(60, 0)).toBeNull();
+  });
+
+  test('zero spend with workouts is 0, not null', () => {
+    expect(spendPerWorkout(0, 2)).toBe(0);
+  });
+
+  test('invalid inputs never produce NaN', () => {
+    expect(spendPerWorkout(Number.NaN, 2)).toBe(0);
+    expect(spendPerWorkout(60, Number.NaN)).toBeNull();
+    expect(spendPerWorkout(-5, 2)).toBe(0);
+    expect(spendPerWorkout(60, -1)).toBeNull();
   });
 });
 

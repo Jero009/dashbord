@@ -10,6 +10,7 @@
         <ion-card class="finance-card summary-card">
           <div class="card-topline">
             <p class="nt-kicker">Portfolio value</p>
+            <span v-if="failed['investments'] || failed['accounts']" class="card-error">Couldn't load</span>
           </div>
           <div class="summary-value">{{ formatCurrency(totalValue) }}</div>
           <div class="summary-grid">
@@ -122,6 +123,7 @@
               </div>
             </div>
           </div>
+          <p v-else-if="failed['investments']" class="nt-empty card-error">Couldn't load holdings</p>
           <p v-else class="nt-empty">No investments</p>
         </ion-card>
       </div>
@@ -221,10 +223,24 @@ const holdingRows = computed(() =>
   })
 );
 
+// Per-card failure flags: a DB error must not look like "no data".
+const failed = ref<Record<string, boolean>>({});
+
+const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    const v = await p;
+    failed.value[key] = false;
+    return v;
+  } catch {
+    failed.value[key] = true;
+    return fallback;
+  }
+};
+
 const loadAll = async () => {
   const [inv, acc] = await Promise.all([
-    getFinanceInvestments().catch(() => []),
-    getFinanceAccounts().catch(() => []),
+    settled('investments', getFinanceInvestments(), []),
+    settled('accounts', getFinanceAccounts(), []),
   ]);
   investments.value = inv;
   accounts.value = acc;
@@ -410,6 +426,14 @@ onIonViewWillEnter(loadAll);
 /* Shared finance primitives (.finance-content, .form-fields*, .field-*, .styled-*,
    .add-btn, .metric-*, .link-btn) live in theme/finance.css — do not re-declare
    them here; a scoped copy silently shadows the global (v3.21.1 contract). */
+
+.card-error {
+  margin-left: auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ion-color-accent-red);
+}
 
 .item-list {
   display: grid;

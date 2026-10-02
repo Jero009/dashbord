@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { localDateISO, parseLocalDate, shiftDate } from '@/shared/utils/timeFormat'
+import { localDateISO, parseLocalDate, shiftDate, formatLocalDay, formatLocalMonth } from '@/shared/utils/timeFormat'
 
 describe('timeFormat shiftDate', () => {
   test('moves across month boundaries', () => {
@@ -25,5 +25,34 @@ describe('timeFormat shiftDate', () => {
   test('result parses back to the same local calendar day', () => {
     const d = parseLocalDate(shiftDate('2026-06-15', 17))
     expect(localDateISO(d)).toBe('2026-07-02')
+  })
+})
+
+describe('formatLocalDay', () => {
+  test('formats a YYYY-MM-DD key as a short local day, calendar-safe', () => {
+    expect(formatLocalDay('2026-06-28')).toBe('Jun 28')
+    expect(formatLocalDay('2026-01-05')).toBe('Jan 5')
+  })
+
+  test('returns the original string for malformed keys instead of Invalid Date', () => {
+    expect(formatLocalDay('garbage')).toBe('garbage')
+    expect(formatLocalDay('')).toBe('')
+  })
+})
+
+describe('formatLocalMonth', () => {
+  test('long style: month + year', () => {
+    expect(formatLocalMonth('2026-06')).toBe('June 2026')
+    expect(formatLocalMonth('2025-12')).toBe('December 2025')
+  })
+
+  test('short style: month only', () => {
+    expect(formatLocalMonth('2026-06', 'short')).toBe('Jun')
+    expect(formatLocalMonth('2025-12', 'short')).toBe('Dec')
+  })
+
+  test('returns the original string for malformed keys instead of Invalid Date', () => {
+    expect(formatLocalMonth('nonsense')).toBe('nonsense')
+    expect(formatLocalMonth('')).toBe('')
   })
 })

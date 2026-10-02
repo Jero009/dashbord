@@ -2485,6 +2485,7 @@ export interface ReviewDigest {
   netWorthDelta: number | null;
   spent: number;
   budget: number | null;           // monthly budget total, prorated to the period
+  healthFitnessSpend: number;      // 'health' expense transactions in the period
 }
 
 // Cross-domain summary for the Review page (and HomePage "This Week" card).
@@ -2492,7 +2493,7 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
   const days = period === 'month' ? 30 : 7;
   const empty: ReviewDigest = {
     period, workoutCount: 0, totalVolume: 0, avgSleepScore: null, avgReadiness: null,
-    readinessTrend: null, netWorthDelta: null, spent: 0, budget: null,
+    readinessTrend: null, netWorthDelta: null, spent: 0, budget: null, healthFitnessSpend: 0,
   };
   if (!db) return empty;
 
@@ -2506,7 +2507,7 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
 
   const [
     workoutsR, volumeR, sleepR, readinessR, prevReadinessR,
-    spentR, budgetR, netNowR, netThenR,
+    spentR, budgetR, netNowR, netThenR, healthSpendR,
   ] = await Promise.all([
     db.query(`SELECT COUNT(*) AS v FROM workout WHERE time_end IS NOT NULL AND date(time_start, 'localtime') >= date('now', ?, 'localtime');`, [`-${days} days`]),
     db.query(`SELECT SUM(weight * reps) AS v FROM workout_exercise_sets WHERE completed = 1 AND date(created_at, 'localtime') >= date('now', ?, 'localtime');`, [`-${days} days`]),
@@ -2517,6 +2518,7 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
     db.query(`SELECT SUM(monthly_limit) AS v FROM finance_budget;`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot ORDER BY date DESC LIMIT 1;`),
     db.query(`SELECT (total_assets - total_liabilities) AS v FROM net_worth_snapshot WHERE date <= ? ORDER BY date DESC LIMIT 1;`, [since]),
+    db.query(`SELECT SUM(amount) AS v FROM finance_transaction WHERE type = 'expense' AND category = 'health' AND date >= ?;`, [since]),
   ]);
 
   const num = (r: any, key = 'v') => {
@@ -2540,6 +2542,7 @@ export async function getReviewDigest(period: 'week' | 'month' = 'week'): Promis
     netWorthDelta: netNow !== null && netThen !== null ? Math.round((netNow - netThen) * 100) / 100 : null,
     spent: Math.round((num(spentR) ?? 0) * 100) / 100,
     budget: monthlyBudget !== null ? Math.round((monthlyBudget * days / 30) * 100) / 100 : null,
+    healthFitnessSpend: Math.round((num(healthSpendR) ?? 0) * 100) / 100,
   };
 }
 

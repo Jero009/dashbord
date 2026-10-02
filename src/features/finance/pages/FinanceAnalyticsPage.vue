@@ -19,8 +19,11 @@
         </div>
 
         <!-- Category breakdown -->
-        <div class="finance-card">
-          <p class="nt-kicker">Spending by category</p>
+        <ion-card class="finance-card">
+          <div class="card-topline">
+            <p class="nt-kicker">Spending by category</p>
+            <span v-if="failed['categories']" class="card-error">Couldn't load</span>
+          </div>
           <template v-if="categories.length > 0">
             <div class="donut-wrap">
               <canvas ref="donutRef"></canvas>
@@ -32,43 +35,21 @@
             <div class="cat-legend">
               <div v-for="(c, i) in categories" :key="c.category" class="cat-legend__row">
                 <i class="cat-legend__dot" :style="{ background: palette()[i % palette().length] }"></i>
-                <span class="cat-legend__name">{{ c.category }}</span>
+                <span class="cat-legend__name">{{ categoryLabel(c.category) }}</span>
                 <span class="cat-legend__amt">{{ formatCurrency(c.amount) }}</span>
               </div>
             </div>
           </template>
+          <p v-else-if="failed['categories']" class="nt-empty card-error">Couldn't load spending</p>
           <p v-else class="nt-empty">No expenses</p>
-        </div>
-
-        <!-- Budget vs actual -->
-        <div class="finance-card">
-          <p class="nt-kicker">Budget vs actual</p>
-          <template v-if="budgetRows.length > 0">
-            <div class="budget-list">
-              <div v-for="row in budgetRows" :key="row.category" class="budget-row">
-                <div class="budget-row__head">
-                  <span class="budget-row__name">{{ row.category }}</span>
-                  <span class="budget-row__nums">
-                    <span :class="{ 'over-text': row.over }">{{ formatCurrency(row.spent) }}</span>
-                    <span class="budget-row__limit"> / {{ formatCurrency(row.limit) }}</span>
-                  </span>
-                </div>
-                <div class="prog-bar">
-                  <div
-                    class="prog-bar__fill"
-                    :class="{ 'prog-bar__fill--over': row.over, 'prog-bar__fill--warn': !row.over && row.ratio >= 0.85 }"
-                    :style="{ width: Math.min(100, row.ratio * 100) + '%' }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </template>
-          <p v-else class="nt-empty">No budgets set</p>
-        </div>
+        </ion-card>
 
         <!-- Monthly trend -->
-        <div class="finance-card">
-          <p class="nt-kicker">Income vs spending</p>
+        <ion-card class="finance-card">
+          <div class="card-topline">
+            <p class="nt-kicker">Income vs spending</p>
+            <span v-if="failed['monthly']" class="card-error">Couldn't load</span>
+          </div>
           <template v-if="monthly.length > 1">
             <div class="chart-readout">
               <span class="chart-readout__date">{{ trendReadoutLabel }}</span>
@@ -92,27 +73,29 @@
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Income</span>
             </div>
           </template>
+          <p v-else-if="failed['monthly']" class="nt-empty card-error">Couldn't load history</p>
           <p v-else class="nt-empty">Not enough history</p>
-        </div>
+        </ion-card>
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonContent, IonIcon, onIonViewWillEnter } from '@ionic/vue';
+import { IonPage, IonHeader, IonContent, IonCard, IonIcon, onIonViewWillEnter } from '@ionic/vue';
 import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { ref, computed, nextTick, onUnmounted } from 'vue';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import FinanceSectionTabs from '@/features/finance/components/FinanceSectionTabs.vue';
 import { formatCurrency } from '@/shared/utils/currency';
+import { formatLocalMonth } from '@/shared/utils/timeFormat';
 import {
   queryCategorySpending,
   queryMonthlySpending,
-  getFinanceBudgets,
   type CategorySpending,
   type MonthlySpending,
 } from '@/shared/db/app_db';
+import { categoryLabel } from '@/features/finance/finance';
 import {
   Chart,
   LineController, LineElement, PointElement,
@@ -133,31 +116,31 @@ const localMonthKey = localMonthISO;
 const viewedMonth = ref(localMonthKey(new Date()));
 const categories = ref<CategorySpending[]>([]);
 const monthly = ref<MonthlySpending[]>([]);
-const budgets = ref<{ category: string; monthly_limit: number }[]>([]);
 
 const donutRef = ref<HTMLCanvasElement>();
 const trendRef = ref<HTMLCanvasElement>();
 let donutChart: Chart | null = null;
 let trendChart: Chart | null = null;
 
+// Per-card failure flags: a DB error must not look like "no data".
+const failed = ref<Record<string, boolean>>({});
+
+const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    const v = await p;
+    failed.value[key] = false;
+    return v;
+  } catch {
+    failed.value[key] = true;
+    return fallback;
+  }
+};
+
 const isCurrentMonth = computed(() => viewedMonth.value === localMonthKey(new Date()));
 
-const monthLabel = computed(() => {
-  const [year, month] = viewedMonth.value.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-});
+const monthLabel = computed(() => formatLocalMonth(viewedMonth.value));
 
 const categoryTotal = computed(() => categories.value.reduce((a, c) => a + c.amount, 0));
-
-const budgetRows = computed(() => {
-  const spentByCat = new Map(categories.value.map((c) => [c.category, c.amount]));
-  return budgets.value.map((b) => {
-    const spent = spentByCat.get(b.category) ?? 0;
-    const limit = Number(b.monthly_limit) || 0;
-    const ratio = limit > 0 ? spent / limit : 0;
-    return { category: b.category, spent, limit, ratio, over: spent > limit };
-  });
-});
 
 const changeMonth = (delta: number) => {
   const [year, month] = viewedMonth.value.split('-').map(Number);
@@ -169,18 +152,14 @@ const changeMonth = (delta: number) => {
 };
 
 const loadMonth = async () => {
-  const [cats, buds] = await Promise.all([
-    queryCategorySpending(viewedMonth.value).catch(() => []),
-    getFinanceBudgets().catch(() => []),
-  ]);
+  const cats = await settled('categories', queryCategorySpending(viewedMonth.value), []);
   categories.value = cats;
-  budgets.value = buds as { category: string; monthly_limit: number }[];
   await nextTick();
   renderDonut();
 };
 
 const loadAll = async () => {
-  monthly.value = await queryMonthlySpending(6).catch(() => []);
+  monthly.value = await settled('monthly', queryMonthlySpending(6), []);
   await loadMonth();
   await nextTick();
   renderTrend();
@@ -195,7 +174,7 @@ const renderDonut = () => {
   donutChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: categories.value.map((c) => c.category),
+      labels: categories.value.map((c) => categoryLabel(c.category)),
       datasets: [
         {
           data: categories.value.map((c) => c.amount),
@@ -236,7 +215,7 @@ const renderTrend = () => {
   trendChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: monthly.value.map((m) => monthShort(m.month)),
+      labels: monthly.value.map((m) => formatLocalMonth(m.month, 'short')),
       datasets: [
         { ...chartLineDataset, label: 'Spending', data: monthly.value.map((m) => m.expense) },
         { ...chartDimDataset, label: 'Income', data: monthly.value.map((m) => m.income) },
@@ -265,19 +244,12 @@ const trendActiveIdx = computed(() =>
 const trendReadoutLabel = computed(() => {
   const m = monthly.value[trendActiveIdx.value];
   if (!m) return '';
-  const [year, month] = m.month.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  return formatLocalMonth(m.month);
 });
 const trendReadoutExpense = computed(() =>
   formatCurrency(monthly.value[trendActiveIdx.value]?.expense ?? 0));
 const trendReadoutIncome = computed(() =>
   formatCurrency(monthly.value[trendActiveIdx.value]?.income ?? 0));
-
-// "2026-06" -> "Jun"
-const monthShort = (key: string) => {
-  const [year, month] = key.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'short' });
-};
 
 onIonViewWillEnter(() => {
   // Recompute on entry — kept-alive page must follow month rollovers.
@@ -381,7 +353,6 @@ onUnmounted(() => {
   flex: 1;
   font-size: 0.85rem;
   color: rgba(var(--nt-ink), 0.8);
-  text-transform: capitalize;
 }
 
 .cat-legend__amt {
@@ -390,65 +361,13 @@ onUnmounted(() => {
   color: var(--nt-fg);
 }
 
-/* Budget rows */
-.budget-list {
-  display: grid;
-  gap: 12px;
-}
-
-.budget-row {
-  display: grid;
-  gap: 6px;
-}
-
-.budget-row__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.budget-row__name {
-  font-size: 0.85rem;
-  color: rgba(var(--nt-ink), 0.8);
-  text-transform: capitalize;
-}
-
-.budget-row__nums {
-  font-family: var(--nt-font-mono);
-  font-size: 0.82rem;
-  color: var(--nt-fg);
-}
-
-.budget-row__limit {
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.over-text {
+.card-error {
+  margin-left: auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   color: var(--ion-color-accent-red);
 }
-
-.prog-bar {
-  height: 8px;
-  border-radius: var(--nt-radius-pill);
-  background: var(--nt-tile);
-  overflow: hidden;
-}
-
-.prog-bar__fill {
-  height: 100%;
-  background: var(--nt-data-positive);
-  border-radius: var(--nt-radius-pill);
-}
-
-.prog-bar__fill--warn {
-  background: var(--nt-data-goal);
-}
-
-.prog-bar__fill--over {
-  background: var(--ion-color-accent-red);
-}
-
 
 .chart-readout {
   display: flex;

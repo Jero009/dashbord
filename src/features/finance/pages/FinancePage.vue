@@ -22,28 +22,26 @@
 
           <TrendChart
             v-if="history.length >= 2"
-            :pts="history.map((p) => ({ label: formatDay(p.date), value: p.net }))"
+            :pts="history.map((p) => ({ label: formatLocalDay(p.date), value: p.net }))"
             unit=""
             size="xs"
           />
-          <p v-else class="hero-hint">Net worth trend builds as you use the app daily.</p>
+          <!-- Failed history fetch must stay visible even when a previous range
+               succeeded and the chart still shows that stale series. -->
+          <p v-if="failed['history']" class="hero-hint card-error-inline">Couldn't load</p>
+          <p v-else-if="history.length < 2" class="hero-hint">Net worth trend builds as you use the app daily.</p>
 
-          <!-- Income vs spend split (this month) -->
-          <div class="split">
-            <div class="split__bar">
-              <div class="split__seg split__seg--income" :style="{ width: `${incomePct}%` }"></div>
-              <div class="split__seg split__seg--spend" :style="{ width: `${100 - incomePct}%` }"></div>
-            </div>
-            <div class="split__legend">
-              <div class="split__item">
-                <span class="split__label"><i class="dot dot--income"></i>Income</span>
-                <strong>{{ formatCurrency(monthIncome) }}</strong>
-              </div>
-              <div class="split__item split__item--end">
-                <span class="split__label"><i class="dot dot--spend"></i>Spend</span>
-                <strong>{{ formatCurrency(monthExpense) }}</strong>
-              </div>
-            </div>
+          <!-- Trend window: screen-local preference, no persistence. -->
+          <div class="range-switch" role="group" aria-label="Trend range">
+            <button
+              v-for="r in rangeOptions"
+              :key="r"
+              type="button"
+              class="range-switch__btn"
+              :class="{ 'is-active': historyRange === r }"
+              :aria-pressed="historyRange === r"
+              @click="selectHistoryRange(r)"
+            >{{ r }}d</button>
           </div>
         </ion-card>
 
@@ -131,7 +129,7 @@
               <div class="mini-row__info">
                 <strong class="mini-row__name">{{ tx.name }}</strong>
                 <span class="mini-row__meta">
-                  {{ tx.type === 'income' ? 'Income' : categoryLabel(tx.category) }} · {{ formatDay(tx.date) }}<template v-if="tx.account_name"> · {{ tx.account_name }}</template>
+                  {{ tx.type === 'income' ? 'Income' : categoryLabel(tx.category) }} · {{ formatLocalDay(tx.date) }}<template v-if="tx.account_name"> · {{ tx.account_name }}</template>
                 </span>
               </div>
               <span class="mini-row__val" :class="{ 'metric-positive': tx.type === 'income' }">
@@ -186,7 +184,7 @@ import {
 import { formatCurrency } from '@/shared/utils/currency';
 import { hapticLight, hapticHeavy, hapticSuccess } from '@/shared/utils/haptics';
 import { showToast } from '@/shared/utils/toast';
-import { localMonthISO } from '@/shared/utils/timeFormat';
+import { localMonthISO, formatLocalDay, parseLocalDate } from '@/shared/utils/timeFormat';
 import {
   computeNetWorth,
   upcomingBills,
@@ -198,7 +196,10 @@ import {
 
 const router = useRouter();
 
-const rangeDays = 30;
+// Net-worth trend window: 30/90/365 days, screen-local preference.
+const rangeOptions = [30, 90, 365] as const;
+type HistoryRange = (typeof rangeOptions)[number];
+const historyRange = ref<HistoryRange>(30);
 const rangeBillsDays = 14;
 
 const accounts = ref<Array<Record<string, any>>>([]);
@@ -213,11 +214,6 @@ const loading = ref(true);
 const failed = ref<Record<string, boolean>>({});
 
 const netWorth = computed(() => computeNetWorth(accounts.value, investments.value));
-// Income vs spend split (replaced the assets-vs-liabilities bar).
-const incomePct = computed(() => {
-  const denom = monthIncome.value + monthExpense.value;
-  return denom > 0 ? (monthIncome.value / denom) * 100 : 100;
-});
 
 // Delta vs the first snapshot in the trend window.
 const netDelta = computed(() => {
@@ -225,13 +221,15 @@ const netDelta = computed(() => {
   return netWorth.value - history.value[0].net;
 });
 
-// Actual age of the comparison snapshot (≤ rangeDays), so the chip shows "5d"
-// when the app only has 5 days of history rather than a misleading "30d".
+// Actual age of the comparison snapshot (≤ selected range), so the chip shows
+// "5d" when the app only has 5 days of history rather than a misleading "30d".
+// Parsed with parseLocalDate — `new Date('YYYY-MM-DD')` is UTC midnight and
+// shifts a day in UTC+ timezones.
 const deltaDays = computed(() => {
-  if (history.value.length < 2) return rangeDays;
-  const first = new Date(history.value[0].date).getTime();
+  if (history.value.length < 2) return historyRange.value;
+  const first = parseLocalDate(history.value[0].date).getTime();
   const days = Math.round((Date.now() - first) / 86400000);
-  return Math.max(1, Math.min(rangeDays, days));
+  return Math.max(1, Math.min(historyRange.value, days));
 });
 
 const monthIncome = computed(() => monthTotals.value.income);
@@ -244,12 +242,6 @@ const bills = computed(() => allBills.value.slice(0, 4));
 const billsTotal = computed(() => allBills.value.reduce((s, b) => s + (Number(b.amount) || 0), 0));
 
 const topCategoryMax = computed(() => topCategories.value[0]?.amount || 1);
-
-const formatDay = (date: string) => {
-  const [year, month, day] = String(date).split('-').map(Number);
-  if (!year || !month || !day) return date;
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
 
 const go = (path: string) => {
   hapticLight();
@@ -299,6 +291,24 @@ const settled = async <T,>(key: string, p: Promise<T>, fallback: T): Promise<T> 
   }
 };
 
+// Monotonic token so a slow 30d response can never overwrite a later 365d one.
+let historyRequestToken = 0;
+
+const loadHistory = async () => {
+  const token = ++historyRequestToken;
+  const range = historyRange.value;
+  const hist = await settled('history', getNetWorthHistory(range), []);
+  if (token !== historyRequestToken) return; // stale response — drop it
+  history.value = hist;
+};
+
+const selectHistoryRange = (range: HistoryRange) => {
+  if (historyRange.value === range) return;
+  hapticLight();
+  historyRange.value = range;
+  loadHistory();
+};
+
 const loadFinance = async () => {
   loading.value = true;
   // Persist today's snapshot first so the trend includes the latest point.
@@ -306,12 +316,12 @@ const loadFinance = async () => {
   // Auto-post due subscription periods (idempotent) before reading totals.
   await postDueSubscriptions().catch(() => {});
   const monthKey = localMonthISO();
-  const [acc, inv, subs, totals, hist, rec, cats] = await Promise.all([
+  const [acc, inv, subs, totals, , rec, cats] = await Promise.all([
     settled('accounts', getFinanceAccounts(), []),
     settled('investments', getFinanceInvestments(), []),
     settled('subscriptions', getFinanceSubscriptions(), []),
     settled('month', getFinanceMonthTotals(monthKey), { income: 0, expense: 0 }),
-    settled('history', getNetWorthHistory(rangeDays), []),
+    loadHistory(),
     settled('recent', getRecentFinanceTransactions(5), []),
     settled('categories', queryCategorySpending(monthKey), []),
   ]);
@@ -319,7 +329,6 @@ const loadFinance = async () => {
   investments.value = inv;
   subscriptions.value = subs;
   monthTotals.value = totals;
-  history.value = hist;
   recent.value = rec;
   topCategories.value = cats.slice(0, 4);
   loading.value = false;
@@ -407,75 +416,44 @@ onIonViewWillEnter(loadFinance);
   color: rgba(var(--nt-ink), 0.45);
 }
 
-/* Assets / liabilities split */
-.split {
-  display: grid;
-  gap: 10px;
-}
-
-.split__bar {
-  display: flex;
-  height: 8px;
-  border-radius: var(--nt-radius-pill);
-  overflow: hidden;
-  background: var(--nt-tile);
-}
-
-.split__seg {
-  height: 100%;
-}
-
-.split__seg--income {
-  background: rgba(var(--nt-ink), 0.85);
-}
-
-.split__seg--spend {
-  background: var(--ion-color-accent-red);
-}
-
-.split__legend {
-  display: flex;
-  justify-content: space-between;
-}
-
-.split__item {
-  display: grid;
-  gap: 3px;
-}
-
-.split__item--end {
-  text-align: right;
-  justify-items: end;
-}
-
-.split__label {
+/* Assets / liabilities split removed — the "This month" card owns cash flow. */
+.range-switch {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(var(--nt-ink), 0.5);
+  gap: 2px;
+  padding: 3px;
+  background: var(--nt-tile);
+  border-radius: var(--nt-radius-pill);
+  align-self: flex-start;
 }
 
-.split__item strong {
-  font-family: var(--nt-font-mono);
-  font-size: 0.95rem;
+.range-switch__btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: var(--nt-radius-pill);
+  font-family: var(--nt-font-head);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: var(--nt-text-dim);
+  transition: background var(--nt-dur-micro) var(--nt-ease-decel),
+    color var(--nt-dur-micro) var(--nt-ease-decel);
+}
+
+.range-switch__btn.is-active {
+  background: var(--nt-surface-2);
   color: var(--nt-fg);
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+.range-switch__btn:active {
+  opacity: 0.7;
 }
 
-.dot--income {
-  background: rgba(var(--nt-ink), 0.85);
-}
-
-.dot--spend {
-  background: var(--ion-color-accent-red);
+.card-error-inline {
+  color: var(--ion-color-accent-red);
 }
 
 /* This month flow */
