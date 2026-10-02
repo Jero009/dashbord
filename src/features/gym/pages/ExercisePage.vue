@@ -92,7 +92,7 @@
   </ion-content>
   </ion-page>
 </template>
-<style>
+<style scoped>
 .exercise-content {
   --padding-top: 16px;
   --padding-bottom: 24px;
@@ -112,12 +112,6 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-}
-
-.exercise-hero__copy h2 {
-  margin: 4px 0 6px;
-  color: var(--ion-color-light);
-  font-size: 1.4rem;
 }
 
 .add-exercise-button {

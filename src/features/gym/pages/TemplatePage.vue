@@ -57,7 +57,7 @@
     </ion-content>
   </ion-page>
 </template>
-<style>
+<style scoped>
 .template-content {
   --padding-top: 16px;
   --padding-bottom: 24px;

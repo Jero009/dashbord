@@ -138,7 +138,7 @@
     </div>
   </ion-page>
 </template>
-<style>
+<style scoped>
 /*top bar*/
 .timer {
   position: absolute;
@@ -150,14 +150,6 @@
 }
 .title {
   margin-left: 10px;
-}
-.btn-quickstart {
-  --background: var(--ion-color-accent-red);
-  --background-activated: var(--nt-accent-press);
-  --color: var(--ion-color-light);
-  --color-activated: var(--ion-color-light);
-  border-radius: 8px;
-  padding: 0 16px;
 }
 /* exercise cards */
 .exercise-card{
@@ -183,12 +175,6 @@
   background-color: transparent;
 }
 
-.exercise-slide-host {
-  --background: transparent;
-  --padding-start: 0;
-  --inner-padding-end: 0;
-  --inner-border-width: 0;
-}
 .exercise-header {
   display: flex;
   justify-content: space-between;
@@ -471,20 +457,6 @@
 .delete-exercise-btn ion-icon {
   font-size: 18px;
   color: var(--ion-color-accent-red);
-}
-
-ion-toast.pr-toast {
-  --background: var(--nt-surface-2);
-  --color: var(--nt-fg);
-  --border-radius: var(--nt-radius-md);
-  font-family: var(--nt-font-head);
-}
-
-ion-toast.pr-toast::part(header) {
-  color: var(--ion-color-accent-red);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
 }
 
 </style>

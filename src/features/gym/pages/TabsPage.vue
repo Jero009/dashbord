@@ -56,7 +56,7 @@ const fadeTransition: AnimationBuilder = (_, opts) => {
   return createAnimation().addAnimation([enter, leave]);
 };
 </script>
-<style>
+<style scoped>
 ion-tab-bar {
   --background: rgba(var(--nt-ink), 0.03);
   --border: 0;

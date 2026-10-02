@@ -94,7 +94,7 @@
 import { ref, computed, watch } from 'vue';
 import { IonButton, modalController } from '@ionic/vue';
 import { Capacitor } from '@capacitor/core';
-import { Haptics } from '@capacitor/haptics';
+import { hapticSelect } from '@/shared/utils/haptics';
 
 interface Props {
   initialValue?: number;
@@ -219,7 +219,7 @@ watch(value, () => {
   if (now - lastHapticAt.value < HAPTIC_INTERVAL_MS) return;
   if (!Capacitor.isNativePlatform()) return;
   lastHapticAt.value = now;
-  void Haptics.selectionChanged();
+  hapticSelect();
 });
 
 const setPreset = (presetValue: number) => {

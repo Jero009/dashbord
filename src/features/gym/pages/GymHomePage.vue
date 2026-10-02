@@ -459,7 +459,7 @@ onUnmounted(() => {
 });
 
 </script>
-<style>
+<style scoped>
 ion-content.home-content {
   --padding-top: 16px;
   --padding-bottom: 24px;
