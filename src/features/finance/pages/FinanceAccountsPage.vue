@@ -263,77 +263,9 @@ onIonViewWillEnter(loadAccounts);
 </script>
 
 <style scoped>
-.finance-content {
-  --padding-top: 16px;
-  --padding-bottom: 24px;
-}
-
-.metric-negative {
-  color: var(--ion-color-accent-red);
-}
-
-.link-btn {
-  background: none;
-  border: none;
-  color: rgba(var(--nt-ink), 0.6);
-  font-family: var(--nt-font-head);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.form-fields {
-  display: grid;
-  gap: 10px;
-}
-
-.form-fields--inline {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.field-group {
-  display: grid;
-  gap: 6px;
-}
-
-.field-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(var(--nt-ink), 0.5);
-}
-
-.styled-input,
-.styled-select {
-  background: var(--nt-tile);
-  border: 1px solid rgba(var(--nt-ink), 0.1);
-  border-radius: 8px;
-  color: var(--nt-fg);
-  --color: var(--nt-fg);
-  --placeholder-color: rgba(var(--nt-ink), 0.35);
-  --padding-start: 12px;
-  --padding-end: 12px;
-  --padding-top: 10px;
-  --padding-bottom: 10px;
-  min-height: 44px;
-  color-scheme: var(--nt-color-scheme);
-}
-
-.styled-input:focus-within,
-.styled-select:focus-within {
-  border-color: var(--ion-color-accent-red);
-}
-
-.add-btn {
-  --background: var(--ion-color-accent-red);
-  --background-activated: var(--nt-accent-press);
-  --border-radius: 8px;
-  --box-shadow: none;
-  font-weight: 600;
-  margin: 0;
-}
+/* Shared finance primitives (.finance-content, .form-fields*, .field-*, .styled-*,
+   .add-btn, .metric-*, .link-btn) live in theme/finance.css — do not re-declare
+   them here; a scoped copy silently shadows the global (v3.21.1 contract). */
 
 .account-list {
   display: grid;

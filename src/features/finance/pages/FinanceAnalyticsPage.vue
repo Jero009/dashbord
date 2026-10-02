@@ -37,7 +37,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">No expenses</p>
+          <p v-else class="nt-empty">No expenses</p>
         </div>
 
         <!-- Budget vs actual -->
@@ -63,7 +63,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">No budgets set</p>
+          <p v-else class="nt-empty">No budgets set</p>
         </div>
 
         <!-- Monthly trend -->
@@ -92,7 +92,7 @@
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Income</span>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough history</p>
+          <p v-else class="nt-empty">Not enough history</p>
         </div>
       </div>
     </ion-content>
@@ -449,12 +449,6 @@ onUnmounted(() => {
   background: var(--ion-color-accent-red);
 }
 
-/* Trend chart */
-.empty-copy {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.6);
-  font-size: 0.9rem;
-}
 
 .chart-readout {
   display: flex;

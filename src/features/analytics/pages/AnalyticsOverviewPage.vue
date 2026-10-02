@@ -9,7 +9,7 @@
       <div class="analytics-shell">
         <!-- Recovery recommendation hero -->
         <div class="card recovery-card" :class="recovery ? `recovery-card--${recovery.level}` : ''">
-          <div class="card-header">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Today</p>
             <span v-if="recovery" class="recovery-pill" :class="`recovery-pill--${recovery.level}`">
               {{ recoveryLabel }}
@@ -25,22 +25,22 @@
           <p class="nt-kicker">Training load</p>
           <template v-if="load.status !== 'insufficient'">
             <div class="tile-grid tile-grid--3">
-              <div class="tile">
+              <div class="tile nt-metric-tile">
                 <span class="tile__label">Acute (7d)</span>
                 <strong class="tile__value">{{ formatVolume(load.acuteTotal) }}</strong>
               </div>
-              <div class="tile">
+              <div class="tile nt-metric-tile">
                 <span class="tile__label">Weekly avg</span>
                 <strong class="tile__value">{{ formatVolume(load.chronicWeeklyAvg) }}</strong>
               </div>
-              <div class="tile">
+              <div class="tile nt-metric-tile">
                 <span class="tile__label">ACWR</span>
                 <strong class="tile__value" :class="acwrClass">{{ load.acwr.toFixed(2) }}</strong>
               </div>
             </div>
             <p class="load-note">{{ loadNote }}</p>
           </template>
-          <p v-else class="empty-copy">Need more workout history</p>
+          <p v-else class="nt-empty">Need more workout history</p>
         </div>
 
         <!-- Insights -->
@@ -54,7 +54,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough data yet</p>
+          <p v-else class="nt-empty">Not enough data yet</p>
         </div>
 
         <!-- Layered health heatmap (Workouts / Sick / Readiness) + day detail -->
@@ -62,7 +62,7 @@
 
         <!-- Life-event logging: standalone, forward-only catalog (moved from Gym) -->
         <div class="card">
-          <div class="card-header">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Life events</p>
             <ion-button fill="clear" size="small" class="log-event-btn" @click="logLifeEvent">
               Log event
@@ -76,7 +76,7 @@
               </span>
             </div>
           </template>
-          <p v-else class="empty-copy">Nothing logged yet</p>
+          <p v-else class="nt-empty">Nothing logged yet</p>
         </div>
       </div>
     </ion-content>
@@ -259,13 +259,6 @@ onIonViewWillEnter(() => {
   gap: 14px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
 
 
 /* Life-event rows (moved from AnalyticsGymPage, renamed) */
@@ -367,14 +360,12 @@ onIonViewWillEnter(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* Surface from .nt-metric-tile (global, variables.css); centering is local. */
 .tile {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 12px 14px;
-  background: var(--nt-tile);
-  border-radius: 10px;
   text-align: center;
 }
 
@@ -446,10 +437,8 @@ onIonViewWillEnter(() => {
   line-height: 1.45;
 }
 
+/* .nt-empty (global, variables.css) + this page's line-height. */
 .empty-copy {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.6);
-  font-size: 0.9rem;
   line-height: 1.5;
 }
 </style>

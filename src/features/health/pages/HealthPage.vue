@@ -139,7 +139,7 @@
             :show-avg="true"
             aria-label="Resting heart rate history"
           />
-          <p v-else class="empty-hint">No heart-rate data yet</p>
+          <p v-else class="nt-empty">No heart-rate data yet</p>
         </div>
 
         <!-- 5. Readiness history -->
@@ -150,7 +150,7 @@
             :pts="readinessTrendPts"
             aria-label="Readiness history"
           />
-          <p v-else class="empty-hint">No readiness data yet</p>
+          <p v-else class="nt-empty">No readiness data yet</p>
         </div>
 
         <!-- 7. Recent activities -->
@@ -674,8 +674,6 @@ const handleConnect = async () => {
   border-radius: 10px;
   border-left: 2px solid color-mix(in srgb, var(--ion-color-accent-red) 50%, transparent);
 }
-
-.empty-hint { margin: 0; font-size: 0.9rem; color: rgba(var(--nt-ink), 0.5); }
 
 /* ── Heart rate trend ── */
 .hr-head {

@@ -1,6 +1,6 @@
 <template>
   <ion-toolbar class="dashboard-toolbar">
-    <div class="seg-pill">
+    <div class="nt-segment-pill">
       <ion-segment :value="activeTab" @ionChange="handleSegmentChange" scrollable>
       <ion-segment-button value="home">
         <ion-label>Home</ion-label>
@@ -98,28 +98,8 @@ const goToSettings = () => {
   padding: 6px 10px;
 }
 
-.seg-pill {
-  background: var(--nt-tile);
-  border-radius: 999px;
-  padding: 6px;
-  overflow: hidden;
-}
-
-ion-segment {
-  width: 100%;
-  --background: transparent;
-}
-
-ion-segment-button {
-  --background: transparent;
-  --background-checked: transparent;
-  --color: rgba(var(--nt-ink), 0.5);
-  --color-checked: var(--ion-color-accent-red);
-  --indicator-color: var(--ion-color-accent-red);
-  min-height: 34px;
-  border-radius: 999px;
-  font-weight: 600;
-}
+/* .nt-segment-pill (global primitive, variables.css) carries the pill +
+   ion-segment-button recipe; nothing segment-related is declared here. */
 
 .toolbar-end {
   display: flex;

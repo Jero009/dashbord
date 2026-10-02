@@ -10,7 +10,7 @@
 
         <!-- HRV -->
         <ion-card class="vitals-card">
-          <div class="card-topline">
+          <div class="nt-card-topline vitals-card__topline nt-card-topline--tight">
             <p class="nt-kicker">Heart rate variability</p>
             <div class="range-selector">
               <button 
@@ -59,7 +59,7 @@
 
         <!-- SpO2 -->
         <ion-card class="vitals-card">
-          <div class="card-topline">
+          <div class="nt-card-topline vitals-card__topline nt-card-topline--tight">
             <p class="nt-kicker">Oxygen saturation</p>
           </div>
           <trend-chart
@@ -91,7 +91,7 @@
 
         <!-- VO2 max -->
         <ion-card class="vitals-card">
-          <div class="card-topline">
+          <div class="nt-card-topline vitals-card__topline nt-card-topline--tight">
             <p class="nt-kicker">VO2 max</p>
           </div>
           <trend-chart
@@ -243,12 +243,14 @@ onIonViewWillEnter(loadData);
   padding: 18px;
 }
 
-.card-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+/* .nt-card-topline (global, variables.css) covers the header row; the range
+   chips in the topline need a tighter gap than the canonical 12px. */
+.vitals-card__topline {
   margin-bottom: 14px;
+}
+
+.nt-card-topline--tight {
+  gap: 8px;
 }
 
 .range-selector {

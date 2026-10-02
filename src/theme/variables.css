@@ -762,6 +762,53 @@ html, body, ion-app ion-content {
   color: var(--nt-text-dim);
 }
 
+/* ---- Segment pill (canonical; pages must not re-declare) ----
+   Pill-shaped ion-segment host + button overrides. Originally duplicated
+   4x (DashboardTopBar + three feature SectionTabs). Pair with a height
+   modifier when a consumer needs a different control size (see
+   .nt-segment-pill--compact used by HealthHeatmap's 30px layer switch). */
+.nt-segment-pill {
+  background: var(--nt-tile);
+  border-radius: 999px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.nt-segment-pill ion-segment {
+  width: 100%;
+  --background: transparent;
+}
+
+.nt-segment-pill ion-segment-button {
+  --background: transparent;
+  --background-checked: transparent;
+  --color: rgba(var(--nt-ink), 0.5);
+  --color-checked: var(--ion-color-accent-red);
+  --indicator-color: var(--ion-color-accent-red);
+  min-height: 34px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.nt-segment-pill--compact ion-segment-button {
+  min-height: 30px;
+}
+
+/* ---- Card topline (canonical; pages must not re-declare) ----
+   Header row of a card: title left, action/count right. Nesting a .nt-kicker
+   inside drops its default bottom margin (the card's grid gap does the job).
+   Previously re-declared (and drifted) scoped in five feature pages. */
+.nt-card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.nt-card-topline .nt-kicker {
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0.01ms !important;

@@ -9,7 +9,7 @@
       <div class="analytics-shell">
         <!-- Summary tiles -->
         <div class="card">
-          <div class="card-header">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Training load</p>
             <ion-select
               v-model="windowDays"
@@ -102,7 +102,7 @@
 
         <!-- Plan progress (active plan + past-plan picker) -->
         <div v-if="planPickerOptions.length > 0" class="card">
-          <div class="card-header">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Plan progress</p>
             <ion-select
               v-model="selectedPlanId"
@@ -564,13 +564,6 @@ onUnmounted(() => {
   padding: 18px;
   display: grid;
   gap: 14px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
 }
 
 

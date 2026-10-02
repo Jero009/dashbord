@@ -12,7 +12,7 @@
       <div class="plan-shell">
         <!-- 1. Active plan header -->
         <div v-if="activePlan" class="card plan-header" :class="{ 'plan-header--paused': !!openPause }">
-          <div class="card-topline">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Active plan</p>
             <button v-if="!openPause" class="nt-chip nt-press" @click="openPauseSheet">
               <span class="nt-chip__dot" />
@@ -242,17 +242,6 @@ onIonViewWillEnter(async () => {
   padding: 18px;
   display: grid;
   gap: 12px;
-}
-
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.card-topline .nt-kicker {
-  margin: 0;
 }
 
 .plan-name {

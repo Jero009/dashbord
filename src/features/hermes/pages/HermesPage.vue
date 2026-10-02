@@ -12,7 +12,7 @@
         <template v-else>
         <!-- Today verdict hero -->
         <div class="card recovery-card" :class="recovery ? `recovery-card--${recovery.level}` : ''">
-          <div class="card-header">
+          <div class="card-header nt-card-topline">
             <p class="nt-kicker">Today</p>
             <span v-if="recovery" class="recovery-pill" :class="`recovery-pill--${recovery.level}`">
               {{ recoveryLabel }}
@@ -59,7 +59,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">Not enough data yet</p>
+          <p v-else class="nt-empty">Not enough data yet</p>
         </div>
 
         <!-- Grades (mirrored from eAsistent via the receiver) -->
@@ -80,7 +80,7 @@
 
         <!-- Hermes push notifications -->
         <div class="card">
-          <div class="card-header">
+          <div class="card-header nt-card-topline">
             <p class="nt-kicker">Push from Hermes</p>
             <button class="refresh-btn" aria-label="Refresh" @click="refreshPush">
               <ion-icon :icon="refreshOutline" :class="{ spinning: pushLoading }" />
@@ -98,7 +98,7 @@
               </div>
             </div>
           </template>
-          <p v-else class="empty-copy">
+          <p v-else class="nt-empty">
             {{ pushLoading ? 'Checking…' : 'No messages — Hermes pushes briefings to your notifications.' }}
           </p>
           <p class="hint-copy">Polled from the health receiver (type <span class="mono">hermes</span>).</p>
@@ -259,10 +259,11 @@ onIonViewWillEnter(() => {
   gap: 14px;
 }
 
+/* Wrap layout is local (buttons wrap under the kicker on narrow screens);
+   the canonical base comes from .nt-card-topline (variables.css). */
 .card-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .recovery-headline {
@@ -450,8 +451,7 @@ onIonViewWillEnter(() => {
   to { transform: rotate(360deg); }
 }
 
-.hint-copy,
-.empty-copy {
+.hint-copy {
   color: var(--nt-text-dim);
   font-size: 0.8rem;
   margin: 0;

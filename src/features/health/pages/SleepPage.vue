@@ -10,7 +10,7 @@
 
         <!-- Hero: score ring + key metrics -->
         <ion-card class="sleep-card">
-          <div class="card-topline">
+          <div class="nt-card-topline sleep-card__topline">
             <p class="nt-kicker">Sleep score</p>
             <div class="date-nav" v-if="sessionDates.length">
               <button class="date-nav__btn nt-press" aria-label="Previous day" @click="goToPrevDay" :disabled="sessionDates.indexOf(selectedDate ?? '') >= sessionDates.length - 1"><ion-icon :icon="chevronBackOutline" /></button>
@@ -604,6 +604,10 @@ onIonViewWillEnter(async () => {
 </script>
 
 <style scoped>
+.sleep-card__topline {
+  margin-bottom: 16px;
+}
+
 .sleep-content {
   --padding-top: 16px;
   --padding-bottom: 24px;
@@ -623,14 +627,6 @@ onIonViewWillEnter(async () => {
   background: var(--ion-color-primary);
   color: var(--nt-fg);
   padding: 18px;
-}
-
-/* Card topline */
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
 }
 
 /* Hero layout */

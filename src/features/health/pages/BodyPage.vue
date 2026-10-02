@@ -123,7 +123,7 @@
         </div>
 
         <div v-else class="card empty-card">
-          <p class="empty-text">No entries yet</p>
+          <p class="nt-empty">No entries yet</p>
         </div>
 
       </div>
@@ -524,12 +524,6 @@ onIonViewWillEnter(loadEntries)
 .empty-card {
   text-align: center;
   padding: 24px 18px;
-}
-
-.empty-text {
-  margin: 0;
-  font-size: 0.9rem;
-  color: rgba(var(--nt-ink), 0.5);
 }
 
 /* Chart card */

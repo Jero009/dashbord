@@ -13,7 +13,7 @@
         <section class="hero-wrap">
           <div class="top-cards">
             <ion-card v-if="!activeWorkout" class="summary-card">
-              <div class="card-topline">
+              <div class="nt-card-topline">
                 <p class="nt-kicker">Last workout</p>
               </div>
 
@@ -38,7 +38,7 @@
             </ion-card>
 
             <ion-card v-else class="active-card" @click="backToWorkout()">
-              <div class="card-topline">
+              <div class="nt-card-topline">
                 <p class="nt-kicker">Active workout</p>
               </div>
 
@@ -110,7 +110,7 @@
         </section>
 
         <ion-card v-if="recentPRs.length" class="pr-card">
-          <div class="card-topline">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Recent PRs</p>
             <span class="pr-card__window">30 days</span>
           </div>
@@ -605,7 +605,8 @@ ion-content.home-content {
   border-color: var(--ion-color-accent-red);
 }
 
-.card-topline,
+/* .nt-card-topline (global, variables.css) covers the topline header rows;
+   the graph header keeps a local selector (taller multi-line right side). */
 .graph-card__header {
   display: flex;
   justify-content: space-between;

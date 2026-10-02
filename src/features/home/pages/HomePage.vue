@@ -7,10 +7,10 @@
     <ion-content :fullscreen="true" class="home-content">
       <div class="home-shell">
 
-        <!-- Hermes daily briefing (local-first: cached, refreshed by pull) -->
-        <ion-card v-if="briefing && hermesOn" class="summary-card briefing-card" button @click="openHermes">
-          <div class="card-topline">
-            <p class="nt-kicker">Hermes briefing</p>
+        <!-- Local training signal; Hermes only adds optional briefing text. -->
+        <ion-card v-if="briefing" class="summary-card briefing-card" :button="hermesOn" @click="hermesOn && openHermes()">
+          <div class="nt-card-topline">
+            <p class="nt-kicker">Training signal</p>
             <span class="card-date">{{ briefingLabel }}</span>
           </div>
           <div class="briefing-head">
@@ -25,7 +25,7 @@
 
         <!-- Active workout banner -->
         <ion-card v-if="activeWorkout" class="active-card" @click="backToWorkout">
-          <div class="card-topline">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Active workout</p>
           </div>
           <div class="active-card__body">
@@ -42,7 +42,7 @@
 
         <!-- Battery -->
         <ion-card class="summary-card">
-          <div class="card-topline">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Battery</p>
             <span class="card-date">{{ new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }) }}</span>
           </div>
@@ -124,7 +124,7 @@
         </ion-card>
 
         <ion-card v-if="weekDigest" class="summary-card week-card" button @click="openReview">
-          <div class="card-topline">
+          <div class="nt-card-topline">
             <p class="nt-kicker">This week</p>
             <ion-icon :icon="chevronUpOutline" class="week-card__chevron" />
           </div>
@@ -264,22 +264,24 @@ const openHermes = () => {
 // Kill switch: re-read on view enter via loadAll — kept-alive page.
 const hermesOn = ref(getHermesIntegrationEnabled());
 const loadBriefing = async () => {
-  if (!hermesOn.value) {
-    briefing.value = null;
-    gradeLine.value = '';
-    return;
-  }
-  briefing.value = getCachedBriefing();
-  await Promise.all([
-    syncBriefing().then((next) => { if (next) briefing.value = next; }),
-    syncGrades().catch(() => 0),
-  ]);
-  const grades = getCachedGrades();
-  if (grades.length > 0) {
-    const fresh = countNewAndMarkSeen();
-    const avg = averageGrade(grades, 10);
-    gradeLine.value = `Avg ${avg != null ? avg.toFixed(1) : '—'}${fresh > 0 ? ` · ${fresh} new` : ''}`;
+  if (hermesOn.value) {
+    briefing.value = getCachedBriefing();
+    await Promise.all([
+      syncBriefing().then((next) => { if (next) briefing.value = next; }),
+      syncGrades().catch(() => 0),
+    ]);
+    const grades = getCachedGrades();
+    if (grades.length > 0) {
+      const fresh = countNewAndMarkSeen();
+      const avg = averageGrade(grades, 10);
+      gradeLine.value = `Avg ${avg != null ? avg.toFixed(1) : '—'}${fresh > 0 ? ` · ${fresh} new` : ''}`;
+    } else {
+      gradeLine.value = '';
+    }
   } else {
+    // The traffic light remains fully functional with Hermes disabled.
+    // Only remote briefing copy and grades depend on the integration.
+    briefing.value = null;
     gradeLine.value = '';
   }
   // The verdict is fully LOCAL: sick (life_event) > deload (plan) > the
@@ -824,13 +826,6 @@ onMounted(() => {
   border: 1px solid color-mix(in srgb, var(--ion-color-accent-red) 35%, transparent);
   cursor: pointer;
   transition: border-color 150ms ease;
-}
-
-.card-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
 }
 
 .card-date {

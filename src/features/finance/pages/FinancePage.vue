@@ -329,11 +329,8 @@ onIonViewWillEnter(loadFinance);
 </script>
 
 <style scoped>
-.finance-content {
-  --padding-top: 16px;
-  --padding-bottom: 24px;
-}
-
+/* Shared finance primitives (.finance-content, .metric-*) live in theme/finance.css
+   — do not re-declare them here; a scoped copy silently shadows the global. */
 
 .page-loading {
   display: flex;
@@ -508,14 +505,6 @@ onIonViewWillEnter(loadFinance);
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--nt-fg);
-}
-
-.metric-positive {
-  color: var(--nt-data-positive);
-}
-
-.metric-negative {
-  color: var(--ion-color-accent-red);
 }
 
 .savings {

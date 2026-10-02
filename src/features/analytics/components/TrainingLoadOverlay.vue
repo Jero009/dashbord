@@ -1,6 +1,6 @@
 <template>
   <div class="card tlo">
-    <div class="card-header">
+    <div class="nt-card-topline">
       <p class="nt-kicker">Load vs recovery</p>
       <ion-select
         v-model="windowDays"
@@ -177,7 +177,7 @@
       </div>
     </template>
 
-    <p v-else class="empty-copy">
+    <p v-else class="nt-empty">
       Log workouts to build the overlay
     </p>
   </div>
@@ -613,13 +613,6 @@ onIonViewWillEnter(load);
   gap: 14px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
 
 
 .time-select {
@@ -801,7 +794,6 @@ onIonViewWillEnter(load);
   left: 0;
   color: var(--nt-text-dim);
 }
-.empty-copy { margin: 0; color: rgba(var(--nt-ink), 0.6); font-size: 0.9rem; }
 
 @media (min-width: 600px) {
   .tile-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }

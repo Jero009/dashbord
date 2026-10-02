@@ -19,7 +19,7 @@
       <div class="detail-shell">
         <!-- PR hero -->
         <div v-if="hasAnyData" class="card">
-          <div class="card-header">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Personal record</p>
             <div v-if="muscleGroup || equipment" class="meta-chips">
               <span v-if="muscleGroup" class="meta-chip">{{ muscleGroup }}</span>
@@ -43,12 +43,12 @@
               <small class="tile__detail">&nbsp;</small>
             </div>
           </div>
-          <p v-else class="empty-copy">No record</p>
+          <p v-else class="nt-empty">No record</p>
         </div>
 
         <!-- Strength chart -->
         <div v-if="hasAnyData" class="card">
-          <div class="card-header">
+          <div class="nt-card-topline">
             <p class="nt-kicker">Strength</p>
             <ion-select
               v-model="timeFrame"
@@ -76,7 +76,7 @@
               <span class="chart-legend__item"><i class="chart-legend__swatch chart-legend__swatch--dim"></i>Est. 1RM</span>
             </div>
           </template>
-          <p v-else class="empty-copy">No sessions</p>
+          <p v-else class="nt-empty">No sessions</p>
         </div>
 
         <!-- Volume chart -->
@@ -143,7 +143,7 @@
 
         <!-- Global empty state -->
         <div v-if="!hasAnyData" class="card">
-          <p class="empty-copy">No history</p>
+          <p class="nt-empty">No history</p>
         </div>
       </div>
     </ion-content>
@@ -397,13 +397,6 @@ onUnmounted(() => {
   gap: 14px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
 
 
 .tile-grid {
@@ -546,11 +539,6 @@ onUnmounted(() => {
   border-radius: var(--nt-radius-pill);
 }
 
-.empty-copy {
-  margin: 0;
-  color: rgba(var(--nt-ink), 0.6);
-  font-size: 0.9rem;
-}
 
 /* Chart.js scrub readout (mirrors TrendChart's readout row) */
 .chart-readout {

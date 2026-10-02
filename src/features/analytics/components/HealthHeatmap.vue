@@ -1,9 +1,9 @@
 <template>
   <div class="card heat-card">
-    <div class="card-header">
+    <div class="card-header nt-card-topline">
       <p class="nt-kicker">Health heatmap</p>
-      <div class="seg-pill">
-        <ion-segment v-model="layer" mode="ios" class="heat-seg">
+      <div class="nt-segment-pill nt-segment-pill--compact heat-pill">
+        <ion-segment v-model="layer" mode="ios">
           <ion-segment-button value="workouts"><ion-label>Workouts</ion-label></ion-segment-button>
           <ion-segment-button value="sick"><ion-label>Sick</ion-label></ion-segment-button>
           <ion-segment-button value="readiness"><ion-label>Readiness</ion-label></ion-segment-button>
@@ -219,27 +219,17 @@ onUnmounted(() => { cancelled = true; });
   gap: 12px;
 }
 
+/* .nt-card-topline (global, variables.css) covers the header row; the wrap
+   stays local — three layer chips next to a kicker need it. */
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
 }
 
-.card-header .nt-kicker {
-  margin: 0;
-}
-
-.seg-pill {
-  overflow: hidden;
-  border-radius: 999px;
-  --background: transparent;
-}
-
-.heat-seg {
-  --background: transparent;
-  min-height: 30px;
+/* .nt-segment-pill--compact (global, variables.css) carries the pill recipe at
+   this control's 30px height; only the local width behavior stays scoped. */
+.heat-pill {
+  /* Shrink to fit the header row next to the kicker. */
+  width: max-content;
 }
 
 .heat-scroll {
