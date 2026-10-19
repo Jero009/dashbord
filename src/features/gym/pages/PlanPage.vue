@@ -65,6 +65,22 @@
           </ion-button>
         </div>
 
+        <div v-if="pendingPlan" class="card">
+          <p class="nt-kicker">Plan proposed by Hermes · review before importing</p>
+          <strong class="plan-name">{{ pendingPlan.name }}</strong>
+          <p v-if="pendingPlan.goal" class="plan-goal">{{ pendingPlan.goal }}</p>
+          <p>{{ pendingPlan.start_date }} → {{ pendingPlan.end_date }} · Deload every {{ pendingPlan.deload_every_weeks || 'off' }} weeks at {{ Math.round(pendingPlan.deload_factor * 100) }}%</p>
+          <div v-for="(template, index) in pendingPlan.templates" :key="index" class="import-template">
+            <strong>{{ template.name }}</strong>
+            <span v-for="(ex, exIndex) in template.exercises" :key="exIndex">
+              {{ ex.name }} · {{ ex.sets }} × {{ ex.reps }}{{ ex.rpe ? ` · RPE ${ex.rpe}` : '' }}
+            </span>
+          </div>
+          <p class="plan-goal">Creates separate templates. Your current workouts stay unchanged.</p>
+          <ion-button expand="block" :disabled="importing" @click="approveImport">Import plan</ion-button>
+          <ion-button expand="block" fill="outline" :disabled="importing" @click="rejectImport">Dismiss proposal</ion-button>
+        </div>
+
         <!-- 2. Templates with done-counts -->
         <div v-if="activePlan" class="card">
           <p class="nt-kicker">Templates</p>
@@ -109,11 +125,13 @@ import {
   modalController,
 } from '@ionic/vue';
 import { ref } from 'vue';
+import { CapacitorHttp } from '@capacitor/core';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import {
   getPlanAdherence, getPlans, getPausesForPlan, getTemplates, resumePlan,
   planConfigOf, pauseSpansOf,
+  importApprovedPlan,
   type Plan, type PlanAdherence,
 } from '@/shared/db/app_db';
 import { deloadWeekNumbers, planWeeksTotal } from '@/shared/utils/planCalendar';
@@ -126,6 +144,49 @@ import {
   pauseDay, loadPlan, reloadPlan,
 } from '@/features/gym/planStore';
 import PauseSheet from '@/features/gym/components/PauseSheet.vue';
+import { latestPendingPlan, type PlanImport } from '@/features/gym/planImport';
+import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
+
+const HANDLED_IMPORTS = 'gym.handledPlanImports';
+const pendingPlan = ref<PlanImport | null>(null);
+const importing = ref(false);
+function handledIds(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HANDLED_IMPORTS) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch { return []; }
+}
+function markHandled(id: string) {
+  localStorage.setItem(HANDLED_IMPORTS, JSON.stringify([...new Set([...handledIds(), id])].slice(-100)));
+  pendingPlan.value = null;
+  void loadPendingImport();
+}
+async function loadPendingImport() {
+  if (!getHermesIntegrationEnabled()) { pendingPlan.value = null; return; }
+  try {
+    const base = localStorage.getItem('hermesReceiverBase') || 'https://docker.tail85cdcd.ts.net:9443';
+    const result = await CapacitorHttp.get({ url: `${base}/latest?type=gym_plan_import&limit=50`, connectTimeout: 8000, readTimeout: 8000 });
+    if (result.status === 200) pendingPlan.value = latestPendingPlan(result.data, new Set(handledIds()));
+  } catch { /* offline: retain the current proposal for review */ }
+}
+async function approveImport() {
+  if (!pendingPlan.value || importing.value) return;
+  importing.value = true;
+  const id = pendingPlan.value.id;
+  try {
+    await importApprovedPlan(pendingPlan.value);
+    await reloadPlan();
+    if (activePlan.value) await loadTemplateRows(activePlan.value);
+    await loadPastPlans();
+    markHandled(id);
+    showToast('plan imported', 'success');
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : 'import failed');
+  } finally { importing.value = false; }
+}
+function rejectImport() {
+  if (pendingPlan.value) markHandled(pendingPlan.value.id);
+}
 
 const router = useRouter();
 
@@ -224,6 +285,7 @@ onIonViewWillEnter(async () => {
   await loadPlan(true);
   if (activePlan.value) await loadTemplateRows(activePlan.value);
   await loadPastPlans();
+  await loadPendingImport();
 });
 </script>
 
@@ -354,6 +416,16 @@ onIonViewWillEnter(async () => {
   font-weight: 700;
   color: var(--ion-color-accent-red);
 }
+
+.import-template {
+  display: grid;
+  gap: 5px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--nt-border);
+  color: var(--nt-text-dim);
+  font-size: 0.85rem;
+}
+.import-template strong { color: var(--nt-text); }
 
 .past-detail {
   display: flex;

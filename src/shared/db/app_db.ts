@@ -3,6 +3,8 @@ import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@ca
 import { Capacitor } from '@capacitor/core';
 import { localDateISO, localIsoWithOffset } from '@/shared/utils/timeFormat';
 import { nextDueAfter } from '@/shared/db/financeDates';
+import { parsePlanImport } from '@/features/gym/planImport';
+import type { PlanImport } from '@/features/gym/planImport';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
 
 let db: SQLiteDBConnection | null = null;
@@ -957,6 +959,11 @@ async function doInitDB() {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    const planColumns = await db.query('PRAGMA table_info("gym_plan");');
+    if (!planColumns.values?.some((c) => c.name === 'source_id')) {
+      await db.execute('ALTER TABLE gym_plan ADD COLUMN source_id TEXT;');
+    }
+    await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_gym_plan_source_id ON gym_plan(source_id);');
 
     await db.execute(`
       CREATE TABLE IF NOT EXISTS gym_plan_pause (
@@ -1097,6 +1104,72 @@ export async function createPlan(input: {
     return result.changes?.lastId;
   } catch (error) {
     console.error('Error creating plan:', error);
+    throw error;
+  }
+}
+
+/** Import an approved proposal as one atomic write. An accepted UUID is never imported twice. */
+export async function importApprovedPlan(raw: PlanImport): Promise<number> {
+  const plan = parsePlanImport(raw);
+  if (!plan || !db) throw new Error('Invalid plan or database unavailable');
+  const existing = await db.query('SELECT id FROM gym_plan WHERE source_id = ? LIMIT 1;', [plan.id]);
+  if (existing.values?.length) return Number(existing.values[0].id);
+
+  // Plans cannot overlap. Open pauses extend the existing window indefinitely.
+  const plans = await getPlans();
+  for (const other of plans) {
+    if (other.start_date > plan.end_date) continue;
+    const pauses = await getPausesForPlan(other.id);
+    if (other.start_date >= plan.start_date ||
+      planDayIndex(planConfigOf(other), pauseSpansOf(pauses), plan.start_date) !== null) {
+      throw new Error(`Overlaps existing plan: ${other.name}`);
+    }
+  }
+
+  await db.execute('BEGIN TRANSACTION;', false);
+  try {
+    const templateIds: number[] = [];
+    for (const template of plan.templates) {
+      // Never edit an existing template. A predictable suffix makes collisions visible.
+      let name = template.name.trim();
+      let found = await db.query('SELECT id FROM workout_template WHERE lower(name) = lower(?) LIMIT 1;', [name]);
+      if (found.values?.length) {
+        const base = `${name} (Hermes ${plan.id.slice(0, 8)})`;
+        name = base;
+        let suffix = 2;
+        while ((found = await db.query('SELECT id FROM workout_template WHERE lower(name) = lower(?) LIMIT 1;', [name])).values?.length) {
+          name = `${base} ${suffix++}`;
+        }
+      }
+      const inserted = await db.run('INSERT INTO workout_template (name) VALUES (?);', [name], false);
+      const templateId = inserted.changes?.lastId;
+      if (!templateId) throw new Error('Template insert failed');
+      templateIds.push(templateId);
+      for (const [index, exercise] of template.exercises.entries()) {
+        const exName = exercise.name.trim();
+        const row = await db.query('SELECT id FROM exercise WHERE lower(name) = lower(?) LIMIT 1;', [exName]);
+        let exerciseId = row.values?.[0]?.id as number | undefined;
+        if (!exerciseId) {
+          const created = await db.run('INSERT INTO exercise (name, rest_seconds) VALUES (?, ?);', [exName, 90], false);
+          exerciseId = created.changes?.lastId;
+        }
+        if (!exerciseId) throw new Error('Exercise insert failed');
+        await db.run(`INSERT INTO workout_template_exercise
+          (id_workout_template, id_exercise, set_number, rep_number, order_index, rpe)
+          VALUES (?, ?, ?, ?, ?, ?);`,
+        [templateId, exerciseId, exercise.sets, exercise.reps, index, exercise.rpe ?? null], false);
+      }
+    }
+    const result = await db.run(`INSERT INTO gym_plan
+      (name, goal, start_date, end_date, deload_every_weeks, deload_factor, template_ids_json, source_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+    [plan.name.trim(), plan.goal, plan.start_date, plan.end_date, plan.deload_every_weeks,
+      plan.deload_factor, JSON.stringify(templateIds), plan.id], false);
+    if (!result.changes?.lastId) throw new Error('Plan insert failed');
+    await db.execute('COMMIT;', false);
+    return result.changes.lastId;
+  } catch (error) {
+    await db.execute('ROLLBACK;', false).catch(() => undefined);
     throw error;
   }
 }
