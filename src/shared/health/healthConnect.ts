@@ -38,9 +38,11 @@ const HEALTH_CONNECT_OPTIONAL_READ_TYPES: HealthConnectDataType[] = [
 // requiring it silently blocked all metric syncing.
 const HEALTH_CONNECT_READ_TYPES: HealthConnectDataType[] = [...HEALTH_CONNECT_CORE_READ_TYPES, ...HEALTH_CONNECT_OPTIONAL_READ_TYPES];
 
-// True when every core metric is granted. Optional 'workouts' is intentionally ignored.
-const hasCoreReadAccess = (readAuthorized: string[]) =>
-  HEALTH_CONNECT_CORE_READ_TYPES.every((type) => readAuthorized.includes(type));
+const hasAnyCoreReadAccess = (readAuthorized: string[]) =>
+  HEALTH_CONNECT_CORE_READ_TYPES.some((type) => readAuthorized.includes(type));
+
+export const canSyncHealthType = (readAuthorized: string[], type: HealthConnectDataType) =>
+  readAuthorized.includes(type);
 
 const HEALTH_CONNECT_SOURCE = 'health-connect';
 
@@ -363,8 +365,46 @@ function toDateKey(date: string): string {
 // the target device). The plugin's bucket:'day' buckets by UTC, shifting steps
 // across midnight for UTC+1/+2 users. Each window is [localMidnight, +1d) and
 // the result is keyed by the local date, so a 23:50 walk lands on the right day.
-function localDayWindow(daysAgo: number): { startISO: string; endISO: string; dateKey: string } {
-  const start = new Date();
+function zonedDateParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
+  return { year: value('year'), month: value('month'), day: value('day'), hour: value('hour'), minute: value('minute'), second: value('second') };
+}
+
+function zonedMidnight(year: number, month: number, day: number, timeZone: string) {
+  const nominal = Date.UTC(year, month - 1, day);
+  let instant = nominal;
+  for (let i = 0; i < 2; i++) {
+    const shown = zonedDateParts(new Date(instant), timeZone);
+    const shownAsUtc = Date.UTC(shown.year, shown.month - 1, shown.day, shown.hour, shown.minute, shown.second);
+    instant -= shownAsUtc - nominal;
+  }
+  return new Date(instant);
+}
+
+export function localDayWindow(daysAgo: number, now = new Date(), timeZone?: string): { startISO: string; endISO: string; dateKey: string } {
+  if (timeZone) {
+    const current = zonedDateParts(now, timeZone);
+    const target = new Date(Date.UTC(current.year, current.month - 1, current.day - daysAgo));
+    const year = target.getUTCFullYear();
+    const month = target.getUTCMonth() + 1;
+    const day = target.getUTCDate();
+    const next = new Date(Date.UTC(year, month - 1, day + 1));
+    const start = zonedMidnight(year, month, day, timeZone);
+    const end = zonedMidnight(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), timeZone);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return { startISO: start.toISOString(), endISO: end.toISOString(), dateKey: `${year}-${pad(month)}-${pad(day)}` };
+  }
+  const start = new Date(now);
   start.setHours(0, 0, 0, 0);
   start.setDate(start.getDate() - daysAgo);
   const end = new Date(start);
@@ -374,6 +414,17 @@ function localDayWindow(daysAgo: number): { startISO: string; endISO: string; da
     endISO: end.toISOString(),
     dateKey: toDateKey(start.toISOString()),
   };
+}
+
+export function stepTotalFromAggregation(result: {
+  successful?: boolean;
+  samples?: Array<Pick<AggregatedSample, 'value'>>;
+}): number | null {
+  if (result.successful === false) return null;
+  return (result.samples ?? []).reduce(
+    (sum, sample) => Number.isFinite(sample.value) && sample.value > 0 ? sum + sample.value : sum,
+    0
+  );
 }
 
 // Pure window-join logic lives in sleepJoin.ts (unit-tested); these thin
@@ -455,7 +506,7 @@ export async function requestHealthConnectPermissions(): Promise<HealthConnectAc
     read: HEALTH_CONNECT_READ_TYPES,
   });
 
-  const granted = hasCoreReadAccess(status.readAuthorized);
+  const granted = hasAnyCoreReadAccess(status.readAuthorized);
 
   return {
     available: true,
@@ -489,7 +540,7 @@ export async function canAutoSyncHealthConnectMetrics() {
       read: HEALTH_CONNECT_READ_TYPES,
     });
 
-    return hasCoreReadAccess(auth.readAuthorized);
+    return hasAnyCoreReadAccess(auth.readAuthorized);
   } catch (error) {
     console.error('Health Connect authorization check failed:', error);
     return false;
@@ -520,7 +571,7 @@ export async function checkHealthConnectExerciseAccess(): Promise<HealthConnectE
     const auth = await Health.checkAuthorization({ read: HEALTH_CONNECT_READ_TYPES });
     return {
       available: true,
-      coreGranted: hasCoreReadAccess(auth.readAuthorized),
+      coreGranted: hasAnyCoreReadAccess(auth.readAuthorized),
       exerciseGranted: auth.readAuthorized.includes('workouts'),
     };
   } catch (error) {
@@ -546,7 +597,7 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     read: HEALTH_CONNECT_READ_TYPES,
   });
 
-  const granted = hasCoreReadAccess(auth.readAuthorized);
+  const granted = hasAnyCoreReadAccess(auth.readAuthorized);
   if (!granted) {
     return { available: true, granted: false, synced: 0 };
   }
@@ -555,21 +606,21 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
 
   const [sleepResult, restingHeartRateResult, heartRateResult, respiratoryRateResult, hrvResult, spo2Result, vo2MaxResult] = await Promise.all([
-    Health.readSamples({
+    canSyncHealthType(auth.readAuthorized, 'sleep') ? Health.readSamples({
       dataType: 'sleep',
       startDate,
       endDate,
       limit: 1000,
       ascending: true,
-    }),
+    }) : Promise.resolve({ samples: [] as HealthSample[] }),
     // queryAggregated with min matches the resting HR shown in Health Connect.
-    Health.queryAggregated({
+    canSyncHealthType(auth.readAuthorized, 'restingHeartRate') ? Health.queryAggregated({
       dataType: 'restingHeartRate',
       startDate,
       endDate,
       bucket: 'day',
       aggregation: 'min',
-    }).catch(() => ({ samples: [] as import('@capgo/capacitor-health').AggregatedSample[] })),
+    }).catch(() => ({ samples: [] as AggregatedSample[] })) : Promise.resolve({ samples: [] as AggregatedSample[] }),
     // HR: continuous HR is ~1440 samples/day (Amazfit). The plugin pages Health
     // Connect records from the START of the window and stops at `limit`, then
     // keeps the first `limit` samples — so a single 30-day read with limit 5000
@@ -578,37 +629,37 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
     // chunk fits the bridge cap, so all nights keep their sleep HR.
     // (The original fixed 7-day window meant nights older than 7 days could
     // never get sleep HR, even after a manual 30-day re-sync.)
-    fetchHeartRateSamples(startDate, endDate),
-    Health.readSamples({
+    canSyncHealthType(auth.readAuthorized, 'heartRate') ? fetchHeartRateSamples(startDate, endDate) : Promise.resolve({ samples: [] as HealthSample[] }),
+    canSyncHealthType(auth.readAuthorized, 'respiratoryRate') ? Health.readSamples({
       dataType: 'respiratoryRate',
       startDate,
       endDate,
       limit: 1000,
       ascending: true,
-    }),
+    }) : Promise.resolve({ samples: [] as HealthSample[] }),
     // Vitals (optional reads — each wrapped so a failure/permission gap can
     // never gate core sync). Spot samples: HRV rmssd ms, SpO₂ %, VO₂ max.
-    Health.readSamples({
+    canSyncHealthType(auth.readAuthorized, 'heartRateVariability') ? Health.readSamples({
       dataType: 'heartRateVariability',
       startDate,
       endDate,
       limit: 5000,
       ascending: true,
-    }).catch(() => ({ samples: [] })),
-    Health.readSamples({
+    }).catch(() => ({ samples: [] as HealthSample[] })) : Promise.resolve({ samples: [] as HealthSample[] }),
+    canSyncHealthType(auth.readAuthorized, 'oxygenSaturation') ? Health.readSamples({
       dataType: 'oxygenSaturation',
       startDate,
       endDate,
       limit: 5000,
       ascending: true,
-    }).catch(() => ({ samples: [] })),
-    Health.readSamples({
+    }).catch(() => ({ samples: [] as HealthSample[] })) : Promise.resolve({ samples: [] as HealthSample[] }),
+    canSyncHealthType(auth.readAuthorized, 'vo2Max') ? Health.readSamples({
       dataType: 'vo2Max',
       startDate,
       endDate,
       limit: 1000,
       ascending: true,
-    }).catch(() => ({ samples: [] })),
+    }).catch(() => ({ samples: [] as HealthSample[] })) : Promise.resolve({ samples: [] as HealthSample[] }),
   ]);
 
   // Steps: one query per local day instead of one rolling bucket:'day' query.
@@ -617,24 +668,23 @@ export async function syncHealthConnectMetrics(opts: { daysBack?: number } = {})
   // windows anchored at device-local midnight keep each day's total on its own
   // local date. Sequential awaits keep native-bridge traffic ordered.
   const stepsByDate = new Map<string, number>();
-  for (let daysAgo = daysBack - 1; daysAgo >= 0; daysAgo--) {
-    const window = localDayWindow(daysAgo);
-    if (!window.dateKey) continue;
-    try {
-      const dayResult = await Health.queryAggregated({
-        dataType: 'steps',
-        startDate: window.startISO,
-        endDate: window.endISO,
-        bucket: 'day',
-        aggregation: 'sum',
-      }).catch(() => ({ samples: [] as AggregatedSample[] }));
-      let dayTotal = 0;
-      for (const sample of (dayResult as { samples: AggregatedSample[] }).samples) {
-        if (Number.isFinite(sample.value) && sample.value > 0) dayTotal += sample.value;
+  if (canSyncHealthType(auth.readAuthorized, 'steps')) {
+    for (let daysAgo = daysBack - 1; daysAgo >= 0; daysAgo--) {
+      const window = localDayWindow(daysAgo);
+      if (!window.dateKey) continue;
+      try {
+        const dayResult = await Health.queryAggregated({
+          dataType: 'steps',
+          startDate: window.startISO,
+          endDate: window.endISO,
+          bucket: 'day',
+          aggregation: 'sum',
+        }) as { successful?: boolean; samples: AggregatedSample[] };
+        const dayTotal = stepTotalFromAggregation(dayResult);
+        if (dayTotal !== null) stepsByDate.set(window.dateKey, dayTotal);
+      } catch (e) {
+        console.error(`[healthConnect] Steps aggregation failed for ${window.dateKey}:`, e);
       }
-      if (dayTotal > 0) stepsByDate.set(window.dateKey, dayTotal);
-    } catch (e) {
-      console.error(`[healthConnect] Steps aggregation failed for ${window.dateKey}:`, e);
     }
   }
 

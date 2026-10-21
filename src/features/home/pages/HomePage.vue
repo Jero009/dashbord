@@ -163,8 +163,8 @@
               <strong>{{ latestWorkoutSetCount }}</strong>
             </div>
           </div>
-          <button v-if="latestWorkout.id_workout_template" class="workout-hero__start nt-press" @click="repeatLastWorkout">
-            Start again
+          <button v-if="latestWorkout.id_workout_template" class="workout-hero__start nt-press" :disabled="startingRepeat" @click="repeatLastWorkout">
+            {{ startingRepeat ? 'Starting…' : 'Start again' }}
           </button>
         </ion-card>
 
@@ -207,7 +207,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import BriefingVuBar from '@/shared/components/BriefingVuBar.vue';
 import NtProgressRing from '@/shared/components/NtProgressRing.vue';
-import { getLatestHealthMetric, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, postDueSubscriptions, getFinanceSubscriptions, getLifeEvents} from '@/shared/db/app_db';
+import { getLatestHealthMetric, getHealthMetricForDate, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getFinanceSubscriptions, getLifeEvents} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
 import { computeTodayRecovery, type RecoveryRecommendation } from '@/shared/health/todayRecovery';
@@ -396,12 +396,20 @@ const backToWorkout = async () => {
   if (w) router.push(`/workout/${w.id}`).catch(() => {});
 };
 
+const startingRepeat = ref(false);
+
 const repeatLastWorkout = async () => {
+  if (startingRepeat.value) return;
   hapticMedium();
   const templateId = latestWorkout.value?.id_workout_template
   if (!templateId) return
-  const workoutId = await startWorkoutFromTemplate(templateId)
-  if (workoutId) router.push(`/workout/${workoutId}`).catch(() => {})
+  startingRepeat.value = true;
+  try {
+    const workoutId = await startWorkoutFromTemplate(templateId)
+    if (workoutId) router.push(`/workout/${workoutId}`).catch(() => {})
+  } finally {
+    startingRepeat.value = false;
+  }
 }
 
 // Today
@@ -487,7 +495,7 @@ const loadSummary = async () => {
       getLatestHealthMetric('sleep_score'),
       getLatestHealthMetric('sleep_heart_rate'),
       getLatestHealthMetric('respiratory_rate'),
-      getLatestHealthMetric('steps'),
+      getHealthMetricForDate('steps', localDateISO()),
       getLatestHealthMetric('resting_heart_rate'),
       getLatestHealthMetric('hrv'),
     ]);
@@ -668,11 +676,10 @@ const loadAll = async () => {
   buildBatteryChart();
 };
 
-// Finance housekeeping on every Home entry (T2/T3): auto-post due subscription
-// periods (idempotent — skipped days post late otherwise) and re-arm the
-// bill-due notification, which needs the DB to know what's due.
+// Finance housekeeping on every Home entry: re-arm the bill-due notification
+// from the recurring schedule. Posting is
+// always explicit on the Recurring page so missed periods are reviewable.
 const armFinance = async () => {
-  await postDueSubscriptions().catch(() => {});
   try {
     if (!getNotifBillAlertEnabled()) {
       // Toggle is off — make sure no previously-armed alert survives it.
@@ -934,7 +941,7 @@ onMounted(() => {
 
 .week-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-top: 8px;
 }

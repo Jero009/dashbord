@@ -19,7 +19,7 @@ import {
   projectMonthlySpend,
   spendPerWorkout,
 } from '@/features/finance/finance';
-import { nextDueAfter } from '@/shared/db/financeDates';
+import { buildRecurringPostPlan, dueDatesThrough, nextDueAfter } from '@/shared/db/financeDates';
 
 const accounts = [
   { type: 'cash', balance: 500 },
@@ -177,6 +177,60 @@ describe('nextDueAfter (local-date safe cadence roll)', () => {
       expect(nextDueAfter(key, 'weekly') >= key).toBe(true);
       expect(nextDueAfter(key, 'yearly') >= key).toBe(true);
     }
+  });
+});
+
+describe('explicit recurring catch-up', () => {
+  test('enumerates every due period through a local date without posting future periods', () => {
+    expect(dueDatesThrough('2026-01-31', 'monthly', '2026-04-30')).toEqual([
+      '2026-01-31',
+      '2026-02-28',
+      '2026-03-28',
+      '2026-04-28',
+    ]);
+  });
+
+  test('builds one atomic idempotent posting batch with the recurring category', () => {
+    const plan = buildRecurringPostPlan({
+      id: 7,
+      name: 'Rent',
+      amount: 900,
+      cadence: 'monthly',
+      nextDueDate: '2026-01-01',
+      dueDates: ['2026-01-01', '2026-02-01'],
+      accountId: 3,
+      direction: 'expense',
+      category: 'housing',
+    });
+
+    expect(plan.nextDueDate).toBe('2026-03-01');
+    expect(plan.statements).toHaveLength(3);
+    expect(plan.statements[0].statement).toContain('INSERT OR IGNORE INTO finance_transaction');
+    expect(plan.statements[0].values).toEqual([
+      '2026-01-01', 'Rent', 'housing', 900, 'expense',
+      'Recurring payment', 3, 7, '2026-01-01',
+    ]);
+    expect(plan.statements[1].values?.at(-1)).toBe('2026-02-01');
+    expect(plan.statements[2]).toEqual({
+      statement: 'UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?',
+      values: ['2026-02-01', '2026-03-01', 7],
+    });
+  });
+
+  test('income recurrence stores the income category regardless of expense category', () => {
+    const plan = buildRecurringPostPlan({
+      id: 8,
+      name: 'Salary',
+      amount: 2500,
+      cadence: 'monthly',
+      nextDueDate: '2026-05-01',
+      dueDates: ['2026-05-01'],
+      accountId: null,
+      direction: 'income',
+      category: 'housing',
+    });
+    expect(plan.statements[0].values?.[2]).toBe('income');
+    expect(plan.statements[0].values?.[4]).toBe('income');
   });
 });
 

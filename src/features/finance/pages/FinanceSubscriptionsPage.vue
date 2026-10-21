@@ -58,6 +58,14 @@
               <label class="field-label">Next due</label>
               <ion-input v-model="subscriptionNextDue" type="date" class="styled-input"></ion-input>
             </div>
+            <div v-if="subscriptionDirection === 'expense'" class="field-group">
+              <label class="field-label">Category</label>
+              <ion-select v-model="subscriptionCategory" class="styled-select" interface="action-sheet">
+                <ion-select-option v-for="category in EXPENSE_CATEGORIES" :key="category.value" :value="category.value">
+                  {{ category.label }}
+                </ion-select-option>
+              </ion-select>
+            </div>
             <div class="field-group">
               <label class="field-label">{{ subscriptionDirection === 'income' ? 'Deposited to' : 'Paid from' }}</label>
               <ion-select v-model="subscriptionAccountId" class="styled-select" interface="action-sheet" placeholder="Account" :disabled="!accounts.length">
@@ -95,13 +103,13 @@
                   <span v-else-if="isOverdue(sub.next_due_date)" class="due-badge due-badge--overdue">Overdue</span>
                   <span v-else-if="isDueSoon(sub.next_due_date)" class="due-badge due-badge--soon">Due soon</span>
                 </div>
-                <span class="list-item__meta">{{ sub.cadence }} · {{ dueLabel(sub.next_due_date) }}<template v-if="sub.account_name"> · {{ sub.direction === 'income' ? 'to' : 'from' }} {{ sub.account_name }}</template></span>
+                <span class="list-item__meta">{{ sub.cadence }} · {{ dueLabel(sub.next_due_date) }}<template v-if="sub.direction !== 'income'"> · {{ categoryLabel(String(sub.category || 'subscriptions')) }}</template><template v-if="sub.account_name"> · {{ sub.direction === 'income' ? 'to' : 'from' }} {{ sub.account_name }}</template></span>
               </div>
               <div class="list-item__end">
                 <span class="list-item__value" :class="{ 'metric-positive': sub.direction === 'income' }">
                   {{ sub.direction === 'income' ? '+' : '' }}{{ formatCurrency(Number(sub.amount) || 0) }}
                 </span>
-                <button class="row-icon" aria-label="Mark paid" @click="markPaid(sub)">
+                <button class="row-icon" aria-label="Record payment" :disabled="postingIds.has(Number(sub.id))" @click="markPaid(sub)">
                   <ion-icon :icon="checkmarkOutline" />
                 </button>
                 <button class="row-icon" :aria-label="isActive(sub) ? 'Pause' : 'Resume'" @click="toggleStatus(sub)">
@@ -148,15 +156,21 @@ import {
   deleteFinanceSubscription,
   setFinanceSubscriptionStatus,
   markSubscriptionPaid,
+  catchUpFinanceSubscription,
   getFinanceSubscriptions,
   getFinanceAccounts,
 } from '@/shared/db/app_db';
 import { formatCurrency } from '@/shared/utils/currency';
+import { localDateISO } from '@/shared/utils/timeFormat';
+import { dueDatesThrough } from '@/shared/db/financeDates';
 import { hapticMedium, hapticHeavy, hapticSuccess, hapticLight } from '@/shared/utils/haptics';
 import {
   subscriptionsMonthlyOutflow,
   subscriptionsMonthlyInflow,
   dueLabel,
+  daysFromToday,
+  categoryLabel,
+  EXPENSE_CATEGORIES,
   type SubscriptionRow,
 } from '@/features/finance/finance';
 
@@ -166,36 +180,29 @@ const subscriptionCadence = ref('monthly');
 const subscriptionNextDue = ref('');
 const subscriptionAccountId = ref<number | null>(null);
 const subscriptionDirection = ref<'expense' | 'income'>('expense');
+const subscriptionCategory = ref('subscriptions');
 const editingId = ref<number | null>(null);
 
 const subscriptions = ref<SubscriptionRow[]>([]);
 const accounts = ref<Array<Record<string, any>>>([]);
+const postingIds = ref(new Set<number>());
 
 const monthlyOutflow = computed(() => subscriptionsMonthlyOutflow(subscriptions.value));
 const monthlyInflow = computed(() => subscriptionsMonthlyInflow(subscriptions.value));
 
 const isActive = (sub: SubscriptionRow): boolean => String(sub.status ?? 'active') === 'active';
 
-// Compare on calendar-day granularity in local time, mirroring dueLabel() so the
-// "Due soon"/"Overdue" badges never contradict the relative-date label on the same row.
-const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-const daysUntil = (dateStr: string): number | null => {
-  const target = new Date(String(dateStr));
-  if (!Number.isFinite(target.getTime())) return null;
-  return Math.round((startOfDay(target) - startOfDay(new Date())) / 86400000);
-};
-
 const DUE_SOON_DAYS = 3;
 
 const isDueSoon = (dateStr: string | null): boolean => {
   if (!dateStr) return false;
-  const days = daysUntil(dateStr);
+  const days = daysFromToday(dateStr);
   return days !== null && days >= 0 && days <= DUE_SOON_DAYS;
 };
 
 const isOverdue = (dateStr: string | null): boolean => {
   if (!dateStr) return false;
-  const days = daysUntil(dateStr);
+  const days = daysFromToday(dateStr);
   return days !== null && days < 0;
 };
 
@@ -215,6 +222,7 @@ const resetForm = () => {
   subscriptionNextDue.value = '';
   subscriptionAccountId.value = null;
   subscriptionDirection.value = 'expense';
+  subscriptionCategory.value = 'subscriptions';
 };
 
 const beginEdit = (sub: SubscriptionRow) => {
@@ -226,6 +234,7 @@ const beginEdit = (sub: SubscriptionRow) => {
   subscriptionNextDue.value = sub.next_due_date ? String(sub.next_due_date) : '';
   subscriptionAccountId.value = sub.account_id != null ? Number(sub.account_id) : null;
   subscriptionDirection.value = sub.direction === 'income' ? 'income' : 'expense';
+  subscriptionCategory.value = String(sub.category || 'subscriptions');
 };
 
 const saveSubscription = async () => {
@@ -249,7 +258,8 @@ const saveSubscription = async () => {
         subscriptionCadence.value,
         subscriptionNextDue.value || null,
         subscriptionAccountId.value,
-        subscriptionDirection.value
+        subscriptionDirection.value,
+        subscriptionCategory.value
       );
     } else {
       await addFinanceSubscription(
@@ -258,7 +268,8 @@ const saveSubscription = async () => {
         subscriptionCadence.value,
         subscriptionNextDue.value || undefined,
         subscriptionAccountId.value,
-        subscriptionDirection.value
+        subscriptionDirection.value,
+        subscriptionCategory.value
       );
     }
   } catch {
@@ -282,19 +293,63 @@ const toggleStatus = async (sub: SubscriptionRow) => {
   await loadSubscriptions();
 };
 
-// Accept the current period as paid: logs the transaction (unless the
-// auto-poster already did) and rolls the due date forward one cadence.
-const markPaid = async (sub: SubscriptionRow) => {
+const postRecurringLocked = async (sub: SubscriptionRow, catchUp: boolean) => {
   hapticLight();
   try {
-    await markSubscriptionPaid(Number(sub.id));
+    if (catchUp) await catchUpFinanceSubscription(Number(sub.id), localDateISO());
+    else await markSubscriptionPaid(Number(sub.id));
   } catch {
     await showToast('update failed', 'warning');
     return;
   }
   await loadSubscriptions();
   hapticSuccess();
-  await showToast(`${sub.name} marked paid`, 'success');
+  await showToast(`${sub.name} recorded`, 'success');
+};
+
+const finishPosting = async (sub: SubscriptionRow, catchUp: boolean) => {
+  const id = Number(sub.id);
+  if (postingIds.value.has(id)) return;
+  postingIds.value.add(id);
+  try {
+    await postRecurringLocked(sub, catchUp);
+  } finally {
+    postingIds.value.delete(id);
+  }
+};
+
+const markPaid = async (sub: SubscriptionRow) => {
+  const due = sub.next_due_date ? String(sub.next_due_date) : '';
+  const periods = dueDatesThrough(due, String(sub.cadence), localDateISO());
+  if (periods.length <= 1) {
+    await finishPosting(sub, false);
+    return;
+  }
+  const id = Number(sub.id);
+  if (postingIds.value.has(id)) return;
+  postingIds.value.add(id);
+  let selected = false;
+  const choose = (catchUp: boolean) => async () => {
+    selected = true;
+    try {
+      await postRecurringLocked(sub, catchUp);
+    } finally {
+      postingIds.value.delete(id);
+    }
+  };
+  const alert = await alertController.create({
+    header: 'Review missed payments',
+    message: `${periods.length} periods are overdue (${periods[0]}–${periods[periods.length - 1]}). Record only the oldest, or catch up all?`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Oldest only', handler: choose(false) },
+      { text: `All ${periods.length}`, handler: choose(true) },
+    ],
+  });
+  await alert.present();
+  void alert.onDidDismiss().then(() => {
+    if (!selected) postingIds.value.delete(id);
+  });
 };
 
 const confirmDelete = async (sub: SubscriptionRow) => {
@@ -363,6 +418,35 @@ onIonViewWillEnter(async () => {
 .item-list {
   display: grid;
   gap: 10px;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .list-item {
+    align-items: stretch;
+    box-sizing: border-box;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .list-item__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .list-item__end {
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .row-icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
 }
 
 </style>

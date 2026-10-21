@@ -1,3 +1,15 @@
+diff --git a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthManager.kt b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthManager.kt
+index e4ffd6a..151bd95 100644
+--- a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthManager.kt
++++ b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthManager.kt
+@@ -718,0 +719 @@ private fun createSamplePayload(
++        var successful = true
+@@ -804,0 +806 @@ private fun createSamplePayload(
++                successful = false
+@@ -806,0 +809 @@ private fun createSamplePayload(
++                successful = false
+@@ -814,0 +818 @@ private fun createSamplePayload(
++            put("successful", successful)
 diff --git a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
 index 79d2eb7..99ff97b 100644
 --- a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt

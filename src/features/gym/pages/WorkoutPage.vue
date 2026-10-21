@@ -459,6 +459,18 @@
   color: var(--ion-color-accent-red);
 }
 
+.deload-banner {
+  margin: 0 0 var(--nt-space-4);
+  padding: var(--nt-space-3) var(--nt-space-4);
+  background: var(--nt-tile);
+  border-left: 2px solid var(--nt-accent);
+  border-radius: var(--nt-radius-sm);
+  color: var(--nt-text-dim);
+  font-family: var(--nt-font-body);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 </style>
 <script setup lang="ts">
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent,IonButtons,IonButton,IonCard,IonCardHeader,IonCardContent,IonCheckbox,IonInput,IonCardTitle,onIonViewWillEnter, alertController, IonIcon, IonItemSliding, IonItemOptions, IonItemOption, IonItem, modalController, toastController, useBackButton } from '@ionic/vue';
@@ -1143,12 +1155,13 @@ onIonViewWillEnter(async () => {
 // (blurred inputs commit on blur, but a back press can skip the blur) before
 // leaving so nothing typed is lost. Registration is torn down automatically
 // when the component unmounts.
-useBackButton(10, async () => {
+useBackButton(10, async (processNextHandler) => {
   await Promise.all(
     workoutExercises.value.flatMap((ex) =>
       (ex.sets || []).map((s) => saveSet(s))
     )
   );
+  processNextHandler();
 });
 
 // Re-sync the rest timer when the app returns to the foreground (picked the phone

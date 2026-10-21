@@ -200,6 +200,7 @@ import { localDateISO, parseLocalDate } from '@/shared/utils/timeFormat';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import {
   getLatestHealthMetric,
+  getHealthMetricForDate,
   getReadinessScore,
   getLatestReadinessScore,
   getBodyLogs,
@@ -338,7 +339,7 @@ const loadMetrics = async () => {
     getLatestHealthMetric('sleep_heart_rate'),
     getLatestHealthMetric('respiratory_rate'),
     getLatestHealthMetric('resting_heart_rate'),
-    getLatestHealthMetric('steps'),
+    getHealthMetricForDate('steps', localDateISO()),
   ]);
   sleepHours.value      = mSleep      ? Number(mSleep.value)      : null;
   sleepScore.value      = mSleepScore ? Number(mSleepScore.value) : null;
@@ -538,7 +539,7 @@ const handleConnect = async () => {
 /* ── Metric tiles ── */
 .metric-grid { display: grid; gap: 10px; }
 .metric-grid--2col { grid-template-columns: repeat(2, 1fr); }
-.metric-grid--3col { grid-template-columns: repeat(3, 1fr); }
+.metric-grid--3col { grid-template-columns: repeat(2, 1fr); }
 
 .metric-value { font-size: 0.95rem; font-weight: 600; color: var(--nt-fg); }
 

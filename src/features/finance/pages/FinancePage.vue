@@ -176,7 +176,6 @@ import {
   getNetWorthHistory,
   queryCategorySpending,
   recordNetWorthSnapshot,
-  postDueSubscriptions,
   resetFinanceData,
   type NetWorthPoint,
   type CategorySpending,
@@ -313,8 +312,6 @@ const loadFinance = async () => {
   loading.value = true;
   // Persist today's snapshot first so the trend includes the latest point.
   await recordNetWorthSnapshot().catch(() => {});
-  // Auto-post due subscription periods (idempotent) before reading totals.
-  await postDueSubscriptions().catch(() => {});
   const monthKey = localMonthISO();
   const [acc, inv, subs, totals, , rec, cats] = await Promise.all([
     settled('accounts', getFinanceAccounts(), []),

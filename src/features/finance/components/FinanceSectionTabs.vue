@@ -13,6 +13,6 @@ const segments = [
   { value: 'analytics', label: 'Analytics', path: '/finance/analytics' },
   { value: 'accounts', label: 'Accounts', path: '/finance/accounts' },
   { value: 'investments', label: 'Investments', path: '/finance/investments' },
-  { value: 'subscriptions', label: 'Subscriptions', path: '/finance/subscriptions' },
+  { value: 'subscriptions', label: 'Recurring', path: '/finance/subscriptions' },
 ];
 </script>

@@ -2,7 +2,7 @@ import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import type { SQLiteDBConnection, SQLiteConnection as SQLiteConnType } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { localDateISO, localIsoWithOffset } from '@/shared/utils/timeFormat';
-import { nextDueAfter } from '@/shared/db/financeDates';
+import { buildRecurringPostPlan, dueDatesThrough, nextDueAfter } from '@/shared/db/financeDates';
 import { parsePlanImport } from '@/features/gym/planImport';
 import type { PlanImport } from '@/features/gym/planImport';
 const sqlite: SQLiteConnType = new SQLiteConnection(CapacitorSQLite);
@@ -310,7 +310,9 @@ async function doInitDB() {
     next_due_date TEXT,
     account_id INTEGER,
     direction TEXT DEFAULT 'expense',
-    status TEXT DEFAULT 'active'
+    status TEXT DEFAULT 'active',
+    category TEXT DEFAULT 'subscriptions',
+    last_posted_date TEXT
   );
 
   CREATE TABLE IF NOT EXISTS finance_transaction (
@@ -321,7 +323,9 @@ async function doInitDB() {
     amount REAL DEFAULT 0,
     type TEXT DEFAULT 'expense',
     notes TEXT,
-    account_id INTEGER
+    account_id INTEGER,
+    recurring_id INTEGER,
+    recurring_due_date TEXT
   );
 
   CREATE TABLE IF NOT EXISTS finance_budget (
@@ -869,6 +873,9 @@ async function doInitDB() {
     if (!subColNames.has('last_posted_date')) {
       await db.execute(`ALTER TABLE finance_subscription ADD COLUMN last_posted_date TEXT;`);
     }
+    if (!subColNames.has('category')) {
+      await db.execute(`ALTER TABLE finance_subscription ADD COLUMN category TEXT DEFAULT 'subscriptions';`);
+    }
 
     // finance_transaction.account_id — links manual/imported transactions to
     // an account so cash flow can reconcile against balances (T10).
@@ -877,6 +884,17 @@ async function doInitDB() {
     if (!txColNames.has('account_id')) {
       await db.execute(`ALTER TABLE finance_transaction ADD COLUMN account_id INTEGER;`);
     }
+    if (!txColNames.has('recurring_id')) {
+      await db.execute(`ALTER TABLE finance_transaction ADD COLUMN recurring_id INTEGER;`);
+    }
+    if (!txColNames.has('recurring_due_date')) {
+      await db.execute(`ALTER TABLE finance_transaction ADD COLUMN recurring_due_date TEXT;`);
+    }
+    await db.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_finance_transaction_recurring_period
+      ON finance_transaction(recurring_id, recurring_due_date)
+      WHERE recurring_id IS NOT NULL AND recurring_due_date IS NOT NULL;
+    `);
 
     const invColumns = await db.query(`PRAGMA table_info("finance_investment");`);
     const invColNames = new Set((invColumns.values || []).map((c: any) => String(c.name)));
@@ -1745,11 +1763,23 @@ async function hasSchoolTravelCovering(fromKey: string, todayKey: string): Promi
   return (Number(r?.p) || 0) > 0 || (Number(r?.e) || 0) > 0;
 }
 
-export async function startWorkoutFromTemplate(templateId: number) {
+let startWorkoutInFlight: Promise<number | undefined> | null = null;
+
+export function startWorkoutFromTemplate(templateId: number): Promise<number | undefined> {
+  if (startWorkoutInFlight) return startWorkoutInFlight;
+  startWorkoutInFlight = startWorkoutFromTemplateInner(templateId).finally(() => {
+    startWorkoutInFlight = null;
+  });
+  return startWorkoutInFlight;
+}
+
+async function startWorkoutFromTemplateInner(templateId: number): Promise<number | undefined> {
   if (!db) return;
   const conn = db;
 
   try {
+    const active = await getActiveWorkout();
+    if (active?.id) return Number(active.id);
     const deloadCfg = await resolvedDeloadConfig();
     const template = await getTemplateById(templateId);
     // Write time_start EXPLICITLY as a full local ISO-8601 string. The column
@@ -2315,28 +2345,6 @@ export async function getTemplateExercisesByTemplateId(templateId: number) {
 }
 
 // health + dashboard functions
-async function addHealthMetric(
-  date: string,
-  type: string,
-  value: number,
-  unit?: string,
-  source?: string
-) {
-  if (!db) return;
-
-  try {
-    const result = await db.run(
-      `INSERT INTO health_metric (date, type, value, unit, source)
-       VALUES (?, ?, ?, ?, ?);`,
-      [date, type, value, unit ?? null, source ?? null]
-    );
-    return result;
-  } catch (error) {
-    console.error('Error adding health metric:', error);
-    throw error;
-  }
-}
-
 export async function replaceHealthMetric(
   date: string,
   type: string,
@@ -2347,13 +2355,18 @@ export async function replaceHealthMetric(
   if (!db) return;
 
   try {
-    await db.run(
-      `DELETE FROM health_metric
-       WHERE date = ? AND type = ? AND (source = ? OR (source IS NULL AND ? IS NULL));`,
-      [date, type, source ?? null, source ?? null]
-    );
-
-    return await addHealthMetric(date, type, value, unit, source);
+    return await db.executeSet([
+      {
+        statement: `DELETE FROM health_metric
+          WHERE date = ? AND type = ? AND (source = ? OR (source IS NULL AND ? IS NULL));`,
+        values: [date, type, source ?? null, source ?? null],
+      },
+      {
+        statement: `INSERT INTO health_metric (date, type, value, unit, source)
+          VALUES (?, ?, ?, ?, ?);`,
+        values: [date, type, value, unit ?? null, source ?? null],
+      },
+    ]);
   } catch (error) {
     console.error('Error replacing health metric:', error);
     throw error;
@@ -2368,6 +2381,18 @@ export async function getLatestHealthMetric(type: string) {
      ORDER BY date DESC, id DESC
      LIMIT 1;`,
     [type]
+  );
+  return result.values?.[0] || null;
+}
+
+export async function getHealthMetricForDate(type: string, date: string) {
+  if (!db) return null;
+  const result = await db.query(
+    `SELECT * FROM health_metric
+     WHERE type = ? AND date = ?
+     ORDER BY id DESC
+     LIMIT 1;`,
+    [type, date]
   );
   return result.values?.[0] || null;
 }
@@ -2797,14 +2822,15 @@ export async function addFinanceSubscription(
   cadence: string,
   nextDueDate?: string,
   accountId?: number | null,
-  direction: 'expense' | 'income' = 'expense'
+  direction: 'expense' | 'income' = 'expense',
+  category = 'subscriptions'
 ) {
   if (!db) return;
   try {
     const result = await db.run(
-      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date, account_id, direction)
-       VALUES (?, ?, ?, ?, ?, ?);`,
-      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction]
+      `INSERT INTO finance_subscription (name, amount, cadence, next_due_date, account_id, direction, category)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction, direction === 'income' ? 'income' : category]
     );
     return result;
   } catch (error) {
@@ -2831,15 +2857,16 @@ export async function updateFinanceSubscription(
   cadence: string,
   nextDueDate?: string | null,
   accountId?: number | null,
-  direction: 'expense' | 'income' = 'expense'
+  direction: 'expense' | 'income' = 'expense',
+  category = 'subscriptions'
 ) {
   if (!db) return;
   try {
     await db.run(
       `UPDATE finance_subscription
-       SET name = ?, amount = ?, cadence = ?, next_due_date = ?, account_id = ?, direction = ?
+       SET name = ?, amount = ?, cadence = ?, next_due_date = ?, account_id = ?, direction = ?, category = ?
        WHERE id = ?;`,
-      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction, id]
+      [name, amount, cadence, nextDueDate ?? null, accountId ?? null, direction, direction === 'income' ? 'income' : category, id]
     );
   } catch (error) {
     console.error('Error updating subscription:', error);
@@ -2859,35 +2886,43 @@ export async function setFinanceSubscriptionStatus(id: number, status: 'active' 
   }
 }
 
-/**
- * Mark the current due period as paid: stamps last_posted_date with
- * next_due_date (so the auto-poster skips it) and rolls next_due_date forward
- * one cadence step. Same invariant as postDueSubscriptions: one transaction
- * per period, catch-up-safe. Returns the new due date.
- */
-export async function markSubscriptionPaid(id: number): Promise<string | null> {
+async function postRecurringPeriods(id: number, throughDate: string | null): Promise<{ nextDueDate: string; postedPeriods: number } | null> {
   if (!db) return null;
-  const res = await db.query(`SELECT name, amount, cadence, next_due_date, account_id, direction, last_posted_date FROM finance_subscription WHERE id = ?;`, [id]);
+  const res = await db.query(
+    `SELECT name, amount, cadence, next_due_date, account_id, direction, category
+     FROM finance_subscription WHERE id = ?;`,
+    [id]
+  );
   const sub = res.values?.[0];
   if (!sub) return null;
   const due = sub.next_due_date ? String(sub.next_due_date) : null;
   if (!due) return null;
-  // Period already posted → just roll forward (matches the auto-poster's
-  // already-posted branch, no double transaction).
-  const nextDue = nextDueAfter(due, String(sub.cadence));
-  if (sub.last_posted_date !== due) {
-    await addFinanceTransaction(
-      due,
-      String(sub.name),
-      'subscriptions',
-      Number(sub.amount) || 0,
-      sub.direction === 'income' ? 'income' : 'expense',
-      'Marked paid',
-      sub.account_id != null ? Number(sub.account_id) : undefined
-    );
-  }
-  await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDue, id]);
-  return nextDue;
+  const dueDates = throughDate === null ? [due] : dueDatesThrough(due, String(sub.cadence), throughDate);
+  if (dueDates.length === 0) return { nextDueDate: due, postedPeriods: 0 };
+  const plan = buildRecurringPostPlan({
+    id,
+    name: String(sub.name),
+    amount: Number(sub.amount) || 0,
+    cadence: String(sub.cadence),
+    nextDueDate: due,
+    dueDates,
+    accountId: sub.account_id != null ? Number(sub.account_id) : null,
+    direction: sub.direction === 'income' ? 'income' : 'expense',
+    category: String(sub.category || 'subscriptions'),
+  });
+  await db.executeSet(plan.statements);
+  return { nextDueDate: plan.nextDueDate, postedPeriods: dueDates.length };
+}
+
+/** Explicitly post the currently displayed period. */
+export async function markSubscriptionPaid(id: number): Promise<string | null> {
+  const result = await postRecurringPeriods(id, null);
+  return result?.nextDueDate ?? null;
+}
+
+/** Explicitly post every overdue period through a confirmed local date. */
+export async function catchUpFinanceSubscription(id: number, throughDate = localDateISO()) {
+  return postRecurringPeriods(id, throughDate);
 }
 
 export async function deleteFinanceSubscription(id: number) {
@@ -2904,70 +2939,6 @@ export async function deleteFinanceSubscription(id: number) {
 // Implementation lives in the pure module financeDates.ts (unit-tested);
 // re-exported here for existing import sites.
 export { nextDueAfter };
-
-// One in-flight postDueSubscriptions at a time. Home and Finance both fire it
-// on view-enter; interleaved read→read→insert→insert between two concurrent
-// calls double-posted a period (the last_posted_date stamp ends up correct but
-// a duplicate finance_transaction row remains). A shared in-flight promise
-// makes concurrent callers await the same pass instead.
-let postDueSubscriptionsInFlight: Promise<number> | null = null;
-
-/**
- * Post due unpaid subscription periods as finance_transaction rows.
- * Idempotent per period via last_posted_date: a subscription with
- * next_due_date <= today posts ONE transaction per call (the oldest due
- * period), stamps last_posted_date, and rolls next_due_date forward — so
- * repeated calls catch up multi-month lags without ever double-posting.
- * Returns the number of transactions created. Safe to call on every app
- * start / finance page entry.
- */
-export async function postDueSubscriptions(today?: string): Promise<number> {
-  if (postDueSubscriptionsInFlight) return postDueSubscriptionsInFlight;
-  postDueSubscriptionsInFlight = postDueSubscriptionsInner(today).finally(() => {
-    postDueSubscriptionsInFlight = null;
-  });
-  return postDueSubscriptionsInFlight;
-}
-
-async function postDueSubscriptionsInner(today?: string): Promise<number> {
-  if (!db) return 0;
-  // Local calendar date — never toISOString().slice(0,10), which is the UTC
-  // date and lags a day behind Slovenia in the evening (due-date drift bug).
-  const todayKey = today ?? localDateISO(new Date());
-  const subs = await getFinanceSubscriptions();
-  let posted = 0;
-  for (const s of subs) {
-    if (s.status !== 'active') continue;
-    const due = s.next_due_date ? String(s.next_due_date) : null;
-    if (!due || due > todayKey) continue;
-    // Already posted this exact period → roll forward without posting again.
-    if (s.last_posted_date === due) {
-      await db.run(`UPDATE finance_subscription SET next_due_date = ? WHERE id = ?;`, [nextDueAfter(due, String(s.cadence)), s.id]);
-      continue;
-    }
-    const type = s.direction === 'income' ? 'income' : 'expense';
-    // Per-row guard: one failing subscription must not abort the remaining
-    // catch-up posts (callers swallow errors — a silent stop would stall
-    // every later sub forever).
-    try {
-      await addFinanceTransaction(
-        due,
-        String(s.name),
-        'subscriptions',
-        Number(s.amount) || 0,
-        type,
-        'Auto-posted subscription',
-        s.account_id != null ? Number(s.account_id) : undefined
-      );
-      await db.run(`UPDATE finance_subscription SET last_posted_date = ?, next_due_date = ? WHERE id = ?;`, [due, nextDueAfter(due, String(s.cadence)), s.id]);
-      posted++;
-    } catch (error) {
-      console.error('Failed to auto-post subscription', s.id, error);
-    }
-  }
-  return posted;
-}
-
 
 export async function addFinanceTransaction(
   date: string,

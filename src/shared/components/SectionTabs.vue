@@ -1,6 +1,6 @@
 <template>
   <ion-toolbar class="section-toolbar">
-    <div class="nt-segment-pill">
+    <div ref="segmentWrap" class="nt-segment-pill">
       <ion-segment :value="activeSegment" @ionChange="handleSegmentChange" scrollable>
         <ion-segment-button v-for="seg in segments" :key="seg.value" :value="seg.value">
           <ion-label>{{ seg.label }}</ion-label>
@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { IonToolbar, IonSegment, IonSegmentButton, IonLabel } from '@ionic/vue';
 import { hapticLight } from '@/shared/utils/haptics';
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 export interface SectionTabSegment {
@@ -56,6 +56,13 @@ const isActive = (seg: SectionTabSegment): boolean =>
 // Unknown route → the first entry (the configured overview) stays active,
 // mirroring the previous per-feature `return 'overview'` fallbacks.
 const activeSegment = computed(() => props.segments.find(isActive)?.value ?? props.segments[0]?.value ?? '');
+const segmentWrap = ref<HTMLElement | null>(null);
+
+watch(activeSegment, async (value) => {
+  await nextTick();
+  const button = segmentWrap.value?.querySelector<HTMLElement>(`ion-segment-button[value="${value}"]`);
+  button?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}, { immediate: true, flush: 'post' });
 
 const handleSegmentChange = (event: CustomEvent) => {
   const value = (event.detail as { value?: string }).value;
