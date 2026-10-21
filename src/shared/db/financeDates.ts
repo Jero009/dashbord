@@ -8,10 +8,14 @@
 // Jan 31 + monthly = Feb 28.
 export function nextDueAfter(dateKey: string, cadence: string): string {
   const [y, m, d] = dateKey.split('-').map(Number);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (cadence === 'weekly') {
+    const next = new Date(Date.UTC(y, m - 1, d + 7));
+    return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
+  }
   let month = m - 1;
   let day = d;
   if (cadence === 'yearly') month += 12;
-  else if (cadence === 'weekly') day += 7;
   else if (cadence === 'quarterly') month += 3;
   else month += 1;
   // Normalize year overflow (month ≥ 12 rolls into the next year), then clamp
@@ -20,7 +24,6 @@ export function nextDueAfter(dateKey: string, cadence: string): string {
   month = ((month % 12) + 12) % 12;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   if (day > daysInMonth) day = daysInMonth;
-  const pad = (n: number) => String(n).padStart(2, '0');
   return `${year}-${pad(month + 1)}-${pad(day)}`;
 }
 
@@ -70,9 +73,12 @@ export function buildRecurringPostPlan(input: RecurringPostInput): {
   const type = input.direction === 'income' ? 'income' : 'expense';
   const category = type === 'income' ? 'income' : input.category || 'other';
   const statements: RecurringPostStatement[] = input.dueDates.map((due) => ({
-    statement: `INSERT OR IGNORE INTO finance_transaction
+    statement: `INSERT INTO finance_transaction
       (date, name, category, amount, type, notes, account_id, recurring_id, recurring_due_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(recurring_id, recurring_due_date)
+      WHERE recurring_id IS NOT NULL AND recurring_due_date IS NOT NULL
+      DO NOTHING`,
     values: [
       due,
       input.name,

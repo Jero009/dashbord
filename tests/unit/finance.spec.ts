@@ -156,6 +156,11 @@ describe('nextDueAfter (local-date safe cadence roll)', () => {
     expect(nextDueAfter('2026-09-17', 'weekly')).toBe('2026-09-24');
   });
 
+  test('weekly crosses month and year boundaries without clamping', () => {
+    expect(nextDueAfter('2026-01-28', 'weekly')).toBe('2026-02-04');
+    expect(nextDueAfter('2026-12-28', 'weekly')).toBe('2027-01-04');
+  });
+
   test('quarterly advances three months', () => {
     expect(nextDueAfter('2026-09-17', 'quarterly')).toBe('2026-12-17');
     expect(nextDueAfter('2026-11-15', 'quarterly')).toBe('2027-02-15');
@@ -190,6 +195,15 @@ describe('explicit recurring catch-up', () => {
     ]);
   });
 
+  test('weekly catch-up crosses month-end and terminates at the confirmed date', () => {
+    expect(dueDatesThrough('2026-01-28', 'weekly', '2026-02-18')).toEqual([
+      '2026-01-28',
+      '2026-02-04',
+      '2026-02-11',
+      '2026-02-18',
+    ]);
+  });
+
   test('builds one atomic idempotent posting batch with the recurring category', () => {
     const plan = buildRecurringPostPlan({
       id: 7,
@@ -205,7 +219,9 @@ describe('explicit recurring catch-up', () => {
 
     expect(plan.nextDueDate).toBe('2026-03-01');
     expect(plan.statements).toHaveLength(3);
-    expect(plan.statements[0].statement).toContain('INSERT OR IGNORE INTO finance_transaction');
+    expect(plan.statements[0].statement).toContain('INSERT INTO finance_transaction');
+    expect(plan.statements[0].statement).toContain('ON CONFLICT(recurring_id, recurring_due_date)');
+    expect(plan.statements[0].statement).not.toContain('OR IGNORE');
     expect(plan.statements[0].values).toEqual([
       '2026-01-01', 'Rent', 'housing', 900, 'expense',
       'Recurring payment', 3, 7, '2026-01-01',

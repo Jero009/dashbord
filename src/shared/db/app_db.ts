@@ -2910,7 +2910,7 @@ async function postRecurringPeriods(id: number, throughDate: string | null): Pro
     direction: sub.direction === 'income' ? 'income' : 'expense',
     category: String(sub.category || 'subscriptions'),
   });
-  await db.executeSet(plan.statements);
+  await db.executeSet(plan.statements, true);
   return { nextDueDate: plan.nextDueDate, postedPeriods: dueDates.length };
 }
 
