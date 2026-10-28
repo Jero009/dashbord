@@ -55,6 +55,9 @@
               Resume plan
             </ion-button>
           </template>
+          <ion-button expand="block" fill="outline" class="end-btn" @click="confirmEndPlan">
+            End plan
+          </ion-button>
         </div>
 
         <div v-else class="card plan-header">
@@ -122,14 +125,14 @@
 import {
   IonPage, IonHeader, IonContent, IonTitle, IonToolbar, IonButton,
   onIonViewWillEnter,
-  modalController,
+  alertController, modalController,
 } from '@ionic/vue';
 import { ref } from 'vue';
 import { CapacitorHttp } from '@capacitor/core';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import {
-  getPlanAdherence, getPlans, getPausesForPlan, getTemplates, resumePlan,
+  endPlan, getPlanAdherence, getPlans, getPausesForPlan, getTemplates, resumePlan,
   planConfigOf, pauseSpansOf,
   importApprovedPlan,
   type Plan, type PlanAdherence,
@@ -137,7 +140,7 @@ import {
 import { deloadWeekNumbers, planWeeksTotal } from '@/shared/utils/planCalendar';
 import { localDateISO } from '@/shared/utils/timeFormat';
 import { formatWorkoutDate } from '@/shared/utils/timeFormat';
-import { hapticLight, hapticMedium } from '@/shared/utils/haptics';
+import { hapticHeavy, hapticLight, hapticMedium } from '@/shared/utils/haptics';
 import { showToast } from '@/shared/utils/toast';
 import {
   activePlan, openPause, currentWeek, weeksTotal, nextDeload, deloadWeeks,
@@ -281,6 +284,31 @@ const resume = async () => {
   showToast('plan resumed', 'success');
 };
 
+const confirmEndPlan = async () => {
+  if (!activePlan.value) return;
+  const planId = activePlan.value.id;
+  const alert = await alertController.create({
+    header: 'End plan?',
+    message: 'Ends the plan today. Workout history and templates are kept.',
+    cssClass: 'app-confirm-alert',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'End plan',
+        role: 'destructive',
+        handler: async () => {
+          await endPlan(planId);
+          await reloadPlan();
+          await loadPastPlans();
+          hapticHeavy();
+          showToast('plan ended');
+        },
+      },
+    ],
+  });
+  await alert.present();
+};
+
 onIonViewWillEnter(async () => {
   await loadPlan(true);
   if (activePlan.value) await loadTemplateRows(activePlan.value);
@@ -385,6 +413,12 @@ onIonViewWillEnter(async () => {
 .create-btn {
   --background: var(--ion-color-accent-red);
   --border-radius: 8px;
+  margin: 0;
+}
+
+.end-btn {
+  --border-color: var(--ion-color-accent-red);
+  --color: var(--ion-color-accent-red);
   margin: 0;
 }
 

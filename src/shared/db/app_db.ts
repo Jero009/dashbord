@@ -1219,6 +1219,15 @@ export async function getActivePlan(now: Date = new Date()): Promise<Plan | null
   return null;
 }
 
+/** Archive a current plan at its actual local end date; history/templates stay intact. */
+export async function endPlan(planId: number, endDate = localDateISO()): Promise<void> {
+  if (!db) return;
+  await db.run(
+    'UPDATE gym_plan SET archived = 1, end_date = ? WHERE id = ? AND COALESCE(archived, 0) = 0;',
+    [endDate, planId]
+  );
+}
+
 export async function getPausesForPlan(planId: number): Promise<PlanPause[]> {
   if (!db) return [];
   const result = await db.query(
