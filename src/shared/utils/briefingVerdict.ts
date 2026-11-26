@@ -13,11 +13,13 @@
 //   5. PUSH    — recovery engine green-lights training — 3 lit segments.
 //
 // The recovery verdict comes from computeTodayRecovery() (EWMA ACWR + RHR
-// recovery z + readiness) — the SAME call that drives the Home recovery chip
-// and Analytics overview, so the three surfaces can never disagree.
+// recovery z + readiness) — the SAME call that drives the Home recovery chip,
+// so the two surfaces can never disagree.
 //
 // The result feeds the Home briefing card AND the briefing-widget push.
-import type { BriefingLevel } from '@/shared/sync/briefingStore'
+
+/** VU-bar level: push/normal/recover map to lit-segment counts; sick/deload paint the whole bar. */
+export type BriefingLevel = 'push' | 'normal' | 'recover' | 'sick' | 'deload'
 
 /** Open sick spell: a sick life_event whose span covers `todayKey`. */
 export function isSickToday(

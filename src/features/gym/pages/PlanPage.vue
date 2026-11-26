@@ -116,6 +116,11 @@
             </div>
           </template>
         </div>
+        <!-- 4. History heatmap: workouts / sick / readiness layers + life-event log -->
+        <div class="card">
+          <p class="nt-kicker">History</p>
+          <HealthHeatmap />
+        </div>
       </div>
     </ion-content>
   </ion-page>
@@ -147,6 +152,7 @@ import {
   pauseDay, loadPlan, reloadPlan,
 } from '@/features/gym/planStore';
 import PauseSheet from '@/features/gym/components/PauseSheet.vue';
+import HealthHeatmap from '@/features/gym/components/HealthHeatmap.vue';
 import { latestPendingPlan, type PlanImport } from '@/features/gym/planImport';
 import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 

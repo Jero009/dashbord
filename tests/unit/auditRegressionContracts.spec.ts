@@ -35,22 +35,7 @@ describe('audit UI and workout regression contracts', () => {
   it('balances the reported dashboard metric grids', () => {
     const home = read('src/features/home/pages/HomePage.vue');
     const health = read('src/features/health/pages/HealthPage.vue');
-    expect(home).toMatch(/\.week-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,/);
+    expect(home).toMatch(/\.week-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
     expect(health).toContain('.metric-grid--3col { grid-template-columns: repeat(2, 1fr); }');
-  });
-
-  it('gives recurring rows a stacked mobile layout and usable action targets', () => {
-    const recurring = read('src/features/finance/pages/FinanceSubscriptionsPage.vue');
-    expect(recurring).toContain('@media (max-width: 600px)');
-    expect(recurring).toContain('min-width: 40px');
-    expect(recurring).toContain('flex-direction: column');
-    expect(recurring).toContain('box-sizing: border-box');
-    expect(recurring).toContain('width: 100%');
-  });
-
-  it('prevents a repeated payment tap from advancing another period', () => {
-    const recurring = read('src/features/finance/pages/FinanceSubscriptionsPage.vue');
-    expect(recurring).toContain('if (postingIds.value.has(id)) return;');
-    expect(recurring).toContain(':disabled="postingIds.has(Number(sub.id))"');
   });
 });

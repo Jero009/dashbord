@@ -49,19 +49,6 @@ export function setGoalWeightKg(kg: number): void {
   localStorage.setItem(GOAL_WEIGHT_KEY, String(kg))
 }
 
-const CURRENCY_KEY = 'setting_currency'
-
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'CHF'
-
-export function getCurrency(): CurrencyCode {
-  const v = localStorage.getItem(CURRENCY_KEY)
-  return v === 'EUR' || v === 'GBP' || v === 'CHF' ? v : 'USD'
-}
-
-export function setCurrency(code: CurrencyCode): void {
-  localStorage.setItem(CURRENCY_KEY, code)
-}
-
 const LAST_HC_SYNC_KEY = 'setting_last_hc_sync_at'
 
 export function getLastHcSyncAt(): number | null {
@@ -84,23 +71,14 @@ export function setNotifSleepEnabled(v: boolean): void { localStorage.setItem('n
 export function getNotifSleepTime(): string { return localStorage.getItem('notif_sleep_time') ?? '22:30' }
 export function setNotifSleepTime(t: string): void { localStorage.setItem('notif_sleep_time', t) }
 
-export function getNotifBillAlertEnabled(): boolean { return localStorage.getItem('notif_bill_enabled') === '1' }
-export function setNotifBillAlertEnabled(v: boolean): void { localStorage.setItem('notif_bill_enabled', v ? '1' : '0') }
-export function getNotifBillAlertTime(): string { return localStorage.getItem('notif_bill_time') ?? '20:00' }
-export function setNotifBillAlertTime(t: string): void { localStorage.setItem('notif_bill_time', t) }
-
-export function getCoinGeckoApiKey(): string { return localStorage.getItem('coingecko_api_key') ?? '' }
-export function setCoinGeckoApiKey(key: string): void { localStorage.setItem('coingecko_api_key', key.trim()) }
-
 // Glyph Matrix (Nothing back LED grid) — rest-timer countdown dial.
 // Defaults OFF (opt-in): never light up hardware the user hasn't asked for.
 export function getGlyphMatrixEnabled(): boolean { return localStorage.getItem('glyph_matrix_enabled') === '1' }
 export function setGlyphMatrixEnabled(v: boolean): void { localStorage.setItem('glyph_matrix_enabled', v ? '1' : '0') }
 
-// Hermes integration kill switch — full cut when off: no Hermes tab, no push
-// polling/notifications, no briefing/grades pull, no gym-workout mirror.
-// Defaults ON: the integration is the established behavior; this is an escape
-// hatch, not an opt-in feature.
+// Hermes/receiver integration kill switch — gates the silent gym-workout
+// mirror (and the startup dirty-queue flush). Defaults ON: the mirror is the
+// established behavior; this is an escape hatch, not an opt-in feature.
 export function getHermesIntegrationEnabled(): boolean { return localStorage.getItem('hermes_integration_enabled') !== '0' }
 export function setHermesIntegrationEnabled(v: boolean): void { localStorage.setItem('hermes_integration_enabled', v ? '1' : '0') }
 export function getReceiverWriteKey(): string { return localStorage.getItem('receiver_write_key') ?? '' }

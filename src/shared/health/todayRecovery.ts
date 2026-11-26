@@ -1,13 +1,20 @@
-import { type RecoveryRecommendation } from '@/shared/health/insights';
 import { computeDailyLoads, computeAcwrSeries, selectLoadMetric, dailyLoadValue, type SessionLoadInput, type AcwrPoint } from './trainingLoad';
 import { computeRecoverySeries, type DailyReading } from './recoveryBaseline';
 
-export type { RecoveryRecommendation } from '@/shared/health/insights';
+export type RecoveryLevel = 'train' | 'maintain' | 'recover';
+
+export interface RecoveryRecommendation {
+  level: RecoveryLevel;
+  reason: string;
+}
 
 /**
- * Shared "today" recovery verdict used by the Home chip AND Analytics overview,
- * so both pages can never disagree. Built from the same EWMA ACWR + recovery
- * z-score services that TrainingLoadOverlay charts.
+ * Shared "today" recovery verdict used by the Home chip AND the briefing
+ * card, so both surfaces can never disagree. Built from the EWMA ACWR +
+ * recovery z-score services.
+ *
+ * Threshold constants are exported — any surface that re-derives a verdict
+ * from ACWR/recovery-z must import these, not restate the numbers.
  *
  * Inputs (all date-keyed, ascending not required):
  *  - sessions: workout session loads (volume + optional sRPE + duration)
@@ -15,6 +22,11 @@ export type { RecoveryRecommendation } from '@/shared/health/insights';
  *  - readiness: readiness scores
  *  - today:    local YYYY-MM-DD key
  */
+export const ACWR_CAUTION = 1.3;
+export const ACWR_RISK = 1.5;
+export const RECOVERY_Z_SUPPRESS = -1.0;
+export const READINESS_LOW = 45;
+export const READINESS_HIGH = 60;
 export function computeTodayRecovery(input: {
   sessions: SessionLoadInput[];
   rhr: DailyReading[];
@@ -34,20 +46,20 @@ export function computeTodayRecovery(input: {
 
   const readinessToday = lastByDate(readiness, today);
 
-  // ── Verdict: fuse ACWR flag + recovery z + readiness (same thresholds the
-  //    overlay banner uses: ACWR 1.3 caution / 1.5 risk, z −1.0) ──
+  // ── Verdict: fuse ACWR flag + recovery z + readiness (see the exported
+  //    threshold constants above — the single source of truth) ──
   if (latestAcwr == null) {
-    if (readinessToday != null && readinessToday < 45) {
+    if (readinessToday != null && readinessToday < READINESS_LOW) {
       return { level: 'recover', reason: 'Readiness is low — prioritise rest today.' };
     }
     return null; // insufficient history: chip hides itself
   }
 
-  const highLoad = latestAcwr > 1.5;
-  const cautionLoad = latestAcwr > 1.3;
-  const suppressed = latestRecovery != null && latestRecovery <= -1.0;
-  const readinessLow = readinessToday != null && readinessToday < 45;
-  const readinessMid = readinessToday != null && readinessToday >= 45 && readinessToday < 60;
+  const highLoad = latestAcwr > ACWR_RISK;
+  const cautionLoad = latestAcwr > ACWR_CAUTION;
+  const suppressed = latestRecovery != null && latestRecovery <= RECOVERY_Z_SUPPRESS;
+  const readinessLow = readinessToday != null && readinessToday < READINESS_LOW;
+  const readinessMid = readinessToday != null && readinessToday >= READINESS_LOW && readinessToday < READINESS_HIGH;
 
   if (highLoad && suppressed) {
     return { level: 'recover', reason: 'Load is spiking while recovery is suppressed — take a rest day.' };

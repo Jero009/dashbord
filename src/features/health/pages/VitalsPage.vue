@@ -134,10 +134,7 @@ import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import HealthSectionTabs from '@/features/health/components/HealthSectionTabs.vue';
 import { getHealthMetricDailySeries } from '@/shared/db/app_db';
-import { computeRecoverySeries } from '@/shared/health/recoveryBaseline';
-
-// Must match TrainingLoadOverlay's takeover threshold — the two views agree.
-const HRV_TAKEOVER_MIN = 14;
+import { computeRecoverySeries, HRV_TAKEOVER_MIN } from '@/shared/health/recoveryBaseline';
 
 interface DailyPoint { date: string; value: number }
 

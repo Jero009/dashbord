@@ -12,9 +12,8 @@ import type { AnimationBuilder } from '@ionic/vue';
 import HealthConnectAutoSync from '@/shared/health/HealthConnectAutoSync.vue';
 import { Capacitor } from '@capacitor/core'
 import { scheduleWeightReminder, scheduleSleepReminder } from '@/shared/utils/notifications'
-import { startHermesPolling, stopHermesPolling } from '@/shared/hermes/hermesPush'
 import { flushDirtyWorkoutQueue } from '@/shared/sync/receiverSync'
-import { getNotifWeightEnabled, getNotifWeightTime, getNotifSleepEnabled, getNotifSleepTime, getHermesIntegrationEnabled } from '@/shared/utils/userSettings'
+import { getNotifWeightEnabled, getNotifWeightTime, getNotifSleepEnabled, getNotifSleepTime } from '@/shared/utils/userSettings'
 import { initDB } from '@/shared/db/app_db'
 
 onMounted(async () => {
@@ -29,17 +28,9 @@ onMounted(async () => {
 
     if (getNotifSleepEnabled()) await scheduleSleepReminder(getNotifSleepTime())
 
-    // Hermes push channel: poll the health receiver for new agent messages and
-    // surface them as OS notifications (no-op on web/dev). Kill switch cuts
-    // the poll, the OS notifications AND the workout mirror flush.
-    if (getHermesIntegrationEnabled()) {
-      startHermesPolling()
-      // Retry any gym-workout payloads queued while offline (dirty queue is a
-      // no-op when empty; failures stay queued for the next cycle).
-      void flushDirtyWorkoutQueue()
-    } else {
-      stopHermesPolling()
-    }
+    // Gym mirror dirty-queue flush: retry workout payloads queued while the
+    // receiver was unreachable (no-op when empty; failures stay queued).
+    void flushDirtyWorkoutQueue()
   } catch (error) {
     console.error('Startup notification scheduling failed:', error)
   }

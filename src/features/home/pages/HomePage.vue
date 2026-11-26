@@ -7,11 +7,11 @@
     <ion-content :fullscreen="true" class="home-content">
       <div class="home-shell">
 
-        <!-- Local-only verdict. Detail lives in Analytics; Hermes is the inbox. -->
-        <ion-card v-if="briefing" class="summary-card briefing-card">
+        <!-- Local training-signal verdict — watch data + plan, computed on-device. -->
+        <ion-card v-if="briefingLevel" class="summary-card briefing-card">
           <p class="nt-kicker">Training signal</p>
           <div class="briefing-head">
-            <BriefingVuBar :level="briefing.level" class="briefing-vu" />
+            <BriefingVuBar :level="briefingLevel" class="briefing-vu" />
             <div class="briefing-head-text">
               <strong class="briefing-title">{{ trainingSignalVerdict }}</strong>
               <span v-if="trainingSignalReason" class="briefing-reason">{{ trainingSignalReason }}</span>
@@ -80,7 +80,7 @@
                 v-if="recovery"
                 class="recovery-chip"
                 :class="`recovery-chip--${recovery.level}`"
-                @click="openAnalytics"
+                @click="openVitals"
               >
                 <span class="recovery-chip__label">{{ recoveryLabel }}</span>
                 <span class="recovery-chip__reason">{{ recovery.reason }}</span>
@@ -114,10 +114,9 @@
           </div>
         </ion-card>
 
-        <ion-card v-if="weekDigest" class="summary-card week-card" button @click="openReview">
+        <ion-card v-if="weekDigest" class="summary-card week-card">
           <div class="nt-card-topline">
             <p class="nt-kicker">This week</p>
-            <ion-icon :icon="chevronUpOutline" class="week-card__chevron" />
           </div>
           <div class="week-grid">
             <div class="week-stat">
@@ -127,13 +126,6 @@
             <div class="week-stat">
               <span class="week-stat__label">Avg sleep</span>
               <strong class="week-stat__val">{{ weekDigest.avgSleepScore ?? '—' }}</strong>
-            </div>
-            <div class="week-stat">
-              <span class="week-stat__label">Net worth</span>
-              <strong class="week-stat__val" :class="{ 'week-stat__val--pos': (weekDigest.netWorthDelta ?? 0) > 0, 'week-stat__val--neg': (weekDigest.netWorthDelta ?? 0) < 0 }">
-                <template v-if="weekDigest.netWorthDelta !== null">{{ weekDigest.netWorthDelta > 0 ? '+' : '' }}{{ formatCurrency(weekDigest.netWorthDelta) }}</template>
-                <template v-else>—</template>
-              </strong>
             </div>
           </div>
         </ion-card>
@@ -199,52 +191,39 @@
 </template>
 
 <script setup lang="ts">
-import { IonCard, IonContent, IonHeader, IonIcon, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
-import { chevronUpOutline } from 'ionicons/icons';
+import { IonCard, IonContent, IonHeader, IonPage, onIonViewWillEnter, toastController } from '@ionic/vue';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue';
 import TrendChart from '@/shared/components/TrendChart.vue';
 import BriefingVuBar from '@/shared/components/BriefingVuBar.vue';
 import NtProgressRing from '@/shared/components/NtProgressRing.vue';
-import { getLatestHealthMetric, getHealthMetricForDate, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getFinanceSubscriptions, getLifeEvents} from '@/shared/db/app_db';
+import { getLatestHealthMetric, getHealthMetricForDate, getLatestReadinessScore, getReadinessScore, getLatestWorkout, getWorkoutHistoryExercises, getActiveWorkout, getTodayCompletedWorkouts, getBodyLogs, insertBodyLog, startWorkoutFromTemplate, getLifeEvents} from '@/shared/db/app_db';
 import { calculateReadinessScore, calculateBattery, getRecentActivities, type BatteryResult, type ActivitySummary } from '@/shared/health/healthConnect';
 import { getRecentHealthMetrics, queryReadinessHistory, getSessionLoads, getReviewDigest, type ReviewDigest } from '@/shared/db/app_db';
 import { computeTodayRecovery, type RecoveryRecommendation } from '@/shared/health/todayRecovery';
-import { formatCurrency } from '@/shared/utils/currency';
 import { formatDuration, formatWorkoutDate, localDateISO, normalizeDateInput, parseLocalDate, formatTime as formatElapsed, formatRestTime } from '@/shared/utils/timeFormat';
 import type { Workout, WorkoutHistoryExercise } from '@/features/gym/types/models';
 import { getGoalWeightKg } from '@/shared/utils/userSettings';
 import { hapticLight, hapticMedium, hapticSuccess } from '@/shared/utils/haptics';
 import { restTimerState, cancelRestTimer, resumeRestTimer, stopRestInterval, finalizeExpiredTimer } from '@/shared/composables/useRestTimer';
-import { dueWithin, billAlertBody } from '@/features/finance/billAlerts';
-import { scheduleBillAlert, cancelBillAlert } from '@/shared/utils/notifications';
-import { getNotifBillAlertEnabled, getNotifBillAlertTime, getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
-import { Capacitor } from '@capacitor/core';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 import { chartLineDataset, chartDimDataset, chartTooltip, chartTicks, chartGrid } from '@/shared/utils/chartStyle';
-import { getCachedBriefing, syncBriefing, type Briefing } from '@/shared/sync/briefingStore';
 import { resolvedDeloadConfig } from '@/shared/utils/trainingPhase';
-import { resolveBriefingVerdict, isSickToday } from '@/shared/utils/briefingVerdict';
+import { resolveBriefingVerdict, isSickToday, type BriefingLevel } from '@/shared/utils/briefingVerdict';
 
 import { updateWidgetFields } from '@/shared/widget/widgetBridge';
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 const router = useRouter();
 
-// The receiver copy is retained for the native widget, but Home renders only
-// the local verdict so stale push prose can never contradict current recovery.
-const briefing = ref<Briefing | null>(null);
+// The widget copy is derived from the same local verdict — no receiver round-trip.
+const briefingLevel = ref<BriefingLevel | null>(null);
+const trainingSignalVerdict = ref('');
 const trainingSignalReason = ref('');
-const trainingSignalVerdict = computed(() => briefing.value?.verdict?.split(' · ')[0] ?? 'OK');
-// Kill switch: re-read on view enter via loadAll — kept-alive page.
-const hermesOn = ref(getHermesIntegrationEnabled());
 const loadBriefing = async () => {
-  const cached = hermesOn.value ? getCachedBriefing() : null;
-
   // The verdict is fully LOCAL: sick (life_event) > deload (plan) > the
-  // shared recovery engine. Resolve it before any receiver request so the
-  // card still appears immediately while Hermes is offline.
+  // shared recovery engine.
   const [plan, lifeEvents] = await Promise.all([
     resolvedDeloadConfig(),
     getLifeEvents('sick', 50).catch(() => []),
@@ -254,40 +233,18 @@ const loadBriefing = async () => {
     sick: isSickToday(lifeEvents, localDateISO()),
     recovery: recovery.value, // loadAll awaits loadRecovery before this runs
   });
-  const localTitle = resolved.reason ? `${resolved.verdict} — ${resolved.reason}` : resolved.verdict;
+  trainingSignalVerdict.value = resolved.verdict.split(' · ')[0];
   trainingSignalReason.value = resolved.reason?.split(' — ')[0] ?? '';
+  briefingLevel.value = resolved.level;
 
-  const applyLocalVerdict = (remote: Briefing | null) => {
-    briefing.value = remote
-      ? { ...remote, title: localTitle, level: resolved.level, verdict: resolved.verdict }
-      : {
-          receivedAt: Math.floor(Date.now() / 1000),
-          title: localTitle,
-          body: resolved.reason ?? '',
-          verdict: resolved.verdict,
-          level: resolved.level,
-        };
-
-    // Always send a level — updateWidgetFields drops null fields, which would
-    // leave the native widget on a stale glyph.
-    const b = briefing.value;
-    void updateWidgetFields({
-      briefingTitle: b.title || 'Daily briefing',
-      briefingBody: b.body,
-      briefingDate: localDateISO(new Date(b.receivedAt * 1000)),
-      briefingLevel: resolved.level,
-    });
-  };
-
-  applyLocalVerdict(cached);
-
-  // Remote copy is optional enrichment for the widget/inbox. Never block the
-  // local Home signal on an offline receiver.
-  if (hermesOn.value) {
-    void syncBriefing()
-      .then((next) => { if (next) applyLocalVerdict(next); })
-      .catch(() => {});
-  }
+  // Always send a level — updateWidgetFields drops null fields, which would
+  // leave the native widget on a stale glyph.
+  void updateWidgetFields({
+    briefingTitle: trainingSignalVerdict.value,
+    briefingBody: trainingSignalReason.value,
+    briefingDate: localDateISO(),
+    briefingLevel: resolved.level,
+  });
 };
 
 // Weight card
@@ -453,14 +410,14 @@ const batteryRatio = computed(() => batteryScore.value === null ? 0 : batterySco
 const batteryColor = computed(() => {
   const s = batteryScore.value;
   if (s === null) return 'rgba(var(--nt-ink), 0.25)';
-  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 70) return 'var(--nt-data-positive)';
   if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
   return 'var(--ion-color-accent-red)';
 });
 const sleepScoreColor = computed(() => {
   const s = sleepScoreVal.value;
   if (s === null) return 'var(--nt-fg)';
-  if (s >= 70) return 'rgb(34,197,94)';
+  if (s >= 70) return 'var(--nt-data-positive)';
   if (s >= 45) return 'rgba(var(--nt-ink), 0.85)';
   return 'var(--ion-color-accent-red)';
 });
@@ -549,8 +506,8 @@ const loadRecovery = async () => {
     getSessionLoads(28).catch(() => []),
   ]);
 
-  // Shared with Analytics overview + TrainingLoadOverlay: one EWMA-ACWR /
-  // recovery-z verdict so the Home chip can never contradict Analytics.
+  // Shared with the Vitals page: one EWMA-ACWR / recovery-z verdict so the
+  // Home chip can never contradict Vitals.
   recovery.value = computeTodayRecovery({
     sessions: sessions.map((s) => ({
       date: s.date,
@@ -568,19 +525,14 @@ const loadRecovery = async () => {
   });
 };
 
-const openAnalytics = () => {
+const openVitals = () => {
   hapticLight();
-  router.push('/analytics');
+  router.push('/health/vitals');
 };
 
 const weekDigest = ref<ReviewDigest | null>(null);
 const loadWeekDigest = async () => {
   weekDigest.value = await getReviewDigest('week').catch(() => null);
-};
-
-const openReview = () => {
-  hapticLight();
-  router.push('/analytics/review');
 };
 
 // Battery timeline chart
@@ -658,7 +610,6 @@ const buildBatteryChart = () => {
 
 const loadAll = async () => {
   todayStr = localDateISO();
-  hermesOn.value = getHermesIntegrationEnabled(); // kill switch re-read on every entry
   // Recovery FIRST: loadBriefing resolves the verdict from recovery.value and
   // must never read a stale/null snapshot (they share the same engine).
   await loadRecovery();
@@ -670,36 +621,9 @@ const loadAll = async () => {
     loadBriefing(),
     getTodayCompletedWorkouts().then((ws) => { todayWorkouts.value = ws; }),
     getRecentActivities(2).then((acts) => { todayActivities.value = acts; }),
-    armFinance(),
   ]);
   await nextTick();
   buildBatteryChart();
-};
-
-// Finance housekeeping on every Home entry: re-arm the bill-due notification
-// from the recurring schedule. Posting is
-// always explicit on the Recurring page so missed periods are reviewable.
-const armFinance = async () => {
-  try {
-    if (!getNotifBillAlertEnabled()) {
-      // Toggle is off — make sure no previously-armed alert survives it.
-      await cancelBillAlert();
-      return;
-    }
-    if (!Capacitor.isNativePlatform()) return;
-    const alerts = dueWithin(await getFinanceSubscriptions(), 3);
-    if (!alerts) {
-      await cancelBillAlert();
-      return;
-    }
-    const [h, m] = getNotifBillAlertTime().split(':').map(Number);
-    const at = new Date();
-    at.setHours(Number.isFinite(h) ? h : 20, Number.isFinite(m) ? m : 0, 0, 0);
-    if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1);
-    await scheduleBillAlert('Bills due soon', billAlertBody(alerts), at);
-  } catch {
-    // notification arming must never break the dashboard load
-  }
 };
 
 onIonViewWillEnter(loadAll);
@@ -930,18 +854,12 @@ onMounted(() => {
 }
 
 .week-card {
-  cursor: pointer;
-}
-
-.week-card__chevron {
-  color: rgba(var(--nt-ink), 0.4);
-  transform: rotate(90deg);
-  font-size: 16px;
+  margin: 0;
 }
 
 .week-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 8px;
 }
@@ -968,9 +886,6 @@ onMounted(() => {
   font-weight: 700;
   color: var(--nt-fg);
 }
-
-.week-stat__val--pos { color: var(--nt-data-positive); }
-.week-stat__val--neg { color: var(--ion-color-accent-red); }
 
 .drain-line {
   margin: 0;

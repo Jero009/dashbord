@@ -41,34 +41,8 @@
 
           <div class="set-row">
             <div class="set-row__label">
-              <span class="set-row__title">Currency</span>
-            </div>
-            <ion-select v-model="currency" interface="action-sheet" :interface-options="{ cssClass: 'app-action-sheet' }" class="settings-select" @ionChange="hapticSelect()">
-              <ion-select-option v-for="code in currencyOptions" :key="code" :value="code">
-                {{ code }}
-              </ion-select-option>
-            </ion-select>
-          </div>
-
-          <div class="set-row">
-            <div class="set-row__label">
-              <span class="set-row__title">CoinGecko key</span>
-              <span class="set-row__sub">Optional · rate limit for crypto prices</span>
-            </div>
-            <ion-input
-              v-model="coinGeckoKey"
-              type="password"
-              placeholder="demo key"
-              class="form-input form-input--compact"
-              style="max-width: 140px"
-              @ionBlur="saveCoinGeckoKey"
-            ></ion-input>
-          </div>
-
-          <div class="set-row">
-            <div class="set-row__label">
               <span class="set-row__title">Receiver write key</span>
-              <span class="set-row__sub">Required for gym sync &amp; Hermes logging</span>
+              <span class="set-row__sub">Required for gym sync to the health receiver</span>
             </div>
             <ion-input
               v-model="receiverKey"
@@ -166,21 +140,6 @@
               </label>
             </div>
           </div>
-
-          <!-- Bills due (finance) -->
-          <div class="notif-row">
-            <div class="notif-row__label">
-              <span class="notif-title">Bill alert</span>
-              <span class="notif-sub">Bills due within 3 days</span>
-            </div>
-            <div class="notif-row__controls">
-              <input v-if="notifBillEnabled" v-model="notifBillTime" type="time" class="form-input form-input--time notif-time" @change="saveNotifBill" />
-              <label class="notif-toggle">
-                <input type="checkbox" v-model="notifBillEnabled" @change="saveNotifBill" />
-                <span class="notif-toggle__track"></span>
-              </label>
-            </div>
-          </div>
         </div>
 
         <!-- HARDWARE -->
@@ -203,7 +162,7 @@
           <div class="notif-row">
             <div class="notif-row__label">
               <span class="notif-title">Hermes integration</span>
-              <span class="notif-sub">Agent tab, briefings, gym sync &amp; push messages</span>
+              <span class="notif-sub">Gym workout sync to the health receiver</span>
             </div>
             <div class="notif-row__controls">
               <label class="notif-toggle">
@@ -256,26 +215,22 @@
 import { ref, computed, watch } from 'vue'
 import { IonPage, IonHeader, IonContent, IonSelect, IonSelectOption, IonIcon, IonInput, toastController, alertController } from '@ionic/vue'
 import { showToast } from '@/shared/utils/toast';
-import { stopHermesPolling } from '@/shared/hermes/hermesPush';
 import { downloadOutline, cloudUploadOutline, sparklesOutline } from 'ionicons/icons'
 import DashboardTopBar from '@/shared/components/DashboardTopBar.vue'
 import { localDateISO } from '@/shared/utils/timeFormat'
 import {
   getSleepGoalHours, setSleepGoalHours, getStepGoal, setStepGoal, getGoalWeightKg, setGoalWeightKg,
-  getCurrency, setCurrency, getLastHcSyncAt, setLastHcSyncAt,
+  getLastHcSyncAt, setLastHcSyncAt,
   getNotifWeightEnabled, setNotifWeightEnabled, getNotifWeightTime, setNotifWeightTime,
   getNotifSleepEnabled, setNotifSleepEnabled, getNotifSleepTime, setNotifSleepTime,
-  getNotifBillAlertEnabled, setNotifBillAlertEnabled, getNotifBillAlertTime, setNotifBillAlertTime,
   getGlyphMatrixEnabled, setGlyphMatrixEnabled,
   getHermesIntegrationEnabled, setHermesIntegrationEnabled,
-  getCoinGeckoApiKey, setCoinGeckoApiKey,
   getReceiverWriteKey, setReceiverWriteKey,
   getWeeklyWorkoutGoal, setWeeklyWorkoutGoal,
 } from '@/shared/utils/userSettings'
-import type { CurrencyCode } from '@/shared/utils/userSettings'
 import {
   requestNotificationPermission,
-  scheduleWeightReminder, scheduleSleepReminder, cancelBillAlert,
+  scheduleWeightReminder, scheduleSleepReminder,
   cancelWeightReminder, cancelSleepReminder,
 } from '@/shared/utils/notifications'
 import { hapticLight, hapticMedium, hapticSelect, hapticSuccess, hapticError } from '@/shared/utils/haptics'
@@ -368,12 +323,7 @@ const syncNow = async () => {
   }
 }
 
-// --- Finance ---
-const currencyOptions: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'CHF']
-const currency = ref<CurrencyCode>(getCurrency())
-watch(currency, (code) => setCurrency(code))
-const coinGeckoKey = ref(getCoinGeckoApiKey())
-const saveCoinGeckoKey = () => setCoinGeckoApiKey(coinGeckoKey.value)
+// --- Receiver sync ---
 const receiverKey = ref(getReceiverWriteKey())
 const saveReceiverKey = () => {
   setReceiverWriteKey(receiverKey.value)
@@ -421,19 +371,6 @@ const saveNotifSleep = async () => {
   else await cancelSleepReminder()
 }
 
-// Bill alert: toggle/time only persist the preference here — the notification
-// itself is armed on Home entry (it needs the DB to know what's due).
-const notifBillEnabled = ref(getNotifBillAlertEnabled())
-const notifBillTime = ref(getNotifBillAlertTime())
-
-const saveNotifBill = async () => {
-  hapticLight()
-  setNotifBillAlertEnabled(notifBillEnabled.value)
-  setNotifBillAlertTime(notifBillTime.value)
-  // Toggle-off must also disarm a notification armed by an earlier Home entry.
-  if (!notifBillEnabled.value) await cancelBillAlert()
-}
-
 // --- Hardware ---
 const glyphMatrixEnabled = ref(getGlyphMatrixEnabled())
 const saveGlyphMatrix = () => {
@@ -441,12 +378,11 @@ const saveGlyphMatrix = () => {
   hapticLight()
 }
 
-// Hermes integration kill switch (full cut): stops the push poll immediately
-// when disabled; every other gate re-reads on its next entry point.
+// Receiver/Hermes integration: gates the silent gym-workout mirror (and the
+// startup dirty-queue flush). No app UI depends on it anymore.
 const hermesEnabled = ref(getHermesIntegrationEnabled())
 const saveHermes = () => {
   setHermesIntegrationEnabled(hermesEnabled.value)
-  if (!hermesEnabled.value) stopHermesPolling()
   hapticLight()
 }
 

@@ -58,7 +58,7 @@
   default, horizontally scrollable back through the years as data accumulates.
   Layers: Workouts (density) / Sick (red intensity from life_event + pauses) /
   Readiness (daily score shade). Tap a day for the compare-sickness-vs-training
-  detail card. Supersedes the inline 10-week grid on AnalyticsGymPage.
+  detail card. Lives on the Plan tab (moved from the removed Analytics overview).
 -->
 <script setup lang="ts">
 import {

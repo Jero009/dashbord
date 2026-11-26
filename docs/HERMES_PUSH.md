@@ -1,5 +1,14 @@
 # Hermes → dashbord push channel
 
+> **Removed in v3.27:** the app no longer polls `/latest?type=hermes`. The
+> Hermes tab, push notifications, briefing inbox and grades mirror are gone;
+> the training-signal verdict is computed fully on-device. What remains of the
+> receiver link: the app POSTS finished gym workouts to `/webhook` (the silent
+> mirror, `shared/sync/workoutMirror.ts`, gated by the "Hermes integration"
+> toggle) and GETs `gym_plan_import` proposals on the Plan tab. Everything
+> below documents the historical receive path — keep only if the receive side
+> ever comes back.
+
 Minimal contract for Hermes (the user's agent) to push notifications into the
 dashbord Android app. **App-side only** — it reuses the existing health-receiver
 service (`http://100.95.172.88:8901`) that already collects the phone's health

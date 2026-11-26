@@ -34,17 +34,6 @@ vi.mock('@/shared/db/app_db', () => ({
   getAllExercisePRs: vi.fn(() => Promise.resolve([
     { exercise_id: 1, exercise_name: 'Bench Press', pr_weight: 85, pr_reps: 3, one_rep_max: 93, date_achieved: `${Y}T18:00:00` },
   ])),
-  getFinanceTransactionsForMonth: vi.fn(() => Promise.resolve([
-    { id: 1, date: T, name: 'Groceries run', category: 'groceries', amount: 42.5, type: 'expense', notes: null },
-  ])),
-  getNetWorthHistory: vi.fn(() => Promise.resolve([])),
-  getFinanceMonthTotals: vi.fn(() => Promise.resolve({ income: 0, expense: 42.5 })),
-  getFinanceSubscriptions: vi.fn(() => Promise.resolve([
-    { id: 1, name: 'Netflix', amount: 13.99, cadence: 'monthly', next_due_date: key(2), direction: 'expense', status: 'active' },
-  ])),
-  getFinanceBudgets: vi.fn(() => Promise.resolve([
-    { id: 1, category: 'groceries', monthly_limit: 200 },
-  ])),
 }))
 
 vi.mock('@/shared/utils/userSettings', () => ({
@@ -69,25 +58,19 @@ describe('buildAiExport', () => {
       '=== DAILY TIMELINE (CSV) ===',
       '=== PERSONAL RECORDS (strength) ===',
       '=== BODY ===',
-      '=== FINANCE ===',
       '=== END OF EXPORT ===',
     ]) {
       expect(text).toContain(h)
     }
   })
 
-  test('excludes cut modules (circadian, plan, habits, goals)', () => {
+  test('excludes cut modules (circadian, plan, habits, goals, finance)', () => {
     expect(text).not.toContain('CIRCADIAN')
     expect(text).not.toContain('=== HABITS ===')
     expect(text).not.toContain('=== GOALS ===')
-  })
-
-  test('finance section renders month totals, subscriptions and budgets', () => {
-    expect(text).toContain('This month')
-    expect(text).toContain('expenses 43')
-    expect(text).toContain('Netflix: 14 / monthly')
-    expect(text).toContain('Groceries: 43 of 200')
-  })
+    expect(text).not.toContain('=== FINANCE ===')
+    expect(text).not.toContain('Net worth')
+  });
 
   test('daily CSV has the documented header and a today row with merged metrics', () => {
     expect(text).toContain('date,readiness,sleep_h,eff,sleep_score,bedtime,wake,')

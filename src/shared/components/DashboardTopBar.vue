@@ -5,20 +5,11 @@
       <ion-segment-button value="home">
         <ion-label>Home</ion-label>
       </ion-segment-button>
-      <ion-segment-button value="finance">
-        <ion-label>Finance</ion-label>
-      </ion-segment-button>
       <ion-segment-button value="health">
         <ion-label>Health</ion-label>
       </ion-segment-button>
       <ion-segment-button value="gym">
         <ion-label>Gym</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="analytics">
-        <ion-label>Analytics</ion-label>
-      </ion-segment-button>
-      <ion-segment-button v-if="hermesEnabled" value="hermes">
-        <ion-label>Hermes</ion-label>
       </ion-segment-button>
       </ion-segment>
     </div>
@@ -36,24 +27,11 @@ import { hapticLight } from '@/shared/utils/haptics';
 import { settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getHermesIntegrationEnabled } from '@/shared/utils/userSettings';
 
 const router = useRouter();
 const route = useRoute();
 
-// Kill switch: the Hermes tab exists only while the integration is on.
-// computed keyed on the route so it re-reads localStorage on every navigation —
-// top bars live inside kept-alive pages, a setup-time ref would go stale after
-// toggling in Settings and navigating back.
-const hermesEnabled = computed(() => {
-  void route.fullPath;
-  return getHermesIntegrationEnabled();
-});
-
 const activeTab = computed(() => {
-  if (route.path.startsWith('/analytics')) return 'analytics';
-  if (route.path.startsWith('/hermes')) return 'hermes';
-  if (route.path.startsWith('/finance')) return 'finance';
   if (route.path.startsWith('/health'))  return 'health';
   if (route.path.startsWith('/tabs') || route.path.startsWith('/workout') || route.path.startsWith('/exercise')) return 'gym';
   return 'home';
@@ -68,11 +46,8 @@ const handleSegmentChange = (event: CustomEvent) => {
 
   const target = {
     home: '/home',
-    finance: '/finance',
     health: '/health',
     gym: '/tabs/Home',
-    analytics: '/analytics',
-    hermes: '/hermes',
   }[value];
 
   if (target && target !== route.path) {

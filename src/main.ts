@@ -42,7 +42,6 @@ import '@fontsource/geist-mono/600.css'
 /* Theme */
 import './theme/variables.css'
 import './theme/charts.css'
-import './theme/finance.css'
 import { initTheme } from '@/shared/composables/useTheme'
 
 // Apply the persisted light/dark theme before mount so there's no flash.

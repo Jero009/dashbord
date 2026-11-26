@@ -20,6 +20,13 @@
 /** 'hrv' → higher is better; 'rhr' → higher is worse. */
 export type RecoveryMetric = 'hrv' | 'rhr';
 
+/**
+ * Data-density policy: HRV takes over as the recovery signal once this many
+ * daily readings exist. Shared by every surface that picks HRV-vs-RHR
+ * (Vitals page countdown, AI export) — import it, don't restate it.
+ */
+export const HRV_TAKEOVER_MIN = 14;
+
 export interface DailyReading {
   date: string; // YYYY-MM-DD
   value: number;

@@ -16,7 +16,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { BriefingLevel } from '@/shared/sync/briefingStore';
+import type { BriefingLevel } from '@/shared/utils/briefingVerdict';
 
 const props = defineProps<{ level: BriefingLevel | null }>();
 

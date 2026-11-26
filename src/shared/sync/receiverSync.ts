@@ -19,7 +19,7 @@ import { getReceiverWriteKey } from '@/shared/utils/userSettings'
 
 const STAMP_KEY = 'receiverSync.lastPullAt'
 
-// Receiver row caps (mirrors hermesPush.ts conventions).
+// Receiver row caps (same conventions the old push channel used).
 const MAX_PULL_ROWS = 50
 
 export interface GymWorkoutPayload {
